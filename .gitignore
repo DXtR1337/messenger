@@ -36,6 +36,24 @@ yarn-error.log*
 # vercel
 .vercel
 
+# personal / sensitive data
+/messages/
+/cv-bzcommerce/
+
+# design mockups (not source code)
+dashboard.html
+dashboard-styles.css
+dashboard-charts.js
+/design-v2/
+
+# screenshots
+*.png
+
+# misc artifacts
+nul
+setup.sh
+.playwright-mcp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
