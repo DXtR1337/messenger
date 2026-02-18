@@ -21,9 +21,9 @@ interface BalanceMetric {
 const BALANCE_METRICS: BalanceMetric[] = [
   { name: 'Wzajemność', key: 'balance', color: 'blue' },
   { name: 'Emocjonalny wkład', key: 'emotional_safety', color: 'emerald' },
-  { name: 'Otwartość', key: 'communication_quality', color: 'purple' },
+  { name: 'Otwartość', key: 'response_pattern', color: 'purple' },
   { name: 'Stabilność', key: 'growth_trajectory', color: 'amber' },
-  { name: 'Głębokość tematów', key: 'engagement', color: 'cyan' },
+  { name: 'Głębokość tematów', key: 'reciprocity', color: 'cyan' },
 ];
 
 const GRADIENT_MAP: Record<GradientColor, string> = {
@@ -52,12 +52,12 @@ function ProgressBar({
   return (
     <div ref={ref}>
       <div className="flex justify-between mb-1.5">
-        <span className="text-[0.82rem] text-muted-foreground">{name}</span>
-        <span className="font-display text-[0.82rem] font-bold">
+        <span className="text-[13px] text-muted-foreground">{name}</span>
+        <span className="font-display text-[13px] font-bold">
           {clampedValue}%
         </span>
       </div>
-      <div className="h-[5px] bg-white/5 rounded-sm overflow-hidden">
+      <div className="h-1.5 bg-white/5 rounded-sm overflow-hidden">
         <motion.div
           className="h-full rounded-sm"
           style={{ background: GRADIENT_MAP[color] }}
@@ -99,11 +99,11 @@ export default function RelationshipBalance({
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="px-5 pt-4">
-        <h3 className="font-display text-[0.93rem] font-bold">
+        <h3 className="font-display text-[15px] font-bold">
           Bilans relacji
         </h3>
       </div>
-      <div className="px-5 py-4 flex flex-col gap-3.5">
+      <div className="px-5 py-4 flex flex-col gap-4">
         {/* Progress bars */}
         {BALANCE_METRICS.map((metric, index) => (
           <ProgressBar
@@ -118,30 +118,30 @@ export default function RelationshipBalance({
         {/* Flags section */}
         {hasFlags && (
           <div className="mt-4 pt-3.5 border-t border-border">
-            <div className="font-display text-[0.78rem] font-semibold mb-2">
+            <div className="font-display text-[13px] font-semibold mb-2">
               {hasRedFlags ? '\u26A0\uFE0F Flagi' : '\u2705 Pozytywne sygnały'}
             </div>
 
             {hasRedFlags
               ? redFlags.map((flag, idx) => (
-                  <div
-                    key={idx}
-                    className={cn(
-                      'text-[0.75rem] px-3 py-2 rounded-lg mb-1.5 leading-relaxed',
-                      getFlagSeverityClass(flag.severity),
-                    )}
-                  >
-                    {flag.pattern}
-                  </div>
-                ))
+                <div
+                  key={idx}
+                  className={cn(
+                    'text-[13px] px-3 py-2 rounded-lg mb-1.5 leading-relaxed',
+                    getFlagSeverityClass(flag.severity),
+                  )}
+                >
+                  {flag.pattern}
+                </div>
+              ))
               : greenFlags.map((flag, idx) => (
-                  <div
-                    key={idx}
-                    className="text-[0.75rem] px-3 py-2 rounded-lg mb-1.5 leading-relaxed bg-success-subtle text-success"
-                  >
-                    {flag.pattern}
-                  </div>
-                ))}
+                <div
+                  key={idx}
+                  className="text-[13px] px-3 py-2 rounded-lg mb-1.5 leading-relaxed bg-success-subtle text-success"
+                >
+                  {flag.pattern}
+                </div>
+              ))}
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { motion, useInView } from 'framer-motion';
 import type { HeatmapData } from '@/lib/parsers/types';
 
 interface HeatmapChartProps {
@@ -21,6 +22,9 @@ function getHeatColor(intensity: number): string {
 }
 
 export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(containerRef, { once: true, margin: '-50px' });
+
   const { cells } = useMemo(() => {
     const combined = heatmap.combined;
     let max = 0;
@@ -53,72 +57,79 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
   }, [heatmap.combined]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <motion.div
+      ref={containerRef}
+      role="img"
+      aria-label="Mapa aktywności: godzina vs dzień tygodnia"
+      initial={{ opacity: 0, y: 20 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      transition={{ duration: 0.5 }}
+      className="overflow-hidden rounded-xl border border-border bg-card"
+    >
       <div className="px-5 pt-4">
-        <h3 className="font-display text-[0.93rem] font-bold">Godziny aktywnosci</h3>
-        <p className="mt-0.5 text-[0.72rem] text-[#555]">
+        <h3 className="font-display text-[15px] font-bold">Godziny aktywności</h3>
+        <p className="mt-0.5 text-xs text-text-muted">
           Kiedy rozmawiacie &mdash; heatmapa
         </p>
       </div>
-      <div className="flex gap-2 px-5 py-4">
-        {/* Y-axis labels (hours) */}
-        <div
-          className="relative shrink-0"
-          style={{ width: 24, height: 24 * 14 + 23 * 3 }}
-        >
-          {HOUR_LABELS.map((hour) => (
-            <span
-              key={hour}
-              className="absolute right-0 font-display text-[0.62rem] text-[#555] leading-none"
-              style={{
-                top: `${(hour / 23) * 100}%`,
-                transform: 'translateY(-50%)',
-              }}
-            >
-              {String(hour).padStart(2, '0')}
-            </span>
-          ))}
-        </div>
 
-        {/* Grid + X-axis */}
-        <div className="flex-1">
-          <div
-            className="grid"
-            style={{
-              gridTemplateColumns: 'repeat(7, 1fr)',
-              gridTemplateRows: 'repeat(24, 1fr)',
-              gap: '3px',
-            }}
-          >
-            {cells.map((cell) => (
-              <div
-                key={`${cell.hour}-${cell.day}`}
-                className="rounded-[3px] transition-transform duration-150 hover:z-10 hover:scale-[1.4]"
-                style={{
-                  backgroundColor: getHeatColor(cell.intensity),
-                  minHeight: '14px',
-                }}
-                title={`${DAYS_PL[cell.day]} ${String(cell.hour).padStart(2, '0')}:00 \u2014 ${cell.value} wiad./h`}
-              />
-            ))}
-          </div>
-
-          {/* X-axis labels (days) */}
-          <div
-            className="mt-1.5 grid"
-            style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}
-          >
-            {DAYS_PL.map((day) => (
+      {/* Overflow-x-auto as a safety net for very narrow screens */}
+      <div className="overflow-x-auto px-5 py-4">
+        <div className="flex gap-2" style={{ minWidth: 200 }}>
+          {/* Y-axis labels (hours) — uses relative positioning, height driven by grid */}
+          <div className="relative shrink-0" style={{ width: 24 }}>
+            {HOUR_LABELS.map((hour) => (
               <span
-                key={day}
-                className="text-center font-display text-[0.62rem] text-[#555]"
+                key={hour}
+                className="absolute right-0 font-display text-[10px] text-text-muted leading-none"
+                style={{
+                  top: `${(hour / 23) * 100}%`,
+                  transform: 'translateY(-50%)',
+                }}
               >
-                {day}
+                {String(hour).padStart(2, '0')}
               </span>
             ))}
           </div>
+
+          {/* Grid + X-axis */}
+          <div className="flex-1 min-w-0">
+            <div
+              className="grid gap-[2px] sm:gap-[3px]"
+              style={{
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gridAutoRows: 'minmax(12px, 18px)',
+              }}
+            >
+              {cells.map((cell) => (
+                <div
+                  key={`${cell.hour}-${cell.day}`}
+                  className="rounded-[3px] transition-transform duration-150 hover:z-10 hover:scale-[1.4]"
+                  style={{
+                    backgroundColor: getHeatColor(cell.intensity),
+                  }}
+                  title={`${DAYS_PL[cell.day]} ${String(cell.hour).padStart(2, '0')}:00 \u2014 ${cell.value} wiad./h`}
+                />
+              ))}
+            </div>
+
+            {/* X-axis labels (days) */}
+            <div
+              className="mt-1.5 grid"
+              style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}
+            >
+              {DAYS_PL.map((day) => (
+                <span
+                  key={day}
+                  className="text-center font-display text-[10px] text-text-muted"
+                >
+                  {day}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -3,6 +3,8 @@ import type { QuantitativeAnalysis, ParsedConversation } from '@/lib/parsers/typ
 export interface KPICardData {
   id: string;
   value: string;
+  /** Raw numeric value used for animated count-up display */
+  numericValue: number;
   label: string;
   trendPercent: number;
   trendDirection: 'up' | 'down' | 'neutral';
@@ -133,7 +135,8 @@ export function computeKPICards(
     {
       id: 'avg-response-time',
       value: formatResponseTime(avgMedian),
-      label: 'Sr. czas odpowiedzi',
+      numericValue: avgMedian,
+      label: 'Śr. czas odpowiedzi',
       trendPercent: responseTrend,
       trendDirection: trendDir(responseTrend),
       sparklineData: responseSparkline,
@@ -143,7 +146,8 @@ export function computeKPICards(
     {
       id: 'messages-per-day',
       value: messagesPerDay.toFixed(1),
-      label: 'Wiadomosci / dzien',
+      numericValue: messagesPerDay,
+      label: 'Wiadomości / dzień',
       trendPercent: volumeTrend,
       trendDirection: trendDir(volumeTrend),
       sparklineData: volumeSparkline,
@@ -153,6 +157,7 @@ export function computeKPICards(
     {
       id: 'total-reactions',
       value: totalReactions.toLocaleString(),
+      numericValue: totalReactions,
       label: 'Laczna liczba reakcji',
       trendPercent: reactionTrend,
       trendDirection: trendDir(reactionTrend),
@@ -163,6 +168,7 @@ export function computeKPICards(
     {
       id: 'initiation-ratio',
       value: `${dominantPct}%`,
+      numericValue: dominantPct,
       label: `Inicjacja: ${dominantInitiator}`,
       trendPercent: initiationTrendPct,
       trendDirection: trendDir(initiationTrendPct),

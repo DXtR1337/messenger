@@ -69,6 +69,29 @@ export interface QuantitativeAnalysis {
   patterns: PatternMetrics;
   heatmap: HeatmapData;
   trends: TrendData;
+  viralScores?: ViralScores;
+  badges?: Badge[];
+  bestTimeToText?: BestTimeToText;
+  catchphrases?: CatchphraseResult;
+  networkMetrics?: NetworkMetrics;
+  reciprocityIndex?: ReciprocityIndex;
+}
+
+/**
+ * Reciprocity Index — composite metric measuring relationship balance.
+ * 0 = completely one-sided, 50 = perfectly balanced, 100 = completely one-sided (other direction).
+ */
+export interface ReciprocityIndex {
+  /** Overall reciprocity score: 0-100, 50 = perfect balance */
+  overall: number;
+  /** Message count balance between participants */
+  messageBalance: number;
+  /** Who starts conversations balance */
+  initiationBalance: number;
+  /** Response time symmetry between participants */
+  responseTimeSymmetry: number;
+  /** Reaction/emoji giving balance */
+  reactionBalance: number;
 }
 
 export interface PersonMetrics {
@@ -184,4 +207,100 @@ export interface TrendData {
     month: string;
     perPerson: Record<string, number>;
   }>;
+}
+
+// ============================================================
+// Viral Scores
+// ============================================================
+
+export interface ViralScores {
+  /** Overall compatibility 0-100 based on activity overlap, response symmetry, engagement balance */
+  compatibilityScore: number;
+  /** Per-person interest score 0-100 based on initiation, response speed trends, message length trends */
+  interestScores: Record<string, number>;
+  /** Per-person ghost risk 0-100 — higher = more likely to ghost/be ghosted */
+  ghostRisk: Record<string, GhostRiskData>;
+  /** Delusion score 0-100 — how mismatched interest levels are */
+  delusionScore: number;
+  /** Who is more "delusional" (has higher interest while other has lower) */
+  delusionHolder?: string;
+}
+
+export interface GhostRiskData {
+  score: number;
+  factors: string[];
+}
+
+// ============================================================
+// Badges & Achievements
+// ============================================================
+
+export interface Badge {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  /** Who earned this badge */
+  holder: string;
+  /** Supporting evidence (stat value) */
+  evidence: string;
+}
+
+// ============================================================
+// Best Time to Text
+// ============================================================
+
+export interface BestTimeToText {
+  perPerson: Record<string, {
+    bestDay: string;
+    bestHour: number;
+    bestWindow: string;
+    avgResponseMs: number;
+  }>;
+}
+
+// ============================================================
+// Catchphrases
+// ============================================================
+
+export interface CatchphraseResult {
+  perPerson: Record<string, CatchphraseEntry[]>;
+}
+
+export interface CatchphraseEntry {
+  phrase: string;
+  count: number;
+  /** How unique this phrase is to this person vs others (0-1, higher = more unique) */
+  uniqueness: number;
+}
+
+// ============================================================
+// Network Metrics (Group Chats)
+// ============================================================
+
+export interface NetworkNode {
+  name: string;
+  totalMessages: number;
+  /** Degree centrality: 0-1, how connected this person is */
+  centrality: number;
+}
+
+export interface NetworkEdge {
+  from: string;
+  to: string;
+  /** Total mutual interaction count */
+  weight: number;
+  /** Messages from -> to (A sent after B) */
+  fromToCount: number;
+  /** Messages to -> from (B sent after A) */
+  toFromCount: number;
+}
+
+export interface NetworkMetrics {
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  /** Graph density: actual edges / possible edges (0-1) */
+  density: number;
+  /** Person with highest centrality */
+  mostConnected: string;
 }

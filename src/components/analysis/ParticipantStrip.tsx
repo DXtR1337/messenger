@@ -40,27 +40,27 @@ export default function ParticipantStrip({
       : 0;
 
   return (
-    <div className="rounded-2xl border border-border bg-card px-5 py-4 mb-5">
+    <div className="rounded-xl border border-border bg-card px-5 py-4">
       <div className="flex flex-col items-center gap-4 md:flex-row">
         {/* Person A */}
         {personA && (
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-[38px] w-[38px] items-center justify-center rounded-[10px] text-sm font-bold text-white ${PERSON_BG_CLASSES[0]}`}
+              className={`flex h-[38px] w-[38px] items-center justify-center rounded-lg text-sm font-bold text-white ${PERSON_BG_CLASSES[0]}`}
             >
               {personA.charAt(0).toUpperCase()}
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.93rem] font-bold text-foreground">
+              <span className="text-[15px] font-bold text-foreground">
                 {personA}
               </span>
-              <span className="text-[0.68rem] text-[#555]">
-                {formatCount(metricsA?.totalMessages ?? 0)} wiadomosci &middot; sr.{' '}
-                {avgWordsA} slow
+              <span className="text-xs text-text-muted">
+                {formatCount(metricsA?.totalMessages ?? 0)} wiadomości &middot; śr.{' '}
+                {avgWordsA} słów
               </span>
             </div>
             <span
-              className="font-display text-[1.1rem] font-bold"
+              className="font-display text-lg font-bold"
               style={{ color: PERSON_COLORS[0] }}
             >
               {pctA}%
@@ -84,21 +84,21 @@ export default function ParticipantStrip({
         {personB && (
           <div className="flex items-center gap-3 md:flex-row-reverse">
             <div
-              className={`flex h-[38px] w-[38px] items-center justify-center rounded-[10px] text-sm font-bold text-white ${PERSON_BG_CLASSES[1]}`}
+              className={`flex h-[38px] w-[38px] items-center justify-center rounded-lg text-sm font-bold text-white ${PERSON_BG_CLASSES[1]}`}
             >
               {personB.charAt(0).toUpperCase()}
             </div>
             <div className="flex flex-col md:text-right">
-              <span className="text-[0.93rem] font-bold text-foreground">
+              <span className="text-[15px] font-bold text-foreground">
                 {personB}
               </span>
-              <span className="text-[0.68rem] text-[#555]">
-                {formatCount(metricsB?.totalMessages ?? 0)} wiadomosci &middot; sr.{' '}
-                {avgWordsB} slow
+              <span className="text-xs text-text-muted">
+                {formatCount(metricsB?.totalMessages ?? 0)} wiadomości &middot; śr.{' '}
+                {avgWordsB} słów
               </span>
             </div>
             <span
-              className="font-display text-[1.1rem] font-bold"
+              className="font-display text-lg font-bold"
               style={{ color: PERSON_COLORS[1] }}
             >
               {pctB}%

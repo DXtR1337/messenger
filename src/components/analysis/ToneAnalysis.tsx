@@ -22,9 +22,9 @@ const PERSON_COLORS = [
 
 const TRAJECTORY_STYLES: Record<string, { label: string; className: string }> = {
   warming: { label: 'Warming', className: 'bg-success/15 text-success border-success/30' },
-  stable: { label: 'Stable', className: 'bg-primary/15 text-primary border-primary/30' },
+  stable: { label: 'Stabilny', className: 'bg-primary/15 text-primary border-primary/30' },
   cooling: { label: 'Cooling', className: 'bg-warning/15 text-warning border-warning/30' },
-  volatile: { label: 'Volatile', className: 'bg-destructive/15 text-destructive border-destructive/30' },
+  volatile: { label: 'Niestabilny', className: 'bg-destructive/15 text-destructive border-destructive/30' },
 };
 
 function GaugeBar({
@@ -117,7 +117,11 @@ function PersonToneCard({
 }
 
 export default function ToneAnalysis({ pass1, participants }: ToneAnalysisProps) {
-  const trajectoryStyle = TRAJECTORY_STYLES[pass1.overall_dynamic.trajectory] ?? TRAJECTORY_STYLES.stable;
+  const dynamic = pass1?.overall_dynamic;
+  const relType = pass1?.relationship_type;
+  const trajectoryStyle = TRAJECTORY_STYLES[dynamic?.trajectory ?? 'stable'] ?? TRAJECTORY_STYLES.stable;
+
+  if (!pass1) return null;
 
   return (
     <div className="space-y-6">
@@ -126,14 +130,16 @@ export default function ToneAnalysis({ pass1, participants }: ToneAnalysisProps)
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-semibold">Tone & Style Analysis</CardTitle>
             <div className="flex gap-2">
-              <Badge variant="secondary" className="capitalize">
-                {pass1.relationship_type.category}
-                {pass1.relationship_type.sub_type && (
-                  <span className="ml-1 text-muted-foreground">
-                    / {pass1.relationship_type.sub_type}
-                  </span>
-                )}
-              </Badge>
+              {relType && (
+                <Badge variant="secondary" className="capitalize">
+                  {relType.category}
+                  {relType.sub_type && (
+                    <span className="ml-1 text-muted-foreground">
+                      / {relType.sub_type}
+                    </span>
+                  )}
+                </Badge>
+              )}
               <Badge className={cn('border', trajectoryStyle.className)}>
                 {trajectoryStyle.label}
               </Badge>
@@ -141,37 +147,41 @@ export default function ToneAnalysis({ pass1, participants }: ToneAnalysisProps)
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {pass1.overall_dynamic.description}
-          </p>
+          {dynamic?.description && (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {dynamic.description}
+            </p>
+          )}
 
-          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <span>
-              Energy:{' '}
-              <span className="font-medium capitalize text-foreground">
-                {pass1.overall_dynamic.energy}
+          {dynamic && (
+            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+              <span>
+                Energy:{' '}
+                <span className="font-medium capitalize text-foreground">
+                  {dynamic.energy}
+                </span>
               </span>
-            </span>
-            <span>
-              Balance:{' '}
-              <span className="font-medium capitalize text-foreground">
-                {pass1.overall_dynamic.balance.replace(/_/g, ' ')}
+              <span>
+                Równowaga:{' '}
+                <span className="font-medium capitalize text-foreground">
+                  {dynamic.balance?.replace(/_/g, ' ')}
+                </span>
               </span>
-            </span>
-            <span>
-              Confidence:{' '}
-              <span className="font-mono font-medium text-foreground">
-                {pass1.overall_dynamic.confidence}%
+              <span>
+                Confidence:{' '}
+                <span className="font-mono font-medium text-foreground">
+                  {dynamic.confidence}%
+                </span>
               </span>
-            </span>
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Per-person tone cards */}
       <div className="grid gap-4 md:grid-cols-2">
         {participants.map((name, index) => {
-          const tone = pass1.tone_per_person[name];
+          const tone = pass1.tone_per_person?.[name];
           if (!tone) return null;
           return (
             <PersonToneCard key={name} name={name} tone={tone} colorIndex={index} />

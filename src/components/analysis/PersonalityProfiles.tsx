@@ -22,23 +22,23 @@ const PERSON_COLORS = [
 ];
 
 const BIG_FIVE_LABELS: Array<{ key: keyof BigFiveApproximation; label: string }> = [
-  { key: 'openness', label: 'Openness' },
-  { key: 'conscientiousness', label: 'Conscientiousness' },
-  { key: 'extraversion', label: 'Extraversion' },
-  { key: 'agreeableness', label: 'Agreeableness' },
-  { key: 'neuroticism', label: 'Neuroticism' },
+  { key: 'openness', label: 'Otwartość' },
+  { key: 'conscientiousness', label: 'Sumienność' },
+  { key: 'extraversion', label: 'Ekstrawersja' },
+  { key: 'agreeableness', label: 'Ugodowość' },
+  { key: 'neuroticism', label: 'Neurotyczność' },
 ];
 
 const ATTACHMENT_STYLES: Record<string, { label: string; className: string }> = {
-  secure: { label: 'Secure', className: 'bg-success/15 text-success border-success/30' },
-  anxious: { label: 'Anxious', className: 'bg-warning/15 text-warning border-warning/30' },
-  avoidant: { label: 'Avoidant', className: 'bg-primary/15 text-primary border-primary/30' },
+  secure: { label: 'Bezpieczny', className: 'bg-success/15 text-success border-success/30' },
+  anxious: { label: 'Lękowy', className: 'bg-warning/15 text-warning border-warning/30' },
+  avoidant: { label: 'Unikający', className: 'bg-primary/15 text-primary border-primary/30' },
   disorganized: {
-    label: 'Disorganized',
+    label: 'Zdezorganizowany',
     className: 'bg-destructive/15 text-destructive border-destructive/30',
   },
   insufficient_data: {
-    label: 'Insufficient Data',
+    label: 'Brak danych',
     className: 'bg-muted text-muted-foreground border-border',
   },
 };
@@ -118,7 +118,7 @@ function ProfileCard({
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Brain className="size-3.5" />
-            <span className="uppercase tracking-wider">Big Five Approximation</span>
+            <span className="uppercase tracking-wider">Przybliżenie Wielkiej Piątki</span>
           </div>
           <div className="space-y-2">
             {BIG_FIVE_LABELS.map((trait, idx) => {
@@ -141,7 +141,7 @@ function ProfileCard({
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Link2 className="size-3.5" />
-            <span className="uppercase tracking-wider">Attachment Style</span>
+            <span className="uppercase tracking-wider">Styl przywiązania</span>
           </div>
           <Badge className={cn('border', attachmentStyle.className)}>
             {attachmentStyle.label}
@@ -161,17 +161,17 @@ function ProfileCard({
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <MessageCircle className="size-3.5" />
-            <span className="uppercase tracking-wider">Communication Style</span>
+            <span className="uppercase tracking-wider">Styl komunikacji</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             <Badge variant="outline" className="text-[10px] capitalize">
               {profile.communication_profile.style}
             </Badge>
             <Badge variant="outline" className="text-[10px]">
-              Assertiveness: {profile.communication_profile.assertiveness}/10
+              Asertywność: {profile.communication_profile.assertiveness}/10
             </Badge>
             <Badge variant="outline" className="text-[10px]">
-              Expressiveness: {profile.communication_profile.emotional_expressiveness}/10
+              Ekspresyjność: {profile.communication_profile.emotional_expressiveness}/10
             </Badge>
             <Badge variant="outline" className="text-[10px] capitalize">
               {profile.communication_profile.question_to_statement_ratio.replace(/_/g, ' ')}
@@ -179,7 +179,7 @@ function ProfileCard({
           </div>
           {profile.communication_profile.verbal_tics.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              Verbal tics:{' '}
+              Nawyki słowne:{' '}
               {profile.communication_profile.verbal_tics.map((tic, idx) => (
                 <span key={idx}>
                   <span className="font-mono text-foreground">&ldquo;{tic}&rdquo;</span>
@@ -194,7 +194,7 @@ function ProfileCard({
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Heart className="size-3.5" />
-            <span className="uppercase tracking-wider">Communication Needs</span>
+            <span className="uppercase tracking-wider">Potrzeby komunikacyjne</span>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="capitalize">
@@ -207,7 +207,7 @@ function ProfileCard({
           {profile.communication_needs.unmet_needs_signals.length > 0 && (
             <div className="space-y-1 pt-1">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Unmet needs signals
+                Sygnały niezaspokojonych potrzeb
               </p>
               {profile.communication_needs.unmet_needs_signals.map((signal, idx) => (
                 <p key={idx} className="text-xs text-warning">
@@ -222,7 +222,7 @@ function ProfileCard({
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Zap className="size-3.5" />
-            <span className="uppercase tracking-wider">Emotional Patterns</span>
+            <span className="uppercase tracking-wider">Wzorce emocjonalne</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {profile.emotional_patterns.dominant_emotions.map((emotion) => (
@@ -233,13 +233,13 @@ function ProfileCard({
           </div>
           {profile.emotional_patterns.coping_mechanisms_visible.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              Coping:{' '}
+              Mechanizmy radzenia sobie:{' '}
               {profile.emotional_patterns.coping_mechanisms_visible.join(', ')}
             </p>
           )}
           {profile.emotional_patterns.stress_indicators.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              Stress indicators:{' '}
+              Wskaźniki stresu:{' '}
               {profile.emotional_patterns.stress_indicators.join(', ')}
             </p>
           )}
@@ -252,7 +252,7 @@ function ProfileCard({
 export default function PersonalityProfiles({ profiles, participants }: PersonalityProfilesProps) {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Personality Profiles</h3>
+      <h3 className="text-lg font-semibold">Profile osobowości</h3>
       <div className="grid gap-4 md:grid-cols-2">
         {participants.map((name, index) => {
           const profile = profiles[name];

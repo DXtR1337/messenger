@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import type { PersonMetrics } from '@/lib/parsers/types';
 
 interface EmojiReactionsProps {
@@ -47,12 +48,18 @@ export default function EmojiReactions({
   const personB = participants[1];
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{ duration: 0.5 }}
+      className="overflow-hidden rounded-xl border border-border bg-card"
+    >
       <div className="flex items-center justify-between px-5 pt-4">
         <div>
-          <h3 className="font-display text-[0.93rem] font-bold">Top reakcje</h3>
-          <p className="mt-0.5 text-[0.72rem] text-[#555]">
-            Najczesciej uzywane emoji
+          <h3 className="font-display text-[15px] font-bold">Top reakcje</h3>
+          <p className="mt-0.5 text-xs text-text-muted">
+            Najczęściej używane emoji
           </p>
         </div>
       </div>
@@ -76,7 +83,7 @@ export default function EmojiReactions({
                   style={{ width: `${pctB}%` }}
                 />
               </div>
-              <span className="w-11 text-right font-display text-[0.78rem] text-muted-foreground">
+              <span className="w-11 text-right font-display text-[13px] text-muted-foreground">
                 {entry.total}
               </span>
             </div>
@@ -84,7 +91,7 @@ export default function EmojiReactions({
         })}
 
         {/* Legend */}
-        <div className="mt-1.5 flex items-center gap-4 text-[0.72rem] text-[#555]">
+        <div className="mt-1.5 flex items-center gap-4 text-xs text-text-muted">
           {personA && (
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-2 rounded-sm bg-chart-a" />
@@ -99,6 +106,6 @@ export default function EmojiReactions({
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

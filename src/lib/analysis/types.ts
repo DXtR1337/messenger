@@ -4,6 +4,7 @@
  */
 
 import type { ParsedConversation, QuantitativeAnalysis } from '../parsers/types';
+import type { SCIDResult } from './scid-ii';
 
 // ============================================================
 // PASS 1: Overview — Tone, Style, Relationship Type
@@ -117,6 +118,7 @@ export interface IntimacyMarkers {
 export interface RedFlag {
   pattern: string;
   severity: 'mild' | 'moderate' | 'severe';
+  context_note?: string;
   evidence_indices: number[];
   confidence: number;
 }
@@ -132,6 +134,7 @@ export interface Pass2Result {
   emotional_labor: EmotionalLabor;
   conflict_patterns: ConflictPatterns;
   intimacy_markers: IntimacyMarkers;
+  relationship_phase?: 'new' | 'developing' | 'established' | 'long_term';
   red_flags: RedFlag[];
   green_flags: GreenFlag[];
 }
@@ -169,7 +172,9 @@ export interface AttachmentIndicators {
   | 'disorganized'
   | 'insufficient_data';
   indicators: AttachmentIndicator[];
+  /** Max 65 for text-only analysis */
   confidence: number;
+  disclaimer?: string;
 }
 
 export interface CommunicationProfile {
@@ -206,6 +211,31 @@ export interface EmotionalPatterns {
   confidence: number;
 }
 
+export interface MBTIResult {
+  type: string; // e.g., "INFJ", "ENTP"
+  confidence: number; // 0-100
+  reasoning: {
+    ie: { letter: 'I' | 'E'; evidence: string; confidence: number };
+    sn: { letter: 'S' | 'N'; evidence: string; confidence: number };
+    tf: { letter: 'T' | 'F'; evidence: string; confidence: number };
+    jp: { letter: 'J' | 'P'; evidence: string; confidence: number };
+  };
+}
+
+export interface LoveLanguageResult {
+  primary: 'words_of_affirmation' | 'quality_time' | 'acts_of_service' | 'gifts_pebbling' | 'physical_touch';
+  secondary: 'words_of_affirmation' | 'quality_time' | 'acts_of_service' | 'gifts_pebbling' | 'physical_touch';
+  scores: {
+    words_of_affirmation: number; // 0-100
+    quality_time: number;
+    acts_of_service: number;
+    gifts_pebbling: number;
+    physical_touch: number;
+  };
+  evidence: string;
+  confidence: number;
+}
+
 export interface PersonProfile {
   big_five_approximation: BigFiveApproximation;
   attachment_indicators: AttachmentIndicators;
@@ -215,6 +245,8 @@ export interface PersonProfile {
   clinical_observations: ClinicalObservations;
   conflict_resolution: ConflictResolution;
   emotional_intelligence: EmotionalIntelligence;
+  mbti?: MBTIResult;
+  love_language?: LoveLanguageResult;
 }
 
 // ── Clinical-adjacent observations ────────────────────────
@@ -278,10 +310,10 @@ export interface EmotionalIntelligence {
 
 export interface HealthScoreComponents {
   balance: number;
-  engagement: number;
+  reciprocity: number;
+  response_pattern: number;
   emotional_safety: number;
   growth_trajectory: number;
-  communication_quality: number;
 }
 
 export interface HealthScore {
@@ -332,11 +364,32 @@ export interface Pass4Result {
 }
 
 // ============================================================
+// Relationship Context
+// ============================================================
+
+export type RelationshipContext = 'romantic' | 'friendship' | 'colleague' | 'professional' | 'family' | 'other';
+
+// ============================================================
+// ROAST MODE
+// ============================================================
+
+export interface RoastResult {
+  roasts_per_person: Record<string, string[]>; // person name -> array of roast lines
+  relationship_roast: string; // overall relationship roast paragraph
+  superlatives: Array<{
+    title: string;   // e.g., "Mistrz Ghostingu"
+    holder: string;  // person name
+    roast: string;   // funny description
+  }>;
+  verdict: string; // one-line brutal summary
+}
+
+// ============================================================
 // Container & Storage Types
 // ============================================================
 
 export interface QualitativeAnalysis {
-  status: 'pending' | 'running' | 'complete' | 'error';
+  status: 'pending' | 'running' | 'complete' | 'partial' | 'error';
   error?: string;
   currentPass?: number;
   pass1?: Pass1Result;
@@ -344,6 +397,9 @@ export interface QualitativeAnalysis {
   /** Keyed by participant name */
   pass3?: Record<string, PersonProfile>;
   pass4?: Pass4Result;
+  roast?: RoastResult;
+  /** SCID-II personality disorder screening (optional Pass 5) */
+  scid?: SCIDResult;
   completedAt?: number;
 }
 
@@ -352,6 +408,7 @@ export interface StoredAnalysis {
   id: string;
   title: string;
   createdAt: number;
+  relationshipContext?: RelationshipContext;
   conversation: ParsedConversation;
   quantitative: QuantitativeAnalysis;
   qualitative?: QualitativeAnalysis;
@@ -365,4 +422,5 @@ export interface AnalysisIndexEntry {
   messageCount: number;
   participants: string[];
   hasQualitative: boolean;
+  healthScore?: number;
 }

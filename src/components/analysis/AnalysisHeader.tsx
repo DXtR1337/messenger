@@ -54,19 +54,19 @@ export default function AnalysisHeader({
 
   return (
     <motion.div
-      className="flex flex-col items-center justify-between gap-6 mb-5 md:flex-row md:items-center"
+      className="flex flex-col items-center justify-between gap-6 md:flex-row md:items-center"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: 'easeOut' }}
     >
       {/* Left side */}
       <div className="min-w-0 flex-1">
-        <h1 className="font-display text-[1.7rem] font-extrabold tracking-[-0.04em] text-foreground">
+        <h1 className="font-display text-[1.75rem] font-extrabold tracking-[-0.04em] text-foreground">
           {title}
         </h1>
         <div className="mt-1.5 flex flex-wrap gap-2.5">
           {/* Message count */}
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#1a1a1a] bg-white/[0.03] px-2.5 py-1 text-[0.72rem] text-[#555]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-white/[0.03] px-2.5 py-1 text-xs text-text-muted">
             <svg
               width="12"
               height="12"
@@ -79,11 +79,11 @@ export default function AnalysisHeader({
             >
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
             </svg>
-            {formatMessageCount(metadata.totalMessages)} wiadomosci
+            {formatMessageCount(metadata.totalMessages)} wiadomości
           </span>
 
           {/* Date range */}
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#1a1a1a] bg-white/[0.03] px-2.5 py-1 text-[0.72rem] text-[#555]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-white/[0.03] px-2.5 py-1 text-xs text-text-muted">
             <svg
               width="12"
               height="12"
@@ -103,7 +103,7 @@ export default function AnalysisHeader({
           </span>
 
           {/* Duration */}
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#1a1a1a] bg-white/[0.03] px-2.5 py-1 text-[0.72rem] text-[#555]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-white/[0.03] px-2.5 py-1 text-xs text-text-muted">
             <svg
               width="12"
               height="12"
@@ -121,7 +121,7 @@ export default function AnalysisHeader({
           </span>
 
           {/* Platform badge */}
-          <span className="inline-flex items-center gap-1 rounded-full border border-transparent bg-accent-subtle px-2.5 py-1 text-[0.72rem] font-semibold text-accent">
+          <span className="inline-flex items-center gap-1 rounded-full border border-transparent bg-accent-subtle px-2.5 py-1 text-xs font-semibold text-accent">
             {platform === 'messenger'
               ? 'Messenger'
               : platform === 'whatsapp'
@@ -176,13 +176,13 @@ export default function AnalysisHeader({
               >
                 {healthScore}
               </span>
-              <span className="text-[0.62rem] uppercase tracking-[0.05em] text-[#555]">
-                Health Score
+              <span className="text-[10px] uppercase tracking-[0.05em] text-text-muted">
+                Wynik zdrowia
               </span>
             </div>
           </div>
           {healthVerdict && (
-            <p className="mt-1 text-center text-[0.78rem] font-medium text-success">
+            <p className="mt-1 text-center text-[13px] font-medium text-success">
               {healthVerdict}
             </p>
           )}

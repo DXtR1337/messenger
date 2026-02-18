@@ -1,0 +1,7 @@
+node_modules
+.next
+.git
+*.md
+.env.local
+Animate_me_write_1080p_202602171622.mp4
+messages/

@@ -150,8 +150,8 @@ export default function ToneRadarChart({
   const personA = participants[0];
   const personB = participants[1];
 
-  const toneA = personA ? pass1.tone_per_person[personA] : undefined;
-  const toneB = personB ? pass1.tone_per_person[personB] : undefined;
+  const toneA = personA ? pass1.tone_per_person?.[personA] : undefined;
+  const toneB = personB ? pass1.tone_per_person?.[personB] : undefined;
 
   const dataA = toneA ? mapToneData(toneA) : null;
   const dataB = toneB ? mapToneData(toneB) : null;

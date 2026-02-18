@@ -63,7 +63,7 @@ function TimelineItem({
   return (
     <motion.div
       ref={ref}
-      className={cn('flex gap-3.5 mb-5 relative', isLast && 'mb-0')}
+      className={cn('flex gap-4 mb-5 relative', isLast && 'mb-0')}
       initial={{ opacity: 0, x: -12 }}
       animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -12 }}
       transition={{ duration: 0.4, delay: index * 0.1, ease: 'easeOut' }}
@@ -75,7 +75,7 @@ function TimelineItem({
 
       {/* Date */}
       {point.approximate_date && (
-        <span className="font-display text-[0.72rem] text-[#555] w-20 shrink-0 pt-0.5">
+        <span className="font-display text-xs text-text-muted w-20 shrink-0 pt-0.5">
           {point.approximate_date}
         </span>
       )}
@@ -90,11 +90,11 @@ function TimelineItem({
 
       {/* Content */}
       <div className="flex-1">
-        <div className="font-bold text-[0.9rem] mb-0.5">
+        <div className="font-bold text-sm mb-0.5">
           {point.description}
         </div>
         {point.evidence && (
-          <p className="text-[0.78rem] text-muted-foreground leading-relaxed">
+          <p className="text-[13px] text-muted-foreground leading-relaxed">
             {point.evidence}
           </p>
         )}
@@ -122,10 +122,10 @@ export default function TurningPointsTimeline({
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="flex justify-between items-center px-5 pt-4">
         <div>
-          <h3 className="font-display text-[0.93rem] font-bold">
+          <h3 className="font-display text-[15px] font-bold">
             Punkty zwrotne
           </h3>
-          <p className="text-[0.72rem] text-[#555] mt-0.5">
+          <p className="text-xs text-text-muted mt-0.5">
             Kluczowe momenty wykryte przez AI
           </p>
         </div>

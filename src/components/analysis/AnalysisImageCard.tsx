@@ -62,8 +62,8 @@ export default function AnalysisImageCard({
                 body: JSON.stringify({
                     participants,
                     conversationExcerpt: excerpt,
-                    executiveSummary: pass4.executive_summary,
-                    healthScore: pass4.health_score.overall,
+                    executiveSummary: pass4?.executive_summary,
+                    healthScore: pass4?.health_score?.overall,
                 }),
             });
 

@@ -26,12 +26,12 @@ const HEALTH_LABELS: Array<{
   key: keyof Pass4Result['health_score']['components'];
   label: string;
 }> = [
-  { key: 'balance', label: 'Balance' },
-  { key: 'engagement', label: 'Engagement' },
-  { key: 'emotional_safety', label: 'Emotional Safety' },
-  { key: 'growth_trajectory', label: 'Growth' },
-  { key: 'communication_quality', label: 'Communication' },
-];
+    { key: 'balance', label: 'Równowaga' },
+    { key: 'reciprocity', label: 'Wzajemność' },
+    { key: 'response_pattern', label: 'Wzorce odpowiedzi' },
+    { key: 'emotional_safety', label: 'Bezpieczeństwo emocjonalne' },
+    { key: 'growth_trajectory', label: 'Rozwój' },
+  ];
 
 function getScoreColor(score: number): string {
   if (score < 40) return 'text-destructive';
@@ -58,10 +58,10 @@ const PRIORITY_STYLES = {
 };
 
 const DIRECTION_STYLES: Record<string, { label: string; className: string }> = {
-  strengthening: { label: 'Strengthening', className: 'text-success' },
-  stable: { label: 'Stable', className: 'text-primary' },
-  weakening: { label: 'Weakening', className: 'text-warning' },
-  volatile: { label: 'Volatile', className: 'text-destructive' },
+  strengthening: { label: 'Wzmacniająca się', className: 'text-success' },
+  stable: { label: 'Stabilna', className: 'text-primary' },
+  weakening: { label: 'Słabnąca', className: 'text-warning' },
+  volatile: { label: 'Niestabilna', className: 'text-destructive' },
 };
 
 function HealthScoreBreakdown({
@@ -75,7 +75,7 @@ function HealthScoreBreakdown({
   return (
     <div ref={ref} className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">Overall Score</span>
+        <span className="text-sm text-muted-foreground">Wynik ogólny</span>
         <span className={cn('font-mono text-3xl font-bold', getScoreColor(healthScore.overall))}>
           {healthScore.overall}
         </span>
@@ -124,7 +124,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <FileText className="size-4 text-muted-foreground" />
-            Executive Summary
+            Podsumowanie
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -140,7 +140,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <Activity className="size-4 text-muted-foreground" />
-              Conversation Health Score
+              Wynik zdrowia rozmowy
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -153,13 +153,13 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <TrendingUp className="size-4 text-muted-foreground" />
-              Relationship Trajectory
+              Trajektoria relacji
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Current Phase</p>
+                <p className="text-xs text-muted-foreground">Obecna faza</p>
                 <p className="mt-0.5 text-sm font-medium capitalize">
                   {relationship_trajectory.current_phase}
                 </p>
@@ -172,7 +172,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
             {relationship_trajectory.inflection_points.length > 0 && (
               <div className="space-y-2 border-t border-border pt-3">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Inflection Points
+                  Punkty zwrotne
                 </p>
                 {relationship_trajectory.inflection_points.map((point, idx) => (
                   <div key={idx} className="rounded-lg bg-secondary/50 px-3 py-2">
@@ -197,7 +197,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <Lightbulb className="size-4 text-muted-foreground" />
-              Key Findings
+              Kluczowe odkrycia
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -221,7 +221,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
       {insights.length > 0 && (
         <Card className="border-border/50">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Actionable Insights</CardTitle>
+            <CardTitle className="text-base font-semibold">Wskazówki</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {insights.map((insight, idx) => {
@@ -236,7 +236,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
                   </Badge>
                   <div>
                     <p className="text-xs text-muted-foreground">
-                      For <span className="font-medium text-foreground">{insight.for}</span>
+                      Dla: <span className="font-medium text-foreground">{insight.for}</span>
                     </p>
                     <p className="mt-0.5 text-sm">{insight.insight}</p>
                   </div>
@@ -251,7 +251,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
       <Card className="border-border/50 bg-gradient-to-br from-card to-secondary/20">
         <CardHeader>
           <CardTitle className="text-base font-semibold">
-            Conversation Personality
+            Osobowość rozmowy
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -261,7 +261,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
                 <Film className="size-5 text-primary" />
               </div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                If a Movie Genre
+                Gatunek filmowy
               </p>
               <p className="mt-1 text-sm font-medium">
                 {conversation_personality.if_this_conversation_were_a.movie_genre}
@@ -272,7 +272,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
                 <Cloud className="size-5 text-primary" />
               </div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                If Weather
+                Pogoda
               </p>
               <p className="mt-1 text-sm font-medium">
                 {conversation_personality.if_this_conversation_were_a.weather}
@@ -283,7 +283,7 @@ export default function FinalReport({ pass4, participants }: FinalReportProps) {
                 <Hash className="size-5 text-primary" />
               </div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                In One Word
+                Jednym słowem
               </p>
               <p className="mt-1 text-sm font-semibold">
                 {conversation_personality.if_this_conversation_were_a.one_word}

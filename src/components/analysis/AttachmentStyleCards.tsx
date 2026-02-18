@@ -64,7 +64,7 @@ function PersonAttachmentCard({
       transition={{ duration: 0.4, delay, ease: 'easeOut' }}
     >
       {/* Name row */}
-      <div className="flex items-center gap-1.5 font-semibold text-[0.86rem] mb-1.5">
+      <div className="flex items-center gap-1.5 font-semibold text-sm mb-1.5">
         <span className={cn('w-2 h-2 rounded-full shrink-0', dotClass)} />
         <span>{name}</span>
       </div>
@@ -72,7 +72,7 @@ function PersonAttachmentCard({
       {/* Attachment type badge */}
       <span
         className={cn(
-          'font-display text-[0.78rem] font-semibold px-2.5 py-1 rounded-md inline-block mb-2',
+          'font-display text-[13px] font-semibold px-2.5 py-1 rounded-md inline-block mb-2',
           bgClass,
           textClass,
         )}
@@ -86,7 +86,7 @@ function PersonAttachmentCard({
           {behavioralIndicators.map((indicator, idx) => (
             <span
               key={idx}
-              className="text-[0.68rem] text-muted-foreground px-2 py-0.5 bg-white/[0.04] border border-border rounded"
+              className="text-xs text-muted-foreground px-2 py-0.5 bg-white/[0.04] border border-border rounded"
             >
               {indicator}
             </span>
@@ -110,9 +110,9 @@ export default function AttachmentStyleCards({
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="px-5 pt-4">
-        <h3 className="font-display text-[0.93rem] font-bold">Styl przywiązania</h3>
+        <h3 className="font-display text-[15px] font-bold">Styl przywiązania</h3>
       </div>
-      <div className="px-5 py-4 flex flex-col gap-3.5">
+      <div className="px-5 py-4 flex flex-col gap-4">
         {participantsWithProfiles.map((name, index) => {
           const profile = profiles[name];
           if (!profile) return null;

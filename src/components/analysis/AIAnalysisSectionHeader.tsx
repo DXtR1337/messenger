@@ -34,12 +34,12 @@ export default function AIAnalysisSectionHeader({ confidence }: AIAnalysisSectio
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >
-      <div className="inline-flex items-center gap-1.5 font-display text-[0.78rem] font-semibold text-chart-b bg-chart-b-subtle px-3.5 py-1.5 rounded-full">
+      <div className="inline-flex items-center gap-1.5 font-display text-[13px] font-semibold text-chart-b bg-chart-b-subtle px-3.5 py-1.5 rounded-full">
         <BrainIcon />
         Analiza AI — Claude
       </div>
       {confidence !== undefined && confidence > 0 && (
-        <span className="font-display text-[0.72rem] text-[#555]">
+        <span className="font-display text-xs text-text-muted">
           Pewność analizy: {confidence}%
         </span>
       )}

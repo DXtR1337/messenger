@@ -20,18 +20,18 @@ interface StepDefinition {
 const STEPS: StepDefinition[] = [
   {
     key: 'parsing',
-    label: 'Parse',
-    description: 'Reading and decoding Messenger data',
+    label: 'Parsowanie',
+    description: 'Odczytywanie i dekodowanie danych z Messengera',
   },
   {
     key: 'analyzing',
-    label: 'Compute',
-    description: 'Crunching quantitative metrics',
+    label: 'Obliczanie',
+    description: 'Wyliczanie metryk ilościowych',
   },
   {
     key: 'saving',
-    label: 'Save',
-    description: 'Persisting analysis results',
+    label: 'Zapis',
+    description: 'Zapisywanie wyników analizy',
   },
 ];
 
@@ -172,7 +172,7 @@ export function ProcessingState({ stage, progress, error }: ProcessingStateProps
             className="flex items-center gap-2 rounded-md bg-success/10 border border-success/20 px-3 py-2.5 text-xs text-success"
           >
             <Check className="size-4 shrink-0" />
-            <span>Analysis complete. Redirecting...</span>
+            <span>Analiza gotowa. Przekierowanie...</span>
           </motion.div>
         )}
 

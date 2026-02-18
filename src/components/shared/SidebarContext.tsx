@@ -13,7 +13,10 @@ const STORAGE_KEY = 'chatscope_sidebar_collapsed';
 
 interface SidebarContextValue {
   collapsed: boolean;
+  mobileOpen: boolean;
+  isMobile: boolean;
   toggleCollapsed: () => void;
+  setMobileOpen: (open: boolean) => void;
   breadcrumb: string[];
   setBreadcrumb: (items: string[]) => void;
 }
@@ -32,28 +35,57 @@ function readPersistedCollapsed(): boolean {
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [breadcrumb, setBreadcrumb] = useState<string[]>(['ChatScope']);
 
-  // Hydrate from localStorage after mount to avoid SSR mismatch
   useEffect(() => {
     setCollapsed(readPersistedCollapsed());
+
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setMobileOpen(false);
+      }
+      // Auto-collapse sidebar on medium screens (768-1279)
+      if (window.innerWidth >= 768 && window.innerWidth < 1280) {
+        setCollapsed(true);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const toggleCollapsed = useCallback(() => {
+    if (isMobile) {
+      setMobileOpen((prev) => !prev);
+      return;
+    }
     setCollapsed((prev) => {
       const next = !prev;
       try {
         localStorage.setItem(STORAGE_KEY, String(next));
       } catch {
-        // localStorage unavailable — silently ignore
+        // localStorage unavailable
       }
       return next;
     });
-  }, []);
+  }, [isMobile]);
 
   return (
     <SidebarContext.Provider
-      value={{ collapsed, toggleCollapsed, breadcrumb, setBreadcrumb }}
+      value={{
+        collapsed,
+        mobileOpen,
+        isMobile,
+        toggleCollapsed,
+        setMobileOpen,
+        breadcrumb,
+        setBreadcrumb,
+      }}
     >
       {children}
     </SidebarContext.Provider>

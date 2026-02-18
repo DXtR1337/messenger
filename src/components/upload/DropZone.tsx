@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Upload, X, FileJson, AlertTriangle } from 'lucide-react';
+import { Upload, X, FileJson, FileText, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -32,28 +32,28 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
       setError(null);
       setSizeWarning(null);
 
-      // Filter to only .json files
-      const jsonFiles = files.filter((file) => file.name.endsWith('.json'));
-      if (jsonFiles.length === 0) {
-        setError('Only .json files are accepted. Please select a Messenger export file.');
+      // Filter to .json and .txt files
+      const validFiles = files.filter((file) => file.name.endsWith('.json') || file.name.endsWith('.txt'));
+      if (validFiles.length === 0) {
+        setError('Akceptowane są tylko pliki .json i .txt. Wybierz plik eksportu z Messengera lub WhatsAppa.');
         return;
       }
 
-      if (jsonFiles.length < files.length) {
+      if (validFiles.length < files.length) {
         setError(
-          `${files.length - jsonFiles.length} non-JSON file(s) were ignored.`
+          `${files.length - validFiles.length} plik(i) o nieobsługiwanym formacie zostały pominięte.`
         );
       }
 
       // Check individual file sizes
-      const totalSize = jsonFiles.reduce((sum, file) => sum + file.size, 0);
+      const totalSize = validFiles.reduce((sum, file) => sum + file.size, 0);
       const totalSizeMB = totalSize / (1024 * 1024);
 
-      for (const file of jsonFiles) {
+      for (const file of validFiles) {
         const fileSizeMB = file.size / (1024 * 1024);
         if (fileSizeMB > MAX_FILE_SIZE_MB) {
           setError(
-            `"${file.name}" exceeds the ${MAX_FILE_SIZE_MB}MB limit (${formatFileSize(file.size)}). Please use a smaller export.`
+            `"${file.name}" przekracza limit ${MAX_FILE_SIZE_MB}MB (${formatFileSize(file.size)}).`
           );
           return;
         }
@@ -61,19 +61,19 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
 
       if (totalSizeMB > MAX_FILE_SIZE_MB) {
         setError(
-          `Total file size (${formatFileSize(totalSize)}) exceeds the ${MAX_FILE_SIZE_MB}MB limit.`
+          `Łączny rozmiar plików (${formatFileSize(totalSize)}) przekracza limit ${MAX_FILE_SIZE_MB}MB.`
         );
         return;
       }
 
       if (totalSizeMB > WARN_FILE_SIZE_MB) {
         setSizeWarning(
-          `Large upload (${formatFileSize(totalSize)}). Processing may take a while.`
+          `Duży upload (${formatFileSize(totalSize)}). Przetwarzanie może chwilę potrwać.`
         );
       }
 
-      setSelectedFiles(jsonFiles);
-      onFilesSelected(jsonFiles);
+      setSelectedFiles(validFiles);
+      onFilesSelected(validFiles);
     },
     [onFilesSelected]
   );
@@ -155,7 +155,7 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
         const totalSizeMB = totalSize / (1024 * 1024);
         if (totalSizeMB > WARN_FILE_SIZE_MB) {
           setSizeWarning(
-            `Large upload (${formatFileSize(totalSize)}). Processing may take a while.`
+            `Duży upload (${formatFileSize(totalSize)}). Przetwarzanie może chwilę potrwać.`
           );
         }
         onFilesSelected(updated);
@@ -197,7 +197,7 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json"
+          accept=".json,.txt"
           multiple
           onChange={handleFileInputChange}
           className="hidden"
@@ -216,16 +216,21 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
 
         <div className="text-center space-y-1.5">
           <p className="text-sm font-medium text-foreground">
-            {isDragging ? 'Drop files here' : 'Drop your Messenger JSON here'}
+            {isDragging ? 'Upuść pliki tutaj' : 'Upuść plik z Messengera (.json) lub WhatsAppa (.txt)'}
           </p>
           <p className="text-xs text-muted-foreground">
-            or click to browse
+            lub kliknij, żeby wybrać
           </p>
           <p className="text-xs text-muted-foreground/70">
-            Supports multiple files (message_1.json, message_2.json, ...)
+            Obsługuje Messenger (JSON) i WhatsApp (TXT)
           </p>
         </div>
       </div>
+
+      {/* Privacy notice */}
+      <p className="text-center text-[11px] text-muted-foreground/50">
+        🔒 Twoje wiadomości są przetwarzane wyłącznie w przeglądarce. Żadne dane nie trafiają na serwer.
+      </p>
 
       {/* Error message */}
       {error && (
@@ -248,7 +253,7 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
             <span>
-              {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+              {selectedFiles.length} plik{selectedFiles.length !== 1 ? '(i)' : ''} wybrany{selectedFiles.length !== 1 ? 'ch' : ''}
             </span>
             <span>{formatFileSize(totalSize)}</span>
           </div>
@@ -258,7 +263,11 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
                 key={`${file.name}-${file.size}-${file.lastModified}`}
                 className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2"
               >
-                <FileJson className="size-4 shrink-0 text-primary" />
+                {file.name.endsWith('.txt') ? (
+                  <FileText className="size-4 shrink-0 text-primary" />
+                ) : (
+                  <FileJson className="size-4 shrink-0 text-primary" />
+                )}
                 <span className="flex-1 truncate text-sm font-mono text-foreground">
                   {file.name}
                 </span>

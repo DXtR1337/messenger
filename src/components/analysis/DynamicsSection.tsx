@@ -15,6 +15,18 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Pass2Result } from '@/lib/analysis/types';
 
+const FREQUENCY_PL: Record<string, string> = {
+  frequent: 'częste',
+  occasional: 'okazjonalne',
+  rare: 'rzadkie',
+};
+
+const SEVERITY_PL: Record<string, string> = {
+  mild: 'łagodne',
+  moderate: 'umiarkowane',
+  severe: 'poważne',
+};
+
 interface DynamicsSectionProps {
   pass2: Pass2Result;
   participants: string[];
@@ -54,10 +66,10 @@ function PowerBalanceSlider({
         </span>
         <span className="font-mono text-muted-foreground">
           {Math.abs(score) < 15
-            ? 'Balanced'
+            ? 'Zrównoważone'
             : score < 0
-              ? `${participants[0] ?? 'Person A'} leads`
-              : `${participants[1] ?? 'Person B'} leads`}
+              ? `${participants[0] ?? 'Person A'} przewodzi`
+              : `${participants[1] ?? 'Person B'} przewodzi`}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="font-medium">{participants[1] ?? 'Person B'}</span>
@@ -105,7 +117,7 @@ function EmotionalLaborBreakdown({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Primary caregiver</span>
+        <span>Główny opiekun emocjonalny</span>
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block size-2 rounded-full"
@@ -131,7 +143,7 @@ function EmotionalLaborBreakdown({
                   pattern.frequency === 'rare' && 'border-muted-foreground/30 text-muted-foreground',
                 )}
               >
-                {pattern.frequency}
+                {FREQUENCY_PL[pattern.frequency] ?? pattern.frequency}
               </Badge>
               <span className="flex items-center gap-1">
                 <span
@@ -165,7 +177,7 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <Scale className="size-4 text-muted-foreground" />
-              Power Balance
+              Balans sił
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -173,17 +185,17 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
 
             <div className="space-y-2 text-xs text-muted-foreground">
               <div className="flex justify-between">
-                <span>Who adapts more</span>
+                <span>Kto dostosowuje się bardziej</span>
                 <span className="font-medium text-foreground">{power_dynamics.who_adapts_more}</span>
               </div>
               <div className="flex justify-between">
-                <span>Adaptation type</span>
+                <span>Typ adaptacji</span>
                 <span className="font-medium capitalize text-foreground">
                   {power_dynamics.adaptation_type}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Confidence</span>
+                <span>Pewność</span>
                 <span className="font-mono font-medium text-foreground">
                   {power_dynamics.confidence}%
                 </span>
@@ -192,7 +204,7 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
 
             {power_dynamics.evidence.length > 0 && (
               <div className="space-y-1 border-t border-border pt-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Evidence</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Dowody</p>
                 {power_dynamics.evidence.map((item, idx) => (
                   <p key={idx} className="text-xs italic text-muted-foreground">
                     &ldquo;{item}&rdquo;
@@ -207,7 +219,7 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <HeartHandshake className="size-4 text-muted-foreground" />
-              Emotional Labor
+              Praca emocjonalna
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -221,20 +233,20 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <Swords className="size-4 text-muted-foreground" />
-            Conflict Patterns
+            Wzorce konfliktów
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-4 text-xs">
             <div>
-              <span className="text-muted-foreground">Frequency: </span>
+              <span className="text-muted-foreground">Częstotliwość: </span>
               <Badge variant="outline" className="ml-1 capitalize text-xs">
-                {conflict_patterns.conflict_frequency.replace(/_/g, ' ')}
+                {FREQUENCY_PL[conflict_patterns.conflict_frequency] ?? conflict_patterns.conflict_frequency.replace(/_/g, ' ')}
               </Badge>
             </div>
             {conflict_patterns.typical_trigger && (
               <div>
-                <span className="text-muted-foreground">Typical trigger: </span>
+                <span className="text-muted-foreground">Typowy wyzwalacz: </span>
                 <span className="font-medium text-foreground">{conflict_patterns.typical_trigger}</span>
               </div>
             )}
@@ -243,7 +255,7 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
           {/* Resolution styles per person */}
           <div className="space-y-2">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Resolution Styles
+              Style rozwiązywania
             </p>
             {Object.entries(conflict_patterns.resolution_style).map(([name, style]) => {
               const colorIndex = participants.indexOf(name);
@@ -269,7 +281,7 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
           {conflict_patterns.unresolved_tensions.length > 0 && (
             <div className="space-y-1 border-t border-border pt-3">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Unresolved Tensions
+                Nierozwiązane napięcia
               </p>
               {conflict_patterns.unresolved_tensions.map((tension, idx) => (
                 <p key={idx} className="text-xs text-muted-foreground">
@@ -288,7 +300,7 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <AlertTriangle className="size-4 text-destructive" />
-                Red Flags
+                Czerwone flagi
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -311,7 +323,7 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
                         flag.severity === 'mild' && 'border-warning/30 text-warning',
                       )}
                     >
-                      {flag.severity}
+                      {SEVERITY_PL[flag.severity] ?? flag.severity}
                     </Badge>
                   </div>
                 </div>
@@ -325,7 +337,7 @@ export default function DynamicsSection({ pass2, participants }: DynamicsSection
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <CheckCircle2 className="size-4 text-success" />
-                Green Flags
+                Zielone flagi
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">

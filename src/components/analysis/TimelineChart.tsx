@@ -10,36 +10,29 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { PatternMetrics } from '@/lib/parsers/types';
+import {
+  CHART_HEIGHT,
+  CHART_TOOLTIP_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+  CHART_AXIS_TICK,
+  CHART_GRID_PROPS,
+  PERSON_COLORS_HEX,
+  MONTHS_PL,
+} from './chart-config';
 
 interface TimelineChartProps {
   monthlyVolume: PatternMetrics['monthlyVolume'];
   participants: string[];
 }
 
-const MONTHS_PL: Record<string, string> = {
-  '01': 'Sty',
-  '02': 'Lut',
-  '03': 'Mar',
-  '04': 'Kwi',
-  '05': 'Maj',
-  '06': 'Cze',
-  '07': 'Lip',
-  '08': 'Sie',
-  '09': 'Wrz',
-  '10': 'Paz',
-  '11': 'Lis',
-  '12': 'Gru',
-};
-
 function formatMonth(ym: string): string {
   const parts = ym.split('-');
-  const m = parts[1] ?? '';
-  return MONTHS_PL[m] ?? m;
+  const m = parseInt(parts[1] ?? '0', 10);
+  return MONTHS_PL[m - 1] ?? parts[1] ?? '';
 }
-
-const PERSON_COLORS = ['#3b82f6', '#a855f7'] as const;
 
 type TimeRange = '3M' | '6M' | 'Rok' | 'Wszystko';
 const TIME_RANGES: TimeRange[] = ['3M', '6M', 'Rok', 'Wszystko'];
@@ -89,14 +82,22 @@ export default function TimelineChart({
   }, [filteredData, participants]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <motion.div
+      role="img"
+      aria-label="Wykres aktywności wiadomości w czasie"
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{ duration: 0.5 }}
+      className="overflow-hidden rounded-xl border border-border bg-card"
+    >
       <div className="relative flex items-center justify-between px-5 pt-4">
         <div>
-          <h3 className="font-display text-[0.93rem] font-bold">
-            Aktywnosc w czasie
+          <h3 className="font-display text-[15px] font-bold">
+            Aktywność w czasie
           </h3>
-          <p className="mt-0.5 text-[0.72rem] text-[#555]">
-            Wiadomosci miesiecznie &mdash; porownanie uczestnikow
+          <p className="mt-0.5 text-xs text-text-muted">
+            Wiadomości miesięcznie &mdash; porównanie uczestników
           </p>
         </div>
         <div className="flex gap-0.5 rounded-md bg-white/[0.03] p-0.5">
@@ -105,29 +106,28 @@ export default function TimelineChart({
               key={r}
               onClick={() => setRange(r)}
               className={cn(
-                'cursor-pointer rounded-[5px] border-none bg-transparent px-3 py-1.5 text-[0.72rem] font-medium transition-colors',
+                'cursor-pointer rounded-[5px] border-none bg-transparent px-3 py-1.5 text-xs font-medium transition-colors',
                 range === r
                   ? 'bg-white/[0.07] text-white'
-                  : 'text-[#555] hover:text-[#888]',
+                  : 'text-text-muted hover:text-muted-foreground',
               )}
             >
               {r}
             </button>
           ))}
         </div>
-
       </div>
 
       {/* Legend strip */}
-      <div className="flex gap-3.5 px-5 pt-2">
+      <div className="flex gap-4 px-5 pt-2">
         {participants.map((name, i) => (
           <span
             key={name}
-            className="flex items-center gap-1.5 text-[0.72rem] text-muted-foreground"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
           >
             <span
               className="inline-block h-2 w-2 rounded-sm"
-              style={{ backgroundColor: PERSON_COLORS[i] ?? PERSON_COLORS[0] }}
+              style={{ backgroundColor: PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0] }}
             />
             {name}
           </span>
@@ -135,11 +135,11 @@ export default function TimelineChart({
       </div>
 
       <div className="px-5 py-4">
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <defs>
               {participants.map((name, i) => {
-                const color = PERSON_COLORS[i] ?? PERSON_COLORS[0];
+                const color = PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0];
                 return (
                   <linearGradient
                     key={name}
@@ -155,44 +155,26 @@ export default function TimelineChart({
                 );
               })}
             </defs>
-            <CartesianGrid
-              strokeDasharray="0"
-              stroke="rgba(255,255,255,0.04)"
-              vertical={false}
-            />
+            <CartesianGrid {...CHART_GRID_PROPS} />
             <XAxis
               dataKey="label"
-              tick={{
-                fill: '#555',
-                fontSize: 10,
-                fontFamily: 'var(--font-jetbrains-mono), monospace',
-              }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{
-                fill: '#555',
-                fontSize: 10,
-                fontFamily: 'var(--font-jetbrains-mono), monospace',
-              }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               width={40}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: '#111111',
-                border: '1px solid #1a1a1a',
-                borderRadius: '8px',
-                fontSize: 12,
-                color: '#fafafa',
-              }}
-              labelStyle={{ color: '#888888', marginBottom: 4 }}
+              contentStyle={CHART_TOOLTIP_STYLE}
+              labelStyle={CHART_TOOLTIP_LABEL_STYLE}
             />
             {participants.map((name, i) => {
-              const color = PERSON_COLORS[i] ?? PERSON_COLORS[0];
+              const color = PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0];
               return (
                 <Area
                   key={name}
@@ -210,6 +192,6 @@ export default function TimelineChart({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </motion.div>
   );
 }

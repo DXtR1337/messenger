@@ -18,7 +18,13 @@ import type {
   PatternMetrics,
   HeatmapData,
   TrendData,
+  ReciprocityIndex,
 } from '../parsers/types';
+import { computeViralScores } from './viral-scores';
+import { computeBadges } from './badges';
+import { computeCatchphrases, computeBestTimeToText } from './catchphrases';
+import { computeNetworkMetrics } from './network';
+import { STOPWORDS, linearRegressionSlope } from './constants';
 
 // ============================================================
 // Constants
@@ -26,34 +32,6 @@ import type {
 
 const SESSION_GAP_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-// Polish + English stopwords — short, common words filtered from top-words analysis
-const STOPWORDS = new Set([
-  // English
-  'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours',
-  'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers',
-  'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves',
-  'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
-  'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does',
-  'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until',
-  'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'through',
-  'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in',
-  'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here',
-  'there', 'when', 'where', 'why', 'how', 'all', 'both', 'each', 'few', 'more', 'most',
-  'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than',
-  'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now', 'd', 'll',
-  'm', 'o', 're', 've', 'y', 'ain', 'aren', 'couldn', 'didn', 'doesn', 'hadn', 'hasn',
-  'haven', 'isn', 'ma', 'mightn', 'mustn', 'needn', 'shan', 'shouldn', 'wasn',
-  'weren', 'won', 'wouldn', 'ok', 'yes', 'yeah', 'yep', 'no', 'nah', 'nope', 'oh',
-  'ah', 'um', 'uh', 'like', 'lol', 'haha', 'hahaha', 'xd', 'xdd',
-  // Polish
-  'i', 'w', 'z', 'na', 'do', 'to', 'je', 'się', 'nie', 'że', 'co', 'tak', 'za', 'ale',
-  'o', 'od', 'po', 'jak', 'już', 'mi', 'ty', 'ja', 'ten', 'ta', 'te', 'go', 'mu', 'czy',
-  'jest', 'są', 'był', 'była', 'było', 'być', 'ma', 'mam', 'masz', 'no', 'si', 'tu',
-  'tam', 'też', 'tym', 'tego', 'tej', 'tych', 'bo', 'ze', 'sobie', 'tylko', 'jeszcze',
-  'może', 'trzeba', 'bardzo', 'teraz', 'kiedy', 'gdzie', 'dlaczego', 'bez', 'przy',
-  'nad', 'pod', 'przed', 'przez', 'dla', 'ani', 'albo', 'a', 'u', 'ku', 'aż',
-  'juz', 'sie', 'ze', 'moze', 'tez', 'wiec', 'czyli', 'ok', 'dobra', 'xd', 'xdd',
-]);
 
 // ============================================================
 // Helper Functions
@@ -78,21 +56,6 @@ function median(values: number[]): number {
     : sorted[mid];
 }
 
-function linearRegressionSlope(values: number[]): number {
-  const n = values.length;
-  if (n < 2) return 0;
-  const xMean = (n - 1) / 2;
-  const yMean = values.reduce((a, b) => a + b, 0) / n;
-  const numerator = values.reduce(
-    (sum, y, x) => sum + (x - xMean) * (y - yMean),
-    0,
-  );
-  const denominator = values.reduce(
-    (sum, _, x) => sum + (x - xMean) ** 2,
-    0,
-  );
-  return denominator === 0 ? 0 : numerator / denominator;
-}
 
 function getMonthKey(timestamp: number): string {
   return new Date(timestamp).toISOString().slice(0, 7);
@@ -350,7 +313,7 @@ export function computeQuantitativeAnalysis(
           timestamp: msg.timestamp,
         };
       }
-      if (wordCount < acc.shortestMessage.length) {
+      if (wordCount > 0 && wordCount < acc.shortestMessage.length) {
         acc.shortestMessage = {
           content: msg.content,
           length: wordCount,
@@ -370,7 +333,8 @@ export function computeQuantitativeAnalysis(
     }
 
     // ── Question detection ───────────────────────────────────
-    if (msg.content.includes('?')) {
+    const contentWithoutUrls = msg.content.replace(/https?:\/\/\S+/g, '');
+    if (contentWithoutUrls.includes('?')) {
       acc.questionsAsked++;
     }
 
@@ -596,8 +560,8 @@ export function computeQuantitativeAnalysis(
     const avg =
       rts.length > 0 ? rts.reduce((a, b) => a + b, 0) / rts.length : 0;
     const med = median(rts);
-    const fastest = rts.length > 0 ? Math.min(...rts) : 0;
-    const slowest = rts.length > 0 ? Math.max(...rts) : 0;
+    const fastest = rts.length > 0 ? rts.reduce((a, b) => a < b ? a : b, rts[0]) : 0;
+    const slowest = rts.length > 0 ? rts.reduce((a, b) => a > b ? a : b, rts[0]) : 0;
 
     // Response time trend: compute monthly averages, then linear regression
     const monthKeys = [...acc.monthlyResponseTimes.keys()].sort();
@@ -687,6 +651,21 @@ export function computeQuantitativeAnalysis(
     participantNames,
   );
 
+  // ── Phase 6A: viral/fun metrics ────────────────────────────
+  const quantitativeBase = { perPerson, timing, engagement, patterns, heatmap, trends };
+  const viralScores = computeViralScores(quantitativeBase, conversation);
+  const badges = computeBadges(quantitativeBase, conversation);
+  const bestTimeToText = computeBestTimeToText(quantitativeBase, participantNames);
+  const catchphrases = computeCatchphrases(conversation);
+
+  // ── Network metrics (group chats only) ─────────────────────
+  const networkMetrics = conversation.metadata.isGroup
+    ? computeNetworkMetrics(conversation.messages, participantNames)
+    : undefined;
+
+  // ── Reciprocity Index ──────────────────────────────────────
+  const reciprocityIndex = computeReciprocityIndex(engagement, timing, perPerson, participantNames);
+
   return {
     perPerson,
     timing,
@@ -694,6 +673,12 @@ export function computeQuantitativeAnalysis(
     patterns,
     heatmap,
     trends,
+    viralScores,
+    badges,
+    bestTimeToText,
+    catchphrases,
+    networkMetrics,
+    reciprocityIndex,
   };
 }
 
@@ -855,5 +840,80 @@ function computeTrends(
     responseTimeTrend,
     messageLengthTrend,
     initiationTrend,
+  };
+}
+
+// ============================================================
+// Reciprocity Index
+// ============================================================
+
+/**
+ * Compute reciprocity index — a composite metric measuring balance
+ * between participants. 0 = one-sided, 50 = perfectly balanced.
+ * Only meaningful for 2-person conversations.
+ */
+function computeReciprocityIndex(
+  engagement: EngagementMetrics,
+  timing: TimingMetrics,
+  perPerson: Record<string, PersonMetrics>,
+  participantNames: string[],
+): ReciprocityIndex {
+  // Default: balanced
+  const defaultResult: ReciprocityIndex = {
+    overall: 50,
+    messageBalance: 50,
+    initiationBalance: 50,
+    responseTimeSymmetry: 50,
+    reactionBalance: 50,
+  };
+
+  if (participantNames.length < 2) return defaultResult;
+
+  // Use first two participants for 1:1 analysis
+  const [a, b] = participantNames;
+
+  // 1. Message Balance: how close to 50/50 is the message split?
+  const ratioA = engagement.messageRatio[a] ?? 0.5;
+  // Score: 50 when ratioA = 0.5, 0 when ratioA = 0 or 1
+  const messageBalance = Math.round(100 * (1 - 2 * Math.abs(ratioA - 0.5)));
+
+  // 2. Initiation Balance: who starts conversations?
+  const initA = timing.conversationInitiations[a] ?? 0;
+  const initB = timing.conversationInitiations[b] ?? 0;
+  const totalInits = initA + initB;
+  const initiationBalance = totalInits > 0
+    ? Math.round(100 * (1 - 2 * Math.abs(initA / totalInits - 0.5)))
+    : 50;
+
+  // 3. Response Time Symmetry: are response times similar?
+  const rtA = timing.perPerson[a]?.medianResponseTimeMs ?? 0;
+  const rtB = timing.perPerson[b]?.medianResponseTimeMs ?? 0;
+  let responseTimeSymmetry = 50;
+  if (rtA > 0 && rtB > 0) {
+    const ratio = Math.min(rtA, rtB) / Math.max(rtA, rtB); // 0-1, 1 = same
+    responseTimeSymmetry = Math.round(ratio * 100);
+  } else if (rtA === 0 && rtB === 0) {
+    responseTimeSymmetry = 50; // no data
+  }
+
+  // 4. Reaction Balance: do they react to each other equally?
+  const reactA = perPerson[a]?.reactionsGiven ?? 0;
+  const reactB = perPerson[b]?.reactionsGiven ?? 0;
+  const totalReacts = reactA + reactB;
+  const reactionBalance = totalReacts > 0
+    ? Math.round(100 * (1 - 2 * Math.abs(reactA / totalReacts - 0.5)))
+    : 50;
+
+  // Overall: equal weight average of all 4 sub-scores
+  const overall = Math.round(
+    (messageBalance + initiationBalance + responseTimeSymmetry + reactionBalance) / 4
+  );
+
+  return {
+    overall,
+    messageBalance,
+    initiationBalance,
+    responseTimeSymmetry,
+    reactionBalance,
   };
 }

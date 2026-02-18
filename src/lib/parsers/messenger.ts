@@ -151,8 +151,8 @@ function parseAltConversation(data: AltConversation): ParsedConversation {
   });
 
   const timestamps = messages.map(m => m.timestamp);
-  const start = Math.min(...timestamps);
-  const end = Math.max(...timestamps);
+  const start = timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]);
+  const end = timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]);
   const durationDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
 
   // Derive title from threadName (strip trailing _number)
@@ -239,8 +239,8 @@ export function parseMessengerJSON(data: unknown): ParsedConversation {
 
   // Compute metadata
   const timestamps = messages.map(m => m.timestamp);
-  const start = Math.min(...timestamps);
-  const end = Math.max(...timestamps);
+  const start = timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]);
+  const end = timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]);
   const durationDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
 
   return {
@@ -272,16 +272,25 @@ export function mergeMessengerFiles(files: unknown[]): ParsedConversation {
 
   const parsed = files.map(f => parseMessengerJSON(f));
   
-  // Merge all messages and re-sort chronologically
-  const allMessages = parsed
+  // Merge all messages, deduplicate overlapping files, and re-sort chronologically
+  const merged = parsed
     .flatMap(p => p.messages)
-    .sort((a, b) => a.timestamp - b.timestamp)
-    .map((msg, index) => ({ ...msg, index })); // Re-index
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const seen = new Set<string>();
+  const deduped = merged.filter(m => {
+    const key = `${m.timestamp}-${m.sender}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const allMessages = deduped.map((msg, index) => ({ ...msg, index })); // Re-index
 
   const first = parsed[0];
   const timestamps = allMessages.map(m => m.timestamp);
-  const start = Math.min(...timestamps);
-  const end = Math.max(...timestamps);
+  const start = timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]);
+  const end = timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]);
   const durationDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
 
   return {

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-ChatScope is a SaaS web app that analyzes Messenger (and potentially other platform) conversation exports. Users upload a JSON file from their chat history and receive deep psychological and communication analysis powered by Claude API.
+ChatScope is a SaaS web app that analyzes Messenger (and potentially other platform) conversation exports. Users upload a JSON file from their chat history and receive deep psychological and communication analysis powered by Google Gemini API.
 
 **Core value proposition:** "See your relationships through data." — quantitative metrics + qualitative AI-powered psychological analysis of any conversation.
 
@@ -13,13 +13,13 @@ ChatScope is a SaaS web app that analyzes Messenger (and potentially other platf
 - **Styling:** Tailwind CSS v4 + custom CSS variables for theming
 - **UI Components:** shadcn/ui as base, heavily customized
 - **Charts/Visualization:** Recharts + custom SVG visualizations
-- **AI Analysis:** Anthropic Claude API (claude-opus-4-6) via Claude Max subscription
+- **AI Analysis:** Google Gemini API (gemini-2.0-flash)
 - **Development AI:** Claude Opus 4.6 (claude-opus-4-6) — used for coding and development
-- **Auth:** Supabase Auth (Google + email/password)
-- **Database:** Supabase PostgreSQL
-- **File Storage:** Supabase Storage (for uploaded JSONs, temporary)
-- **Payments:** Stripe (subscription model)
-- **Deployment:** Vercel
+- **Auth:** Supabase Auth (Google + email/password) *(not yet implemented — local-only MVP)*
+- **Database:** Supabase PostgreSQL *(not yet implemented — using localStorage)*
+- **File Storage:** Supabase Storage (for uploaded JSONs, temporary) *(not yet implemented — local-only MVP)*
+- **Payments:** Stripe (subscription model) *(not yet implemented — local-only MVP)*
+- **Deployment:** Google Cloud Run (Docker) — uses `output: 'standalone'` in next.config.ts
 - **Package Manager:** pnpm
 
 ## Project Structure
@@ -88,7 +88,7 @@ chatscope/
 │   │   │   └── types.ts            # Unified message format
 │   │   ├── analysis/
 │   │   │   ├── quantitative.ts     # All number-crunching (no AI needed)
-│   │   │   ├── qualitative.ts      # Claude API analysis prompts
+│   │   │   ├── gemini.ts           # Gemini API analysis integration
 │   │   │   ├── prompts.ts          # System prompts for analysis
 │   │   │   └── types.ts            # Analysis result types
 │   │   ├── supabase/
@@ -165,7 +165,7 @@ Apply `decodeFBString()` to EVERY string field during parsing: `sender_name`, `c
 - Handle edge cases: group chats (support 2+ participants), unsent messages, media-only messages, call events
 
 ### Stage 2: Quantitative Analysis (server-side, no AI)
-Compute these metrics without Claude API — pure math, fast, free:
+Compute these metrics without AI API — pure math, fast, free:
 
 **Volume metrics:**
 - Total messages per person
@@ -202,8 +202,8 @@ Compute these metrics without Claude API — pure math, fast, free:
 - Monthly/seasonal trends
 - "Burst" detection (clusters of rapid messages vs sparse periods)
 
-### Stage 3: Qualitative Analysis (Claude API)
-Send batched message samples to Claude for deep analysis:
+### Stage 3: Qualitative Analysis (Gemini API)
+Send batched message samples to Gemini for deep analysis:
 
 **Tone analysis:**
 - Overall emotional tone per person (warm, neutral, distant, anxious, playful, sarcastic, etc.)
@@ -254,9 +254,9 @@ Compile everything into a structured report:
 - Actionable insights (specific, not generic advice)
 - Comparison to baseline patterns (optional, future feature)
 
-## Claude API Analysis Strategy
+## Gemini API Analysis Strategy
 
-**Do NOT send entire conversation to Claude.** Conversations can be 50,000+ messages. Instead:
+**Do NOT send entire conversation to the AI.** Conversations can be 50,000+ messages. Instead:
 
 ### Sampling Strategy
 1. Divide conversation into time-based segments (monthly or bi-weekly)
@@ -283,9 +283,8 @@ Compile everything into a structured report:
 - No moralizing: describe patterns, don't judge them
 
 ### Cost Target
-- claude-opus-4-6 for all passes
-- Target: < $0.15 per full analysis for average conversation (5,000 messages)
-- Cache system prompts with prompt caching
+- gemini-2.0-flash for all passes
+- Gemini Flash pricing is significantly cheaper than frontier models — cost per analysis is minimal
 - Batch efficiently — max context usage per call
 
 ## Design System
@@ -352,7 +351,7 @@ Dark, editorial, data-dense. Bloomberg Terminal meets Spotify Wrapped meets clin
 ## Privacy & Security Requirements
 
 1. **Raw messages are NOT stored** after analysis is complete. Only computed metrics and AI analysis results are persisted in database.
-2. **File uploads are temporary.** Delete from Supabase Storage within 1 hour of processing completion.
+2. **File uploads are temporary.** In current local-only MVP, files are processed in-browser and never uploaded to a server. Future: delete from storage within 1 hour of processing completion.
 3. **Shared reports are anonymized.** Names replaced with "Person A" / "Person B". No quoted messages in shared view — only paraphrased insights.
 4. **No conversation content in logs.** API routes must not log message content. Log only metadata (message count, processing time, error types).
 5. **GDPR-friendly.** User can delete all their data (analyses, account) with one action.
@@ -363,7 +362,7 @@ Dark, editorial, data-dense. Bloomberg Terminal meets Spotify Wrapped meets clin
 - **Invalid JSON:** Show clear error with expected format. Link to Facebook export instructions.
 - **Too small conversation:** Minimum 100 messages for meaningful analysis. Show warning for <500.
 - **Too large file:** Stream parse. If >200MB, show warning about processing time. Set hard limit at 500MB.
-- **API failures:** Retry Claude API calls up to 3 times with exponential backoff. If all fail, save partial analysis (quantitative only) and offer to retry qualitative later.
+- **API failures:** Retry Gemini API calls up to 3 times with exponential backoff. If all fail, save partial analysis (quantitative only) and offer to retry qualitative later.
 - **Encoding issues:** If decoded strings still look garbled, flag to user and offer manual encoding selection.
 
 ## Pricing Model
@@ -382,33 +381,33 @@ Dark, editorial, data-dense. Bloomberg Terminal meets Spotify Wrapped meets clin
 
 ## Development Phases
 
-### Phase 1 — Core (start here)
+### Phase 1 — Core
 - [x] Project setup (Next.js, Tailwind, TypeScript)
-- [ ] Messenger JSON parser with unicode decoding
-- [ ] Unified message type system
-- [ ] Quantitative analysis engine (all metrics listed above)
-- [ ] Basic results page showing all quantitative metrics
-- [ ] File upload with drag-and-drop
-- [ ] Processing state UI (progress indicators)
+- [x] Messenger JSON parser with unicode decoding
+- [x] Unified message type system
+- [x] Quantitative analysis engine (all metrics listed above)
+- [x] Basic results page showing all quantitative metrics
+- [x] File upload with drag-and-drop
+- [x] Processing state UI (progress indicators)
 
 ### Phase 2 — AI Analysis
-- [ ] Claude API integration
-- [ ] Message sampling strategy implementation
-- [ ] Analysis prompts (all 4 passes)
-- [ ] Qualitative analysis result types and display
-- [ ] Full report page with all sections
-- [ ] Conversation Health Score algorithm
+- [x] Gemini API integration (gemini-2.0-flash)
+- [x] Message sampling strategy implementation
+- [x] Analysis prompts (all 4 passes)
+- [x] Qualitative analysis result types and display
+- [x] Full report page with all sections
+- [x] Conversation Health Score algorithm
 
 ### Phase 3 — Polish
-- [ ] Landing page (all sections)
-- [ ] Chart animations and custom visualizations
+- [x] Landing page (all sections)
+- [x] Chart animations and custom visualizations
 - [ ] PDF export (react-pdf or server-side generation)
 - [ ] Shareable anonymized report links
 - [ ] Mobile responsive pass
 - [ ] Loading/skeleton states
-- [ ] Error boundaries and fallback UI
+- [x] Error boundaries and fallback UI
 
-### Phase 4 — SaaS Infrastructure
+### Phase 4 — SaaS Infrastructure *(not yet started — local-only MVP uses localStorage)*
 - [ ] Supabase Auth setup
 - [ ] Database schema and migrations
 - [ ] Stripe integration

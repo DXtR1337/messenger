@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import type { PersonMetrics } from '@/lib/parsers/types';
 
 interface TopWordsCardProps {
@@ -79,31 +80,37 @@ export default function TopWordsCard({
     if ((metricsA?.topWords?.length ?? 0) === 0) return null;
 
     return (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5 }}
+            className="overflow-hidden rounded-xl border border-border bg-card"
+        >
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-4">
                 <div>
-                    <h3 className="font-display text-[0.93rem] font-bold">Top słowa</h3>
-                    <p className="mt-0.5 text-[0.72rem] text-[#555]">
+                    <h3 className="font-display text-[15px] font-bold">Top słowa</h3>
+                    <p className="mt-0.5 text-xs text-text-muted">
                         Najczęściej używane słowa i frazy (bez stopwords)
                     </p>
                 </div>
                 {/* Tabs */}
-                <div className="flex gap-1 rounded-lg bg-[#0a0a0a] p-0.5">
+                <div className="flex gap-1 rounded-lg bg-muted p-0.5">
                     <button
                         onClick={() => setActiveTab('words')}
-                        className={`rounded-md px-3 py-1 text-[0.72rem] font-medium transition-colors ${activeTab === 'words'
-                                ? 'bg-[#1a1a1a] text-white'
-                                : 'text-[#555] hover:text-[#888]'
+                        className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${activeTab === 'words'
+                                ? 'bg-secondary text-white'
+                                : 'text-text-muted hover:text-muted-foreground'
                             }`}
                     >
                         Słowa
                     </button>
                     <button
                         onClick={() => setActiveTab('phrases')}
-                        className={`rounded-md px-3 py-1 text-[0.72rem] font-medium transition-colors ${activeTab === 'phrases'
-                                ? 'bg-[#1a1a1a] text-white'
-                                : 'text-[#555] hover:text-[#888]'
+                        className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${activeTab === 'phrases'
+                                ? 'bg-secondary text-white'
+                                : 'text-text-muted hover:text-muted-foreground'
                             }`}
                     >
                         Frazy
@@ -120,13 +127,13 @@ export default function TopWordsCard({
 
                     return (
                         <div key={label} className="flex items-center gap-2.5">
-                            <span className="w-5 text-right font-display text-[0.72rem] text-[#444]">
+                            <span className="w-5 text-right font-display text-xs text-text-muted">
                                 {i + 1}
                             </span>
-                            <span className="w-[100px] truncate text-[0.82rem] font-medium">
+                            <span className="w-[100px] truncate text-[13px] font-medium">
                                 {label}
                             </span>
-                            <div className="flex h-2.5 flex-1 overflow-hidden rounded-sm bg-[#0a0a0a]">
+                            <div className="flex h-2.5 flex-1 overflow-hidden rounded-sm bg-muted">
                                 <div
                                     className="bg-chart-a transition-all duration-500"
                                     style={{ width: `${pctA}%` }}
@@ -136,7 +143,7 @@ export default function TopWordsCard({
                                     style={{ width: `${pctB}%` }}
                                 />
                             </div>
-                            <span className="w-14 text-right font-display text-[0.72rem] text-[#666]">
+                            <span className="w-14 text-right font-display text-xs text-text-muted">
                                 {entry.total}×
                             </span>
                         </div>
@@ -146,16 +153,16 @@ export default function TopWordsCard({
 
             {/* Vocabulary stats footer */}
             <div className="border-t border-border px-5 py-3">
-                <div className="flex items-center gap-6 text-[0.72rem]">
+                <div className="flex items-center gap-6 text-xs">
                     {personA && metricsA && (
                         <div className="flex items-center gap-1.5">
                             <span className="inline-block h-2 w-2 rounded-sm bg-chart-a" />
-                            <span className="text-[#555]">{personA}</span>
+                            <span className="text-text-muted">{personA}</span>
                             <span className="ml-1 font-display text-white">
                                 {metricsA.uniqueWords.toLocaleString()}
                             </span>
-                            <span className="text-[#444]">unikalnych</span>
-                            <span className="ml-1 font-display text-[#666]">
+                            <span className="text-text-muted">unikalnych</span>
+                            <span className="ml-1 font-display text-text-muted">
                                 ({(metricsA.vocabularyRichness * 100).toFixed(1)}%)
                             </span>
                         </div>
@@ -163,18 +170,18 @@ export default function TopWordsCard({
                     {personB && metricsB && (
                         <div className="flex items-center gap-1.5">
                             <span className="inline-block h-2 w-2 rounded-sm bg-chart-b" />
-                            <span className="text-[#555]">{personB}</span>
+                            <span className="text-text-muted">{personB}</span>
                             <span className="ml-1 font-display text-white">
                                 {metricsB.uniqueWords.toLocaleString()}
                             </span>
-                            <span className="text-[#444]">unikalnych</span>
-                            <span className="ml-1 font-display text-[#666]">
+                            <span className="text-text-muted">unikalnych</span>
+                            <span className="ml-1 font-display text-text-muted">
                                 ({(metricsB.vocabularyRichness * 100).toFixed(1)}%)
                             </span>
                         </div>
                     )}
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

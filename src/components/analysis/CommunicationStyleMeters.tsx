@@ -46,7 +46,7 @@ function getFormalityPosition(
   participantName: string,
   pass1?: Pass1Result,
 ): number {
-  if (pass1?.tone_per_person[participantName]) {
+  if (pass1?.tone_per_person?.[participantName]) {
     const formality = pass1.tone_per_person[participantName].formality_level ?? 3;
     return clamp(0, formality * 10, 100);
   }
@@ -111,7 +111,7 @@ function StyleMeter({
 
   return (
     <div ref={ref} className="mb-[18px] last:mb-0">
-      <div className="text-[0.78rem] font-semibold mb-2">{label}</div>
+      <div className="text-[13px] font-semibold mb-2">{label}</div>
       <div className="h-1 bg-white/[0.06] rounded-sm relative mb-1">
         {/* Person A dot (blue, on top) */}
         <motion.div
@@ -136,7 +136,7 @@ function StyleMeter({
           transition={{ duration: 0.7, delay: delay + 0.08, ease: 'easeOut' }}
         />
       </div>
-      <div className="flex justify-between text-[0.62rem] text-[#555]">
+      <div className="flex justify-between text-[10px] text-text-muted">
         <span>{leftLabel}</span>
         <span>{rightLabel}</span>
       </div>
@@ -160,7 +160,7 @@ export default function CommunicationStyleMeters({
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="px-5 pt-4">
-        <h3 className="font-display text-[0.93rem] font-bold">Styl komunikacji</h3>
+        <h3 className="font-display text-[15px] font-bold">Styl komunikacji</h3>
       </div>
       <div className="px-5 py-4">
         {METER_AXES.map((axis, index) => {

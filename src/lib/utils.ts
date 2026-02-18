@@ -7,9 +7,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// UUID generation
+// UUID generation — fallback for environments where crypto.randomUUID is unavailable
 export function generateId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback: manual v4 UUID
+  return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => {
+    const n = Number(c);
+    return (n ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (n / 4)))).toString(16);
+  });
 }
 
 // ============================================================
@@ -57,6 +64,7 @@ export async function saveAnalysis(analysis: StoredAnalysis): Promise<void> {
     messageCount: analysis.conversation.metadata.totalMessages,
     participants: analysis.conversation.participants.map(p => p.name),
     hasQualitative: analysis.qualitative?.status === 'complete',
+    healthScore: analysis.qualitative?.pass4?.health_score?.overall,
   };
 
   await new Promise<void>((resolve, reject) => {

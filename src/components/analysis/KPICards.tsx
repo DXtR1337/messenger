@@ -1,9 +1,77 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useRef, useState, useEffect, type ReactNode, type RefObject } from 'react';
+import { useInView } from 'framer-motion';
 import { computeKPICards, type KPICardData } from '@/lib/analysis/kpi-utils';
 import Sparkline from '@/components/analysis/Sparkline';
 import type { QuantitativeAnalysis, ParsedConversation } from '@/lib/parsers/types';
+
+/* ------------------------------------------------------------------ */
+/*  Animated count-up hook using requestAnimationFrame + easeOutCubic */
+/* ------------------------------------------------------------------ */
+
+function useAnimatedCounter(
+  target: number,
+  duration = 1200,
+): { value: number; ref: RefObject<HTMLDivElement | null> } {
+  const [value, setValue] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true });
+
+  useEffect(() => {
+    if (!inView) return;
+    if (target === 0) {
+      setValue(0);
+      return;
+    }
+
+    const start = performance.now();
+
+    function tick(now: number) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic: decelerating curve for a polished feel
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(target * eased);
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
+  }, [inView, target, duration]);
+
+  return { value, ref };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Value formatters — mirror the logic in kpi-utils per card type    */
+/* ------------------------------------------------------------------ */
+
+function formatResponseTime(ms: number): string {
+  if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
+  if (ms < 3_600_000) {
+    const minutes = Math.floor(ms / 60_000);
+    const seconds = Math.round((ms % 60_000) / 1000);
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  }
+  const hours = Math.floor(ms / 3_600_000);
+  const minutes = Math.round((ms % 3_600_000) / 60_000);
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+}
+
+function formatAnimatedValue(cardId: string, animatedValue: number): string {
+  switch (cardId) {
+    case 'avg-response-time':
+      return formatResponseTime(animatedValue);
+    case 'messages-per-day':
+      return animatedValue.toFixed(1);
+    case 'total-reactions':
+      return Math.round(animatedValue).toLocaleString();
+    case 'initiation-ratio':
+      return `${Math.round(animatedValue)}%`;
+    default:
+      return Math.round(animatedValue).toString();
+  }
+}
 
 interface KPICardsProps {
   quantitative: QuantitativeAnalysis;
@@ -133,35 +201,39 @@ function KPICard({ card }: { card: KPICardData }) {
   const colorHex = ICON_COLOR_HEX[card.iconColor];
   const iconWrapClass = ICON_WRAP_CLASSES[card.iconColor];
 
+  const { value: animatedValue, ref } = useAnimatedCounter(card.numericValue);
+  const displayValue = formatAnimatedValue(card.id, animatedValue);
+
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border bg-card p-[18px] transition-all duration-200 hover:-translate-y-px hover:border-[#2a2a2a]">
+    <div ref={ref} className="relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-px hover:border-border-hover" style={{ borderTop: `2px solid ${colorHex}` }}>
       {/* Header: icon + trend */}
       <div className="mb-3 flex items-center justify-between">
         <div
-          className={`flex h-[38px] w-[38px] items-center justify-center rounded-[10px] ${iconWrapClass}`}
+          className={`flex h-[38px] w-[38px] items-center justify-center rounded-lg ${iconWrapClass}`}
         >
           <IconComponent />
         </div>
         {card.trendDirection !== 'neutral' && (
           <div
-            className={`flex items-center gap-0.5 font-display text-[0.72rem] font-semibold ${
+            className={`flex items-center gap-0.5 font-display text-xs font-semibold ${
               card.trendDirection === 'up' ? 'text-success' : 'text-danger'
             }`}
           >
             {card.trendDirection === 'up' ? <TrendArrowUp /> : <TrendArrowDown />}
+            <span aria-hidden="true">{card.trendDirection === 'up' ? '\u2191' : '\u2193'}</span>
             {card.trendPercent > 0 ? '+' : ''}
             {card.trendPercent}%
           </div>
         )}
       </div>
 
-      {/* Value */}
-      <div className="font-display text-[1.6rem] font-extrabold tracking-[-0.03em] text-foreground">
-        {card.value}
+      {/* Value — animated count-up from 0 */}
+      <div className="font-display text-2xl font-extrabold tracking-[-0.03em] text-foreground">
+        {displayValue}
       </div>
 
       {/* Label */}
-      <div className="mt-0.5 text-[0.78rem] text-[#555]">{card.label}</div>
+      <div className="mt-0.5 text-[13px] text-text-muted">{card.label}</div>
 
       {/* Sparkline */}
       {card.sparklineData.length > 1 && (
@@ -180,7 +252,7 @@ export default function KPICards({ quantitative, conversation }: KPICardsProps) 
   );
 
   return (
-    <div className="mb-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
         <KPICard key={card.id} card={card} />
       ))}

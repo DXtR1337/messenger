@@ -3,17 +3,16 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import {
-  Timer,
-  MessageSquarePlus,
-  MessageSquareMore,
-  Moon,
   HelpCircle,
   Heart,
   Layers,
   VolumeX,
+  BookOpen,
+  Trash2,
+  BookText,
+  MessagesSquare,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { cn, formatDuration, formatNumber } from '@/lib/utils';
+import { formatDuration, formatNumber } from '@/lib/utils';
 import type { QuantitativeAnalysis } from '@/lib/parsers/types';
 
 interface StatsGridProps {
@@ -44,12 +43,13 @@ function StatCard({ icon, label, value, breakdown, delay }: StatCardProps) {
   return (
     <motion.div
       ref={ref}
+      className="h-full"
       initial={{ opacity: 0, y: 20 }}
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       transition={{ duration: 0.4, delay }}
     >
-      <Card className="border-border/50 hover:border-border transition-colors">
-        <CardContent className="space-y-3 pt-6">
+      <div className="h-full rounded-xl border border-border bg-card p-5 transition-colors">
+        <div className="space-y-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             {icon}
             <span className="text-xs uppercase tracking-wider">{label}</span>
@@ -71,8 +71,8 @@ function StatCard({ icon, label, value, breakdown, delay }: StatCardProps) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -82,60 +82,8 @@ export default function StatsGrid({ quantitative, participants }: StatsGridProps
 
   const stats: Array<Omit<StatCardProps, 'delay'>> = [
     {
-      icon: <Timer className="size-4" />,
-      label: 'Avg Response Time',
-      value: (() => {
-        const medians = participants
-          .map((p) => timing.perPerson[p]?.medianResponseTimeMs)
-          .filter((v): v is number => v !== undefined);
-        const avg = medians.length > 0 ? medians.reduce((a, b) => a + b, 0) / medians.length : 0;
-        return formatDuration(avg);
-      })(),
-      breakdown: participants.map((name, index) => ({
-        name,
-        value: formatDuration(timing.perPerson[name]?.medianResponseTimeMs ?? 0),
-        index,
-      })),
-    },
-    {
-      icon: <MessageSquarePlus className="size-4" />,
-      label: 'Conversation Initiations',
-      value: formatNumber(
-        Object.values(timing.conversationInitiations).reduce((a, b) => a + b, 0),
-      ),
-      breakdown: participants.map((name, index) => ({
-        name,
-        value: formatNumber(timing.conversationInitiations[name] ?? 0),
-        index,
-      })),
-    },
-    {
-      icon: <MessageSquareMore className="size-4" />,
-      label: 'Double Texts',
-      value: formatNumber(
-        Object.values(engagement.doubleTexts).reduce((a, b) => a + b, 0),
-      ),
-      breakdown: participants.map((name, index) => ({
-        name,
-        value: formatNumber(engagement.doubleTexts[name] ?? 0),
-        index,
-      })),
-    },
-    {
-      icon: <Moon className="size-4" />,
-      label: 'Late Night Messages',
-      value: formatNumber(
-        Object.values(timing.lateNightMessages).reduce((a, b) => a + b, 0),
-      ),
-      breakdown: participants.map((name, index) => ({
-        name,
-        value: formatNumber(timing.lateNightMessages[name] ?? 0),
-        index,
-      })),
-    },
-    {
       icon: <HelpCircle className="size-4" />,
-      label: 'Questions Asked',
+      label: 'Zadane pytania',
       value: formatNumber(
         participants.reduce((sum, p) => sum + (perPerson[p]?.questionsAsked ?? 0), 0),
       ),
@@ -147,7 +95,7 @@ export default function StatsGrid({ quantitative, participants }: StatsGridProps
     },
     {
       icon: <Heart className="size-4" />,
-      label: 'Reaction Rate',
+      label: 'Wskaźnik reakcji',
       value: (() => {
         const rates = participants
           .map((p) => engagement.reactionRate[p])
@@ -163,14 +111,60 @@ export default function StatsGrid({ quantitative, participants }: StatsGridProps
     },
     {
       icon: <Layers className="size-4" />,
-      label: 'Total Sessions',
+      label: 'Łączna liczba sesji',
       value: formatNumber(engagement.totalSessions),
       breakdown: [],
     },
     {
       icon: <VolumeX className="size-4" />,
-      label: 'Longest Silence',
+      label: 'Najdłuższa cisza',
       value: formatDuration(timing.longestSilence.durationMs),
+      breakdown: [],
+    },
+    {
+      icon: <BookOpen className="size-4" />,
+      label: 'Łączna liczba słów',
+      value: formatNumber(
+        participants.reduce((sum, p) => sum + (perPerson[p]?.totalWords ?? 0), 0),
+      ),
+      breakdown: participants.map((name, index) => ({
+        name,
+        value: formatNumber(perPerson[name]?.totalWords ?? 0),
+        index,
+      })),
+    },
+    {
+      icon: <Trash2 className="size-4" />,
+      label: 'Niewysłane wiadomości',
+      value: formatNumber(
+        participants.reduce((sum, p) => sum + (perPerson[p]?.unsentMessages ?? 0), 0),
+      ),
+      breakdown: participants.map((name, index) => ({
+        name,
+        value: formatNumber(perPerson[name]?.unsentMessages ?? 0),
+        index,
+      })),
+    },
+    {
+      icon: <BookText className="size-4" />,
+      label: 'Bogactwo słownictwa',
+      value: (() => {
+        const richness = participants
+          .map((p) => perPerson[p]?.vocabularyRichness)
+          .filter((v): v is number => v !== undefined);
+        const avg = richness.length > 0 ? richness.reduce((a, b) => a + b, 0) / richness.length : 0;
+        return `${(avg * 100).toFixed(1)}%`;
+      })(),
+      breakdown: participants.map((name, index) => ({
+        name,
+        value: `${((perPerson[name]?.vocabularyRichness ?? 0) * 100).toFixed(1)}%`,
+        index,
+      })),
+    },
+    {
+      icon: <MessagesSquare className="size-4" />,
+      label: 'Śr. długość rozmowy',
+      value: `${Math.round(engagement.avgConversationLength)} wiad.`,
       breakdown: [],
     },
   ];
