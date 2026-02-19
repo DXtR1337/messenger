@@ -1,11 +1,22 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -32,7 +43,6 @@ export default function ParticleBackground() {
 
     function getParticleCount() {
       if (typeof window === 'undefined') return 40;
-      if (window.innerWidth < 640) return 10;
       return window.innerWidth < 768 ? 18 : 35;
     }
 
@@ -130,7 +140,13 @@ export default function ParticleBackground() {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isMobile]);
+
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#050505] via-[#0a0a14] to-[#050505]" />
+    );
+  }
 
   return (
     <canvas

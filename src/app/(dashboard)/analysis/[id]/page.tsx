@@ -6,14 +6,17 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 
 const ShareCardGallery = dynamic(() => import('@/components/share-cards/ShareCardGallery'), {
+  ssr: false,
   loading: () => <div className="h-64 animate-pulse rounded-xl bg-card" />,
 });
 
 const RoastSection = dynamic(() => import('@/components/analysis/RoastSection'), {
+  ssr: false,
   loading: () => <div className="h-48 animate-pulse rounded-xl bg-card" />,
 });
 
 const CPSScreener = dynamic(() => import('@/components/analysis/CPSScreener'), {
+  ssr: false,
   loading: () => <div className="h-48 animate-pulse rounded-xl bg-card" />,
 });
 import { AlertCircle, ArrowLeft, Sparkles, ChevronRight } from 'lucide-react';
@@ -56,12 +59,30 @@ import CatchphraseCard from '@/components/analysis/CatchphraseCard';
 import SectionDivider from '@/components/analysis/SectionDivider';
 
 
-import ExportPDFButton from '@/components/analysis/ExportPDFButton';
-import StandUpPDFButton from '@/components/analysis/StandUpPDFButton';
-import EnhancedRoastButton from '@/components/analysis/EnhancedRoastButton';
-import NetworkGraph from '@/components/analysis/NetworkGraph';
-import GhostForecast from '@/components/analysis/GhostForecast';
-import GroupChatAwards from '@/components/analysis/GroupChatAwards';
+const ExportPDFButton = dynamic(() => import('@/components/analysis/ExportPDFButton'), {
+  ssr: false,
+  loading: () => <div className="h-32 animate-pulse rounded-xl bg-card" />,
+});
+const StandUpPDFButton = dynamic(() => import('@/components/analysis/StandUpPDFButton'), {
+  ssr: false,
+  loading: () => <div className="h-32 animate-pulse rounded-xl bg-card" />,
+});
+const EnhancedRoastButton = dynamic(() => import('@/components/analysis/EnhancedRoastButton'), {
+  ssr: false,
+  loading: () => <div className="h-32 animate-pulse rounded-xl bg-card" />,
+});
+const NetworkGraph = dynamic(() => import('@/components/analysis/NetworkGraph'), {
+  ssr: false,
+  loading: () => <div className="h-32 animate-pulse rounded-xl bg-card" />,
+});
+const GhostForecast = dynamic(() => import('@/components/analysis/GhostForecast'), {
+  ssr: false,
+  loading: () => <div className="h-32 animate-pulse rounded-xl bg-card" />,
+});
+const GroupChatAwards = dynamic(() => import('@/components/analysis/GroupChatAwards'), {
+  ssr: false,
+  loading: () => <div className="h-32 animate-pulse rounded-xl bg-card" />,
+});
 import ShareCaptionModal from '@/components/analysis/ShareCaptionModal';
 import SectionNavigator from '@/components/analysis/SectionNavigator';
 
@@ -509,6 +530,7 @@ export default function AnalysisResultsPage() {
         healthScore={qualitative?.pass4?.health_score?.overall}
         compatibilityScore={quantitative.viralScores?.compatibilityScore}
         delusionScore={quantitative.viralScores?.delusionScore}
+        analysis={analysis}
       />
       <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
         <ShareCardGallery analysis={analysis} />

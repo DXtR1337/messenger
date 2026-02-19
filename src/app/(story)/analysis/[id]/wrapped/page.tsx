@@ -2,12 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { loadAnalysis } from '@/lib/utils';
 import type { StoredAnalysis } from '@/lib/analysis/types';
 import { generateWrappedSlides } from '@/lib/analysis/wrapped-data';
-import WrappedPlayer from '@/components/wrapped/WrappedPlayer';
+
+const WrappedPlayer = dynamic(() => import('@/components/wrapped/WrappedPlayer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-screen items-center justify-center bg-[#0a0a1a]">
+      <div className="space-y-4 text-center">
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-sm text-muted-foreground">Przygotowywanie Wrapped...</p>
+      </div>
+    </div>
+  ),
+});
 
 export default function WrappedPage() {
   const params = useParams();
@@ -27,7 +39,7 @@ export default function WrappedPage() {
           setAnalysis(stored);
         }
       } catch {
-        setError('Nie uda\u0142o si\u0119 za\u0142adowa\u0107 danych.');
+        setError('Nie udało się załadować danych.');
       } finally {
         setLoading(false);
       }
