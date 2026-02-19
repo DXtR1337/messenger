@@ -2,23 +2,12 @@ import { runEnhancedRoastPass } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import type { Pass1Result, Pass2Result, PersonProfile, Pass4Result, RoastResult } from '@/lib/analysis/types';
 import { rateLimit } from '@/lib/rate-limit';
+import { enhancedRoastRequestSchema, formatZodError } from '@/lib/validation/schemas';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000);
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
-
-interface EnhancedRoastRequest {
-  samples: AnalysisSamples;
-  participants: string[];
-  quantitativeContext: string;
-  qualitative: {
-    pass1: Pass1Result;
-    pass2: Pass2Result;
-    pass3: Record<string, PersonProfile>;
-    pass4: Pass4Result;
-  };
-}
 
 export async function POST(request: Request): Promise<Response> {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -26,7 +15,7 @@ export async function POST(request: Request): Promise<Response> {
   const { allowed, retryAfter } = checkLimit(ip);
   if (!allowed) {
     return Response.json(
-      { error: 'Zbyt wiele \u017c\u0105da\u0144. Spr\u00f3buj ponownie za chwil\u0119.' },
+      { error: 'Zbyt wiele żądań. Spróbuj ponownie za chwilę.' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
   }
@@ -37,17 +26,31 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Request body too large.' }, { status: 413 });
   }
 
-  let body: EnhancedRoastRequest;
+  let rawBody: unknown;
   try {
-    body = (await request.json()) as EnhancedRoastRequest;
+    rawBody = await request.json();
   } catch {
     return Response.json({ error: 'Invalid JSON.' }, { status: 400 });
   }
 
-  const { samples, participants, quantitativeContext, qualitative } = body;
-  if (!samples || !Array.isArray(participants) || participants.length === 0 || !qualitative?.pass1) {
-    return Response.json({ error: 'Missing required fields.' }, { status: 400 });
+  const parsed = enhancedRoastRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return Response.json(
+      { error: `Validation error: ${formatZodError(parsed.error)}` },
+      { status: 400 },
+    );
   }
+
+  const { participants, quantitativeContext } = parsed.data;
+  // Zod validates samples is a non-null object; cast through unknown for the deeply-typed AnalysisSamples
+  const samples = parsed.data.samples as unknown as AnalysisSamples;
+  // Zod validates qualitative has pass1-4 as objects; cast through unknown for the deeply-typed pass results
+  const qualitative = parsed.data.qualitative as unknown as {
+    pass1: Pass1Result;
+    pass2: Pass2Result;
+    pass3: Record<string, PersonProfile>;
+    pass4: Pass4Result;
+  };
 
   const { signal } = request;
   const encoder = new TextEncoder();
@@ -72,9 +75,12 @@ export async function POST(request: Request): Promise<Response> {
           return;
         }
 
-        send({ type: 'progress', status: 'Generuj\u0119 brutaln\u0105 prawd\u0119...' });
+        send({ type: 'progress', status: 'Generuję brutalną prawdę...' });
         const result: RoastResult = await runEnhancedRoastPass(
-          samples, participants, quantitativeContext, qualitative,
+          samples,
+          participants,
+          quantitativeContext,
+          qualitative,
         );
 
         if (signal.aborted) {
@@ -88,7 +94,7 @@ export async function POST(request: Request): Promise<Response> {
         if (!signal.aborted) {
           send({
             type: 'error',
-            error: 'B\u0142\u0105d generowania roastu \u2014 spr\u00f3buj ponownie',
+            error: 'Błąd generowania roastu — spróbuj ponownie',
           });
         }
       } finally {

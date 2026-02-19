@@ -1,22 +1,11 @@
 import { generateAnalysisImage, generateRoastImage } from '@/lib/analysis/gemini';
 import { rateLimit } from '@/lib/rate-limit';
+import { imageRequestSchema, formatZodError } from '@/lib/validation/schemas';
 
 const checkLimit = rateLimit(10, 10 * 60 * 1000); // 10 requests per 10 min
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
-
-interface ImageRequest {
-    participants: string[];
-    conversationExcerpt: Array<{ sender: string; content: string }>;
-    executiveSummary?: string;
-    healthScore?: number;
-    roastContext?: {
-        verdict: string;
-        roastSnippets: string[];
-        superlativeTitles: string[];
-    };
-}
 
 export async function POST(request: Request): Promise<Response> {
     const forwarded = request.headers.get('x-forwarded-for');
@@ -39,9 +28,9 @@ export async function POST(request: Request): Promise<Response> {
         );
     }
 
-    let body: ImageRequest;
+    let rawBody: unknown;
     try {
-        body = (await request.json()) as ImageRequest;
+        rawBody = await request.json();
     } catch {
         return Response.json(
             { error: 'Invalid JSON in request body.' },
@@ -49,19 +38,15 @@ export async function POST(request: Request): Promise<Response> {
         );
     }
 
-    if (!Array.isArray(body.participants) || body.participants.length === 0) {
+    const parsed = imageRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
         return Response.json(
-            { error: 'Missing or empty "participants" array in request body.' },
+            { error: `Validation error: ${formatZodError(parsed.error)}` },
             { status: 400 },
         );
     }
 
-    if (!Array.isArray(body.conversationExcerpt) || body.conversationExcerpt.length === 0) {
-        return Response.json(
-            { error: 'Missing or empty "conversationExcerpt" array in request body.' },
-            { status: 400 },
-        );
-    }
+    const body = parsed.data;
 
     const result = body.roastContext
         ? await generateRoastImage({

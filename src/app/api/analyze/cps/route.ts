@@ -1,16 +1,12 @@
 import { runCPSAnalysis } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import { rateLimit } from '@/lib/rate-limit';
+import { cpsRequestSchema, formatZodError } from '@/lib/validation/schemas';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000); // 5 requests per 10 min
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // 2 minutes for CPS analysis (63 questions)
-
-interface CPSRequest {
-  samples: AnalysisSamples;
-  participantName: string;
-}
 
 export async function POST(request: Request): Promise<Response> {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -23,15 +19,27 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const { samples, participantName } = (await request.json()) as CPSRequest;
-
-  if (!samples) {
-    return Response.json({ error: 'Missing samples' }, { status: 400 });
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return Response.json(
+      { error: 'Invalid JSON in request body.' },
+      { status: 400 },
+    );
   }
 
-  if (!participantName) {
-    return Response.json({ error: 'Missing participantName' }, { status: 400 });
+  const parsed = cpsRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return Response.json(
+      { error: `Validation error: ${formatZodError(parsed.error)}` },
+      { status: 400 },
+    );
   }
+
+  const { participantName } = parsed.data;
+  // Zod validates samples is a non-null object; cast through unknown for the deeply-typed AnalysisSamples
+  const samples = parsed.data.samples as unknown as AnalysisSamples;
 
   const { signal } = request;
   const encoder = new TextEncoder();

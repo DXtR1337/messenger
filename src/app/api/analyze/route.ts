@@ -1,19 +1,12 @@
 import { runAnalysisPasses, runRoastPass } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import { rateLimit } from '@/lib/rate-limit';
+import { analyzeRequestSchema, formatZodError } from '@/lib/validation/schemas';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000); // 5 requests per 10 min
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
-
-interface AnalyzeRequest {
-  samples: AnalysisSamples;
-  participants: string[];
-  relationshipContext?: string;
-  mode?: 'standard' | 'roast';
-  quantitativeContext?: string;
-}
 
 export async function POST(request: Request): Promise<Response> {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -36,9 +29,9 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: AnalyzeRequest;
+  let rawBody: unknown;
   try {
-    body = (await request.json()) as AnalyzeRequest;
+    rawBody = await request.json();
   } catch {
     return Response.json(
       { error: 'Invalid JSON in request body.' },
@@ -46,21 +39,17 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const { samples, participants, relationshipContext, mode, quantitativeContext } = body;
-
-  if (!samples || typeof samples !== 'object') {
+  const parsed = analyzeRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
     return Response.json(
-      { error: 'Missing or invalid "samples" object in request body.' },
+      { error: `Validation error: ${formatZodError(parsed.error)}` },
       { status: 400 },
     );
   }
 
-  if (!Array.isArray(participants) || participants.length === 0) {
-    return Response.json(
-      { error: 'Missing or empty "participants" array in request body.' },
-      { status: 400 },
-    );
-  }
+  const { participants, relationshipContext, mode, quantitativeContext } = parsed.data;
+  // Zod validates samples is a non-null object; cast through unknown for the deeply-typed AnalysisSamples
+  const samples = parsed.data.samples as unknown as AnalysisSamples;
 
   const { signal } = request;
   const encoder = new TextEncoder();

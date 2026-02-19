@@ -1,17 +1,12 @@
 import { runStandUpRoast } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import { rateLimit } from '@/lib/rate-limit';
+import { standUpRequestSchema, formatZodError } from '@/lib/validation/schemas';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000);
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
-
-interface StandUpRequest {
-  samples: AnalysisSamples;
-  participants: string[];
-  quantitativeContext: string;
-}
 
 export async function POST(request: Request): Promise<Response> {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -19,7 +14,7 @@ export async function POST(request: Request): Promise<Response> {
   const { allowed, retryAfter } = checkLimit(ip);
   if (!allowed) {
     return Response.json(
-      { error: 'Zbyt wiele \u017C\u0105da\u0144. Spr\u00F3buj ponownie za chwil\u0119.' },
+      { error: 'Zbyt wiele żądań. Spróbuj ponownie za chwilę.' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
   }
@@ -30,17 +25,24 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Request body too large.' }, { status: 413 });
   }
 
-  let body: StandUpRequest;
+  let rawBody: unknown;
   try {
-    body = (await request.json()) as StandUpRequest;
+    rawBody = await request.json();
   } catch {
     return Response.json({ error: 'Invalid JSON.' }, { status: 400 });
   }
 
-  const { samples, participants, quantitativeContext } = body;
-  if (!samples || !Array.isArray(participants) || participants.length === 0) {
-    return Response.json({ error: 'Missing required fields.' }, { status: 400 });
+  const parsed = standUpRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return Response.json(
+      { error: `Validation error: ${formatZodError(parsed.error)}` },
+      { status: 400 },
+    );
   }
+
+  const { participants, quantitativeContext } = parsed.data;
+  // Zod validates samples is a non-null object; cast through unknown for the deeply-typed AnalysisSamples
+  const samples = parsed.data.samples as unknown as AnalysisSamples;
 
   const { signal } = request;
   const encoder = new TextEncoder();
@@ -65,7 +67,7 @@ export async function POST(request: Request): Promise<Response> {
           return;
         }
 
-        send({ type: 'progress', status: 'Przygotowuj\u0119 wyst\u0119p stand-up...' });
+        send({ type: 'progress', status: 'Przygotowuję występ stand-up...' });
         const result = await runStandUpRoast(samples, participants, quantitativeContext);
 
         if (signal.aborted) {
@@ -79,7 +81,7 @@ export async function POST(request: Request): Promise<Response> {
         if (!signal.aborted) {
           send({
             type: 'error',
-            error: 'B\u0142\u0105d generowania stand-upu \u2014 spr\u00F3buj ponownie',
+            error: 'Błąd generowania stand-upu — spróbuj ponownie',
           });
         }
       } finally {
