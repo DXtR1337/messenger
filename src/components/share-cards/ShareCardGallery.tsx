@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Download, X } from 'lucide-react';
+import { Download, X, Link2, Check } from 'lucide-react';
 import type { StoredAnalysis } from '@/lib/analysis/types';
 import HealthScoreCard from './HealthScoreCard';
 import VersusCard from './VersusCard';
@@ -20,6 +20,7 @@ import CompatibilityCardV2 from './CompatibilityCardV2';
 import GhostForecastCard from './GhostForecastCard';
 import PersonalityPassportCard from './PersonalityPassportCard';
 import CPSCard from './CPSCard';
+import { buildShareUrl } from '@/lib/share/encode';
 
 
 interface ShareCardGalleryProps {
@@ -35,28 +36,29 @@ interface CardConfig {
 }
 
 const CARD_CONFIGS: CardConfig[] = [
-  // V2 cards — anti-slop (highlighted first)
-  { id: 'receipt', title: 'Paragon', emoji: '🧾', requiresQualitative: false },
-  { id: 'versus-v2', title: 'Versus V2', emoji: '⚡', requiresQualitative: false, size: '1080×1080' },
-  { id: 'redflag', title: 'Czerwona flaga', emoji: '🚩', requiresQualitative: false },
-  { id: 'ghost-forecast', title: 'Prognoza ghostingu', emoji: '👻', requiresQualitative: false },
-  { id: 'compatibility-v2', title: 'Match', emoji: '💕', requiresQualitative: false, size: '1080×1080' },
-  { id: 'label', title: 'Etykietka', emoji: '🏷️', requiresQualitative: true, size: '1080×1080' },
-  { id: 'passport', title: 'Paszport', emoji: '🛂', requiresQualitative: true },
+  // V2 cards â€” anti-slop (highlighted first)
+  { id: 'receipt', title: 'Paragon', emoji: 'đź§ľ', requiresQualitative: false },
+  { id: 'versus-v2', title: 'Versus V2', emoji: 'âšˇ', requiresQualitative: false, size: '1080Ă—1080' },
+  { id: 'redflag', title: 'Czerwona flaga', emoji: 'đźš©', requiresQualitative: false },
+  { id: 'ghost-forecast', title: 'Prognoza ghostingu', emoji: 'đź‘»', requiresQualitative: false },
+  { id: 'compatibility-v2', title: 'Match', emoji: 'đź’•', requiresQualitative: false, size: '1080Ă—1080' },
+  { id: 'label', title: 'Etykietka', emoji: 'đźŹ·ď¸Ź', requiresQualitative: true, size: '1080Ă—1080' },
+  { id: 'passport', title: 'Paszport', emoji: 'đź›‚', requiresQualitative: true },
   // Classic cards
-  { id: 'stats', title: 'Statystyki', emoji: '📊', requiresQualitative: false },
-  { id: 'versus', title: 'Versus', emoji: '⚔️', requiresQualitative: false },
-  { id: 'health', title: 'Wynik zdrowia', emoji: '💚', requiresQualitative: true },
-  { id: 'flags', title: 'Flagi', emoji: '🚩', requiresQualitative: true },
-  { id: 'personality', title: 'Osobowość', emoji: '🧠', requiresQualitative: true },
-  { id: 'scores', title: 'Wyniki viralowe', emoji: '🔥', requiresQualitative: false },
-  { id: 'badges', title: 'Osiągnięcia', emoji: '🏆', requiresQualitative: false },
-  { id: 'mbti', title: 'MBTI', emoji: '🧬', requiresQualitative: true },
-  { id: 'cps', title: 'Wzorce', emoji: '🧠', requiresQualitative: true },
+  { id: 'stats', title: 'Statystyki', emoji: 'đź“Š', requiresQualitative: false },
+  { id: 'versus', title: 'Versus', emoji: 'âš”ď¸Ź', requiresQualitative: false },
+  { id: 'health', title: 'Wynik zdrowia', emoji: 'đź’š', requiresQualitative: true },
+  { id: 'flags', title: 'Flagi', emoji: 'đźš©', requiresQualitative: true },
+  { id: 'personality', title: 'OsobowoĹ›Ä‡', emoji: 'đź§ ', requiresQualitative: true },
+  { id: 'scores', title: 'Wyniki viralowe', emoji: 'đź”Ą', requiresQualitative: false },
+  { id: 'badges', title: 'OsiÄ…gniÄ™cia', emoji: 'đźŹ†', requiresQualitative: false },
+  { id: 'mbti', title: 'MBTI', emoji: 'đź§¬', requiresQualitative: true },
+  { id: 'cps', title: 'Wzorce', emoji: 'đź§ ', requiresQualitative: true },
 ];
 
 export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
   const [activeCard, setActiveCard] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const { conversation, quantitative, qualitative } = analysis;
   const participants = conversation.participants.map((p) => p.name);
@@ -66,6 +68,20 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
     (c) => !c.requiresQualitative || hasQualitative,
   );
 
+  
+  const copyShareLink = useCallback(() => {
+    try {
+      const shareUrl = buildShareUrl(analysis);
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 2000);
+        });
+      }
+    } catch (err) {
+      void err;
+    }
+  }, [analysis]);
   const renderFullCard = (id: string) => {
     switch (id) {
       // V2 cards
@@ -166,6 +182,19 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
 
   return (
     <div className="space-y-4">
+      {/* Share link button */}
+      <div className="flex justify-end">
+        <button
+          onClick={copyShareLink}
+          className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-semibold text-blue-400 transition-colors hover:bg-blue-500/20"
+        >
+          {linkCopied ? (
+            <><Check className="size-3.5" /> Skopiowano!</>
+          ) : (
+            <><Link2 className="size-3.5" /> Udost\u0119pnij link</>
+          )}
+        </button>
+      </div>
       {/* Card thumbnails */}
       <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3 sm:overflow-x-auto pb-2 scrollbar-thin">
         {availableCards.map((card) => (
@@ -182,7 +211,7 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
             <span className="text-xs font-medium text-foreground">{card.title}</span>
             <span className="hidden sm:flex items-center gap-1 text-[10px] text-text-muted">
               <Download className="size-3" />
-              {card.size ?? '1080×1920'}
+              {card.size ?? '1080Ă—1920'}
             </span>
           </button>
         ))}
@@ -217,3 +246,4 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
     </div>
   );
 }
+
