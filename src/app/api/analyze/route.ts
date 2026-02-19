@@ -121,8 +121,6 @@ export async function POST(request: Request): Promise<Response> {
           }
         }
       } catch (error) {
-        console.error('[Analyze API Error]', error);
-        // Don't send error if client already disconnected
         if (!signal.aborted) {
           send({
             type: 'error',

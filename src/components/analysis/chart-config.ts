@@ -38,7 +38,7 @@ export const CHART_TOOLTIP_LABEL_STYLE: React.CSSProperties = {
 };
 
 export const CHART_AXIS_TICK = {
-  fill: '#555555',
+  fill: '#777777',
   fontSize: 10,
   fontFamily: 'var(--font-jetbrains-mono), monospace',
 };

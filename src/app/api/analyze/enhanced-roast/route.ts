@@ -85,7 +85,6 @@ export async function POST(request: Request): Promise<Response> {
 
         send({ type: 'roast_complete', result });
       } catch (error) {
-        console.error('[Enhanced Roast API Error]', error);
         if (!signal.aborted) {
           send({
             type: 'error',

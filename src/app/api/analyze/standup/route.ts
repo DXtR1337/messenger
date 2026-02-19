@@ -76,7 +76,6 @@ export async function POST(request: Request): Promise<Response> {
 
         send({ type: 'complete', result });
       } catch (error) {
-        console.error('[StandUp API Error]', error);
         if (!signal.aborted) {
           send({
             type: 'error',

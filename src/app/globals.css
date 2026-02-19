@@ -85,7 +85,7 @@ html {
   --secondary-foreground: #fafafa;
   --muted: #0a0a0a;
   --muted-foreground: #888888;
-  --text-muted: #555555;
+  --text-muted: #777777;
   --accent: #3b82f6;
   --accent-foreground: #ffffff;
   --accent-subtle: rgba(59, 130, 246, 0.1);
@@ -175,8 +175,13 @@ html {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
   }
 }
 

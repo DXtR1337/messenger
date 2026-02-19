@@ -37,9 +37,7 @@ export function useShareCard({ cardType, title, text }: UseShareCardOptions): Us
           });
           trackEvent({ name: 'share_card_share', params: { cardType, method: 'native' } });
         } catch (err) {
-          if ((err as Error)?.name !== 'AbortError') {
-            console.error('[Share Error]', err);
-          }
+          void err;
         } finally {
           setIsSharing(false);
         }

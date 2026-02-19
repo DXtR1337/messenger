@@ -43,10 +43,10 @@ function getClient() {
 }
 
 const SAFETY_SETTINGS = [
-    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
 ];
 
 async function callGeminiWithRetry(
@@ -75,13 +75,11 @@ async function callGeminiWithRetry(
 
             // Check for safety blocks
             if (response.promptFeedback?.blockReason) {
-                console.error('[Gemini Safety] Prompt blocked:', response.promptFeedback.blockReason);
                 throw new Error(`Prompt zablokowany przez filtr bezpieczeństwa: ${response.promptFeedback.blockReason}`);
             }
 
             const candidate = response.candidates?.[0];
             if (candidate?.finishReason === 'SAFETY') {
-                console.error('[Gemini Safety] Response filtered:', candidate.safetyRatings);
                 throw new Error('Odpowiedź zablokowana przez filtr bezpieczeństwa');
             }
 
@@ -97,16 +95,13 @@ async function callGeminiWithRetry(
                 msg.includes('permission') ||
                 msg.includes('billing')
             ) {
-                console.error('[Gemini Error] Non-retryable:', lastError.message);
                 throw new Error('Błąd konfiguracji API — sprawdź klucz API');
             }
-            console.error(`[Gemini Error] Attempt ${attempt + 1}/${maxRetries}:`, lastError.message);
             if (attempt < maxRetries - 1) {
                 await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
             }
         }
     }
-    console.error('[Gemini Error] All retries exhausted:', lastError?.message);
     throw new Error(`Błąd analizy AI: ${lastError?.message ?? 'nieznany błąd'}`);
 }
 
@@ -126,11 +121,7 @@ function parseGeminiJSON<T>(raw: string): T {
     }
     try {
         return JSON.parse(cleaned) as T;
-    } catch (e) {
-        console.error('[Gemini Error] Failed to parse response as JSON.');
-        console.error('[Gemini Error] Parse error:', e instanceof Error ? e.message : e);
-        console.error('[Gemini Error] Raw length:', raw.length, 'Cleaned length:', cleaned.length);
-        console.error('[Gemini Error] Raw first 500 chars:', raw.slice(0, 500));
+    } catch {
         throw new Error('Błąd parsowania odpowiedzi AI — odpowiedź nie jest poprawnym JSON');
     }
 }
@@ -224,8 +215,9 @@ function buildRelationshipPrefix(relationshipContext?: string): string {
 - Topic range is naturally limited — lack of deep personal topics is expected, not avoidant.`,
     };
 
-    const label = labels[relationshipContext] ?? relationshipContext;
-    const baseline = baselines[relationshipContext] ?? '';
+    const safeContext = labels[relationshipContext] ? relationshipContext : 'other';
+    const label = labels[safeContext] ?? labels['other'];
+    const baseline = baselines[safeContext] ?? '';
     const baselineBlock = baseline ? `\n\n${baseline}\n` : '';
     return `\n\nIMPORTANT CONTEXT — USER-DECLARED RELATIONSHIP TYPE: ${label}\nThe user has explicitly stated this is a ${label}. Calibrate ALL analysis, flags, and observations to this specific relationship context. Do NOT assume romantic dynamics unless the type is "romantic". Adjust your assessment of what constitutes "red flags" vs normal behavior for this relationship type.${baselineBlock}\n`;
 }
@@ -308,8 +300,7 @@ export async function runAnalysisPasses(
 
         result.status = 'complete';
         result.completedAt = Date.now();
-    } catch (error) {
-        console.error('[Gemini Error] Analysis pass failed:', error);
+    } catch {
         const hasPartialResults = result.pass1 || result.pass2 || result.pass3;
         result.status = hasPartialResults ? 'partial' : 'error';
         result.error = 'Błąd analizy AI';
@@ -485,9 +476,8 @@ STYLE INSTRUCTIONS:
 
         return { error: 'No image data in Gemini response' };
     } catch (error) {
-        console.error('[Gemini Error] Image generation failed:', error);
         return {
-            error: 'Błąd analizy AI',
+            error: error instanceof Error ? error.message : 'Błąd generowania obrazu',
         };
     }
 }
@@ -573,25 +563,20 @@ Answer questions ${batchIds[0]} through ${batchIds[batchIds.length - 1]} based o
 
 ${formattedMessages}`;
 
-        const raw = await callGeminiWithRetry(systemPrompt, input, 3, 8192);
+        const raw = await callGeminiWithRetry(systemPrompt, input, 3, 16384);
         const parsed = parseGeminiJSON<CPSRawResponse>(raw);
         const batchAnswers = parseCPSBatchAnswers(parsed);
 
         for (const [id, answer] of Object.entries(batchAnswers)) {
             allAnswers[Number(id)] = answer;
         }
-
-        console.log(`[CPS] Batch ${batchNum}: got ${Object.keys(batchAnswers).length}/${batchIds.length} answers`);
     }
 
     onProgress?.('Przetwarzanie wyników...');
 
     if (Object.keys(allAnswers).length === 0) {
-        console.error('[Gemini Error] CPS analysis returned zero answers across all batches');
         throw new Error('Analiza zwróciła puste wyniki — spróbuj ponownie');
     }
-
-    console.log(`[CPS] Total answers: ${Object.keys(allAnswers).length}/63`);
 
     // Calculate pattern results
     const patternResults = calculatePatternResults(allAnswers);
@@ -692,9 +677,8 @@ STYLE INSTRUCTIONS:
 
         return { error: 'No image data in Gemini response' };
     } catch (error) {
-        console.error('[Gemini Error] Roast image generation failed:', error);
         return {
-            error: 'Błąd analizy AI',
+            error: error instanceof Error ? error.message : 'Błąd generowania obrazu',
         };
     }
 }

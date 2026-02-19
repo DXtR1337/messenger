@@ -100,7 +100,7 @@ export default function SectionNavigator() {
 
       {/* Mobile: horizontal bottom bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden">
-        <div className="flex items-center gap-1 overflow-x-auto border-t border-border/50 bg-card/95 px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md scrollbar-none">
+        <div className="flex items-center gap-1 overflow-x-auto border-t border-border/50 bg-card/95 pl-2 pr-6 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md scrollbar-none">
           {SECTIONS.map(({ id, label, icon, accent }) => (
             <button
               key={id}
