@@ -6,6 +6,13 @@
  * the messages array with O(n) complexity for the main loop.
  *
  * Performance target: <200ms for 50,000 messages.
+ *
+ * Submodules:
+ * - quant/helpers.ts   -- utility functions (text, stats, dates, freq maps)
+ * - quant/bursts.ts    -- burst detection logic
+ * - quant/trends.ts    -- trend/time-series calculations
+ * - quant/reciprocity.ts -- reciprocity and balance metrics
+ * - quant/types.ts     -- internal accumulator types
  */
 
 import type {
@@ -17,156 +24,38 @@ import type {
   EngagementMetrics,
   PatternMetrics,
   HeatmapData,
-  TrendData,
-  ReciprocityIndex,
 } from '../parsers/types';
 import { computeViralScores } from './viral-scores';
 import { computeBadges } from './badges';
 import { computeCatchphrases, computeBestTimeToText } from './catchphrases';
 import { computeNetworkMetrics } from './network';
-import { STOPWORDS, linearRegressionSlope } from './constants';
+import { linearRegressionSlope } from './constants';
+
+import {
+  extractEmojis,
+  countWords,
+  tokenizeWords,
+  median,
+  filterResponseTimeOutliers,
+  getMonthKey,
+  getDayKey,
+  isLateNight,
+  isWeekend,
+  topN,
+  topNWords,
+  topNPhrases,
+  detectBursts,
+  computeTrends,
+  computeReciprocityIndex,
+  createPersonAccumulator,
+} from './quant';
+import type { PersonAccumulator } from './quant';
 
 // ============================================================
 // Constants
 // ============================================================
 
 const SESSION_GAP_MS = 6 * 60 * 60 * 1000; // 6 hours
-
-
-// ============================================================
-// Helper Functions
-// ============================================================
-
-function extractEmojis(text: string): string[] {
-  const emojiRegex = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
-  return text.match(emojiRegex) ?? [];
-}
-
-function countWords(text: string): number {
-  if (!text.trim()) return 0;
-  return text.trim().split(/\s+/).length;
-}
-
-function median(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0
-    ? (sorted[mid - 1] + sorted[mid]) / 2
-    : sorted[mid];
-}
-
-/** Return the value at the given percentile (0-100) */
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) return 0;
-  const idx = (p / 100) * (sorted.length - 1);
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  if (lo === hi) return sorted[lo];
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
-}
-
-/** Filter out extreme outliers: cap at 95th percentile */
-function filterResponseTimeOutliers(times: number[]): number[] {
-  if (times.length < 10) return times;
-  const sorted = [...times].sort((a, b) => a - b);
-  const p95 = percentile(sorted, 95);
-  return times.filter(t => t <= p95);
-}
-
-
-function getMonthKey(timestamp: number): string {
-  return new Date(timestamp).toISOString().slice(0, 7);
-}
-
-function getDayKey(timestamp: number): string {
-  return new Date(timestamp).toISOString().slice(0, 10);
-}
-
-function isLateNight(timestamp: number): boolean {
-  const hour = new Date(timestamp).getHours();
-  return hour >= 22 || hour < 4;
-}
-
-function isWeekend(timestamp: number): boolean {
-  const day = new Date(timestamp).getDay();
-  return day === 0 || day === 6;
-}
-
-/** Return top N items from a frequency map, sorted descending. */
-function topN(
-  map: Map<string, number>,
-  n: number,
-): Array<{ emoji: string; count: number }> {
-  return [...map.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, n)
-    .map(([emoji, count]) => ({ emoji, count }));
-}
-
-/** Generic top-N for word/phrase frequency maps. */
-function topNWords(
-  map: Map<string, number>,
-  n: number,
-): Array<{ word: string; count: number }> {
-  return [...map.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, n)
-    .map(([word, count]) => ({ word, count }));
-}
-
-function topNPhrases(
-  map: Map<string, number>,
-  n: number,
-): Array<{ phrase: string; count: number }> {
-  return [...map.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, n)
-    .map(([phrase, count]) => ({ phrase, count }));
-}
-
-/** Tokenize text to lowercase words (letters only, min 2 chars). */
-function tokenizeWords(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
-    .split(/[\s.,!?;:()\[\]{}"'\-\/\\<>@#$%^&*+=|~`]+/)
-    .filter(w => w.length >= 2 && !STOPWORDS.has(w));
-}
-
-// ============================================================
-// Accumulator Types (internal, not exported)
-// ============================================================
-
-interface PersonAccumulator {
-  totalMessages: number;
-  totalWords: number;
-  totalCharacters: number;
-  longestMessage: { content: string; length: number; timestamp: number };
-  shortestMessage: { content: string; length: number; timestamp: number };
-  messagesWithEmoji: number;
-  emojiCount: number;
-  emojiFreq: Map<string, number>;
-  questionsAsked: number;
-  mediaShared: number;
-  linksShared: number;
-  reactionsGiven: number;
-  reactionsReceived: number;
-  reactionsGivenFreq: Map<string, number>;
-  unsentMessages: number;
-  /** Response times when this person responded to someone else */
-  responseTimes: number[];
-  /** Monthly response times for trend computation */
-  monthlyResponseTimes: Map<string, number[]>;
-  /** Monthly word counts for message length trend */
-  monthlyWordCounts: Map<string, number[]>;
-  /** Messages received from others (for reaction rate computation) */
-  messagesReceived: number;
-  /** Word frequency map (excluding stopwords) */
-  wordFreq: Map<string, number>;
-  /** Bigram frequency map */
-  phraseFreq: Map<string, number>;
-}
 
 // ============================================================
 // Main Computation Function
@@ -181,29 +70,7 @@ export function computeQuantitativeAnalysis(
   // ── Initialize per-person accumulators ──────────────────────
   const accumulators = new Map<string, PersonAccumulator>();
   for (const name of participantNames) {
-    accumulators.set(name, {
-      totalMessages: 0,
-      totalWords: 0,
-      totalCharacters: 0,
-      longestMessage: { content: '', length: 0, timestamp: 0 },
-      shortestMessage: { content: '', length: Infinity, timestamp: 0 },
-      messagesWithEmoji: 0,
-      emojiCount: 0,
-      emojiFreq: new Map(),
-      questionsAsked: 0,
-      mediaShared: 0,
-      linksShared: 0,
-      reactionsGiven: 0,
-      reactionsReceived: 0,
-      reactionsGivenFreq: new Map(),
-      unsentMessages: 0,
-      responseTimes: [],
-      monthlyResponseTimes: new Map(),
-      monthlyWordCounts: new Map(),
-      messagesReceived: 0,
-      wordFreq: new Map(),
-      phraseFreq: new Map(),
-    });
+    accumulators.set(name, createPersonAccumulator());
   }
 
   // ── Timing / session accumulators ──────────────────────────
@@ -277,29 +144,7 @@ export function computeQuantitativeAnalysis(
     // Ensure accumulator exists for unexpected senders (e.g. someone
     // who sent a message but isn't in the participants array)
     if (!accumulators.has(sender)) {
-      accumulators.set(sender, {
-        totalMessages: 0,
-        totalWords: 0,
-        totalCharacters: 0,
-        longestMessage: { content: '', length: 0, timestamp: 0 },
-        shortestMessage: { content: '', length: Infinity, timestamp: 0 },
-        messagesWithEmoji: 0,
-        emojiCount: 0,
-        emojiFreq: new Map(),
-        questionsAsked: 0,
-        mediaShared: 0,
-        linksShared: 0,
-        reactionsGiven: 0,
-        reactionsReceived: 0,
-        reactionsGivenFreq: new Map(),
-        unsentMessages: 0,
-        responseTimes: [],
-        monthlyResponseTimes: new Map(),
-        monthlyWordCounts: new Map(),
-        messagesReceived: 0,
-        wordFreq: new Map(),
-        phraseFreq: new Map(),
-      });
+      accumulators.set(sender, createPersonAccumulator());
       conversationInitiations[sender] = 0;
       conversationEndings[sender] = 0;
       lateNightMessages[sender] = 0;
@@ -532,72 +377,12 @@ export function computeQuantitativeAnalysis(
   }
 
   // ============================================================
+  // ============================================================
   // POST-PROCESSING: derive final metrics from accumulators
   // ============================================================
 
-  // ── Per-person metrics ─────────────────────────────────────
-  const perPerson: Record<string, PersonMetrics> = {};
-  for (const [name, acc] of accumulators) {
-    // Fix shortestMessage if no non-empty message was found
-    const shortestMessage =
-      acc.shortestMessage.length === Infinity
-        ? { content: '', length: 0, timestamp: 0 }
-        : acc.shortestMessage;
-
-    perPerson[name] = {
-      totalMessages: acc.totalMessages,
-      totalWords: acc.totalWords,
-      totalCharacters: acc.totalCharacters,
-      averageMessageLength:
-        acc.totalMessages > 0 ? acc.totalWords / acc.totalMessages : 0,
-      averageMessageChars:
-        acc.totalMessages > 0 ? acc.totalCharacters / acc.totalMessages : 0,
-      longestMessage: acc.longestMessage,
-      shortestMessage,
-      messagesWithEmoji: acc.messagesWithEmoji,
-      emojiCount: acc.emojiCount,
-      topEmojis: topN(acc.emojiFreq, 10),
-      questionsAsked: acc.questionsAsked,
-      mediaShared: acc.mediaShared,
-      linksShared: acc.linksShared,
-      reactionsGiven: acc.reactionsGiven,
-      reactionsReceived: acc.reactionsReceived,
-      topReactionsGiven: topN(acc.reactionsGivenFreq, 5),
-      unsentMessages: acc.unsentMessages,
-      topWords: topNWords(acc.wordFreq, 20),
-      topPhrases: topNPhrases(acc.phraseFreq, 10),
-      uniqueWords: acc.wordFreq.size,
-      vocabularyRichness: acc.totalWords > 0 ? acc.wordFreq.size / acc.totalWords : 0,
-    };
-  }
-
-  // ── Timing metrics per person ──────────────────────────────
-  const timingPerPerson: TimingMetrics['perPerson'] = {};
-  for (const [name, acc] of accumulators) {
-    // Filter extreme outliers (cap at 95th percentile) for more accurate stats
-    const rts = filterResponseTimeOutliers(acc.responseTimes);
-    const avg =
-      rts.length > 0 ? rts.reduce((a, b) => a + b, 0) / rts.length : 0;
-    const med = median(rts);
-    const fastest = rts.length > 0 ? rts.reduce((a, b) => a < b ? a : b, rts[0]) : 0;
-    const slowest = rts.length > 0 ? rts.reduce((a, b) => a > b ? a : b, rts[0]) : 0;
-
-    // Response time trend: compute monthly medians (more robust than means), then linear regression
-    const monthKeys = [...acc.monthlyResponseTimes.keys()].sort();
-    const monthlyMedians = monthKeys.map((mk) => {
-      const times = filterResponseTimeOutliers(acc.monthlyResponseTimes.get(mk)!);
-      return median(times);
-    });
-    const rtTrend = linearRegressionSlope(monthlyMedians);
-
-    timingPerPerson[name] = {
-      averageResponseTimeMs: avg,
-      medianResponseTimeMs: med,
-      fastestResponseMs: fastest,
-      slowestResponseMs: slowest,
-      responseTimeTrend: rtTrend,
-    };
-  }
+  const perPerson = buildPerPersonMetrics(accumulators);
+  const timingPerPerson = buildTimingPerPerson(accumulators);
 
   const timing: TimingMetrics = {
     perPerson: timingPerPerson,
@@ -607,60 +392,29 @@ export function computeQuantitativeAnalysis(
     lateNightMessages,
   };
 
-  // ── Engagement metrics ─────────────────────────────────────
   const totalMessages = messages.length;
-  const messageRatio: Record<string, number> = {};
-  const reactionRate: Record<string, number> = {};
-  for (const [name, acc] of accumulators) {
-    messageRatio[name] = totalMessages > 0 ? acc.totalMessages / totalMessages : 0;
-    // Reaction rate: reactions given / messages received from others
-    // messagesReceived was incremented for each message sent by someone else
-    reactionRate[name] =
-      acc.messagesReceived > 0 ? acc.reactionsGiven / acc.messagesReceived : 0;
-  }
-
-  const engagement: EngagementMetrics = {
+  const engagement = buildEngagementMetrics(
+    accumulators,
+    totalMessages,
+    totalSessions,
     doubleTexts,
     maxConsecutive,
-    messageRatio,
-    reactionRate,
-    avgConversationLength:
-      totalSessions > 0 ? totalMessages / totalSessions : totalMessages,
-    totalSessions,
-  };
+  );
 
-  // ── Pattern metrics ────────────────────────────────────────
-
-  // Monthly volume array sorted chronologically
-  const sortedMonths = [...monthlyVolumeMap.keys()].sort();
-  const monthlyVolume = sortedMonths.map((month) => {
-    const pp = monthlyVolumeMap.get(month)!;
-    const total = Object.values(pp).reduce((a, b) => a + b, 0);
-    return { month, perPerson: pp, total };
-  });
-
-  // Volume trend: linear regression on monthly totals
-  const monthlyTotals = monthlyVolume.map((mv) => mv.total);
-  const volumeTrend = linearRegressionSlope(monthlyTotals);
-
-  // Burst detection: days where count > 3x rolling 7-day average
-  const bursts = detectBursts(dailyCounts);
-
-  const patterns: PatternMetrics = {
-    monthlyVolume,
-    weekdayWeekend: {
-      weekday: weekdayCount,
-      weekend: weekendCount,
-    },
-    volumeTrend,
-    bursts,
-  };
+  const patterns = buildPatternMetrics(
+    monthlyVolumeMap,
+    weekdayCount,
+    weekendCount,
+    dailyCounts,
+  );
 
   // ── Heatmap data ───────────────────────────────────────────
   const heatmap: HeatmapData = {
     perPerson: heatmapPerPerson,
     combined: heatmapCombined,
   };
+
+  const sortedMonths = [...monthlyVolumeMap.keys()].sort();
 
   // ── Trend data ─────────────────────────────────────────────
   const trends = computeTrends(
@@ -702,237 +456,132 @@ export function computeQuantitativeAnalysis(
 }
 
 // ============================================================
-// Burst Detection
+// Post-Processing Builders
 // ============================================================
 
-function detectBursts(
-  dailyCounts: Map<string, number>,
-): PatternMetrics['bursts'] {
-  const sortedDays = [...dailyCounts.keys()].sort();
-  if (sortedDays.length < 8) return [];
+/** Build final PersonMetrics from accumulators. */
+function buildPerPersonMetrics(
+  accumulators: Map<string, PersonAccumulator>,
+): Record<string, PersonMetrics> {
+  const perPerson: Record<string, PersonMetrics> = {};
+  for (const [name, acc] of accumulators) {
+    const shortestMessage =
+      acc.shortestMessage.length === Infinity
+        ? { content: '', length: 0, timestamp: 0 }
+        : acc.shortestMessage;
 
-  const dayValues: Array<{ day: string; count: number }> = sortedDays.map(
-    (day) => ({
-      day,
-      count: dailyCounts.get(day) ?? 0,
-    }),
-  );
+    perPerson[name] = {
+      totalMessages: acc.totalMessages,
+      totalWords: acc.totalWords,
+      totalCharacters: acc.totalCharacters,
+      averageMessageLength:
+        acc.totalMessages > 0 ? acc.totalWords / acc.totalMessages : 0,
+      averageMessageChars:
+        acc.totalMessages > 0 ? acc.totalCharacters / acc.totalMessages : 0,
+      longestMessage: acc.longestMessage,
+      shortestMessage,
+      messagesWithEmoji: acc.messagesWithEmoji,
+      emojiCount: acc.emojiCount,
+      topEmojis: topN(acc.emojiFreq, 10),
+      questionsAsked: acc.questionsAsked,
+      mediaShared: acc.mediaShared,
+      linksShared: acc.linksShared,
+      reactionsGiven: acc.reactionsGiven,
+      reactionsReceived: acc.reactionsReceived,
+      topReactionsGiven: topN(acc.reactionsGivenFreq, 5),
+      unsentMessages: acc.unsentMessages,
+      topWords: topNWords(acc.wordFreq, 20),
+      topPhrases: topNPhrases(acc.phraseFreq, 10),
+      uniqueWords: acc.wordFreq.size,
+      vocabularyRichness: acc.totalWords > 0 ? acc.wordFreq.size / acc.totalWords : 0,
+    };
+  }
+  return perPerson;
+}
 
-  // Compute rolling 7-day average for each day
-  // For the first 7 days, use the overall average as baseline
-  const overallAvg =
-    dayValues.reduce((sum, d) => sum + d.count, 0) / dayValues.length;
+/** Build per-person timing metrics from accumulators. */
+function buildTimingPerPerson(
+  accumulators: Map<string, PersonAccumulator>,
+): TimingMetrics['perPerson'] {
+  const timingPerPerson: TimingMetrics['perPerson'] = {};
+  for (const [name, acc] of accumulators) {
+    const rts = filterResponseTimeOutliers(acc.responseTimes);
+    const avg =
+      rts.length > 0 ? rts.reduce((a, b) => a + b, 0) / rts.length : 0;
+    const med = median(rts);
+    const fastest = rts.length > 0 ? rts.reduce((a, b) => a < b ? a : b, rts[0]) : 0;
+    const slowest = rts.length > 0 ? rts.reduce((a, b) => a > b ? a : b, rts[0]) : 0;
 
-  const burstDays: Array<{ day: string; count: number }> = [];
+    const monthKeys = [...acc.monthlyResponseTimes.keys()].sort();
+    const monthlyMedians = monthKeys.map((mk) => {
+      const times = filterResponseTimeOutliers(acc.monthlyResponseTimes.get(mk)!);
+      return median(times);
+    });
+    const rtTrend = linearRegressionSlope(monthlyMedians);
 
-  for (let i = 0; i < dayValues.length; i++) {
-    let rollingAvg: number;
-    if (i < 7) {
-      rollingAvg = overallAvg;
-    } else {
-      let sum = 0;
-      for (let j = i - 7; j < i; j++) {
-        sum += dayValues[j].count;
-      }
-      rollingAvg = sum / 7;
-    }
+    timingPerPerson[name] = {
+      averageResponseTimeMs: avg,
+      medianResponseTimeMs: med,
+      fastestResponseMs: fastest,
+      slowestResponseMs: slowest,
+      responseTimeTrend: rtTrend,
+    };
+  }
+  return timingPerPerson;
+}
 
-    if (dayValues[i].count > 3 * rollingAvg && rollingAvg > 0) {
-      burstDays.push(dayValues[i]);
-    }
+/** Build engagement metrics from accumulators. */
+function buildEngagementMetrics(
+  accumulators: Map<string, PersonAccumulator>,
+  totalMessages: number,
+  totalSessions: number,
+  doubleTexts: Record<string, number>,
+  maxConsecutive: Record<string, number>,
+): EngagementMetrics {
+  const messageRatio: Record<string, number> = {};
+  const reactionRate: Record<string, number> = {};
+  for (const [name, acc] of accumulators) {
+    messageRatio[name] = totalMessages > 0 ? acc.totalMessages / totalMessages : 0;
+    reactionRate[name] =
+      acc.messagesReceived > 0 ? acc.reactionsGiven / acc.messagesReceived : 0;
   }
 
-  // Merge consecutive burst days into burst periods
-  // Two days are "consecutive" if they are within 1 calendar day of each other
-  if (burstDays.length === 0) return [];
-
-  const bursts: PatternMetrics['bursts'] = [];
-  let currentBurst = {
-    startDate: burstDays[0].day,
-    endDate: burstDays[0].day,
-    messageCount: burstDays[0].count,
-    days: 1,
+  return {
+    doubleTexts,
+    maxConsecutive,
+    messageRatio,
+    reactionRate,
+    avgConversationLength:
+      totalSessions > 0 ? totalMessages / totalSessions : totalMessages,
+    totalSessions,
   };
+}
 
-  for (let i = 1; i < burstDays.length; i++) {
-    const prevDate = new Date(currentBurst.endDate + 'T00:00:00Z');
-    const currDate = new Date(burstDays[i].day + 'T00:00:00Z');
-    const diffDays =
-      (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
-
-    if (diffDays <= 1) {
-      // Extend current burst
-      currentBurst.endDate = burstDays[i].day;
-      currentBurst.messageCount += burstDays[i].count;
-      currentBurst.days++;
-    } else {
-      // Finalize current burst and start new one
-      bursts.push({
-        startDate: currentBurst.startDate,
-        endDate: currentBurst.endDate,
-        messageCount: currentBurst.messageCount,
-        avgDaily: currentBurst.messageCount / currentBurst.days,
-      });
-      currentBurst = {
-        startDate: burstDays[i].day,
-        endDate: burstDays[i].day,
-        messageCount: burstDays[i].count,
-        days: 1,
-      };
-    }
-  }
-
-  // Push final burst
-  bursts.push({
-    startDate: currentBurst.startDate,
-    endDate: currentBurst.endDate,
-    messageCount: currentBurst.messageCount,
-    avgDaily: currentBurst.messageCount / currentBurst.days,
+/** Build pattern metrics from accumulated data. */
+function buildPatternMetrics(
+  monthlyVolumeMap: Map<string, Record<string, number>>,
+  weekdayCount: Record<string, number>,
+  weekendCount: Record<string, number>,
+  dailyCounts: Map<string, number>,
+): PatternMetrics {
+  const sortedMonths = [...monthlyVolumeMap.keys()].sort();
+  const monthlyVolume = sortedMonths.map((month) => {
+    const pp = monthlyVolumeMap.get(month)!;
+    const total = Object.values(pp).reduce((a, b) => a + b, 0);
+    return { month, perPerson: pp, total };
   });
 
-  return bursts;
-}
-
-// ============================================================
-// Trend Computation
-// ============================================================
-
-function computeTrends(
-  accumulators: Map<string, PersonAccumulator>,
-  sortedMonths: string[],
-  monthlyInitiations: Map<string, Record<string, number>>,
-  participantNames: string[],
-): TrendData {
-  // ── Response time trend (median, outlier-filtered) ─────────
-  const responseTimeTrend: TrendData['responseTimeTrend'] = sortedMonths.map(
-    (month) => {
-      const pp: Record<string, number> = {};
-      for (const [name, acc] of accumulators) {
-        const times = acc.monthlyResponseTimes.get(month);
-        if (times && times.length > 0) {
-          pp[name] = median(filterResponseTimeOutliers(times));
-        } else {
-          pp[name] = 0;
-        }
-      }
-      return { month, perPerson: pp };
-    },
-  );
-
-  // ── Message length trend ───────────────────────────────────
-  const messageLengthTrend: TrendData['messageLengthTrend'] = sortedMonths.map(
-    (month) => {
-      const pp: Record<string, number> = {};
-      for (const [name, acc] of accumulators) {
-        const words = acc.monthlyWordCounts.get(month);
-        if (words && words.length > 0) {
-          pp[name] = words.reduce((a, b) => a + b, 0) / words.length;
-        } else {
-          pp[name] = 0;
-        }
-      }
-      return { month, perPerson: pp };
-    },
-  );
-
-  // ── Initiation trend ──────────────────────────────────────
-  const initiationTrend: TrendData['initiationTrend'] = sortedMonths.map(
-    (month) => {
-      const initiations = monthlyInitiations.get(month);
-      const pp: Record<string, number> = {};
-      for (const name of participantNames) {
-        pp[name] = initiations?.[name] ?? 0;
-      }
-      // Also include any extra senders not in original participantNames
-      if (initiations) {
-        for (const name of Object.keys(initiations)) {
-          if (!(name in pp)) {
-            pp[name] = initiations[name];
-          }
-        }
-      }
-      return { month, perPerson: pp };
-    },
-  );
+  const monthlyTotals = monthlyVolume.map((mv) => mv.total);
+  const volumeTrend = linearRegressionSlope(monthlyTotals);
+  const bursts = detectBursts(dailyCounts);
 
   return {
-    responseTimeTrend,
-    messageLengthTrend,
-    initiationTrend,
-  };
-}
-
-// ============================================================
-// Reciprocity Index
-// ============================================================
-
-/**
- * Compute reciprocity index — a composite metric measuring balance
- * between participants. 0 = one-sided, 50 = perfectly balanced.
- * Only meaningful for 2-person conversations.
- */
-function computeReciprocityIndex(
-  engagement: EngagementMetrics,
-  timing: TimingMetrics,
-  perPerson: Record<string, PersonMetrics>,
-  participantNames: string[],
-): ReciprocityIndex {
-  // Default: balanced
-  const defaultResult: ReciprocityIndex = {
-    overall: 50,
-    messageBalance: 50,
-    initiationBalance: 50,
-    responseTimeSymmetry: 50,
-    reactionBalance: 50,
-  };
-
-  if (participantNames.length < 2) return defaultResult;
-
-  // Use first two participants for 1:1 analysis
-  const [a, b] = participantNames;
-
-  // 1. Message Balance: how close to 50/50 is the message split?
-  const ratioA = engagement.messageRatio[a] ?? 0.5;
-  // Score: 50 when ratioA = 0.5, 0 when ratioA = 0 or 1
-  const messageBalance = Math.round(100 * (1 - 2 * Math.abs(ratioA - 0.5)));
-
-  // 2. Initiation Balance: who starts conversations?
-  const initA = timing.conversationInitiations[a] ?? 0;
-  const initB = timing.conversationInitiations[b] ?? 0;
-  const totalInits = initA + initB;
-  const initiationBalance = totalInits > 0
-    ? Math.round(100 * (1 - 2 * Math.abs(initA / totalInits - 0.5)))
-    : 50;
-
-  // 3. Response Time Symmetry: are response times similar?
-  const rtA = timing.perPerson[a]?.medianResponseTimeMs ?? 0;
-  const rtB = timing.perPerson[b]?.medianResponseTimeMs ?? 0;
-  let responseTimeSymmetry = 50;
-  if (rtA > 0 && rtB > 0) {
-    const ratio = Math.min(rtA, rtB) / Math.max(rtA, rtB); // 0-1, 1 = same
-    responseTimeSymmetry = Math.round(ratio * 100);
-  } else if (rtA === 0 && rtB === 0) {
-    responseTimeSymmetry = 50; // no data
-  }
-
-  // 4. Reaction Balance: do they react to each other equally?
-  const reactA = perPerson[a]?.reactionsGiven ?? 0;
-  const reactB = perPerson[b]?.reactionsGiven ?? 0;
-  const totalReacts = reactA + reactB;
-  const reactionBalance = totalReacts > 0
-    ? Math.round(100 * (1 - 2 * Math.abs(reactA / totalReacts - 0.5)))
-    : 50;
-
-  // Overall: equal weight average of all 4 sub-scores
-  const overall = Math.round(
-    (messageBalance + initiationBalance + responseTimeSymmetry + reactionBalance) / 4
-  );
-
-  return {
-    overall,
-    messageBalance,
-    initiationBalance,
-    responseTimeSymmetry,
-    reactionBalance,
+    monthlyVolume,
+    weekdayWeekend: {
+      weekday: weekdayCount,
+      weekend: weekendCount,
+    },
+    volumeTrend,
+    bursts,
   };
 }
