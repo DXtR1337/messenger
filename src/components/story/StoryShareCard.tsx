@@ -171,16 +171,16 @@ export default function StoryShareCard({
       scale: 2,
     });
     const link = document.createElement('a');
-    link.download = 'chatscope-relationship-card.png';
+    link.download = 'podtekst-relationship-card.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
   }, []);
 
   const handleShare = useCallback(async () => {
     const shareData = {
-      title: 'ChatScope — Analiza relacji',
+      title: 'PodTeksT — Analiza relacji',
       text: `Nasz wynik relacji: ${healthScore}/100. ${executiveSummary}`,
-      url: 'https://chatscope.app',
+      url: 'https://podtekst.app',
     };
 
     if (navigator.share) {
@@ -273,7 +273,7 @@ export default function StoryShareCard({
                 color: 'var(--story-text)',
               }}
             >
-              ChatScope
+              PodTeksT
             </span>
             <span
               className="rounded-full px-2.5 py-0.5 font-mono"
@@ -383,7 +383,7 @@ export default function StoryShareCard({
                 color: 'var(--story-text-3)',
               }}
             >
-              chatscope.app
+              podtekst.app
             </span>
             <span
               style={{

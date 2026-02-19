@@ -27,7 +27,7 @@ function getScoreColor(score: number): string {
 
 export default function CompatibilityCardV2({ viralScores, participants }: CompatibilityCardV2Props) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-compatibility');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-compatibility');
 
   const score = viralScores.compatibilityScore;
   const verdict = getVerdict(score);
@@ -258,7 +258,7 @@ export default function CompatibilityCardV2({ viralScores, participants }: Compa
             letterSpacing: '0.12em',
           }}
         >
-          chatscope.app
+          podtekst.app
         </div>
       </div>
 

@@ -20,9 +20,9 @@ export default function LandingFooter() {
           <div className="flex flex-col gap-3">
             <Link
               href="/"
-              className="font-story-display text-lg font-bold text-foreground"
+              className="brand-logo font-display text-lg font-extrabold tracking-tight text-foreground"
             >
-              ChatScope
+              <span className="text-[#3b82f6]">Pod</span><span className="text-[#a855f7]">T</span><span className="brand-eks text-[#a855f7]">eks</span><span className="text-[#a855f7]">T</span>
             </Link>
             <p className="font-story-body text-sm text-muted-foreground">
               Zobacz swoje relacje przez dane
@@ -56,7 +56,7 @@ export default function LandingFooter() {
                   href="#"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
-                  SCID-II Screener
+                  Wzorce komunikacyjne
                 </a>
               </li>
               <li>
@@ -148,10 +148,10 @@ export default function LandingFooter() {
         {/* Bottom row */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 sm:flex-row">
           <p className="font-mono text-xs text-[#555555]">
-            &copy; 2026 ChatScope
+            &copy; 2026 PodTeksT
           </p>
           <p className="font-mono text-xs text-[#555555]">
-            Zbudowane z 🔬 przez ChatScope
+            Zbudowane z 🔬 przez PodTeksT
           </p>
         </div>
       </div>

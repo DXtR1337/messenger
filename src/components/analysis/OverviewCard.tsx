@@ -172,7 +172,7 @@ export default function OverviewCard({
                 <Calendar className="size-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Date Range</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Okres</p>
                 <p className="font-mono text-sm font-medium">
                   {startDate} &mdash; {endDate}
                 </p>
@@ -184,9 +184,9 @@ export default function OverviewCard({
                 <Clock className="size-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Duration</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Czas trwania</p>
                 <p className="font-mono text-sm font-medium">
-                  {formatNumber(metadata.durationDays)} days
+                  {formatNumber(metadata.durationDays)} dni
                 </p>
               </div>
             </div>
@@ -196,7 +196,7 @@ export default function OverviewCard({
                 <MessageSquare className="size-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Total Messages</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Wiadomości</p>
                 <p className="font-mono text-2xl font-bold text-foreground">
                   <AnimatedCounter value={metadata.totalMessages} />
                 </p>
@@ -208,7 +208,7 @@ export default function OverviewCard({
                 <Users className="size-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Participants</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Uczestnicy</p>
                 <p className="font-mono text-sm font-medium">{participants.length}</p>
               </div>
             </div>

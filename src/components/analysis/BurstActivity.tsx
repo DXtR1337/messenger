@@ -25,13 +25,13 @@ export default function BurstActivity({ quantitative }: BurstActivityProps) {
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
-      <div className="px-5 pt-4">
+      <div className="px-3 sm:px-5 pt-4">
         <h3 className="font-display text-[15px] font-bold">Wzmożona aktywność</h3>
         <p className="mt-0.5 text-xs text-text-muted">
           Okresy najintensywniejszej aktywności
         </p>
       </div>
-      <div className="px-5 py-4">
+      <div className="px-3 sm:px-5 py-4">
         {topBursts.length === 0 ? (
           <p className="text-sm text-text-muted">
             Nie wykryto okresów wzmożonej aktywności
@@ -52,7 +52,7 @@ export default function BurstActivity({ quantitative }: BurstActivityProps) {
                     isLast ? '' : 'border-b border-border'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
                     <span className="font-mono text-xs text-muted-foreground">
                       {burst.startDate} &mdash; {burst.endDate}
                     </span>

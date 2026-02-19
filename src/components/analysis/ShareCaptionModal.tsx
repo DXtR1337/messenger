@@ -18,35 +18,35 @@ const CAPTION_TEMPLATES = [
     emoji: '🔥',
     label: 'Roast',
     template: (p: string[], scores: Scores) =>
-      `🔥 Just got our chat roasted by AI and I'm deceased\n\nDelusion score: ${scores.delusion ?? 0}/100 💀\n\n#chatscope #roasted`,
+      `🔥 Just got our chat roasted by AI and I'm deceased\n\nDelusion score: ${scores.delusion ?? 0}/100 💀\n\n#podtekst #roasted`,
   },
   {
     id: 'compatibility',
     emoji: '💕',
     label: 'Match',
     template: (p: string[], scores: Scores) =>
-      `Our compatibility score is ${scores.compatibility ?? 0}% ${(scores.compatibility ?? 0) > 70 ? '💕' : '💀'}\n\nDon't ask about the rest...\n\n#chatscope #compatibility`,
+      `Our compatibility score is ${scores.compatibility ?? 0}% ${(scores.compatibility ?? 0) > 70 ? '💕' : '💀'}\n\nDon't ask about the rest...\n\n#podtekst #compatibility`,
   },
   {
     id: 'receipts',
     emoji: '🧾',
     label: 'Paragon',
     template: (p: string[], scores: Scores) =>
-      `🧾 The receipts are in.\n\nAI przeanalizowało naszą rozmowę i... wow.\n\n#chatscope #thereceipts`,
+      `🧾 The receipts are in.\n\nAI przeanalizowało naszą rozmowę i... wow.\n\n#podtekst #thereceipts`,
   },
   {
     id: 'redflag',
     emoji: '🚩',
     label: 'Red Flag',
     template: (p: string[], scores: Scores) =>
-      `🚩 RED FLAG REPORT 🚩\n\nKlasyfikacja: ${(scores.delusion ?? 0) > 60 ? 'CRITICAL' : 'MODERATE'}\n\nI already knew, but now I have proof.\n\n#chatscope #redflag`,
+      `🚩 RED FLAG REPORT 🚩\n\nKlasyfikacja: ${(scores.delusion ?? 0) > 60 ? 'CRITICAL' : 'MODERATE'}\n\nI already knew, but now I have proof.\n\n#podtekst #redflag`,
   },
   {
     id: 'ghost',
     emoji: '👻',
     label: 'Ghost',
     template: (p: string[], scores: Scores) =>
-      `👻 Ghost Forecast: ${scores.health && scores.health < 40 ? '🌪️ EWAKUACJA' : '⛅ zachmurzenie'}\n\nAI wie więcej niż my sami\n\n#chatscope #ghosted`,
+      `👻 Ghost Forecast: ${scores.health && scores.health < 40 ? '🌪️ EWAKUACJA' : '⛅ zachmurzenie'}\n\nAI wie więcej niż my sami\n\n#podtekst #ghosted`,
   },
 ];
 

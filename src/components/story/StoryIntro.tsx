@@ -169,7 +169,7 @@ export default function StoryIntro({
               color: 'var(--story-text-2)',
             }}
           >
-            ChatScope &times; Gemini
+            PodTeksT &times; Gemini
           </span>
         </motion.div>
 

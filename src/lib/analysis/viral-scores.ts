@@ -1,5 +1,5 @@
 /**
- * Viral / fun scores computation for ChatScope Phase 6A.
+ * Viral / fun scores computation for PodTeksT Phase 6A.
  *
  * Computes compatibility, interest, ghost-risk, and delusion scores
  * from existing quantitative data. No AI involved.

@@ -55,7 +55,7 @@ export default function EmojiReactions({
       transition={{ duration: 0.5 }}
       className="overflow-hidden rounded-xl border border-border bg-card"
     >
-      <div className="flex items-center justify-between px-5 pt-4">
+      <div className="flex items-center justify-between px-3 sm:px-5 pt-4">
         <div>
           <h3 className="font-display text-[15px] font-bold">Top reakcje</h3>
           <p className="mt-0.5 text-xs text-text-muted">
@@ -63,7 +63,7 @@ export default function EmojiReactions({
           </p>
         </div>
       </div>
-      <div className="flex flex-col gap-3 px-5 py-4">
+      <div className="flex flex-col gap-3 px-3 sm:px-5 py-4">
         {topEmojis.map((entry) => {
           const countA = personA ? (entry.perPerson[personA] ?? 0) : 0;
           const countB = personB ? (entry.perPerson[personB] ?? 0) : 0;
@@ -91,7 +91,7 @@ export default function EmojiReactions({
         })}
 
         {/* Legend */}
-        <div className="mt-1.5 flex items-center gap-4 text-xs text-text-muted">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-text-muted">
           {personA && (
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-2 rounded-sm bg-chart-a" />

@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import type { PatternMetrics } from '@/lib/parsers/types';
 import {
   CHART_HEIGHT,
+  useAxisWidth,
   CHART_TOOLTIP_STYLE,
   CHART_TOOLTIP_LABEL_STYLE,
   CHART_AXIS_TICK,
@@ -61,6 +62,7 @@ export default function TimelineChart({
   participants,
 }: TimelineChartProps) {
   const [range, setRange] = useState<TimeRange>('Wszystko');
+  const axisWidth = useAxisWidth();
 
   const filteredData = useMemo(() => {
     const months = getMonthsForRange(range);
@@ -91,7 +93,7 @@ export default function TimelineChart({
       transition={{ duration: 0.5 }}
       className="overflow-hidden rounded-xl border border-border bg-card"
     >
-      <div className="relative flex items-center justify-between px-5 pt-4">
+      <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-5 pt-4">
         <div>
           <h3 className="font-display text-[15px] font-bold">
             Aktywność w czasie
@@ -119,7 +121,7 @@ export default function TimelineChart({
       </div>
 
       {/* Legend strip */}
-      <div className="flex gap-4 px-5 pt-2">
+      <div className="flex flex-wrap gap-2 sm:gap-4 px-3 sm:px-5 pt-2">
         {participants.map((name, i) => (
           <span
             key={name}
@@ -134,9 +136,9 @@ export default function TimelineChart({
         ))}
       </div>
 
-      <div className="px-5 py-4">
+      <div className="px-3 sm:px-5 py-4">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+          <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <defs>
               {participants.map((name, i) => {
                 const color = PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0];
@@ -167,7 +169,7 @@ export default function TimelineChart({
               tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
-              width={40}
+              width={axisWidth}
             />
             <Tooltip
               contentStyle={CHART_TOOLTIP_STYLE}

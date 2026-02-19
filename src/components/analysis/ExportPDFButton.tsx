@@ -5,6 +5,7 @@ import { FileDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { StoredAnalysis } from '@/lib/analysis/types';
 import type { PdfExportProgress } from '@/lib/export/pdf-export';
+import { trackEvent } from '@/lib/analytics/events';
 
 interface ExportPDFButtonProps {
   analysis: StoredAnalysis;
@@ -22,6 +23,7 @@ export default function ExportPDFButton({ analysis }: ExportPDFButtonProps) {
       // Dynamic import to avoid loading jsPDF until needed
       const { generateAnalysisPdf } = await import('@/lib/export/pdf-export');
       await generateAnalysisPdf(analysis, setProgress);
+      trackEvent({ name: 'pdf_download', params: { type: 'standard' } });
     } catch (err) {
       console.error('PDF export failed:', err);
     } finally {

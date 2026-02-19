@@ -119,7 +119,7 @@ function formatMs(ms: number): string {
 
 export default function VersusCardV2({ quantitative, participants }: VersusCardV2Props) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-versus');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-versus');
 
   const categories = buildCategories(quantitative, participants);
   const [catIdx, setCatIdx] = useState(0);
@@ -348,7 +348,7 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
             zIndex: 1,
           }}
         >
-          chatscope.app
+          podtekst.app
         </div>
       </div>
 

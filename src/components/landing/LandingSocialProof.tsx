@@ -11,7 +11,7 @@ const STATS = [
 ];
 
 const TRUST_BADGES = [
-  '119 pytań SCID-II',
+  '63 wzorce komunikacji',
   '12 zaburzeń osobowości',
   '4 passy AI',
   '28+ metryk',

@@ -88,7 +88,7 @@ export default function TopWordsCard({
             className="overflow-hidden rounded-xl border border-border bg-card"
         >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-5 pt-4">
                 <div>
                     <h3 className="font-display text-[15px] font-bold">Top słowa</h3>
                     <p className="mt-0.5 text-xs text-text-muted">
@@ -119,7 +119,7 @@ export default function TopWordsCard({
             </div>
 
             {/* Word list */}
-            <div className="flex flex-col gap-2 px-5 py-4">
+            <div className="flex flex-col gap-2 px-3 sm:px-5 py-4">
                 {items.map((entry, i) => {
                     const label = 'word' in entry ? entry.word : entry.phrase;
                     const pctA = maxCount > 0 ? (entry.a / maxCount) * 100 : 0;
@@ -130,7 +130,7 @@ export default function TopWordsCard({
                             <span className="w-5 text-right font-display text-xs text-text-muted">
                                 {i + 1}
                             </span>
-                            <span className="w-[100px] truncate text-[13px] font-medium">
+                            <span className="w-[70px] sm:w-[100px] truncate text-[13px] font-medium">
                                 {label}
                             </span>
                             <div className="flex h-2.5 flex-1 overflow-hidden rounded-sm bg-muted">
@@ -143,7 +143,7 @@ export default function TopWordsCard({
                                     style={{ width: `${pctB}%` }}
                                 />
                             </div>
-                            <span className="w-14 text-right font-display text-xs text-text-muted">
+                            <span className="w-10 sm:w-14 text-right font-display text-xs text-text-muted">
                                 {entry.total}×
                             </span>
                         </div>
@@ -152,8 +152,8 @@ export default function TopWordsCard({
             </div>
 
             {/* Vocabulary stats footer */}
-            <div className="border-t border-border px-5 py-3">
-                <div className="flex items-center gap-6 text-xs">
+            <div className="border-t border-border px-3 sm:px-5 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6 text-xs">
                     {personA && metricsA && (
                         <div className="flex items-center gap-1.5">
                             <span className="inline-block h-2 w-2 rounded-sm bg-chart-a" />

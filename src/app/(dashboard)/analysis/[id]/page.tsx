@@ -13,7 +13,7 @@ const RoastSection = dynamic(() => import('@/components/analysis/RoastSection'),
   loading: () => <div className="h-48 animate-pulse rounded-xl bg-card" />,
 });
 
-const SCIDScreener = dynamic(() => import('@/components/analysis/SCIDScreener'), {
+const CPSScreener = dynamic(() => import('@/components/analysis/CPSScreener'), {
   loading: () => <div className="h-48 animate-pulse rounded-xl bg-card" />,
 });
 import { AlertCircle, ArrowLeft, Sparkles, ChevronRight } from 'lucide-react';
@@ -22,9 +22,9 @@ import { Button } from '@/components/ui/button';
 import { loadAnalysis, saveAnalysis } from '@/lib/utils';
 import { useSidebar } from '@/components/shared/SidebarContext';
 import type { StoredAnalysis, QualitativeAnalysis, RoastResult } from '@/lib/analysis/types';
-import type { SCIDResult } from '@/lib/analysis/scid-ii';
-import { meetsSCIDRequirements } from '@/lib/analysis/scid-ii';
-import { useSCIDAnalysis } from '@/hooks/useSCIDAnalysis';
+import type { CPSResult } from '@/lib/analysis/communication-patterns';
+import { meetsCPSRequirements } from '@/lib/analysis/communication-patterns';
+import { useCPSAnalysis } from '@/hooks/useCPSAnalysis';
 
 
 import AnalysisHeader from '@/components/analysis/AnalysisHeader';
@@ -57,6 +57,8 @@ import SectionDivider from '@/components/analysis/SectionDivider';
 
 
 import ExportPDFButton from '@/components/analysis/ExportPDFButton';
+import StandUpPDFButton from '@/components/analysis/StandUpPDFButton';
+import EnhancedRoastButton from '@/components/analysis/EnhancedRoastButton';
 import NetworkGraph from '@/components/analysis/NetworkGraph';
 import GhostForecast from '@/components/analysis/GhostForecast';
 import GroupChatAwards from '@/components/analysis/GroupChatAwards';
@@ -164,12 +166,20 @@ export default function AnalysisResultsPage() {
     (async () => {
       try {
         const stored = await loadAnalysis(id);
+        // Migrate old SCID data to CPS
+        if (stored?.qualitative && 'scid' in stored.qualitative) {
+          const qual = stored.qualitative as Record<string, unknown>;
+          if (qual.scid && !qual.cps) {
+            qual.cps = qual.scid;
+          }
+          delete qual.scid;
+        }
         if (!stored) {
           setError('Nie znaleziono analizy. Mogła zostać usunięta lub link jest nieprawidłowy.');
         } else {
           setAnalysis(stored);
           setBreadcrumb(['Analiza', stored.title]);
-          const celebrateKey = `chatscope-celebrate-${id}`;
+          const celebrateKey = `podtekst-celebrate-${id}`;
           if (sessionStorage.getItem(celebrateKey)) {
             sessionStorage.removeItem(celebrateKey);
             setShowConfetti(true);
@@ -186,7 +196,7 @@ export default function AnalysisResultsPage() {
   const handleAIComplete = useCallback(
     (qualitative: QualitativeAnalysis) => {
       if (!analysis) return;
-      // Spread existing qualitative first (preserves roast, scid, status, etc.)
+      // Spread existing qualitative first (preserves roast, cps, status, etc.)
       // then override with new API results (pass1-4 only)
       const mergedQualitative: QualitativeAnalysis = {
         ...analysis.qualitative,
@@ -212,19 +222,23 @@ export default function AnalysisResultsPage() {
       const updated: StoredAnalysis = { ...analysis, qualitative: updatedQualitative };
       saveAnalysis(updated).catch(console.error);
       setAnalysis(updated);
+      // Scroll to roast results after state update
+      setTimeout(() => {
+        document.getElementById('section-roast')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
     },
     [analysis],
   );
 
-  const handleSCIDComplete = useCallback(
-    (scid: SCIDResult) => {
+  const handleCPSComplete = useCallback(
+    (cps: CPSResult) => {
       if (!analysis) return;
       const existingQualitative = analysis.qualitative ?? {
         status: 'pending' as const,
       };
       const updatedQualitative: QualitativeAnalysis = {
         ...existingQualitative,
-        scid,
+        cps,
       };
       const updated: StoredAnalysis = { ...analysis, qualitative: updatedQualitative };
       saveAnalysis(updated).catch(console.error);
@@ -312,20 +326,29 @@ export default function AnalysisResultsPage() {
           />
         </motion.div>
 
-        {/* Story Mode entry point */}
+        {/* Story Mode + Wrapped entry points */}
         <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
-          <Link
-            href={`/analysis/${id}/story`}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-medium transition-colors hover:bg-card-hover"
-          >
-            <span className="text-lg">{'\u{1F4D6}'}</span>
-            Zobacz Story Mode
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/analysis/${id}/story`}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-medium transition-colors hover:bg-card-hover"
+            >
+              <span className="text-lg">{'\u{1F4D6}'}</span>
+              Story Mode
+            </Link>
+            <Link
+              href={`/analysis/${id}/wrapped`}
+              className="inline-flex items-center gap-2 rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-5 py-3 text-sm font-medium text-purple-300 transition-colors hover:from-purple-500/20 hover:to-blue-500/20"
+            >
+              <span className="text-lg">{'\u{2728}'}</span>
+              Wrapped
+            </Link>
+          </div>
         </motion.div>
       </div>
 
       {/* ═══════ SECTION: KLUCZOWE METRYKI ═══════ */}
-      <SectionDivider title="Kluczowe metryki" id="section-metrics" />
+      <SectionDivider number="01" title="Kluczowe metryki" id="section-metrics" />
       <div className="space-y-4">
         <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
           <KPICards quantitative={quantitative} conversation={conversation} />
@@ -336,7 +359,7 @@ export default function AnalysisResultsPage() {
       </div>
 
       {/* ═══════ SECTION: AKTYWNOŚĆ I CZAS ═══════ */}
-      <SectionDivider title="Aktywność i czas" subtitle="Analiza wzorców czasowych" id="section-activity" />
+      <SectionDivider number="02" title="Aktywność i czas" subtitle="Kiedy piszecie, kiedy milczycie" id="section-activity" />
       <div className="space-y-4">
         <motion.div
           className="grid gap-4 grid-cols-1 xl:grid-cols-[1.6fr_1fr]"
@@ -370,7 +393,7 @@ export default function AnalysisResultsPage() {
       </div>
 
       {/* ═══════ SECTION: WZORCE KOMUNIKACJI ═══════ */}
-      <SectionDivider title="Wzorce komunikacji" id="section-communication" />
+      <SectionDivider number="03" title="Wzorce komunikacji" id="section-communication" />
       <div className="space-y-4">
         <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
           <MessageLengthSection quantitative={quantitative} participants={participants} />
@@ -396,7 +419,7 @@ export default function AnalysisResultsPage() {
       {/* ═══════ SECTION: VIRAL SCORES ═══════ */}
       {quantitative.viralScores && (
         <>
-          <SectionDivider title="Viral Scores" subtitle="Kompatybilność, zainteresowanie i ryzyko" id="section-viral" />
+          <SectionDivider number="04" title="Viral Scores" subtitle="Liczby nie kłamią. Ludzie — owszem." id="section-viral" />
           <div className="space-y-4">
             <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
               <ViralScoresSection quantitative={quantitative} participants={participants} />
@@ -422,7 +445,7 @@ export default function AnalysisResultsPage() {
       {/* ═══════ SECTION: GHOST FORECAST ═══════ */}
       {quantitative.viralScores?.ghostRisk && (
         <>
-          <SectionDivider title="Prognoza Ghostingu" subtitle="Pogoda dla waszej relacji" />
+          <SectionDivider title="Prognoza Ghostingu" subtitle="Prawdopodobieństwo że rozmowa ucichnie. Na zawsze." />
           <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
             <GhostForecast viralScores={quantitative.viralScores} participants={participants} />
           </motion.div>
@@ -432,7 +455,7 @@ export default function AnalysisResultsPage() {
       {/* ═══════ SECTION: OSIĄGNIĘCIA ═══════ */}
       {quantitative.badges && quantitative.badges.length > 0 && (
         <>
-          <SectionDivider title="Osiągnięcia" subtitle="Kto zdobył jakie odznaki?" />
+          <SectionDivider title="Osiągnięcia" subtitle="Odznaki za zasługi i przewinienia" />
           <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
             <BadgesGrid badges={quantitative.badges} participants={participants} />
           </motion.div>
@@ -442,7 +465,7 @@ export default function AnalysisResultsPage() {
       {/* ═══════ SECTION: GROUP CHAT AWARDS ═══════ */}
       {conversation.metadata.isGroup && (
         <>
-          <SectionDivider title="Group Chat Awards" subtitle="Ceremonia nagród grupowych" />
+          <SectionDivider title="Group Chat Awards" subtitle="Nagrody za wybitne osiągnięcia grupowe" />
           <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
             <GroupChatAwards quantitative={quantitative} conversation={conversation} />
           </motion.div>
@@ -452,7 +475,7 @@ export default function AnalysisResultsPage() {
       {/* ═══════ SECTION: SIEĆ INTERAKCJI (group chats only) ═══════ */}
       {quantitative.networkMetrics && (
         <>
-          <SectionDivider title="Siec interakcji" subtitle="Kto z kim rozmawia w grupie?" />
+          <SectionDivider title="Sieć interakcji" subtitle="Kto z kim rozmawia, a kto jest pomijany" />
           <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
             <NetworkGraph
               networkMetrics={quantitative.networkMetrics}
@@ -463,10 +486,11 @@ export default function AnalysisResultsPage() {
       )}
 
       {/* ═══════ SECTION: UDOSTEPNIJ WYNIKI ═══════ */}
-      <SectionDivider title="Udostępnij wyniki" subtitle="Pobierz karty do Instagram Stories" id="section-share" />
+      <SectionDivider number="05" title="Udostępnij wyniki" subtitle="Niech inni też zobaczą" id="section-share" />
       <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
         <div className="mb-4 flex items-center gap-3">
           <ExportPDFButton analysis={analysis} />
+          <StandUpPDFButton analysis={analysis} />
           <Button
             variant="outline"
             size="sm"
@@ -491,7 +515,7 @@ export default function AnalysisResultsPage() {
       </motion.div>
 
       {/* ═══════ SECTION: ANALIZA AI ═══════ */}
-      <SectionDivider title="Analiza AI" subtitle="Psychologiczna analiza konwersacji" id="section-ai" />
+      <SectionDivider number="06" title="Analiza AI" subtitle="Dane czekają na interpretację" id="section-ai" />
 
       {/* AI Analysis Button — when not yet analyzed */}
       {!hasQualitative && (
@@ -509,7 +533,7 @@ export default function AnalysisResultsPage() {
 
       {/* Roast Results */}
       {analysis.qualitative?.roast && (
-        <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
+        <motion.div id="section-roast" variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
           <RoastSection
             roast={analysis.qualitative.roast}
             participants={participants}
@@ -630,13 +654,18 @@ export default function AnalysisResultsPage() {
             </motion.div>
           )}
 
-          {/* SCID-II Personality Disorder Screening */}
+          {/* Enhanced Roast — available after full AI analysis */}
+          <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
+            <EnhancedRoastButton analysis={analysis} onComplete={handleRoastComplete} />
+          </motion.div>
+
+          {/* Communication Pattern Screener */}
           {hasQualitative && qualitative?.pass3 && (
             <>
-              <SectionDivider title="SCID-II Screening" subtitle="Przesiewowe badanie osobowości (opcjonalne)" />
-              <SCIDScreenerSection
+              <SectionDivider title="Wzorce komunikacyjne" subtitle="Jak rozmawiacie — styl, tempo, nawyki" />
+              <CPSScreenerSection
                 analysis={analysis}
-                onSCIDComplete={handleSCIDComplete}
+                onCPSComplete={handleCPSComplete}
               />
             </>
           )}
@@ -650,21 +679,21 @@ export default function AnalysisResultsPage() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SCID-II Screener Section Component
+// CPS (Communication Pattern Screener) Section Component
 // ═══════════════════════════════════════════════════════════
 
-interface SCIDScreenerSectionProps {
+interface CPSScreenerSectionProps {
   analysis: StoredAnalysis;
-  onSCIDComplete: (scid: SCIDResult) => void;
+  onCPSComplete: (cps: CPSResult) => void;
 }
 
-function SCIDScreenerSection({ analysis, onSCIDComplete }: SCIDScreenerSectionProps) {
+function CPSScreenerSection({ analysis, onCPSComplete }: CPSScreenerSectionProps) {
   const { conversation, quantitative, qualitative } = analysis;
   const participants = conversation.participants.map((p) => p.name);
 
   const [selectedParticipant, setSelectedParticipant] = useState(participants[0]);
 
-  const { runSCID, isLoading, progress, result, error, reset } = useSCIDAnalysis({
+  const { runCPS, isLoading, progress, result, error, reset } = useCPSAnalysis({
     conversation,
     quantitative,
     participantName: selectedParticipant,
@@ -680,20 +709,20 @@ function SCIDScreenerSection({ analysis, onSCIDComplete }: SCIDScreenerSectionPr
   if (qualitative?.pass1) completedPasses.push(1);
   if (qualitative?.pass2) completedPasses.push(2);
   if (qualitative?.pass3) completedPasses.push(3);
-  const requirementsCheck = meetsSCIDRequirements(
+  const requirementsCheck = meetsCPSRequirements(
     conversation.metadata.totalMessages,
     timespanMs,
     completedPasses,
   );
 
   // Use saved result only if it matches the selected participant
-  const savedResult = qualitative?.scid;
+  const savedResult = qualitative?.cps;
   const savedMatchesSelected = savedResult?.participantName === selectedParticipant;
   const displayResult = result ?? (savedMatchesSelected ? savedResult : undefined);
 
   const handleRun = useCallback(async () => {
-    await runSCID();
-  }, [runSCID]);
+    await runCPS();
+  }, [runCPS]);
 
   const handleParticipantChange = useCallback((name: string) => {
     setSelectedParticipant(name);
@@ -703,9 +732,9 @@ function SCIDScreenerSection({ analysis, onSCIDComplete }: SCIDScreenerSectionPr
   // When we get a new result, save it
   useEffect(() => {
     if (result) {
-      onSCIDComplete(result);
+      onCPSComplete(result);
     }
-  }, [result, onSCIDComplete]);
+  }, [result, onCPSComplete]);
 
   return (
     <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
@@ -734,9 +763,9 @@ function SCIDScreenerSection({ analysis, onSCIDComplete }: SCIDScreenerSectionPr
           </div>
         )}
 
-        <SCIDScreener
-          scidResult={displayResult}
-          onRunSCID={handleRun}
+        <CPSScreener
+          cpsResult={displayResult}
+          onRunCPS={handleRun}
           isLoading={isLoading}
           progress={progress}
           messageCount={conversation.metadata.totalMessages}
@@ -748,7 +777,7 @@ function SCIDScreenerSection({ analysis, onSCIDComplete }: SCIDScreenerSectionPr
 
         {error && (
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg space-y-2">
-            <p className="text-sm font-medium text-red-400">Błąd analizy SCID-II</p>
+            <p className="text-sm font-medium text-red-400">Błąd analizy wzorców</p>
             <p className="text-xs text-red-300/80">{error}</p>
             <button
               onClick={reset}

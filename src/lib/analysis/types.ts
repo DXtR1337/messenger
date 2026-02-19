@@ -4,7 +4,7 @@
  */
 
 import type { ParsedConversation, QuantitativeAnalysis } from '../parsers/types';
-import type { SCIDResult } from './scid-ii';
+import type { CPSResult } from './communication-patterns';
 
 // ============================================================
 // PASS 1: Overview — Tone, Style, Relationship Type
@@ -385,6 +385,26 @@ export interface RoastResult {
 }
 
 // ============================================================
+// STAND-UP ROAST MODE
+// ============================================================
+
+export interface StandUpAct {
+  number: number;
+  title: string;
+  emoji: string;
+  lines: string[];
+  callback?: string;
+  gradientColors: [string, string];
+}
+
+export interface StandUpRoastResult {
+  showTitle: string;
+  acts: StandUpAct[];
+  closingLine: string;
+  audienceRating: string;
+}
+
+// ============================================================
 // Container & Storage Types
 // ============================================================
 
@@ -398,8 +418,10 @@ export interface QualitativeAnalysis {
   pass3?: Record<string, PersonProfile>;
   pass4?: Pass4Result;
   roast?: RoastResult;
-  /** SCID-II personality disorder screening (optional Pass 5) */
-  scid?: SCIDResult;
+  /** Communication Pattern Screening (optional Pass 5) */
+  cps?: CPSResult;
+  /** Stand-Up Comedy Roast (optional) */
+  standupRoast?: StandUpRoastResult;
   completedAt?: number;
 }
 

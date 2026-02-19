@@ -1,5 +1,5 @@
 /**
- * Qualitative analysis module for ChatScope.
+ * Qualitative analysis module for PodTeksT.
  * Client-safe: handles message sampling and context building.
  * Server-side Gemini API logic is in gemini.ts.
  */

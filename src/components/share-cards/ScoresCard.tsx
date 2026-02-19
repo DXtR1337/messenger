@@ -18,7 +18,7 @@ function getScoreStyle(score: number): { color: string; neon: string; label: str
 
 export default function ScoresCard({ viralScores, participants }: ScoresCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-scores');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-scores');
 
   const nameA = participants[0] ?? 'Osoba A';
   const nameB = participants[1] ?? 'Osoba B';
@@ -88,7 +88,7 @@ export default function ScoresCard({ viralScores, participants }: ScoresCardProp
               marginTop: 4,
             }}
           >
-            CHATSCOPE KASYNO • OBSTAWIAJ
+            PODTEKST KASYNO • OBSTAWIAJ
           </div>
         </div>
 
@@ -324,7 +324,7 @@ export default function ScoresCard({ viralScores, participants }: ScoresCardProp
           }}
         >
           <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#553344' }}>
-            chatscope.app
+            podtekst.app
           </span>
           <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#ff3366', textShadow: '0 0 6px rgba(255,51,102,0.3)' }}>
             ♦ ZAKŁADY BEZ ZWROTÓW ♦

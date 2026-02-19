@@ -55,3 +55,41 @@ export const MONTHS_PL = [
   'Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze',
   'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru',
 ] as const;
+
+/** Returns true when viewport width < 640px. Updates on resize. */
+export function useIsMobile(): boolean {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const update = () => setMobile(window.innerWidth < 640);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return mobile;
+}
+
+/** Responsive YAxis width — 30 on mobile, 40 on tablet, 50 on desktop. */
+export function useAxisWidth(): number {
+  const [w, setW] = useState(50);
+  useEffect(() => {
+    const update = () => {
+      const vw = window.innerWidth;
+      if (vw < 640) setW(30);
+      else if (vw < 1024) setW(40);
+      else setW(50);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return w;
+}
+
+/** Responsive axis tick config — fontSize 9 on mobile, 10 on desktop. */
+export function useAxisTick(): typeof CHART_AXIS_TICK {
+  const mobile = useIsMobile();
+  return {
+    ...CHART_AXIS_TICK,
+    fontSize: mobile ? 9 : 10,
+  };
+}

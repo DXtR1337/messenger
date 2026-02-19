@@ -20,7 +20,7 @@ const GRID_EMOJI: Record<string, string> = {
 
 export default function StatsCard({ quantitative, conversation, participants }: StatsCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-stats');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-stats');
 
   const megaStats = computeMegaStats(quantitative, conversation);
 
@@ -107,7 +107,7 @@ export default function StatsCard({ quantitative, conversation, participants }: 
                 letterSpacing: '0.04em',
               }}
             >
-              CHATSCOPE
+              PODTEKST
             </span>
             <span
               style={{
@@ -336,7 +336,7 @@ export default function StatsCard({ quantitative, conversation, participants }: 
               color: '#3a7a3a',
             }}
           >
-            chatscope.app
+            podtekst.app
           </span>
           <span
             style={{

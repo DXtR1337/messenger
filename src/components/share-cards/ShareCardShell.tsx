@@ -112,7 +112,7 @@ export default function ShareCardShell({
               WebkitTextFillColor: 'transparent',
             }}
           >
-            ChatScope
+            PodTeksT
           </span>
           <span
             style={{
@@ -159,7 +159,7 @@ export default function ShareCardShell({
               color: 'rgba(255,255,255,0.25)',
             }}
           >
-            chatscope.app
+            podtekst.app
           </span>
           <span
             style={{

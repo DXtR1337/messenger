@@ -19,7 +19,8 @@ import LabelCard from './LabelCard';
 import CompatibilityCardV2 from './CompatibilityCardV2';
 import GhostForecastCard from './GhostForecastCard';
 import PersonalityPassportCard from './PersonalityPassportCard';
-import SCIDCard from './SCIDCard';
+import CPSCard from './CPSCard';
+
 
 interface ShareCardGalleryProps {
   analysis: StoredAnalysis;
@@ -42,7 +43,6 @@ const CARD_CONFIGS: CardConfig[] = [
   { id: 'compatibility-v2', title: 'Match', emoji: '💕', requiresQualitative: false, size: '1080×1080' },
   { id: 'label', title: 'Etykietka', emoji: '🏷️', requiresQualitative: true, size: '1080×1080' },
   { id: 'passport', title: 'Paszport', emoji: '🛂', requiresQualitative: true },
-  { id: 'scid', title: 'SCID-II', emoji: '🧪', requiresQualitative: true, size: '1080×1080' },
   // Classic cards
   { id: 'stats', title: 'Statystyki', emoji: '📊', requiresQualitative: false },
   { id: 'versus', title: 'Versus', emoji: '⚔️', requiresQualitative: false },
@@ -52,6 +52,7 @@ const CARD_CONFIGS: CardConfig[] = [
   { id: 'scores', title: 'Wyniki viralowe', emoji: '🔥', requiresQualitative: false },
   { id: 'badges', title: 'Osiągnięcia', emoji: '🏆', requiresQualitative: false },
   { id: 'mbti', title: 'MBTI', emoji: '🧬', requiresQualitative: true },
+  { id: 'cps', title: 'Wzorce', emoji: '🧠', requiresQualitative: true },
 ];
 
 export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
@@ -155,14 +156,9 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
         return (
           <MBTICard profiles={qualitative.pass3} participants={participants} />
         );
-      case 'scid':
-        if (!qualitative?.scid) return null;
-        return (
-          <SCIDCard 
-            scidResult={qualitative.scid} 
-            participantName={participants[0]} 
-          />
-        );
+      case 'cps':
+        if (!qualitative?.cps) return null;
+        return <CPSCard cpsResult={qualitative.cps} />;
       default:
         return null;
     }

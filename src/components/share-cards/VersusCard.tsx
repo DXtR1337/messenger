@@ -12,7 +12,7 @@ interface VersusCardProps {
 
 export default function VersusCard({ quantitative, participants }: VersusCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-versus');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-versus');
 
   const versusCards = computeVersusCards(quantitative, participants);
 
@@ -66,7 +66,7 @@ export default function VersusCard({ quantitative, participants }: VersusCardPro
               textTransform: 'uppercase',
             }}
           >
-            CHATSCOPE PREZENTUJE
+            PODTEKST PREZENTUJE
           </div>
           <div
             style={{
@@ -323,7 +323,7 @@ export default function VersusCard({ quantitative, participants }: VersusCardPro
           }}
         >
           <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#3a3a3a' }}>
-            chatscope.app
+            podtekst.app
           </span>
           <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#dc2626', textShadow: '0 0 6px rgba(220,38,38,0.3)' }}>
             🥊 TYLKO DZIŚ WIECZOREM

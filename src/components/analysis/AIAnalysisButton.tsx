@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { sampleMessages } from '@/lib/analysis/qualitative';
+import { trackEvent } from '@/lib/analytics/events';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 import type { QualitativeAnalysis, RoastResult } from '@/lib/analysis/types';
 
@@ -23,14 +24,14 @@ type AnalysisState = 'idle' | 'running' | 'complete' | 'error';
 type RoastState = 'idle' | 'running' | 'complete' | 'error';
 
 const PASS_LABELS = [
-  'Analizowanie tonu i typu relacji...',
-  'Mapowanie dynamiki relacji...',
-  'Budowanie profili osobowości...',
-  'Synteza raportu końcowego...',
+  'Czytam między wierszami...',
+  'Mapuję dynamikę konwersacji...',
+  'Profiluję osobowości...',
+  'Wyciągam wnioski. Przygotuj się.',
 ];
 
 const ROAST_LABELS = [
-  'Generowanie roastu...',
+  'Prześwietlam wasze profile...',
 ];
 
 interface ProgressStep {
@@ -54,7 +55,7 @@ export default function AIAnalysisButton({
   const [roastError, setRoastError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [aiConsent, setAiConsent] = useState<boolean>(
-    () => typeof window !== 'undefined' && localStorage.getItem('chatscope-ai-consent') === 'true',
+    () => typeof window !== 'undefined' && localStorage.getItem('podtekst-ai-consent') === 'true',
   );
 
   const analysisControllerRef = useRef<AbortController | null>(null);
@@ -111,6 +112,7 @@ export default function AIAnalysisButton({
     setError(null);
     setRoastState('idle');
     setRoastError(null);
+    trackEvent({ name: 'analysis_start', params: { mode: 'standard' } });
 
     // Create AbortController for this analysis request
     analysisControllerRef.current?.abort();
@@ -193,6 +195,7 @@ export default function AIAnalysisButton({
             minute: '2-digit',
           }),
         );
+        trackEvent({ name: 'analysis_complete', params: { mode: 'standard', passCount: 4 } });
         onComplete(finalResult);
       } else {
         throw new Error('Analysis completed without results');
@@ -211,6 +214,7 @@ export default function AIAnalysisButton({
   const handleRunRoast = useCallback(async () => {
     setRoastState('running');
     setRoastError(null);
+    trackEvent({ name: 'analysis_start', params: { mode: 'roast' } });
 
     // Create AbortController for this roast request
     roastControllerRef.current?.abort();
@@ -285,6 +289,7 @@ export default function AIAnalysisButton({
 
       if (roastResult) {
         setRoastState('complete');
+        trackEvent({ name: 'analysis_complete', params: { mode: 'roast', passCount: 1 } });
         onRoastComplete?.(roastResult);
       } else {
         throw new Error('Roast completed without results');
@@ -310,7 +315,7 @@ export default function AIAnalysisButton({
           <div className="text-center">
             <h3 className="text-lg font-semibold">Analiza AI</h3>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Uzyskaj pogłębione psychologiczne spostrzeżenia, profile osobowości i analizę dynamiki relacji.
+              Profile osobowości, dynamika konwersacji, styl przywiązania. Dane czekają na interpretację.
             </p>
           </div>
           {!aiConsent && (
@@ -326,7 +331,7 @@ export default function AIAnalysisButton({
                   onChange={(e) => {
                     setAiConsent(e.target.checked);
                     if (e.target.checked) {
-                      localStorage.setItem('chatscope-ai-consent', 'true');
+                      localStorage.setItem('podtekst-ai-consent', 'true');
                     }
                   }}
                   className="size-4 rounded border-border accent-primary"
@@ -359,7 +364,7 @@ export default function AIAnalysisButton({
             ) : (
               <Flame className="size-4" />
             )}
-            {roastState === 'running' ? 'Generowanie roastu...' : 'Tryb Roast'}
+            {roastState === 'running' ? 'Prześwietlam wasze profile...' : 'Tryb Roast'}
           </Button>
           {roastState === 'error' && roastError && (
             <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
@@ -392,9 +397,9 @@ export default function AIAnalysisButton({
             )}
             <div className="flex-1">
               <h3 className="text-sm font-semibold">
-                {state === 'running' && 'Analizowanie rozmowy...'}
+                {state === 'running' && 'Czytam między wierszami...'}
                 {state === 'complete' && 'Analiza ukończona'}
-                {state === 'error' && 'Analiza nie powiodła się'}
+                {state === 'error' && 'Nawet AI potrzebuje przerwy'}
               </h3>
               {state === 'complete' && completedAt && (
                 <p className="text-xs text-muted-foreground">Ukończono o {completedAt}</p>

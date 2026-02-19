@@ -93,7 +93,7 @@ export default function RoastImageCard({
         if (!imageData) return;
         const link = document.createElement('a');
         link.href = imageData;
-        link.download = `chatscope-roast-${participants.join('-')}-comic.png`;
+        link.download = `podtekst-roast-${participants.join('-')}-comic.png`;
         link.click();
     }, [imageData, participants]);
 

@@ -245,7 +245,7 @@ export default function ViralScoresSection({
         <div className="px-5 pt-4 pb-1">
           <h3 className="font-display text-[15px] font-bold">Viral Scores</h3>
           <p className="mt-0.5 text-xs text-text-muted">
-            Kluczowe wskaźniki dynamiki relacji
+            Liczby nie kłamią. Ludzie — owszem.
           </p>
         </div>
 

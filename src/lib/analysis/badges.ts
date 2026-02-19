@@ -1,5 +1,5 @@
 /**
- * Badge / achievement computation for ChatScope Phase 6A.
+ * Badge / achievement computation for PodTeksT Phase 6A.
  *
  * Awards fun badges to participants based on their messaging patterns.
  * All badge names and evidence strings are in Polish.

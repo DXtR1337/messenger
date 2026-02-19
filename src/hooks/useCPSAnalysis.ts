@@ -1,57 +1,96 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { sampleMessages } from '@/lib/analysis/qualitative';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
-import type { SCIDResult } from '@/lib/analysis/scid-ii';
+import type { CPSResult } from '@/lib/analysis/communication-patterns';
 
-interface UseSCIDAnalysisOptions {
+interface UseCPSAnalysisOptions {
   conversation: ParsedConversation;
   quantitative: QuantitativeAnalysis;
   participantName: string;
 }
 
-interface UseSCIDAnalysisReturn {
-  runSCID: () => Promise<void>;
+interface UseCPSAnalysisReturn {
+  runCPS: () => Promise<void>;
   isLoading: boolean;
   progress: number;
-  result: SCIDResult | undefined;
+  result: CPSResult | undefined;
   error: string | null;
   reset: () => void;
 }
 
-type SCIDState = 'idle' | 'running' | 'complete' | 'error';
+type CPSState = 'idle' | 'running' | 'complete' | 'error';
+
+interface ProgressPhase {
+  start: number;
+  ceiling: number;
+}
+
+const PHASE_MAP: Record<string, ProgressPhase> = {
+  'Przygotowanie analizy wzorców...': { start: 3, ceiling: 12 },
+  'Analiza wzorców 1/3...': { start: 15, ceiling: 37 },
+  'Analiza wzorców 2/3...': { start: 40, ceiling: 62 },
+  'Analiza wzorców 3/3...': { start: 65, ceiling: 83 },
+  'Przetwarzanie wyników...': { start: 85, ceiling: 97 },
+  'Analiza zakończona': { start: 100, ceiling: 100 },
+};
 
 /**
- * Hook for running SCID-II personality disorder screening analysis.
- * 
+ * Hook for running CPS communication pattern screening analysis.
+ *
  * Usage:
  * ```tsx
- * const { runSCID, isLoading, progress, result, error } = useSCIDAnalysis({
+ * const { runCPS, isLoading, progress, result, error } = useCPSAnalysis({
  *   conversation,
  *   quantitative,
  *   participantName: 'John Doe',
  * });
  * ```
  */
-export function useSCIDAnalysis({
+export function useCPSAnalysis({
   conversation,
   quantitative,
   participantName,
-}: UseSCIDAnalysisOptions): UseSCIDAnalysisReturn {
-  const [state, setState] = useState<SCIDState>('idle');
+}: UseCPSAnalysisOptions): UseCPSAnalysisReturn {
+  const [state, setState] = useState<CPSState>('idle');
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<SCIDResult | undefined>();
+  const [result, setResult] = useState<CPSResult | undefined>();
   const [error, setError] = useState<string | null>(null);
+  const ceilingRef = useRef(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  // Smooth progress interpolation — creeps toward ceiling between SSE events
+  useEffect(() => {
+    if (state !== 'running') {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+
+    intervalRef.current = setInterval(() => {
+      setProgress(prev => {
+        const ceiling = ceilingRef.current;
+        if (prev >= ceiling) return prev;
+        const remaining = ceiling - prev;
+        const step = Math.max(0.15, remaining * 0.035);
+        return Math.min(prev + step, ceiling);
+      });
+    }, 150);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [state]);
 
   const reset = useCallback(() => {
     setState('idle');
     setProgress(0);
+    ceilingRef.current = 0;
     setResult(undefined);
     setError(null);
   }, []);
 
-  const runSCID = useCallback(async () => {
+  const runCPS = useCallback(async () => {
     setState('running');
     setProgress(0);
     setError(null);
@@ -59,7 +98,7 @@ export function useSCIDAnalysis({
     try {
       const samples = sampleMessages(conversation, quantitative);
 
-      const response = await fetch('/api/analyze/scid', {
+      const response = await fetch('/api/analyze/cps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -70,7 +109,7 @@ export function useSCIDAnalysis({
 
       if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error(`SCID analysis failed: ${response.status} ${errorBody}`);
+        throw new Error(`CPS analysis failed: ${response.status} ${errorBody}`);
       }
 
       if (!response.body) {
@@ -80,7 +119,7 @@ export function useSCIDAnalysis({
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let finalResult: SCIDResult | null = null;
+      let finalResult: CPSResult | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -99,23 +138,20 @@ export function useSCIDAnalysis({
             const event = JSON.parse(data) as {
               type: string;
               status?: string;
-              result?: SCIDResult;
+              result?: CPSResult;
               error?: string;
             };
 
             if (event.type === 'progress' && event.status) {
-              // Map status messages to progress percentage
-              const progressMap: Record<string, number> = {
-                'Przygotowanie analizy SCID-II...': 5,
-                'Analiza wzorców osobowości...': 25,
-                'Przetwarzanie wyników...': 75,
-                'Analiza zakończona': 100,
-              };
-              setProgress(progressMap[event.status] ?? 50);
+              const phase = PHASE_MAP[event.status];
+              if (phase) {
+                setProgress(phase.start);
+                ceilingRef.current = phase.ceiling;
+              }
             } else if (event.type === 'complete' && event.result) {
               finalResult = event.result;
             } else if (event.type === 'error') {
-              throw new Error(event.error ?? 'Unknown SCID analysis error');
+              throw new Error(event.error ?? 'Unknown CPS analysis error');
             }
           } catch (parseError) {
             // Skip malformed JSON lines in the SSE stream
@@ -130,7 +166,7 @@ export function useSCIDAnalysis({
         setProgress(100);
         setResult(finalResult);
       } else {
-        throw new Error('SCID analysis completed without results');
+        throw new Error('CPS analysis completed without results');
       }
     } catch (err) {
       setState('error');
@@ -139,7 +175,7 @@ export function useSCIDAnalysis({
   }, [conversation, quantitative, participantName]);
 
   return {
-    runSCID,
+    runCPS,
     isLoading: state === 'running',
     progress,
     result,
@@ -148,4 +184,4 @@ export function useSCIDAnalysis({
   };
 }
 
-export default useSCIDAnalysis;
+export default useCPSAnalysis;

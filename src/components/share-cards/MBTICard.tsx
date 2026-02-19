@@ -28,7 +28,7 @@ const DIM_FULL: Record<string, [string, string]> = {
 
 export default function MBTICard({ profiles, participants }: MBTICardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-mbti');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-mbti');
 
   const participantsWithMBTI = participants.filter(
     (name) => profiles[name]?.mbti,
@@ -113,7 +113,7 @@ export default function MBTICard({ profiles, participants }: MBTICardProps) {
               marginTop: 4,
             }}
           >
-            CHATSCOPE MISTRZOSTWA WALKI
+            PODTEKST MISTRZOSTWA WALKI
           </div>
         </div>
 
@@ -333,7 +333,7 @@ export default function MBTICard({ profiles, participants }: MBTICardProps) {
           }}
         >
           <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#333355' }}>
-            chatscope.app
+            podtekst.app
           </span>
           <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#ff3366', textShadow: '0 0 6px rgba(255,51,102,0.3)' }}>
             WALKA!

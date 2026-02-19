@@ -13,7 +13,7 @@ const TROPHY_RANKS = ['🥇', '🥈', '🥉', '🏅', '🎖️', '⭐'];
 
 export default function BadgesCard({ badges, participants }: BadgesCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-badges', { backgroundColor: '#0a0505' });
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-badges', { backgroundColor: '#0a0505' });
 
   const displayBadges = badges.slice(0, 6);
   const remainingCount = badges.length - 6;
@@ -97,7 +97,7 @@ export default function BadgesCard({ badges, participants }: BadgesCardProps) {
               marginTop: 4,
             }}
           >
-            CHATSCOPE PREZENTUJE • NAGRODY {new Date().getFullYear()}
+            PODTEKST PREZENTUJE • NAGRODY {new Date().getFullYear()}
           </div>
           {/* Gold divider */}
           <div
@@ -232,7 +232,7 @@ export default function BadgesCard({ badges, participants }: BadgesCardProps) {
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#5a3a2a' }}>
-              chatscope.app
+              podtekst.app
             </span>
             <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#ffd700', textShadow: '0 0 6px rgba(255,215,0,0.3)' }}>
               ★ A WYGRYWA... ★

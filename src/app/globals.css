@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
   --font-display: var(--font-jetbrains-mono);
   --font-story-display: var(--font-syne);
   --font-story-body: var(--font-space-grotesk);
@@ -125,6 +125,35 @@ html {
   --sidebar-ring: #3b82f6;
 }
 
+/* ═══════════════════════════════════════
+   HDR / Display P3 — wide gamut color overrides
+   Progressive enhancement: only activates on
+   displays that support high dynamic range
+   (modern iPhones, MacBooks, iPads, OLED monitors)
+═══════════════════════════════════════ */
+@media (dynamic-range: high) and (color-gamut: p3) {
+  :root {
+    --primary: color(display-p3 0.18 0.52 1.0);
+    --accent: color(display-p3 0.18 0.52 1.0);
+    --accent-hover: color(display-p3 0.1 0.38 0.95);
+    --ring: color(display-p3 0.18 0.52 1.0);
+    --chart-1: color(display-p3 0.18 0.52 1.0);
+    --chart-a: color(display-p3 0.18 0.52 1.0);
+    --chart-2: color(display-p3 0.62 0.28 1.0);
+    --chart-b: color(display-p3 0.62 0.28 1.0);
+    --success: color(display-p3 0.0 0.78 0.55);
+    --warning: color(display-p3 1.0 0.64 0.0);
+    --danger: color(display-p3 1.0 0.2 0.2);
+    --destructive: color(display-p3 1.0 0.2 0.2);
+    --cyan: color(display-p3 0.0 0.75 0.88);
+    --chart-3: color(display-p3 0.0 0.78 0.55);
+    --chart-4: color(display-p3 1.0 0.64 0.0);
+    --chart-5: color(display-p3 1.0 0.2 0.2);
+    --sidebar-primary: color(display-p3 0.18 0.52 1.0);
+    --sidebar-ring: color(display-p3 0.18 0.52 1.0);
+  }
+}
+
 /* Mobile: hide sidebar entirely */
 @media (max-width: 767px) {
   :root {
@@ -175,6 +204,15 @@ body::after {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+
+/* Hide scrollbar utility for horizontal scroll containers */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Story page design tokens */
@@ -245,5 +283,57 @@ body::after {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Exempt loading spinners — essential UI feedback */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  /* Exempt continuous marquee — slow it down instead of killing */
+  .marquee-track {
+    animation-duration: 60s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  /* Exempt wrapped progress fill — essential UI feedback */
+  .wrapped-progress-fill {
+    animation-duration: inherit !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Wrapped mode: Stories-style progress fill */
+@keyframes wrappedProgressFill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* ═══════════════════════════════════════
+   CURTAIN REVEAL — landing content visibility
+   CurtainReveal.tsx uses Web Animations API
+   for all animations (inline styles only)
+═══════════════════════════════════════ */
+
+/* Landing content starts hidden, fades in after curtain opens */
+.landing-content {
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════
+   BRAND LOGO — eks hover → red reveal
+═══════════════════════════════════════ */
+.brand-logo .brand-eks {
+  transition: color 0.5s ease, text-shadow 0.5s ease;
+}
+.brand-logo:hover .brand-eks {
+  color: #ef4444;
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+@media (dynamic-range: high) and (color-gamut: p3) {
+  .brand-logo:hover .brand-eks {
+    color: color(display-p3 1.0 0.2 0.2);
+    text-shadow: 0 0 14px color(display-p3 1.0 0.2 0.2 / 0.5);
   }
 }

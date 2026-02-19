@@ -141,7 +141,7 @@ export default function ComparisonRadar({ analysisA, analysisB }: ComparisonRada
       transition={{ duration: 0.4, delay: 0.1 }}
       className="overflow-hidden rounded-xl border border-border bg-card"
     >
-      <div className="px-5 pt-4 pb-2">
+      <div className="px-3 sm:px-5 pt-4 pb-2">
         <h3 className="font-display text-[15px] font-bold">Profil porównawczy</h3>
         <p className="mt-0.5 text-xs text-text-muted">
           Nakładka radarowa kluczowych wymiarów

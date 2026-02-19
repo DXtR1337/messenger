@@ -15,6 +15,7 @@ import {
 import type { StoredAnalysis } from '@/lib/analysis/types';
 import {
   CHART_HEIGHT,
+  useAxisWidth,
   CHART_TOOLTIP_STYLE,
   CHART_TOOLTIP_LABEL_STYLE,
   CHART_AXIS_TICK,
@@ -43,6 +44,7 @@ function formatMonth(ym: string): string {
 }
 
 export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonTimelineProps) {
+  const axisWidth = useAxisWidth();
   const { data, titleA, titleB } = useMemo(() => {
     const volA = analysisA.quantitative.patterns.monthlyVolume;
     const volB = analysisB.quantitative.patterns.monthlyVolume;
@@ -81,7 +83,7 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
       transition={{ duration: 0.4, delay: 0.3 }}
       className="overflow-hidden rounded-xl border border-border bg-card"
     >
-      <div className="px-5 pt-4 pb-2">
+      <div className="px-3 sm:px-5 pt-4 pb-2">
         <h3 className="font-display text-[15px] font-bold">Aktywność w czasie</h3>
         <p className="mt-0.5 text-xs text-text-muted">
           Miesięczna liczba wiadomości obu konwersacji
@@ -89,7 +91,7 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
       </div>
 
       {/* Legend */}
-      <div className="flex gap-4 px-5 pt-1">
+      <div className="flex flex-wrap gap-2 sm:gap-4 px-3 sm:px-5 pt-1">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: '#3b82f6' }} />
           {titleA}
@@ -100,9 +102,9 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
         </span>
       </div>
 
-      <div className="px-5 py-4">
+      <div className="px-3 sm:px-5 py-4">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+          <AreaChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <defs>
               <linearGradient id="compare-fill-a" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
@@ -125,7 +127,7 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
               tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
-              width={40}
+              width={axisWidth}
             />
             <Tooltip
               contentStyle={CHART_TOOLTIP_STYLE}

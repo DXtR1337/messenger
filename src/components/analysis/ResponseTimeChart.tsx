@@ -14,6 +14,7 @@ import {
 import type { TrendData } from '@/lib/parsers/types';
 import {
   useChartHeight,
+  useAxisWidth,
   CHART_TOOLTIP_STYLE,
   CHART_TOOLTIP_LABEL_STYLE,
   CHART_AXIS_TICK,
@@ -51,6 +52,7 @@ export default function ResponseTimeChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const inView = useInView(containerRef, { once: true, margin: '-50px' });
   const chartHeight = useChartHeight();
+  const axisWidth = useAxisWidth();
   const chartData: ChartDataPoint[] = useMemo(() => {
     return trendData.map((entry) => {
       const point: ChartDataPoint = {
@@ -89,14 +91,14 @@ export default function ResponseTimeChart({
       transition={{ duration: 0.5 }}
       className="overflow-hidden rounded-xl border border-border bg-card"
     >
-      <div className="flex items-center justify-between px-5 pt-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-5 pt-4">
         <div>
           <h3 className="font-display text-[15px] font-bold">Czas odpowiedzi</h3>
           <p className="mt-0.5 text-xs text-text-muted">
             Mediana czasu odpowiedzi w minutach per osoba
           </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-2 sm:gap-4">
           {participants.map((name, i) => (
             <span
               key={name}
@@ -111,9 +113,9 @@ export default function ResponseTimeChart({
           ))}
         </div>
       </div>
-      <div className="px-5 py-4">
+      <div className="px-3 sm:px-5 py-4">
         <ResponsiveContainer width="100%" height={chartHeight}>
-          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+          <LineChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <CartesianGrid {...CHART_GRID_PROPS} />
             <XAxis
               dataKey="label"
@@ -126,7 +128,7 @@ export default function ResponseTimeChart({
               tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
-              width={50}
+              width={axisWidth}
               tickFormatter={(value: number) => {
                 if (useHours) return `${(value / 3_600_000).toFixed(1)}h`;
                 return `${Math.round(value / 60_000)}min`;

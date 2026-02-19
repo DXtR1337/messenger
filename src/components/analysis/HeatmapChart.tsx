@@ -74,8 +74,8 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
       </div>
 
       {/* Overflow-x-auto as a safety net for very narrow screens */}
-      <div className="overflow-x-auto px-5 py-4">
-        <div className="flex gap-2" style={{ minWidth: 200 }}>
+      <div className="overflow-x-auto px-3 sm:px-5 py-4">
+        <div className="flex gap-2">
           {/* Y-axis labels (hours) — uses relative positioning, height driven by grid */}
           <div className="relative shrink-0" style={{ width: 24 }}>
             {HOUR_LABELS.map((hour) => (
@@ -98,7 +98,7 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
               className="grid gap-[2px] sm:gap-[3px]"
               style={{
                 gridTemplateColumns: 'repeat(7, 1fr)',
-                gridAutoRows: 'minmax(12px, 18px)',
+                gridAutoRows: 'minmax(10px, 16px)',
               }}
             >
               {cells.map((cell) => (

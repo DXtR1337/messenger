@@ -20,6 +20,7 @@ import {
   CHART_GRID_PROPS,
   PERSON_COLORS_HEX,
   MONTHS_PL,
+  useAxisWidth,
 } from './chart-config';
 
 interface MessageLengthSectionProps {
@@ -52,6 +53,8 @@ export default function MessageLengthSection({
   quantitative,
   participants,
 }: MessageLengthSectionProps) {
+  const axisWidth = useAxisWidth();
+
   const chartData: ChartDataPoint[] = useMemo(() => {
     return quantitative.trends.messageLengthTrend.map((entry) => {
       const point: ChartDataPoint = {
@@ -81,7 +84,7 @@ export default function MessageLengthSection({
               className="overflow-hidden rounded-xl border border-border bg-card"
               style={{ borderLeftColor: color, borderLeftWidth: 3 }}
             >
-              <div className="px-5 pt-4 pb-2">
+              <div className="px-3 sm:px-5 pt-4 pb-2">
                 <h3
                   className="text-[15px] font-bold"
                   style={{ color }}
@@ -89,7 +92,7 @@ export default function MessageLengthSection({
                   {person}
                 </h3>
               </div>
-              <div className="space-y-4 px-5 pb-4">
+              <div className="space-y-4 px-3 sm:px-5 pb-4">
                 {/* Longest message */}
                 <div className="space-y-1">
                   <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -131,7 +134,7 @@ export default function MessageLengthSection({
 
       {/* Bottom section: message length trend chart */}
       <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between px-5 pt-4">
+        <div className="flex items-center justify-between px-3 sm:px-5 pt-4">
           <div>
             <h3 className="font-display text-[15px] font-bold">
               Długość wiadomości w czasie
@@ -140,7 +143,7 @@ export default function MessageLengthSection({
               Średnia liczba słów na wiadomość miesięcznie
             </p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-2 sm:gap-4">
             {participants.map((name, i) => (
               <span
                 key={name}
@@ -155,7 +158,7 @@ export default function MessageLengthSection({
             ))}
           </div>
         </div>
-        <div className="px-5 py-4">
+        <div className="px-3 sm:px-5 py-4">
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid {...CHART_GRID_PROPS} />
@@ -170,7 +173,7 @@ export default function MessageLengthSection({
                 tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={axisWidth}
                 tickFormatter={(value: number) => `${Math.round(value)}`}
               />
               <Tooltip

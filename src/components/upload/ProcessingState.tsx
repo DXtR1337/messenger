@@ -20,18 +20,18 @@ interface StepDefinition {
 const STEPS: StepDefinition[] = [
   {
     key: 'parsing',
-    label: 'Parsowanie',
-    description: 'Odczytywanie i dekodowanie danych z Messengera',
+    label: 'Czytam między wierszami...',
+    description: 'Odczytywanie i dekodowanie danych z konwersacji',
   },
   {
     key: 'analyzing',
-    label: 'Obliczanie',
+    label: 'Analizuję konwersację...',
     description: 'Wyliczanie metryk ilościowych',
   },
   {
     key: 'saving',
-    label: 'Zapis',
-    description: 'Zapisywanie wyników analizy',
+    label: 'Zapisuję wyniki.',
+    description: 'Dane gotowe do przeglądu',
   },
 ];
 
@@ -44,11 +44,7 @@ const STAGE_ORDER: Record<string, number> = {
 
 function Spinner() {
   return (
-    <motion.div
-      className="size-5 rounded-full border-2 border-primary border-t-transparent"
-      animate={{ rotate: 360 }}
-      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-    />
+    <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
   );
 }
 
@@ -172,7 +168,7 @@ export function ProcessingState({ stage, progress, error }: ProcessingStateProps
             className="flex items-center gap-2 rounded-md bg-success/10 border border-success/20 px-3 py-2.5 text-xs text-success"
           >
             <Check className="size-4 shrink-0" />
-            <span>Analiza gotowa. Przekierowanie...</span>
+            <span>Gotowe. Wyniki czekają.</span>
           </motion.div>
         )}
 

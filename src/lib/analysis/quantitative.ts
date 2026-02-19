@@ -1,5 +1,5 @@
 /**
- * Quantitative metrics computation engine for ChatScope.
+ * Quantitative metrics computation engine for PodTeksT.
  *
  * Computes all numerical/statistical metrics from a parsed conversation
  * without any AI involvement. Designed for a single-pass approach over
@@ -54,6 +54,24 @@ function median(values: number[]): number {
   return sorted.length % 2 === 0
     ? (sorted[mid - 1] + sorted[mid]) / 2
     : sorted[mid];
+}
+
+/** Return the value at the given percentile (0-100) */
+function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+/** Filter out extreme outliers: cap at 95th percentile */
+function filterResponseTimeOutliers(times: number[]): number[] {
+  if (times.length < 10) return times;
+  const sorted = [...times].sort((a, b) => a - b);
+  const p95 = percentile(sorted, 95);
+  return times.filter(t => t <= p95);
 }
 
 
@@ -556,20 +574,21 @@ export function computeQuantitativeAnalysis(
   // ── Timing metrics per person ──────────────────────────────
   const timingPerPerson: TimingMetrics['perPerson'] = {};
   for (const [name, acc] of accumulators) {
-    const rts = acc.responseTimes;
+    // Filter extreme outliers (cap at 95th percentile) for more accurate stats
+    const rts = filterResponseTimeOutliers(acc.responseTimes);
     const avg =
       rts.length > 0 ? rts.reduce((a, b) => a + b, 0) / rts.length : 0;
     const med = median(rts);
     const fastest = rts.length > 0 ? rts.reduce((a, b) => a < b ? a : b, rts[0]) : 0;
     const slowest = rts.length > 0 ? rts.reduce((a, b) => a > b ? a : b, rts[0]) : 0;
 
-    // Response time trend: compute monthly averages, then linear regression
+    // Response time trend: compute monthly medians (more robust than means), then linear regression
     const monthKeys = [...acc.monthlyResponseTimes.keys()].sort();
-    const monthlyAvgs = monthKeys.map((mk) => {
-      const times = acc.monthlyResponseTimes.get(mk)!;
-      return times.reduce((a, b) => a + b, 0) / times.length;
+    const monthlyMedians = monthKeys.map((mk) => {
+      const times = filterResponseTimeOutliers(acc.monthlyResponseTimes.get(mk)!);
+      return median(times);
     });
-    const rtTrend = linearRegressionSlope(monthlyAvgs);
+    const rtTrend = linearRegressionSlope(monthlyMedians);
 
     timingPerPerson[name] = {
       averageResponseTimeMs: avg,
@@ -784,14 +803,14 @@ function computeTrends(
   monthlyInitiations: Map<string, Record<string, number>>,
   participantNames: string[],
 ): TrendData {
-  // ── Response time trend ────────────────────────────────────
+  // ── Response time trend (median, outlier-filtered) ─────────
   const responseTimeTrend: TrendData['responseTimeTrend'] = sortedMonths.map(
     (month) => {
       const pp: Record<string, number> = {};
       for (const [name, acc] of accumulators) {
         const times = acc.monthlyResponseTimes.get(month);
         if (times && times.length > 0) {
-          pp[name] = times.reduce((a, b) => a + b, 0) / times.length;
+          pp[name] = median(filterResponseTimeOutliers(times));
         } else {
           pp[name] = 0;
         }

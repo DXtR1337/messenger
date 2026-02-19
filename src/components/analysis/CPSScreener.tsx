@@ -33,25 +33,25 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  type SCIDResult,
-  type SCIDDisorderResult,
-  type SCIDDisorder,
-  SCID_DISORDERS,
-  SCID_DISCLAIMER,
-  SCID_SECONDARY_DISCLAIMER,
-  getDisorderByKey,
+  type CPSResult,
+  type CPSPatternResult,
+  type CPSPattern,
+  CPS_PATTERNS,
+  CPS_QUESTIONS,
+  CPS_DISCLAIMER,
+  CPS_SECONDARY_DISCLAIMER,
+  getPatternByKey,
   getQuestionById,
-  isQuestionAssessable,
   getOverallRiskLevel,
-} from '@/lib/analysis/scid-ii';
+} from '@/lib/analysis/communication-patterns';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-interface SCIDScreenerProps {
-  scidResult?: SCIDResult;
-  onRunSCID?: () => void;
+interface CPSScreenerProps {
+  cpsResult?: CPSResult;
+  onRunCPS?: () => void;
   isLoading?: boolean;
   progress?: number;
   messageCount: number;
@@ -65,12 +65,12 @@ interface SCIDScreenerProps {
 // HELPER COMPONENTS
 // ============================================================
 
-function RiskBadge({ level }: { level: 'low' | 'moderate' | 'high' | 'very_high' }) {
+function RiskBadge({ level }: { level: 'niski' | 'umiarkowany' | 'podwyższony' | 'wysoki' }) {
   const config = {
-    low: { color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', text: 'Niskie ryzyko' },
-    moderate: { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', text: 'Umiarkowane ryzyko' },
-    high: { color: 'bg-orange-500/10 text-orange-400 border-orange-500/20', text: 'Podwyższone ryzyko' },
-    very_high: { color: 'bg-red-500/10 text-red-400 border-red-500/20', text: 'Wysokie ryzyko' },
+    niski: { color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', text: 'Niskie ryzyko' },
+    umiarkowany: { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', text: 'Umiarkowane ryzyko' },
+    podwyższony: { color: 'bg-orange-500/10 text-orange-400 border-orange-500/20', text: 'Podwyższone ryzyko' },
+    wysoki: { color: 'bg-red-500/10 text-red-400 border-red-500/20', text: 'Wysokie ryzyko' },
   };
   const { color, text } = config[level];
   return <Badge className={`${color} border`}>{text}</Badge>;
@@ -96,21 +96,16 @@ function AnswerIcon({ answer }: { answer: boolean | null }) {
   return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
 }
 
-function DisorderCard({
-  disorder,
+function PatternCard({
+  pattern,
   result,
   defaultOpen = false,
 }: {
-  disorder: SCIDDisorder;
-  result: SCIDDisorderResult;
+  pattern: CPSPattern;
+  result: CPSPatternResult;
   defaultOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const assessableQuestions = disorder.questions.filter(id => {
-    const q = getQuestionById(id);
-    return q && isQuestionAssessable(q);
-  });
-  const unassessableCount = disorder.questions.length - assessableQuestions.length;
 
   return (
     <Card
@@ -128,19 +123,19 @@ function DisorderCard({
                 <div className="flex items-center gap-2 mb-1">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: disorder.color }}
+                    style={{ backgroundColor: pattern.color }}
                   />
                   <CardTitle className="text-sm font-medium text-foreground">
-                    {disorder.name}
+                    {pattern.name}
                   </CardTitle>
                   {result.meetsThreshold && (
                     <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">
-                      Przekroczono próg
+                      Zalecana konsultacja
                     </Badge>
                   )}
                 </div>
                 <CardDescription className="text-xs text-muted-foreground">
-                  {disorder.nameEn}
+                  {pattern.description}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-3">
@@ -167,24 +162,24 @@ function DisorderCard({
             </div>
             <div className="mt-2 flex items-center justify-between">
               <ConfidenceIndicator confidence={result.confidence} />
-              {unassessableCount > 0 && (
-                <span className="text-xs text-muted-foreground/60">
-                  {unassessableCount} pytań nieocenialnych
-                </span>
-              )}
             </div>
+            {result.meetsThreshold && (
+              <div className="mt-2 p-2 rounded-md bg-orange-500/10 border border-orange-500/20">
+                <p className="text-xs text-orange-300/90 leading-relaxed">
+                  {pattern.recommendation}
+                </p>
+              </div>
+            )}
           </CardHeader>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
           <CardContent className="pt-0 pb-4">
             <div className="border-t border-border pt-4 mt-2 space-y-3">
-              {disorder.questions.map(questionId => {
+              {pattern.questions.map(questionId => {
                 const answer = result.answers[questionId];
                 const question = getQuestionById(questionId);
                 if (!question) return null;
-
-                const assessable = isQuestionAssessable(question);
 
                 return (
                   <div
@@ -197,18 +192,14 @@ function DisorderCard({
                   >
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
-                        {assessable ? (
-                          <AnswerIcon answer={answer?.answer ?? null} />
-                        ) : (
-                          <HelpCircle className="h-4 w-4 text-muted-foreground/60" />
-                        )}
+                        <AnswerIcon answer={answer?.answer ?? null} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-foreground/80 leading-relaxed">
                           <span className="text-muted-foreground mr-2">Q{questionId}.</span>
                           {question.text}
                         </p>
-                        {assessable && answer && (
+                        {answer && (
                           <div className="mt-2">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs text-muted-foreground">
@@ -230,11 +221,6 @@ function DisorderCard({
                             )}
                           </div>
                         )}
-                        {!assessable && (
-                          <p className="text-xs text-muted-foreground/60 mt-1 italic">
-                            Nie można ocenić na podstawie wiadomości
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -252,9 +238,9 @@ function DisorderCard({
 // MAIN COMPONENT
 // ============================================================
 
-export function SCIDScreener({
-  scidResult,
-  onRunSCID,
+export function CPSScreener({
+  cpsResult,
+  onRunCPS,
   isLoading,
   progress = 0,
   messageCount,
@@ -262,23 +248,25 @@ export function SCIDScreener({
   completedPasses,
   canRun,
   reasonsCannotRun = [],
-}: SCIDScreenerProps) {
+}: CPSScreenerProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+
+  const totalQuestions = CPS_QUESTIONS.length;
 
   const handleRunClick = useCallback(() => {
     if (!confirmed) {
       setShowConfirmation(true);
       return;
     }
-    onRunSCID?.();
-  }, [confirmed, onRunSCID]);
+    onRunCPS?.();
+  }, [confirmed, onRunCPS]);
 
   const handleConfirm = useCallback(() => {
     setConfirmed(true);
     setShowConfirmation(false);
-    onRunSCID?.();
-  }, [onRunSCID]);
+    onRunCPS?.();
+  }, [onRunCPS]);
 
   // Render loading state
   if (isLoading) {
@@ -291,10 +279,10 @@ export function SCIDScreener({
             </div>
             <div>
               <CardTitle className="text-base font-medium text-foreground">
-                Analiza SCID-II w toku
+                Analiza wzorców w toku
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                Analizuję wzorce osobowości...
+                Analizuję wzorce komunikacji...
               </CardDescription>
             </div>
           </div>
@@ -303,7 +291,7 @@ export function SCIDScreener({
           <div className="space-y-4">
             <Progress value={progress} className="h-2 bg-muted" />
             <p className="text-sm text-muted-foreground text-center">
-              Przetwarzanie {progress}% - analiza {Math.round((progress / 100) * 119)} z 119 pytań
+              Przetwarzanie {Math.round(progress)}% - analiza {Math.round((progress / 100) * totalQuestions)} z {totalQuestions} pytań
             </p>
           </div>
         </CardContent>
@@ -312,18 +300,18 @@ export function SCIDScreener({
   }
 
   // Render results state
-  if (scidResult) {
-    const riskLevel = getOverallRiskLevel(scidResult.disorders);
-    const disordersWithResults = SCID_DISORDERS.map(disorder => ({
-      disorder,
-      result: scidResult.disorders[disorder.key],
+  if (cpsResult) {
+    const riskLevel = getOverallRiskLevel(cpsResult.patterns);
+    const patternsWithResults = CPS_PATTERNS.map(pattern => ({
+      pattern,
+      result: cpsResult.patterns[pattern.key],
     })).filter(item => item.result);
 
-    const thresholdMet = disordersWithResults.filter(({ result }) => result.meetsThreshold);
-    const nearThreshold = disordersWithResults.filter(
+    const thresholdMet = patternsWithResults.filter(({ result }) => result.meetsThreshold);
+    const nearThreshold = patternsWithResults.filter(
       ({ result }) => !result.meetsThreshold && result.percentage >= 50
     );
-    const belowThreshold = disordersWithResults.filter(
+    const belowThreshold = patternsWithResults.filter(
       ({ result }) => result.percentage < 50
     );
 
@@ -332,9 +320,9 @@ export function SCIDScreener({
         {/* Main Warning Alert */}
         <Alert className="border-red-500/30 bg-red-500/10">
           <AlertTriangle className="h-4 w-4 text-red-400" />
-          <AlertTitle className="text-red-400">Oświadczenie medyczne</AlertTitle>
+          <AlertTitle className="text-red-400">Informacja</AlertTitle>
           <AlertDescription className="text-red-300/80 text-sm">
-            {SCID_DISCLAIMER}
+            {CPS_DISCLAIMER}
           </AlertDescription>
         </Alert>
 
@@ -348,7 +336,7 @@ export function SCIDScreener({
                 </div>
                 <div>
                   <CardTitle className="text-base font-medium text-foreground">
-                    Podsumowanie przesiewu SCID-II
+                    Podsumowanie analizy wzorców
                   </CardTitle>
                   <CardDescription className="text-sm text-muted-foreground">
                     Wynik ogólny i zagrożenie
@@ -365,7 +353,7 @@ export function SCIDScreener({
                 <Shield className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Ogólna pewność analizy</span>
               </div>
-              <ConfidenceIndicator confidence={scidResult.overallConfidence} />
+              <ConfidenceIndicator confidence={cpsResult.overallConfidence} />
             </div>
 
             {/* Risk Description */}
@@ -375,11 +363,11 @@ export function SCIDScreener({
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-muted/50 rounded-lg text-center">
                 <div className="text-2xl font-semibold text-red-400">{thresholdMet.length}</div>
-                <div className="text-xs text-muted-foreground">Przekroczono próg</div>
+                <div className="text-xs text-muted-foreground">Wymagają uwagi</div>
               </div>
               <div className="p-3 bg-muted/50 rounded-lg text-center">
                 <div className="text-2xl font-semibold text-yellow-400">{nearThreshold.length}</div>
-                <div className="text-xs text-muted-foreground">Zbliża się do progu</div>
+                <div className="text-xs text-muted-foreground">Na granicy</div>
               </div>
               <div className="p-3 bg-muted/50 rounded-lg text-center">
                 <div className="text-2xl font-semibold text-emerald-400">{belowThreshold.length}</div>
@@ -390,22 +378,22 @@ export function SCIDScreener({
             {/* Secondary Disclaimer */}
             <div className="flex items-start gap-2 text-xs text-muted-foreground/60">
               <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-              <p>{SCID_SECONDARY_DISCLAIMER}</p>
+              <p>{CPS_SECONDARY_DISCLAIMER}</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Disorders Above Threshold */}
+        {/* Patterns Above Threshold */}
         {thresholdMet.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-red-400 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              Zaburzenia powyżej progu przesiewowego
+              Wzorce wymagające uwagi
             </h4>
-            {thresholdMet.map(({ disorder, result }) => (
-              <DisorderCard
-                key={disorder.key}
-                disorder={disorder}
+            {thresholdMet.map(({ pattern, result }) => (
+              <PatternCard
+                key={pattern.key}
+                pattern={pattern}
                 result={result}
                 defaultOpen={thresholdMet.length === 1}
               />
@@ -413,20 +401,20 @@ export function SCIDScreener({
           </div>
         )}
 
-        {/* Disorders Near Threshold */}
+        {/* Patterns Near Threshold */}
         {nearThreshold.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-yellow-400 flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Zaburzenia zbliżające się do progu
+              Wzorce na granicy progu
             </h4>
-            {nearThreshold.map(({ disorder, result }) => (
-              <DisorderCard key={disorder.key} disorder={disorder} result={result} />
+            {nearThreshold.map(({ pattern, result }) => (
+              <PatternCard key={pattern.key} pattern={pattern} result={result} />
             ))}
           </div>
         )}
 
-        {/* Disorders Below Threshold */}
+        {/* Patterns Below Threshold */}
         {belowThreshold.length > 0 && (
           <Collapsible>
             <CollapsibleTrigger asChild>
@@ -439,8 +427,8 @@ export function SCIDScreener({
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 mt-3">
-              {belowThreshold.map(({ disorder, result }) => (
-                <DisorderCard key={disorder.key} disorder={disorder} result={result} />
+              {belowThreshold.map(({ pattern, result }) => (
+                <PatternCard key={pattern.key} pattern={pattern} result={result} />
               ))}
             </CollapsibleContent>
           </Collapsible>
@@ -459,10 +447,10 @@ export function SCIDScreener({
           </div>
           <div>
             <CardTitle className="text-base font-medium text-foreground">
-              SCID-II Screening
+              Wzorce komunikacyjne
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground">
-              Przesiewowe badanie osobowości
+              Analiza wzorców komunikacji
             </CardDescription>
           </div>
         </div>
@@ -482,9 +470,9 @@ export function SCIDScreener({
 
         {/* Description */}
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Przeprowadź przesiewowe badanie osobowości SCID-II na podstawie wzorców komunikacji.
-          Analiza ocenia 119 wskaźników powiązanych z cechami osobowości. Wyniki wskazują
-          jedynie na potrzebę konsultacji ze specjalistą — nie stanowią diagnozy.
+          Przeprowadź analizę wzorców komunikacji na podstawie wiadomości tekstowych.
+          Analiza ocenia {totalQuestions} wskaźników powiązanych z powtarzającymi się wzorcami w komunikacji.
+          Wyniki wskazują jedynie na obszary wymagające uwagi — nie stanowią diagnozy.
         </p>
 
         {/* Requirements */}
@@ -554,8 +542,8 @@ export function SCIDScreener({
             <AlertTitle className="text-orange-400 text-sm">Potwierdź analizę</AlertTitle>
             <AlertDescription className="text-orange-300/80 text-sm space-y-3">
               <p>
-                Zamierzasz uruchomić analizę SCID-II. To narzędzie przesiewowe NIE
-                zastępuje diagnozy specjalisty.
+                Zamierzasz uruchomić analizę wzorców komunikacji. To narzędzie analityczne NIE
+                zastępuje konsultacji ze specjalistą.
               </p>
               <div className="flex gap-2">
                 <Button
@@ -589,12 +577,12 @@ export function SCIDScreener({
                   className="w-full bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30"
                 >
                   <Brain className="h-4 w-4 mr-2" />
-                  Uruchom analizę SCID-II
+                  Uruchom analizę wzorców
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p className="text-xs max-w-xs">
-                  Analiza wymaga przetworzenia 119 pytań. To może potrwać kilka minut.
+                  Analiza wymaga przetworzenia {totalQuestions} pytań. To może potrwać kilka minut.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -603,11 +591,11 @@ export function SCIDScreener({
 
         {/* Disclaimer */}
         <p className="text-xs text-muted-foreground/60 text-center">
-          {SCID_DISCLAIMER}
+          {CPS_DISCLAIMER}
         </p>
       </CardContent>
     </Card>
   );
 }
 
-export default SCIDScreener;
+export default CPSScreener;

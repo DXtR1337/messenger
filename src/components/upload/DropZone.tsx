@@ -35,7 +35,7 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
       // Filter to .json and .txt files
       const validFiles = files.filter((file) => file.name.endsWith('.json') || file.name.endsWith('.txt'));
       if (validFiles.length === 0) {
-        setError('Akceptowane są tylko pliki .json i .txt. Wybierz plik eksportu z Messengera lub WhatsAppa.');
+        setError('Akceptowane są tylko pliki .json i .txt. Wybierz eksport rozmowy z Messengera, Instagrama, Telegrama lub WhatsAppa.');
         return;
       }
 
@@ -216,13 +216,13 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
 
         <div className="text-center space-y-1.5">
           <p className="text-sm font-medium text-foreground">
-            {isDragging ? 'Upuść pliki tutaj' : 'Upuść plik z Messengera (.json) lub WhatsAppa (.txt)'}
+            {isDragging ? 'Upuść pliki tutaj' : 'Upuść eksport rozmowy (.json lub .txt)'}
           </p>
           <p className="text-xs text-muted-foreground">
             lub kliknij, żeby wybrać
           </p>
           <p className="text-xs text-muted-foreground/70">
-            Obsługuje Messenger (JSON) i WhatsApp (TXT)
+            Messenger · Instagram · Telegram (JSON) · WhatsApp (TXT)
           </p>
         </div>
       </div>

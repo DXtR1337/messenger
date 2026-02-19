@@ -30,7 +30,7 @@ export default function PersonalityCard({
   quantitative,
 }: PersonalityCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-personality', { backgroundColor: '#1a170f' });
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-personality', { backgroundColor: '#1a170f' });
 
   const characters = participants
     .map((name, i) => {
@@ -96,7 +96,7 @@ export default function PersonalityCard({
               marginTop: 2,
             }}
           >
-            CHATSCOPE RPG • ANALIZA OSOBOWOŚCI
+            PODTEKST RPG • ANALIZA OSOBOWOŚCI
           </div>
         </div>
 
@@ -272,7 +272,7 @@ export default function PersonalityCard({
           }}
         >
           <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#6a6050' }}>
-            chatscope.app
+            podtekst.app
           </span>
           <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#6a6050' }}>
             ⚔️ RZUĆ NA INICJATYWĘ

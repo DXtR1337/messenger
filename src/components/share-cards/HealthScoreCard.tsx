@@ -26,7 +26,7 @@ function getVitalStatus(val: number): { color: string; status: string } {
 
 export default function HealthScoreCard({ pass4, participants }: HealthScoreCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-health-score');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-health-score');
 
   const { health_score } = pass4;
   const score = health_score.overall;
@@ -123,7 +123,7 @@ export default function HealthScoreCard({ pass4, participants }: HealthScoreCard
                   letterSpacing: '0.06em',
                 }}
               >
-                CHATSCOPE
+                PODTEKST
               </span>
             </div>
             <span
@@ -396,7 +396,7 @@ export default function HealthScoreCard({ pass4, participants }: HealthScoreCard
               color: '#555577',
             }}
           >
-            chatscope.app
+            podtekst.app
           </span>
           <span
             style={{

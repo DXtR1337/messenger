@@ -57,7 +57,7 @@ function buildLabels(qual: QualitativeAnalysis, participants: string[]): PersonL
 
 export default function LabelCard({ qualitative, participants }: LabelCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-label');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-label');
 
   const labels = buildLabels(qualitative, participants);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -247,7 +247,7 @@ export default function LabelCard({ qualitative, participants }: LabelCardProps)
             letterSpacing: '0.12em',
           }}
         >
-          chatscope.app
+          podtekst.app
         </div>
       </div>
 

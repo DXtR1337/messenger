@@ -1,5 +1,5 @@
 /**
- * Shared constants and utility functions for ChatScope analysis modules.
+ * Shared constants and utility functions for PodTeksT analysis modules.
  *
  * Extracted to avoid duplication across quantitative.ts, catchphrases.ts,
  * and viral-scores.ts.

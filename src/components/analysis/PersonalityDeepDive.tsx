@@ -103,9 +103,9 @@ function PersonTab({
                             {(['ie', 'sn', 'tf', 'jp'] as const).map((dim) => {
                                 const d = profile.mbti!.reasoning[dim];
                                 return (
-                                    <div key={dim} className="rounded-md bg-card px-2 py-1 text-center">
+                                    <div key={dim} className="overflow-hidden rounded-md bg-card px-2 py-1 text-center">
                                         <span className="font-display text-sm font-bold">{d.letter}</span>
-                                        <p className="truncate text-[10px] text-muted-foreground">{d.evidence.slice(0, 40)}</p>
+                                        <p className="line-clamp-2 text-[10px] leading-tight text-muted-foreground">{d.evidence.slice(0, 60)}</p>
                                     </div>
                                 );
                             })}

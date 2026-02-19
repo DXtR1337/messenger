@@ -7,7 +7,7 @@ export default function ConditionalAnalytics({ gaId }: { gaId: string }) {
   const [consent, setConsent] = useState(false);
 
   useEffect(() => {
-    setConsent(localStorage.getItem('chatscope-cookie-consent') === 'true');
+    setConsent(localStorage.getItem('podtekst-cookie-consent') === 'true');
   }, []);
 
   if (!consent) return null;

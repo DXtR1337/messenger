@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 
-const STORAGE_KEY = 'chatscope_sidebar_collapsed';
+const STORAGE_KEY = 'podtekst_sidebar_collapsed';
 
 interface SidebarContextValue {
   collapsed: boolean;
@@ -37,7 +37,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [breadcrumb, setBreadcrumb] = useState<string[]>(['ChatScope']);
+  const [breadcrumb, setBreadcrumb] = useState<string[]>(['PodTeksT']);
 
   useEffect(() => {
     setCollapsed(readPersistedCollapsed());

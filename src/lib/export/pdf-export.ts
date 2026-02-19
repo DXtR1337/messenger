@@ -1,5 +1,5 @@
 /**
- * PDF export for ChatScope conversation analysis.
+ * PDF export for PodTeksT conversation analysis.
  *
  * Generates a multi-page dark-themed A4 report using jsPDF.
  * Pages: Cover, Key Statistics, Viral Scores, Health + Findings,
@@ -70,7 +70,7 @@ function drawPageBg(doc: jsPDF): void {
 function drawFooter(doc: jsPDF, pageNum: number, totalPages: number): void {
   setColor(doc, C.textMuted);
   doc.setFontSize(8);
-  doc.text('ChatScope — chatscope.app', MARGIN, A4_H - 10);
+  doc.text('PodTeksT — podtekst.app', MARGIN, A4_H - 10);
   doc.text(`${pageNum} / ${totalPages}`, A4_W - MARGIN, A4_H - 10, { align: 'right' });
 }
 
@@ -198,7 +198,7 @@ function buildCoverPage(doc: jsPDF, analysis: StoredAnalysis): void {
   // Brand
   setColor(doc, C.textMuted);
   doc.setFontSize(10);
-  doc.text('CHATSCOPE', MARGIN, 30);
+  doc.text('PODTEKST', MARGIN, 30);
 
   // Title
   setColor(doc, C.textPrimary);
@@ -1070,7 +1070,7 @@ export async function generateAnalysisPdf(
     .replace(/(^-|-$)/g, '')
     .slice(0, 40);
   const dateStr = new Date().toISOString().slice(0, 10);
-  const filename = `chatscope-${titleSlug}-${dateStr}.pdf`;
+  const filename = `podtekst-${titleSlug}-${dateStr}.pdf`;
 
   doc.save(filename);
 }

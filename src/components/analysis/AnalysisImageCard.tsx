@@ -85,7 +85,7 @@ export default function AnalysisImageCard({
         if (!imageData) return;
         const link = document.createElement('a');
         link.href = imageData;
-        link.download = `chatscope-${participants.join('-')}-comic.png`;
+        link.download = `podtekst-${participants.join('-')}-comic.png`;
         link.click();
     }, [imageData, participants]);
 

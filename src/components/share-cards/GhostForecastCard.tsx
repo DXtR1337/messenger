@@ -36,7 +36,7 @@ function getForecastLevel(score: number): ForecastLevel {
 
 export default function GhostForecastCard({ viralScores, participants }: GhostForecastCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-ghost-forecast');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-ghost-forecast');
 
   const mono = 'var(--font-geist-mono)';
   const syne = 'var(--font-syne)';
@@ -100,7 +100,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
               WebkitTextFillColor: 'transparent',
             }}
           >
-            ChatScope
+            PodTeksT
           </div>
         </div>
 
@@ -299,7 +299,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
               color: 'rgba(255,255,255,0.2)',
             }}
           >
-            chatscope.app · wyłącznie dla rozrywki
+            podtekst.app · wyłącznie dla rozrywki
           </span>
         </div>
       </div>

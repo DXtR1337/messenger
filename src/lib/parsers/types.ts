@@ -1,5 +1,5 @@
 /**
- * Unified message types for ChatScope.
+ * Unified message types for PodTeksT.
  * All platform-specific parsers normalize to these types.
  */
 

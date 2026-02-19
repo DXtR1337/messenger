@@ -6,21 +6,21 @@ export default function CookieConsent() {
   const [consent, setConsent] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('chatscope-cookie-consent');
+    const stored = localStorage.getItem('podtekst-cookie-consent');
     if (stored !== null) {
       setConsent(stored === 'true');
     }
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem('chatscope-cookie-consent', 'true');
+    localStorage.setItem('podtekst-cookie-consent', 'true');
     setConsent(true);
     // Reload to activate GA4
     window.location.reload();
   };
 
   const handleReject = () => {
-    localStorage.setItem('chatscope-cookie-consent', 'false');
+    localStorage.setItem('podtekst-cookie-consent', 'false');
     setConsent(false);
   };
 

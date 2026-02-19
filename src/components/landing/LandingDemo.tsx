@@ -99,7 +99,7 @@ function BrowserChrome({ children, inView }: { children: React.ReactNode; inView
             <path d="M3 4.5V3a2 2 0 0 1 4 0v1.5" stroke="currentColor" strokeWidth="1" fill="none" />
           </svg>
           <span className="truncate font-mono text-[10px] text-muted-foreground sm:text-xs">
-            chatscope.app/analysis/demo
+            podtekst.app/analysis/demo
           </span>
         </div>
       </div>

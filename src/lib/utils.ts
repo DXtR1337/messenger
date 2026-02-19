@@ -23,7 +23,8 @@ export function generateId(): string {
 // IndexedDB Storage (replaces localStorage for large data)
 // ============================================================
 
-const DB_NAME = 'chatscope';
+const DB_NAME = 'podtekst';
+export const LEGACY_DB_NAME = 'chatscope';
 const DB_VERSION = 1;
 const STORE_ANALYSES = 'analyses';
 const STORE_INDEX = 'index';

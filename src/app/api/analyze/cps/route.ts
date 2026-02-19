@@ -1,13 +1,13 @@
-import { runSCIDAnalysis } from '@/lib/analysis/gemini';
+import { runCPSAnalysis } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import { rateLimit } from '@/lib/rate-limit';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000); // 5 requests per 10 min
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 180; // 3 minutes for SCID analysis (119 questions)
+export const maxDuration = 120; // 2 minutes for CPS analysis (63 questions)
 
-interface SCIDRequest {
+interface CPSRequest {
   samples: AnalysisSamples;
   participantName: string;
 }
@@ -23,7 +23,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const { samples, participantName } = (await request.json()) as SCIDRequest;
+  const { samples, participantName } = (await request.json()) as CPSRequest;
 
   if (!samples) {
     return Response.json({ error: 'Missing samples' }, { status: 400 });
@@ -51,10 +51,10 @@ export async function POST(request: Request): Promise<Response> {
       }, 15000);
 
       try {
-        // Check if client disconnected before starting SCID analysis
+        // Check if client disconnected before starting CPS analysis
         if (signal.aborted) { clearInterval(heartbeat); controller.close(); return; }
 
-        const result = await runSCIDAnalysis(
+        const result = await runCPSAnalysis(
           samples,
           participantName,
           (status) => {
@@ -65,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
           },
         );
 
-        // Check if client disconnected after SCID analysis
+        // Check if client disconnected after CPS analysis
         if (signal.aborted) { clearInterval(heartbeat); controller.close(); return; }
 
         send({ type: 'complete', result });
@@ -74,7 +74,7 @@ export async function POST(request: Request): Promise<Response> {
         if (!signal.aborted) {
           send({
             type: 'error',
-            error: error instanceof Error ? error.message : 'SCID analysis failed',
+            error: error instanceof Error ? error.message : 'CPS analysis failed',
           });
         }
       } finally {

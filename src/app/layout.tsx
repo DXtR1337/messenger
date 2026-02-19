@@ -38,31 +38,31 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://chatscope.app"),
-  title: "ChatScope — Analizator rozmów z Messengera",
+  metadataBase: new URL("https://podtekst.app"),
+  title: "PodTeksT — Analizator rozmów z Messengera",
   description:
     "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji. 28 metryk + analiza AI osobowości i dynamiki.",
   openGraph: {
-    title: "ChatScope — Analizator rozmów z Messengera",
+    title: "PodTeksT — Analizator rozmów z Messengera",
     description:
       "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji.",
     locale: "pl_PL",
     type: "website",
     images: [
       {
-        url: "/og/chatscope-og.png",
+        url: "/og/podtekst-og.png",
         width: 1200,
         height: 630,
-        alt: "ChatScope — Zobacz swoje relacje przez dane",
+        alt: "PodTeksT — Zobacz swoje relacje przez dane",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ChatScope — Analizator rozmów z Messengera",
+    title: "PodTeksT — Analizator rozmów z Messengera",
     description:
       "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji.",
-    images: ["/og/chatscope-og.png"],
+    images: ["/og/podtekst-og.png"],
   },
 };
 

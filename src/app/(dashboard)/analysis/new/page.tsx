@@ -8,9 +8,14 @@ import { ProcessingState } from '@/components/upload/ProcessingState';
 import { Button } from '@/components/ui/button';
 import { parseMessengerJSON, mergeMessengerFiles } from '@/lib/parsers/messenger';
 import { parseWhatsAppText } from '@/lib/parsers/whatsapp';
+// Instagram parser available — same Meta format as Messenger, auto-detected
+// import { parseInstagramJSON, mergeInstagramFiles } from '@/lib/parsers/instagram';
+import { parseTelegramJSON } from '@/lib/parsers/telegram';
+import { detectFormat } from '@/lib/parsers/detect';
 import { computeQuantitativeAnalysis } from '@/lib/analysis/quantitative';
 import { saveAnalysis, generateId } from '@/lib/utils';
 import type { StoredAnalysis, RelationshipContext } from '@/lib/analysis/types';
+import { trackEvent } from '@/lib/analytics/events';
 
 type Stage = 'idle' | 'parsing' | 'analyzing' | 'saving' | 'complete';
 
@@ -66,17 +71,17 @@ export default function NewAnalysisPage() {
       // Stage 1: Read and parse files
       setProgress({ current: 0, total: files.length });
 
-      // Detect file type
-      const isWhatsApp = files.some(f => f.name.endsWith('.txt'));
-      const isMessenger = files.some(f => f.name.endsWith('.json'));
+      // Detect file type from first file
+      const hasTxt = files.some(f => f.name.endsWith('.txt'));
+      const hasJson = files.some(f => f.name.endsWith('.json'));
 
-      if (isWhatsApp && isMessenger) {
-        throw new Error('Nie można mieszać plików Messengera (.json) i WhatsAppa (.txt). Wybierz jeden format.');
+      if (hasTxt && hasJson) {
+        throw new Error('Nie można mieszać plików JSON i TXT. Wybierz jeden format.');
       }
 
       let conversation: import('@/lib/parsers/types').ParsedConversation;
 
-      if (isWhatsApp) {
+      if (hasTxt) {
         // WhatsApp: read all .txt files and concatenate
         let fullText = '';
         for (let i = 0; i < files.length; i++) {
@@ -86,7 +91,7 @@ export default function NewAnalysisPage() {
         }
         conversation = parseWhatsAppText(fullText);
       } else {
-        // Messenger: existing JSON parsing logic
+        // JSON formats: Messenger, Instagram, or Telegram — auto-detect
         const jsonDataArray: unknown[] = [];
 
         for (let i = 0; i < files.length; i++) {
@@ -96,18 +101,32 @@ export default function NewAnalysisPage() {
             parsed = JSON.parse(text);
           } catch {
             throw new Error(
-              `"${files[i].name}" is not valid JSON. Make sure you're uploading a Facebook Messenger export file.`
+              `"${files[i].name}" nie jest poprawnym plikiem JSON. Upewnij się, że przesyłasz eksport rozmowy.`
             );
           }
           jsonDataArray.push(parsed);
           setProgress({ current: i + 1, total: files.length });
         }
 
-        // Parse into unified conversation format
-        conversation =
-          jsonDataArray.length === 1
-            ? parseMessengerJSON(jsonDataArray[0])
-            : mergeMessengerFiles(jsonDataArray);
+        // Auto-detect format from first file
+        const format = detectFormat(files[0].name, jsonDataArray[0]);
+
+        if (format === 'telegram') {
+          if (jsonDataArray.length > 1) {
+            throw new Error('Telegram: przesyłaj jeden plik result.json na raz.');
+          }
+          conversation = parseTelegramJSON(jsonDataArray[0]);
+        } else if (format === 'messenger') {
+          // Could be Messenger or Instagram (nearly identical)
+          conversation =
+            jsonDataArray.length === 1
+              ? parseMessengerJSON(jsonDataArray[0])
+              : mergeMessengerFiles(jsonDataArray);
+        } else {
+          throw new Error(
+            'Nierozpoznany format pliku. Obsługiwane: Messenger (.json), WhatsApp (.txt), Instagram (.json), Telegram (.json).'
+          );
+        }
       }
 
       // Validate minimum message count
@@ -141,13 +160,25 @@ export default function NewAnalysisPage() {
 
       await saveAnalysis(analysis);
 
+      trackEvent({
+        name: 'upload_complete',
+        params: {
+          platform: conversation.platform,
+          messageCount: conversation.metadata.totalMessages,
+          durationDays: Math.round(
+            ((conversation.metadata.dateRange.end ?? Date.now()) - conversation.metadata.dateRange.start) /
+              (1000 * 60 * 60 * 24),
+          ),
+        },
+      });
+
       // Stage 4: Complete and redirect
       setStage('complete');
 
       // Brief pause to show the completion state before navigating
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      sessionStorage.setItem('chatscope-celebrate-' + id, '1');
+      sessionStorage.setItem('podtekst-celebrate-' + id, '1');
       router.push(`/analysis/${id}`);
     } catch (thrown: unknown) {
       const message =
@@ -176,7 +207,7 @@ export default function NewAnalysisPage() {
           Nowa analiza
         </h1>
         <p className="text-sm text-muted-foreground">
-          Wgraj eksport rozmowy z Messengera lub WhatsAppa
+          Wgraj eksport rozmowy z Messengera, Instagrama, Telegrama lub WhatsAppa
         </p>
       </div>
 
@@ -274,25 +305,27 @@ export default function NewAnalysisPage() {
         </div>
         {showInstructions && (
           <div>
-            <p className="mt-3 mb-2 text-xs font-medium text-foreground/80">Messenger:</p>
+            <p className="mt-3 mb-2 text-xs font-medium text-foreground/80">Messenger (przez aplikację):</p>
             <ol className="list-decimal pl-5 text-xs leading-relaxed text-muted-foreground">
               <li>
-                Otwórz Facebooka i przejdź do{' '}
-                <strong className="text-foreground/80">Ustawienia i prywatność → Ustawienia</strong>
+                Otwórz Messengera i przejdź do{' '}
+                <strong className="text-foreground/80">Ustawienia</strong> (ikona zębatki)
               </li>
               <li>
                 Kliknij{' '}
-                <strong className="text-foreground/80">Twoje informacje</strong> →{' '}
-                <strong className="text-foreground/80">Pobierz swoje informacje</strong>
+                <strong className="text-foreground/80">Prywatność i bezpieczeństwo</strong>
               </li>
               <li>
-                Zaznacz tylko{' '}
-                <strong className="text-foreground/80">Wiadomości</strong> i wybierz format{' '}
-                <strong className="text-foreground/80">JSON</strong>
+                Wybierz{' '}
+                <strong className="text-foreground/80">W pełni szyfrowane czaty</strong>
               </li>
               <li>
-                Kliknij{' '}
-                <strong className="text-foreground/80">Utwórz plik</strong> i poczekaj na powiadomienie
+                Otwórz{' '}
+                <strong className="text-foreground/80">Pamięć wiadomości</strong>
+              </li>
+              <li>
+                Na dole kliknij{' '}
+                <strong className="text-foreground/80">Pobierz dane z pamięci wiadomości</strong>
               </li>
               <li>
                 Pobierz archiwum i rozpakuj — pliki JSON znajdziesz w folderze{' '}
@@ -301,6 +334,75 @@ export default function NewAnalysisPage() {
                 </code>
               </li>
             </ol>
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="mb-2 text-xs font-medium text-foreground/80">Messenger (przez Facebook):</p>
+              <ol className="list-decimal pl-5 text-xs leading-relaxed text-muted-foreground">
+                <li>
+                  Otwórz Facebooka i przejdź do{' '}
+                  <strong className="text-foreground/80">Ustawienia i prywatność → Ustawienia</strong>
+                </li>
+                <li>
+                  Kliknij{' '}
+                  <strong className="text-foreground/80">Twoje informacje</strong> →{' '}
+                  <strong className="text-foreground/80">Pobierz swoje informacje</strong>
+                </li>
+                <li>
+                  Zaznacz tylko{' '}
+                  <strong className="text-foreground/80">Wiadomości</strong> i wybierz format{' '}
+                  <strong className="text-foreground/80">JSON</strong>
+                </li>
+                <li>
+                  Kliknij{' '}
+                  <strong className="text-foreground/80">Utwórz plik</strong> i poczekaj na powiadomienie
+                </li>
+                <li>
+                  Pobierz archiwum i rozpakuj — pliki JSON znajdziesz w folderze{' '}
+                  <code className="rounded bg-card px-1 py-0.5 font-mono text-foreground/80">
+                    messages/inbox/[nazwa_rozmowy]/
+                  </code>
+                </li>
+              </ol>
+            </div>
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="mb-2 text-xs font-medium text-foreground/80">Instagram:</p>
+              <ol className="list-decimal pl-5 text-xs leading-relaxed text-muted-foreground">
+                <li>
+                  Otwórz Instagram i przejdź do{' '}
+                  <strong className="text-foreground/80">Ustawienia → Twoje działania → Pobierz swoje informacje</strong>
+                </li>
+                <li>
+                  Wybierz{' '}
+                  <strong className="text-foreground/80">Wiadomości</strong> i format{' '}
+                  <strong className="text-foreground/80">JSON</strong>
+                </li>
+                <li>
+                  Pobierz archiwum i rozpakuj — pliki JSON znajdziesz w folderze{' '}
+                  <code className="rounded bg-card px-1 py-0.5 font-mono text-foreground/80">
+                    messages/inbox/[nazwa_rozmowy]/
+                  </code>
+                </li>
+              </ol>
+            </div>
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="mb-2 text-xs font-medium text-foreground/80">Telegram:</p>
+              <ol className="list-decimal pl-5 text-xs leading-relaxed text-muted-foreground">
+                <li>
+                  Otwórz <strong className="text-foreground/80">Telegram Desktop</strong>
+                </li>
+                <li>
+                  Przejdź do{' '}
+                  <strong className="text-foreground/80">Ustawienia → Zaawansowane → Eksportuj dane z Telegrama</strong>
+                </li>
+                <li>
+                  Zaznacz rozmowy do eksportu, wybierz format{' '}
+                  <strong className="text-foreground/80">Machine-readable JSON</strong>
+                </li>
+                <li>
+                  Wgraj plik{' '}
+                  <code className="rounded bg-card px-1 py-0.5 font-mono text-foreground/80">result.json</code>
+                </li>
+              </ol>
+            </div>
             <div className="mt-3 border-t border-border pt-3">
               <p className="mb-2 text-xs font-medium text-foreground/80">WhatsApp:</p>
               <ol className="list-decimal pl-5 text-xs leading-relaxed text-muted-foreground">

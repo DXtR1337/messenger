@@ -117,7 +117,7 @@ function generateBarcode(seed: number): number[] {
 
 export default function ReceiptCard({ quantitative, conversation }: ReceiptCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-receipt', {
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-receipt', {
     backgroundColor: '#faf7f2',
   });
 
@@ -179,7 +179,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
               color: ink,
             }}
           >
-            CHATSCOPE
+            PODTEKST
           </div>
           <div
             style={{
@@ -303,7 +303,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '0.6rem', color: faded }}>Dziękujemy za zakupy! 🧾</div>
           <div style={{ fontSize: '0.48rem', color: '#aaa', marginTop: 3, letterSpacing: '0.1em' }}>
-            chatscope.app
+            podtekst.app
           </div>
         </div>
 

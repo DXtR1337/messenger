@@ -97,7 +97,7 @@ function getSeverityDot(severity: 'mild' | 'moderate' | 'severe'): string {
 
 export default function RedFlagCard({ quantitative, qualitative, participants }: RedFlagCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-redflag');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-redflag');
 
   const flags = buildFlags(quantitative, qualitative, participants);
   const { label: classLabel, color: classColor } = getSeverityLabel(flags);
@@ -385,7 +385,7 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
               color: 'rgba(255,255,255,0.2)',
             }}
           >
-            chatscope.app
+            podtekst.app
           </span>
         </div>
       </div>

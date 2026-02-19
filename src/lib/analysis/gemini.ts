@@ -1,11 +1,11 @@
 /**
- * Server-only Gemini API module for ChatScope.
+ * Server-only Gemini API module for PodTeksT.
  * Uses Google AI Studio SDK (@google/generative-ai) with a simple API key.
  * Must only be imported in server contexts (API routes).
  */
 
 import 'server-only';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
 import type {
     Pass1Result,
@@ -14,18 +14,21 @@ import type {
     Pass4Result,
     QualitativeAnalysis,
     RoastResult,
+    StandUpRoastResult,
 } from './types';
 import {
     PASS_1_SYSTEM,
     PASS_2_SYSTEM,
     PASS_3_SYSTEM,
     PASS_4_SYSTEM,
-    PASS_5_SCID_SYSTEM,
+    buildCPSBatchPrompt,
     ROAST_SYSTEM,
+    ENHANCED_ROAST_SYSTEM,
+    STANDUP_ROAST_SYSTEM,
     formatMessagesForAnalysis,
 } from './prompts';
-import type { SCIDResult, SCIDAnswer } from './scid-ii';
-import { calculateDisorderResults, SCID_DISCLAIMER } from './scid-ii';
+import type { CPSResult, CPSAnswer } from './communication-patterns';
+import { calculatePatternResults, CPS_DISCLAIMER } from './communication-patterns';
 
 import type { AnalysisSamples } from './qualitative';
 
@@ -38,6 +41,13 @@ function getClient() {
     if (!apiKey) throw new Error('GEMINI_API_KEY is not set in .env.local');
     return new GoogleGenerativeAI(apiKey);
 }
+
+const SAFETY_SETTINGS = [
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+];
 
 async function callGeminiWithRetry(
     systemPrompt: string,
@@ -57,32 +67,47 @@ async function callGeminiWithRetry(
                     temperature: 0.3,
                     responseMimeType: 'application/json',
                 },
+                safetySettings: SAFETY_SETTINGS,
             });
 
             const result = await model.generateContent(userContent);
-            const text = result.response.text();
+            const response = result.response;
+
+            // Check for safety blocks
+            if (response.promptFeedback?.blockReason) {
+                console.error('[Gemini Safety] Prompt blocked:', response.promptFeedback.blockReason);
+                throw new Error(`Prompt zablokowany przez filtr bezpieczeństwa: ${response.promptFeedback.blockReason}`);
+            }
+
+            const candidate = response.candidates?.[0];
+            if (candidate?.finishReason === 'SAFETY') {
+                console.error('[Gemini Safety] Response filtered:', candidate.safetyRatings);
+                throw new Error('Odpowiedź zablokowana przez filtr bezpieczeństwa');
+            }
+
+            const text = response.text();
             if (!text) throw new Error('No text in Gemini response');
             return text;
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
             const msg = lastError.message.toLowerCase();
+            // Non-retryable errors — fail immediately
             if (
                 msg.includes('api key') ||
                 msg.includes('permission') ||
-                msg.includes('billing') ||
-                msg.includes('not found') ||
-                msg.includes('invalid')
+                msg.includes('billing')
             ) {
-                console.error('[Gemini Error]', lastError);
-                throw new Error('Błąd analizy AI');
+                console.error('[Gemini Error] Non-retryable:', lastError.message);
+                throw new Error('Błąd konfiguracji API — sprawdź klucz API');
             }
+            console.error(`[Gemini Error] Attempt ${attempt + 1}/${maxRetries}:`, lastError.message);
             if (attempt < maxRetries - 1) {
                 await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
             }
         }
     }
-    console.error('[Gemini Error]', lastError);
-    throw new Error('Błąd analizy AI');
+    console.error('[Gemini Error] All retries exhausted:', lastError?.message);
+    throw new Error(`Błąd analizy AI: ${lastError?.message ?? 'nieznany błąd'}`);
 }
 
 function parseGeminiJSON<T>(raw: string): T {
@@ -101,9 +126,12 @@ function parseGeminiJSON<T>(raw: string): T {
     }
     try {
         return JSON.parse(cleaned) as T;
-    } catch {
-        console.error('[Gemini Error] Failed to parse response as JSON. Raw (first 500 chars):', raw.slice(0, 500));
-        throw new Error('Błąd analizy AI');
+    } catch (e) {
+        console.error('[Gemini Error] Failed to parse response as JSON.');
+        console.error('[Gemini Error] Parse error:', e instanceof Error ? e.message : e);
+        console.error('[Gemini Error] Raw length:', raw.length, 'Cleaned length:', cleaned.length);
+        console.error('[Gemini Error] Raw first 500 chars:', raw.slice(0, 500));
+        throw new Error('Błąd parsowania odpowiedzi AI — odpowiedź nie jest poprawnym JSON');
     }
 }
 
@@ -315,6 +343,64 @@ ${formatMessagesForAnalysis(samples.overview)}`;
 }
 
 // ============================================================
+// Public: Stand-Up Roast pass
+// ============================================================
+
+export async function runStandUpRoast(
+    samples: AnalysisSamples,
+    participants: string[],
+    quantitativeContext: string,
+): Promise<StandUpRoastResult> {
+    const input = `PARTICIPANTS: ${participants.join(', ')}
+
+QUANTITATIVE DATA:
+${quantitativeContext}
+
+MESSAGE SAMPLES:
+${formatMessagesForAnalysis(samples.overview)}`;
+
+    const raw = await callGeminiWithRetry(STANDUP_ROAST_SYSTEM, input, 3, 8192);
+    return parseGeminiJSON<StandUpRoastResult>(raw);
+}
+
+// ============================================================
+// Public: Enhanced Roast pass (with full psychological context)
+// ============================================================
+
+export async function runEnhancedRoastPass(
+    samples: AnalysisSamples,
+    participants: string[],
+    quantitativeContext: string,
+    qualitative: {
+        pass1: Pass1Result;
+        pass2: Pass2Result;
+        pass3: Record<string, PersonProfile>;
+        pass4: Pass4Result;
+    },
+): Promise<RoastResult> {
+    const psychContext = buildSynthesisInputFromPasses(
+        qualitative.pass1, qualitative.pass2, qualitative.pass3, quantitativeContext,
+    );
+
+    const input = `PARTICIPANTS: ${participants.join(', ')}
+
+=== PSYCHOLOGICAL ANALYSIS RESULTS ===
+${psychContext}
+
+=== HEALTH SCORE ===
+${JSON.stringify(qualitative.pass4.health_score)}
+
+=== KEY INSIGHTS ===
+${JSON.stringify(qualitative.pass4.insights)}
+
+=== MESSAGE SAMPLES ===
+${formatMessagesForAnalysis(samples.overview)}`;
+
+    const raw = await callGeminiWithRetry(ENHANCED_ROAST_SYSTEM, input, 3, 8192);
+    return parseGeminiJSON<RoastResult>(raw);
+}
+
+// ============================================================
 // Public: Image generation (server-side only)
 // ============================================================
 
@@ -407,69 +493,32 @@ STYLE INSTRUCTIONS:
 }
 
 // ============================================================
-// Public: SCID-II Personality Disorder Screening (server-side only)
+// Public: Communication Pattern Screening (server-side only)
 // ============================================================
 
-interface SCIDRawAnswer {
+interface CPSRawAnswer {
     answer?: boolean | null;
     confidence?: number;
     evidence?: string[];
 }
 
-interface SCIDRawResponse {
-    answers?: Record<string, SCIDRawAnswer>;
+interface CPSRawResponse {
+    answers?: Record<string, CPSRawAnswer>;
     overallConfidence?: number;
 }
 
-/**
- * Run SCID-II personality disorder screening analysis.
- * This is an optional Pass 5 that requires Passes 1-3 to be completed first.
- * Must be called server-side (API route) since it requires GEMINI_API_KEY.
- */
-export async function runSCIDAnalysis(
-    samples: AnalysisSamples,
-    participantName: string,
-    onProgress?: (status: string) => void,
-): Promise<SCIDResult> {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error('GEMINI_API_KEY is not set in .env.local');
-    }
+// CPS question batches — split 63 questions into 3 groups to avoid response truncation
+const CPS_BATCHES: number[][] = [
+    // Batch 1: Q1-Q21 (Intimacy Avoidance, Over-Dependence, Control & Perfectionism)
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+    // Batch 2: Q20-Q42 (Suspicion & Distrust, Self-Focused, Emotional Intensity)
+    [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+    // Batch 3: Q40-Q63 (Dramatization, Manipulation, Emotional Distance, Passive Aggression)
+    [40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63],
+];
 
-    onProgress?.('Przygotowanie analizy SCID-II...');
-
-    // Get messages only from the target participant
-    const personMessages = samples.perPerson[participantName] ?? [];
-    if (personMessages.length === 0) {
-        throw new Error(`No messages found for participant: ${participantName}`);
-    }
-
-    onProgress?.('Analiza wzorców osobowości...');
-
-    // Build input with context
-    const input = `ANALYZE MESSAGES FROM: ${participantName}
-
-INSTRUCTIONS:
-You are performing a clinical personality screening based on communication patterns.
-Evaluate all 119 SCID-II screening questions based on the message patterns below.
-
-RULES:
-- Only mark "yes" if there are 3+ clear instances in the messages
-- Confidence must reflect evidence strength (few examples = low confidence)
-- Be conservative - this is SCREENING not diagnosis
-- Questions about behavior outside messaging (childhood, criminal acts, supernatural, physical appearance, spending habits, concentration, suicidal ideation, self-harm, fire-setting, theft, violence) should be marked null with confidence 0
-- Focus on: language patterns, emotional reactions, interpersonal dynamics, avoidance patterns, response patterns visible in text
-
-${formatMessagesForAnalysis(personMessages)}`;
-
-    const raw = await callGeminiWithRetry(PASS_5_SCID_SYSTEM, input, 3, 16384);
-    const parsed = parseGeminiJSON<SCIDRawResponse>(raw);
-
-    onProgress?.('Przetwarzanie wyników...');
-
-    // Convert string keys to numbers and normalize answers
-    const answers: Record<number, SCIDAnswer> = {};
-    
+function parseCPSBatchAnswers(parsed: CPSRawResponse): Record<number, CPSAnswer> {
+    const answers: Record<number, CPSAnswer> = {};
     if (parsed.answers && typeof parsed.answers === 'object') {
         for (const [key, value] of Object.entries(parsed.answers)) {
             const id = parseInt(key, 10);
@@ -477,22 +526,78 @@ ${formatMessagesForAnalysis(personMessages)}`;
                 answers[id] = {
                     answer: typeof value.answer === 'boolean' ? value.answer : null,
                     confidence: Math.max(0, Math.min(100, typeof value.confidence === 'number' ? value.confidence : 0)),
-                    evidence: Array.isArray(value.evidence) ? value.evidence.slice(0, 5) : [],
+                    evidence: Array.isArray(value.evidence) ? value.evidence.slice(0, 3) : [],
                 };
             }
         }
     }
+    return answers;
+}
 
-    if (Object.keys(answers).length === 0) {
-        console.error('[Gemini Error] SCID analysis returned empty answers');
-        throw new Error('Błąd analizy AI — spróbuj ponownie');
+/**
+ * Run Communication Pattern Screening analysis in batches.
+ * Splits 63 questions into 3 smaller Gemini calls to avoid response truncation.
+ * Must be called server-side (API route) since it requires GEMINI_API_KEY.
+ */
+export async function runCPSAnalysis(
+    samples: AnalysisSamples,
+    participantName: string,
+    onProgress?: (status: string) => void,
+): Promise<CPSResult> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error('GEMINI_API_KEY is not set in .env.local');
     }
 
-    // Calculate disorder results
-    const disorderResults = calculateDisorderResults(answers);
+    onProgress?.('Przygotowanie analizy wzorców...');
+
+    // Get messages only from the target participant
+    const personMessages = samples.perPerson[participantName] ?? [];
+    if (personMessages.length === 0) {
+        throw new Error(`No messages found for participant: ${participantName}`);
+    }
+
+    const formattedMessages = formatMessagesForAnalysis(personMessages);
+    const allAnswers: Record<number, CPSAnswer> = {};
+
+    // Process each batch sequentially
+    for (let i = 0; i < CPS_BATCHES.length; i++) {
+        const batchIds = CPS_BATCHES[i];
+        const batchNum = i + 1;
+        onProgress?.(`Analiza wzorców ${batchNum}/${CPS_BATCHES.length}...`);
+
+        const systemPrompt = buildCPSBatchPrompt(batchIds);
+        const input = `ANALYZE MESSAGES FROM: ${participantName}
+
+Answer questions ${batchIds[0]} through ${batchIds[batchIds.length - 1]} based on the message patterns below.
+
+${formattedMessages}`;
+
+        const raw = await callGeminiWithRetry(systemPrompt, input, 3, 8192);
+        const parsed = parseGeminiJSON<CPSRawResponse>(raw);
+        const batchAnswers = parseCPSBatchAnswers(parsed);
+
+        for (const [id, answer] of Object.entries(batchAnswers)) {
+            allAnswers[Number(id)] = answer;
+        }
+
+        console.log(`[CPS] Batch ${batchNum}: got ${Object.keys(batchAnswers).length}/${batchIds.length} answers`);
+    }
+
+    onProgress?.('Przetwarzanie wyników...');
+
+    if (Object.keys(allAnswers).length === 0) {
+        console.error('[Gemini Error] CPS analysis returned zero answers across all batches');
+        throw new Error('Analiza zwróciła puste wyniki — spróbuj ponownie');
+    }
+
+    console.log(`[CPS] Total answers: ${Object.keys(allAnswers).length}/63`);
+
+    // Calculate pattern results
+    const patternResults = calculatePatternResults(allAnswers);
 
     // Calculate overall confidence
-    const answerValues = Object.values(answers);
+    const answerValues = Object.values(allAnswers);
     const overallConfidence = answerValues.length > 0
         ? Math.round(answerValues.reduce((sum, a) => sum + a.confidence, 0) / answerValues.length)
         : 0;
@@ -500,10 +605,10 @@ ${formatMessagesForAnalysis(personMessages)}`;
     onProgress?.('Analiza zakończona');
 
     return {
-        answers,
-        disorders: disorderResults,
-        overallConfidence: parsed.overallConfidence ?? overallConfidence,
-        disclaimer: SCID_DISCLAIMER,
+        answers: allAnswers,
+        patterns: patternResults,
+        overallConfidence,
+        disclaimer: CPS_DISCLAIMER,
         analyzedAt: Date.now(),
         participantName,
     };

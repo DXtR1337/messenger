@@ -1,6 +1,6 @@
 /**
  * Catchphrase detection and best-time-to-text computation
- * for ChatScope Phase 6A.
+ * for PodTeksT Phase 6A.
  *
  * Finds unique phrases per person via n-gram analysis and determines
  * optimal contact windows from heatmap data.

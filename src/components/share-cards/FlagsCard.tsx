@@ -17,7 +17,7 @@ const SEVERITY_BG: Record<string, string> = {
 
 export default function FlagsCard({ redFlags, greenFlags }: FlagsCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-flags');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-flags');
 
   const displayGreen = greenFlags.slice(0, 4);
   const displayRed = redFlags.slice(0, 4);
@@ -308,7 +308,7 @@ export default function FlagsCard({ redFlags, greenFlags }: FlagsCardProps) {
               color: '#7a7060',
             }}
           >
-            chatscope.app
+            podtekst.app
           </span>
           <span
             style={{

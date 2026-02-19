@@ -16,7 +16,7 @@ export default function PersonalityPassportCard({
   participants,
 }: PersonalityPassportCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'chatscope-passport');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-passport');
 
   const [activeIdx, setActiveIdx] = useState(0);
   const profiles = qualitative.pass3;
@@ -119,7 +119,7 @@ export default function PersonalityPassportCard({
                 marginTop: 2,
               }}
             >
-              ChatScope
+              PodTeksT
             </div>
           </div>
           {/* Photo placeholder */}
@@ -285,7 +285,7 @@ export default function PersonalityPassportCard({
               lineHeight: 1.6,
             }}
           >
-            CHATSCOPE&lt;&lt;&lt;&lt;{firstName.toUpperCase()}&lt;&lt;&lt;&lt;2026&lt;&lt;&lt;
+            PODTEKST&lt;&lt;&lt;&lt;{firstName.toUpperCase()}&lt;&lt;&lt;&lt;2026&lt;&lt;&lt;
           </div>
         </div>
 
@@ -304,7 +304,7 @@ export default function PersonalityPassportCard({
               color: 'rgba(255,255,255,0.15)',
             }}
           >
-            chatscope.app
+            podtekst.app
           </span>
         </div>
       </div>

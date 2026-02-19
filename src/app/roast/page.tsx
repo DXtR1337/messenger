@@ -86,7 +86,7 @@ export default function RoastPage() {
       <div className="border-b border-white/5 px-6 py-4">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
           <Link href="/" className="font-syne text-sm font-bold text-white/60 transition-colors hover:text-white">
-            ChatScope
+            PodTeksT
           </Link>
           <span className="rounded-full bg-red-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-red-400">
             Anonymous Roast
@@ -100,7 +100,7 @@ export default function RoastPage() {
         <div className="mb-8 text-center">
           <div className="mb-3 text-5xl">🔥</div>
           <h1 className="font-syne text-2xl font-black tracking-tight">ROAST REPORT</h1>
-          <p className="mt-2 text-xs text-gray-500">Anonimowa analiza roastowa • chatscope.app</p>
+          <p className="mt-2 text-xs text-gray-500">Anonimowa analiza roastowa • podtekst.app</p>
         </div>
 
         {/* Verdict */}
@@ -191,7 +191,7 @@ export default function RoastPage() {
             🔥 Analizuj swoją rozmowę
           </Link>
           <div className="mt-3 font-mono text-[10px] text-gray-600">
-            chatscope.app — Zobacz swoje relacje przez dane
+            podtekst.app — Zobacz swoje relacje przez dane
           </div>
         </div>
       </div>

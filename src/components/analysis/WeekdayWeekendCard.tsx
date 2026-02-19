@@ -21,6 +21,7 @@ import {
   CHART_AXIS_TICK,
   CHART_GRID_PROPS,
   PERSON_COLORS_HEX,
+  useAxisWidth,
 } from './chart-config';
 
 interface WeekdayWeekendCardProps {
@@ -32,6 +33,7 @@ export default function WeekdayWeekendCard({
   quantitative,
   participants,
 }: WeekdayWeekendCardProps) {
+  const axisWidth = useAxisWidth();
   const { weekday, weekend } = quantitative.patterns.weekdayWeekend;
 
   const weekdayTotal = useMemo(
@@ -72,13 +74,13 @@ export default function WeekdayWeekendCard({
       transition={{ duration: 0.5 }}
       className="overflow-hidden rounded-xl border border-border bg-card"
     >
-      <div className="px-5 pt-4">
+      <div className="px-3 sm:px-5 pt-4">
         <h3 className="font-display text-[15px] font-bold">
           Dni robocze vs Weekend
         </h3>
       </div>
 
-      <div className="flex flex-col gap-5 px-5 py-4">
+      <div className="flex flex-col gap-5 px-3 sm:px-5 py-4">
         {/* Stat blocks */}
         <div className="grid grid-cols-2 gap-4">
           {/* Weekday block */}
@@ -144,7 +146,7 @@ export default function WeekdayWeekendCard({
               tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
-              width={50}
+              width={axisWidth}
               tickFormatter={(value: number) => formatNumber(value)}
             />
             <Tooltip
