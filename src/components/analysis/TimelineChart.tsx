@@ -108,7 +108,7 @@ export default function TimelineChart({
               key={r}
               onClick={() => setRange(r)}
               className={cn(
-                'cursor-pointer rounded-[5px] border-none bg-transparent px-3 py-1.5 text-xs font-medium transition-colors',
+                'cursor-pointer rounded-[5px] border-none bg-transparent px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors',
                 range === r
                   ? 'bg-white/[0.07] text-white'
                   : 'text-text-muted hover:text-muted-foreground',

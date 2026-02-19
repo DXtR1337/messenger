@@ -24,7 +24,7 @@ export default function ShareCardShell({
 
     const updateScale = () => {
       const containerWidth = wrapper.clientWidth;
-      setScale(Math.min(1, containerWidth / 380));
+      setScale(Math.max(0.85, Math.min(1, (containerWidth - 16) / 380)));
     };
 
     updateScale();

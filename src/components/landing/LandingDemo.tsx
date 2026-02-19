@@ -122,7 +122,7 @@ function StatsRow({ inView }: { inView: boolean }) {
           key={stat.label}
           {...fadeUp(0.15 + i * 0.08)}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          className="flex flex-col gap-1 rounded-xl border border-border bg-card p-4 transition-colors hover:border-border-hover"
+          className="flex flex-col gap-1 rounded-xl border border-border bg-card p-3 sm:p-4 transition-colors hover:border-border-hover"
         >
           <span className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-muted-foreground">
             {stat.label}
@@ -382,19 +382,25 @@ export default function LandingDemo() {
       >
         <Link
           href="/analysis/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 font-story-body text-sm font-semibold text-primary-foreground transition-all hover:bg-accent-hover hover:scale-[1.02] active:scale-[0.98]"
-          style={{ minHeight: 48 }}
+          className="group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-xl px-10 py-4 font-mono text-[0.82rem] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_32px_rgba(139,92,246,0.3)] active:scale-[0.97]"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6 0%, #7c3aed 50%, #a855f7 100%)',
+            boxShadow: '0 0 20px rgba(59,130,246,0.15), 0 0 40px rgba(168,85,247,0.1)',
+            minHeight: 52,
+          }}
         >
-          Analizuj swoją rozmowę
+          <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+          Inicjuj analizę
           <svg
             width="16"
             height="16"
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
+            className="transition-transform duration-200 group-hover:translate-x-0.5"
           >
             <path d="M3.5 8h9M8.5 4l4 4-4 4" />
           </svg>

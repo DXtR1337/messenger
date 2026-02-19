@@ -117,7 +117,7 @@ function PatternCard({
     >
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer py-4 hover:bg-muted/50 transition-colors">
+          <CardHeader className="cursor-pointer px-4 py-3 sm:px-6 sm:py-4 hover:bg-muted/50 transition-colors">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -360,16 +360,16 @@ export function CPSScreener({
             <p className="text-sm text-muted-foreground">{riskLevel.description}</p>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-muted/50 rounded-lg text-center">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-muted/50 rounded-lg text-center">
                 <div className="text-2xl font-semibold text-red-400">{thresholdMet.length}</div>
                 <div className="text-xs text-muted-foreground">Wymagają uwagi</div>
               </div>
-              <div className="p-3 bg-muted/50 rounded-lg text-center">
+              <div className="p-2 sm:p-3 bg-muted/50 rounded-lg text-center">
                 <div className="text-2xl font-semibold text-yellow-400">{nearThreshold.length}</div>
                 <div className="text-xs text-muted-foreground">Na granicy</div>
               </div>
-              <div className="p-3 bg-muted/50 rounded-lg text-center">
+              <div className="col-span-2 sm:col-span-1 p-2 sm:p-3 bg-muted/50 rounded-lg text-center">
                 <div className="text-2xl font-semibold text-emerald-400">{belowThreshold.length}</div>
                 <div className="text-xs text-muted-foreground">Poniżej progu</div>
               </div>

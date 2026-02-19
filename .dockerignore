@@ -3,5 +3,17 @@ node_modules
 .git
 *.md
 .env.local
+.firebase/
 Animate_me_write_1080p_202602171622.mp4
 messages/
+docs/
+*.splinecode
+*.mp4
+*.pdf
+*.tex
+*.aux
+*.log
+*.out
+spline-3d-integration-skill/
+firebase-debug.log
+scid-ii-screener*.jsx

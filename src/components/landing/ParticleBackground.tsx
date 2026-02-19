@@ -15,6 +15,7 @@ export default function ParticleBackground() {
     let animationId: number;
     let width = 0;
     let height = 0;
+    let paused = false;
 
     interface Particle {
       x: number;
@@ -31,6 +32,7 @@ export default function ParticleBackground() {
 
     function getParticleCount() {
       if (typeof window === 'undefined') return 40;
+      if (window.innerWidth < 640) return 10;
       return window.innerWidth < 768 ? 18 : 35;
     }
 
@@ -64,6 +66,7 @@ export default function ParticleBackground() {
 
     function draw(timestamp: number) {
       animationId = requestAnimationFrame(draw);
+      if (paused) return;
       if (timestamp - lastFrameTime < 33) return; // 30fps cap
       lastFrameTime = timestamp;
 
@@ -117,9 +120,15 @@ export default function ParticleBackground() {
     };
     window.addEventListener('resize', handleResize);
 
+    const handleVisibilityChange = () => {
+      paused = document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

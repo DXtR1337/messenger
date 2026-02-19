@@ -120,7 +120,7 @@ function ProgressBar({
     <div
       style={{
         position: 'absolute',
-        top: 12,
+        top: 'max(12px, calc(env(safe-area-inset-top, 0px) + 4px))',
         left: 16,
         right: 16,
         zIndex: 20,
@@ -1011,7 +1011,7 @@ export default function WrappedPlayer({
           href={`/analysis/${analysisId}`}
           style={{
             position: 'absolute',
-            top: 28,
+            top: 'max(28px, calc(env(safe-area-inset-top, 0px) + 20px))',
             left: 16,
             zIndex: 30,
             display: 'flex',
@@ -1054,7 +1054,7 @@ export default function WrappedPlayer({
         <div
           style={{
             position: 'absolute',
-            bottom: 20,
+            bottom: 'max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
             left: 0,
             right: 0,
             zIndex: 20,

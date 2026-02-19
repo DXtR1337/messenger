@@ -215,7 +215,13 @@ export default function StoryShareCard({
   }
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div
+      className="flex flex-col items-center gap-6"
+      style={{
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+    >
       {/* Background glow container */}
       <div className="relative flex items-center justify-center">
         {/* Radial glow effects */}

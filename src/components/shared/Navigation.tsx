@@ -99,7 +99,7 @@ export function Navigation() {
         )}
         <aside
           className={cn(
-            'fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-[#1a1a1a] bg-[#0a0a0a]',
+            'fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-[#1a1a1a] bg-[#0a0a0a] pb-[env(safe-area-inset-bottom)]',
             'transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           )}

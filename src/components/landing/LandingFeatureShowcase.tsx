@@ -149,7 +149,7 @@ export default function LandingFeatureShowcase() {
               initial={{ opacity: 0, y: 24, scale: 0.97 }}
               animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
               transition={{ duration: 0.5, delay: 0.1 + i * 0.08 }}
-              className={`group relative overflow-hidden rounded-xl border border-border bg-card p-6 transition-all duration-200 hover:border-border-hover hover:-translate-y-0.5 ${spanClass}`}
+              className={`group relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-6 transition-all duration-200 hover:border-border-hover hover:-translate-y-0.5 ${spanClass}`}
               style={{
                 background: `radial-gradient(ellipse at 20% 0%, ${feature.accent}08, transparent 70%), var(--bg-card, #111111)`,
               }}

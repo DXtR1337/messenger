@@ -81,7 +81,7 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
             {HOUR_LABELS.map((hour) => (
               <span
                 key={hour}
-                className="absolute right-0 font-display text-[10px] text-text-muted leading-none"
+                className="absolute right-0 font-display text-[10px] sm:text-[11px] text-text-muted leading-none"
                 style={{
                   top: `${(hour / 23) * 100}%`,
                   transform: 'translateY(-50%)',
@@ -98,7 +98,7 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
               className="grid gap-[2px] sm:gap-[3px]"
               style={{
                 gridTemplateColumns: 'repeat(7, 1fr)',
-                gridAutoRows: 'minmax(10px, 16px)',
+                gridAutoRows: 'minmax(12px, 16px)',
               }}
             >
               {cells.map((cell) => (

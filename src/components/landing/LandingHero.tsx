@@ -139,7 +139,7 @@ export default function LandingHero() {
           <span className="relative inline-block size-2 rounded-full bg-success">
             <span className="absolute inset-0 animate-ping rounded-full bg-success opacity-60" />
           </span>
-          <span className="font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
             Analiza Messengera
           </span>
         </div>
@@ -163,7 +163,7 @@ export default function LandingHero() {
               </span>
             ))}
           </span>
-          <span className="block text-primary">
+          <span className="block" style={{ background: 'linear-gradient(90deg, #3b82f6, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             {['więcej', 'niż', 'myślisz.'].map((word, i) => (
               <span
                 key={word}
@@ -201,7 +201,7 @@ export default function LandingHero() {
 
       {/* Scroll indicator — minimal chevron pulse */}
       <div
-        className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2"
+        className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 hidden sm:block"
         style={{ zIndex: 15, animation: 'heroFadeIn 0.8s ease-out 1.2s both' }}
       >
         <svg

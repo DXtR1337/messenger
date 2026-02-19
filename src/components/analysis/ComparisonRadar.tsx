@@ -149,8 +149,8 @@ export default function ComparisonRadar({ analysisA, analysisB }: ComparisonRada
       </div>
 
       <div className="px-2 py-4">
-        <ResponsiveContainer width="100%" height={chartHeight}>
-          <RadarChart data={data} cx="50%" cy="50%" outerRadius={chartHeight < 280 ? '55%' : '70%'}>
+        <ResponsiveContainer width="100%" height={Math.min(chartHeight, 300)}>
+          <RadarChart data={data} cx="50%" cy="50%" outerRadius={Math.min(chartHeight, 300) < 280 ? '55%' : '65%'}>
             <PolarGrid stroke="rgba(255,255,255,0.06)" />
             <PolarAngleAxis
               dataKey="axis"

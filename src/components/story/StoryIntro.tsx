@@ -139,7 +139,10 @@ export default function StoryIntro({
         style={{ zIndex: 0 }}
       />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 px-6">
+      <div
+        className="relative z-10 flex flex-col items-center gap-8 px-6"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -240,10 +243,9 @@ export default function StoryIntro({
 
           {/* Connecting SVG line */}
           <svg
-            width="80"
             height="2"
             viewBox="0 0 80 2"
-            className="mx-3 flex-shrink-0"
+            className="mx-2 w-12 flex-shrink-0 sm:mx-3 sm:w-20"
             style={{ marginBottom: 24 }}
           >
             <defs>
@@ -316,7 +318,8 @@ export default function StoryIntro({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 2.0 }}
-          className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
+          className="absolute left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
+          style={{ bottom: 'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))' }}
         >
           <span
             className="font-mono"

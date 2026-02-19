@@ -118,7 +118,7 @@ export default function LandingSocialProof() {
       >
         <div className="mx-auto max-w-5xl px-6">
           {/* Stats row */}
-          <div className="mb-10 grid grid-cols-2 gap-8 md:grid-cols-4">
+          <div className="mb-10 grid grid-cols-2 gap-4 sm:gap-8 md:grid-cols-4">
             {STATS.map((stat, i) => (
               <motion.div
                 key={stat.label}

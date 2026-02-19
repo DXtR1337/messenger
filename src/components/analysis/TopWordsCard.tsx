@@ -127,10 +127,10 @@ export default function TopWordsCard({
 
                     return (
                         <div key={label} className="flex items-center gap-2.5">
-                            <span className="w-5 text-right font-display text-xs text-text-muted">
+                            <span className="hidden sm:inline w-5 text-right font-display text-xs text-text-muted">
                                 {i + 1}
                             </span>
-                            <span className="w-[70px] sm:w-[100px] truncate text-[13px] font-medium">
+                            <span className="w-[55px] sm:w-[70px] lg:w-[100px] truncate text-[12px] sm:text-[13px] font-medium">
                                 {label}
                             </span>
                             <div className="flex h-2.5 flex-1 overflow-hidden rounded-sm bg-muted">
@@ -143,7 +143,7 @@ export default function TopWordsCard({
                                     style={{ width: `${pctB}%` }}
                                 />
                             </div>
-                            <span className="w-10 sm:w-14 text-right font-display text-xs text-text-muted">
+                            <span className="w-8 sm:w-14 text-right font-display text-[11px] sm:text-xs text-text-muted">
                                 {entry.total}×
                             </span>
                         </div>

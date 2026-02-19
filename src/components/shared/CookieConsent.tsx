@@ -28,7 +28,7 @@ export default function CookieConsent() {
   if (consent !== null) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-[9998] border-t border-border bg-card/95 backdrop-blur-sm p-4">
+    <div className="fixed bottom-0 inset-x-0 z-[9998] border-t border-border bg-card/95 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
           Używamy plików cookie Google Analytics do analityki ruchu. Żadne dane osobowe nie są zbierane.

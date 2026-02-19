@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono, Syne, Space_Grotesk } from "next/font/google";
 import ConditionalAnalytics from "@/components/shared/ConditionalAnalytics";
 import CookieConsent from "@/components/shared/CookieConsent";
@@ -36,6 +36,12 @@ const spaceGrotesk = Space_Grotesk({
   weight: ["300", "400", "500", "600", "700"],
   display: 'swap',
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://podtekst.app"),

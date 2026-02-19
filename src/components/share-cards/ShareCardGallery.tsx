@@ -167,20 +167,20 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
   return (
     <div className="space-y-4">
       {/* Card thumbnails */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3 sm:overflow-x-auto pb-2 scrollbar-thin">
         {availableCards.map((card) => (
           <button
             key={card.id}
             onClick={() => setActiveCard(activeCard === card.id ? null : card.id)}
-            className="group flex shrink-0 flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 transition-all hover:border-border-hover hover:bg-card-hover"
+            className="group flex min-w-0 sm:w-[120px] sm:shrink-0 flex-col items-center gap-1.5 sm:gap-2 rounded-xl border border-border bg-card p-3 sm:p-4 transition-all hover:border-border-hover hover:bg-card-hover"
             style={{
-              width: 120,
+              width: undefined,
               borderColor: activeCard === card.id ? '#3b82f6' : undefined,
             }}
           >
-            <span style={{ fontSize: '1.5rem' }}>{card.emoji}</span>
+            <span className="text-lg sm:text-2xl">{card.emoji}</span>
             <span className="text-xs font-medium text-foreground">{card.title}</span>
-            <span className="flex items-center gap-1 text-[10px] text-text-muted">
+            <span className="hidden sm:flex items-center gap-1 text-[10px] text-text-muted">
               <Download className="size-3" />
               {card.size ?? '1080×1920'}
             </span>

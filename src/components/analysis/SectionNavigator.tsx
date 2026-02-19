@@ -100,7 +100,7 @@ export default function SectionNavigator() {
 
       {/* Mobile: horizontal bottom bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden">
-        <div className="flex items-center gap-1 overflow-x-auto border-t border-border/50 bg-card/95 px-2 py-1.5 backdrop-blur-md scrollbar-none">
+        <div className="flex items-center gap-1 overflow-x-auto border-t border-border/50 bg-card/95 px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md scrollbar-none">
           {SECTIONS.map(({ id, label, icon, accent }) => (
             <button
               key={id}
@@ -127,7 +127,7 @@ export default function SectionNavigator() {
         className={cn(
           'fixed z-40 flex items-center justify-center rounded-full border border-border/50 bg-card/90 shadow-lg backdrop-blur-sm transition-all duration-300',
           'size-10 right-4',
-          'bottom-16 md:bottom-6',
+          'bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-6',
           showBackToTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none',
         )}
         aria-label="Przewiń do góry"

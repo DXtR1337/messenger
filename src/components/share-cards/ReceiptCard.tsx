@@ -183,7 +183,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
           </div>
           <div
             style={{
-              fontSize: '0.5rem',
+              fontSize: '0.56rem',
               letterSpacing: '0.2em',
               color: faded,
               marginTop: 1,
@@ -263,7 +263,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
         <div style={{ textAlign: 'center', padding: '4px 0', position: 'relative', zIndex: 1 }}>
           <div
             style={{
-              fontSize: '0.5rem',
+              fontSize: '0.56rem',
               letterSpacing: '0.18em',
               color: faded,
               marginBottom: 4,
@@ -285,7 +285,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
           <div style={{ fontSize: '0.6rem', color: faded, marginTop: 2 }}>/100</div>
           <div
             style={{
-              fontSize: '0.55rem',
+              fontSize: '0.56rem',
               fontWeight: 700,
               color: getDelusionColor(delusionScore),
               marginTop: 6,
@@ -302,7 +302,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
         {/* Footer */}
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '0.6rem', color: faded }}>Dziękujemy za zakupy! 🧾</div>
-          <div style={{ fontSize: '0.48rem', color: '#aaa', marginTop: 3, letterSpacing: '0.1em' }}>
+          <div style={{ fontSize: '0.56rem', color: '#aaa', marginTop: 3, letterSpacing: '0.1em' }}>
             podtekst.app
           </div>
         </div>
