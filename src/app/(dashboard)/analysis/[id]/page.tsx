@@ -285,7 +285,7 @@ export default function AnalysisResultsPage() {
   const hasQualitative = qualitative?.status === 'complete' && !!qualitative?.pass1;
 
   return (
-    <div>
+    <div className="min-w-0 overflow-x-hidden">
       {showConfetti && <Confetti onDone={() => setShowConfetti(false)} />}
       <SectionNavigator />
 

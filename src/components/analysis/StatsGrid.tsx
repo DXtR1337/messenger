@@ -48,23 +48,23 @@ function StatCard({ icon, label, value, breakdown, delay }: StatCardProps) {
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       transition={{ duration: 0.4, delay }}
     >
-      <div className="h-full rounded-xl border border-border bg-card p-5 transition-colors">
+      <div className="h-full rounded-xl border border-border bg-card p-3 sm:p-5 transition-colors">
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             {icon}
             <span className="text-xs uppercase tracking-wider">{label}</span>
           </div>
-          <p className="font-mono text-2xl font-bold text-foreground">{value}</p>
+          <p className="font-mono text-xl sm:text-2xl font-bold text-foreground">{value}</p>
           {breakdown.length > 0 && (
             <div className="space-y-1 border-t border-border pt-2">
               {breakdown.map((entry) => (
-                <div key={entry.name} className="flex items-center justify-between text-xs">
+                <div key={entry.name} className="flex items-center justify-between text-[11px] sm:text-xs">
                   <span className="flex items-center gap-1.5">
                     <span
                       className="inline-block size-2 rounded-full"
                       style={{ backgroundColor: PERSON_COLORS[entry.index % PERSON_COLORS.length] }}
                     />
-                    <span className="text-muted-foreground">{entry.name}</span>
+                    <span className="text-muted-foreground truncate max-w-[80px] sm:max-w-none">{entry.name}</span>
                   </span>
                   <span className="font-mono font-medium text-foreground">{entry.value}</span>
                 </div>
@@ -170,7 +170,7 @@ export default function StatsGrid({ quantitative, participants }: StatsGridProps
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
       {stats.map((stat, index) => (
         <StatCard key={stat.label} {...stat} delay={index * 0.05} />
       ))}

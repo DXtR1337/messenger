@@ -9,11 +9,11 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const { collapsed, isMobile } = useSidebar();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen overflow-x-hidden">
       <Navigation />
       <div
         className={cn(
-          'flex flex-1 flex-col min-h-screen transition-[margin-left] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          'flex flex-1 flex-col min-w-0 min-h-screen transition-[margin-left] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
           isMobile
             ? 'ml-0'
             : collapsed
@@ -22,7 +22,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         )}
       >
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6">
           <div className="mx-auto w-full max-w-[1400px]">{children}</div>
         </main>
       </div>

@@ -205,7 +205,7 @@ function KPICard({ card }: { card: KPICardData }) {
   const displayValue = formatAnimatedValue(card.id, animatedValue);
 
   return (
-    <div ref={ref} className="relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-px hover:border-border-hover" style={{ borderTop: `2px solid ${colorHex}` }}>
+    <div ref={ref} className="relative overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-5 transition-all duration-200 hover:-translate-y-px hover:border-border-hover" style={{ borderTop: `2px solid ${colorHex}` }}>
       {/* Header: icon + trend */}
       <div className="mb-3 flex items-center justify-between">
         <div
@@ -252,7 +252,7 @@ export default function KPICards({ quantitative, conversation }: KPICardsProps) 
   );
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
       {cards.map((card) => (
         <KPICard key={card.id} card={card} />
       ))}
