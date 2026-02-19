@@ -104,7 +104,7 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
               {cells.map((cell) => (
                 <div
                   key={`${cell.hour}-${cell.day}`}
-                  className="rounded-[3px] transition-transform duration-150 hover:z-10 hover:scale-[1.4]"
+                  className="rounded-[3px]"
                   style={{
                     backgroundColor: getHeatColor(cell.intensity),
                   }}

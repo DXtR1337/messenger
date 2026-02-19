@@ -39,7 +39,8 @@ export default function EmojiReactions({
     }
 
     merged.sort((a, b) => b.total - a.total);
-    return merged.slice(0, 5);
+    // Filter out entries that aren't valid emoji (e.g. "unknown", empty, garbled text)
+    return merged.filter((e) => e.emoji && e.emoji.length <= 8 && /\p{Emoji}/u.test(e.emoji)).slice(0, 5);
   }, [perPerson, participants]);
 
   if (topEmojis.length === 0) return null;

@@ -361,9 +361,9 @@ export default function NetworkGraph({ networkMetrics, participants }: NetworkGr
                     r={node.radius}
                     fill={node.color}
                     opacity={0.85}
-                    stroke={isHovered ? '#fff' : node.color}
-                    strokeWidth={isHovered ? 2 : 1}
-                    strokeOpacity={isHovered ? 0.8 : 0.3}
+                    stroke={node.color}
+                    strokeWidth={1}
+                    strokeOpacity={0.3}
                   />
                   {/* Message count inside node */}
                   {node.radius >= 20 && (

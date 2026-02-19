@@ -150,7 +150,7 @@ export default function WeekdayWeekendCard({
               tickFormatter={(value: number) => formatNumber(value)}
             />
             <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+              cursor={false}
               contentStyle={CHART_TOOLTIP_STYLE}
               labelStyle={CHART_TOOLTIP_LABEL_STYLE}
               formatter={(value?: number | string) => [formatNumber(Number(value ?? 0))]}

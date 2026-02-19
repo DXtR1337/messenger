@@ -153,7 +153,7 @@ export default function ResponseTimeChart({
                   stroke={color}
                   strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 4, strokeWidth: 0, fill: color }}
+                  activeDot={false}
                 />
               );
             })}

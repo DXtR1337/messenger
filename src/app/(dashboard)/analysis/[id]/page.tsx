@@ -672,8 +672,8 @@ export default function AnalysisResultsPage() {
         </div>
       )}
 
-      {/* Bottom spacer */}
-      <div className="h-16" />
+      {/* Bottom spacer — accounts for fixed bottom nav bar + safe area on mobile */}
+      <div className="h-24 sm:h-16" />
     </div>
   );
 }

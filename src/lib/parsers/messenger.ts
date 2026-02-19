@@ -141,8 +141,8 @@ function parseAltConversation(data: AltConversation): ParsedConversation {
       timestamp: msg.timestamp,
       type,
       reactions: (msg.reactions ?? []).map(r => ({
-        emoji: r.reaction,
-        actor: r.actor,
+        emoji: decodeFBString(r.reaction),
+        actor: decodeFBString(r.actor),
       })),
       hasMedia: Boolean(msg.media?.length),
       hasLink: false,

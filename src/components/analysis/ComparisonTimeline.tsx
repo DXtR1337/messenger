@@ -151,7 +151,7 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
               fillOpacity={1}
               connectNulls
               dot={false}
-              activeDot={{ r: 4, strokeWidth: 0, fill: '#3b82f6' }}
+              activeDot={false}
             />
             <Area
               type="monotone"
@@ -163,7 +163,7 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
               fillOpacity={1}
               connectNulls
               dot={false}
-              activeDot={{ r: 4, strokeWidth: 0, fill: '#a855f7' }}
+              activeDot={false}
             />
           </AreaChart>
         </ResponsiveContainer>

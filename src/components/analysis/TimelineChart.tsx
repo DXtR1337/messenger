@@ -186,8 +186,8 @@ export default function TimelineChart({
                   strokeWidth={2}
                   fill={`url(#area-fill-${i})`}
                   fillOpacity={1}
-                  dot={{ r: 3, fill: color, strokeWidth: 0 }}
-                  activeDot={{ r: 5, strokeWidth: 0, fill: color }}
+                  dot={false}
+                  activeDot={false}
                 />
               );
             })}

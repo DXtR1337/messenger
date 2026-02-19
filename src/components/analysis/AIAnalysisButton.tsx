@@ -54,6 +54,7 @@ export default function AIAnalysisButton({
   const [error, setError] = useState<string | null>(null);
   const [roastError, setRoastError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
+  const [showRoastWarning, setShowRoastWarning] = useState(false);
   const [aiConsent, setAiConsent] = useState<boolean>(
     () => typeof window !== 'undefined' && localStorage.getItem('podtekst-ai-consent') === 'true',
   );
@@ -110,8 +111,6 @@ export default function AIAnalysisButton({
     setState('running');
     setCurrentPass(1);
     setError(null);
-    setRoastState('idle');
-    setRoastError(null);
     trackEvent({ name: 'analysis_start', params: { mode: 'standard' } });
 
     // Create AbortController for this analysis request
@@ -352,7 +351,7 @@ export default function AIAnalysisButton({
           <Button
             size="lg"
             variant="outline"
-            onClick={handleRunRoast}
+            onClick={() => setShowRoastWarning(true)}
             disabled={roastState === 'running' || !aiConsent}
             className={cn(
               'mt-2 gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-400',
@@ -366,6 +365,44 @@ export default function AIAnalysisButton({
             )}
             {roastState === 'running' ? 'Prześwietlam wasze profile...' : 'Tryb Roast'}
           </Button>
+          {showRoastWarning && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm"
+            >
+              <p className="font-medium text-amber-400">Najpierw analiza, potem roast</p>
+              <p className="mt-1 text-xs text-amber-400/70">
+                Roast jest trafniejszy po pełnej analizie AI. Zalecamy najpierw uruchomić analizę jakościową.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setShowRoastWarning(false);
+                    handleRun();
+                  }}
+                  disabled={!aiConsent}
+                  className="gap-1.5"
+                >
+                  <Sparkles className="size-3.5" />
+                  Uruchom analizę AI
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setShowRoastWarning(false);
+                    handleRunRoast();
+                  }}
+                  className="gap-1.5 border-red-500/30 text-red-500 hover:bg-red-500/10"
+                >
+                  <Flame className="size-3.5" />
+                  Roast i tak
+                </Button>
+              </div>
+            </motion.div>
+          )}
           {roastState === 'error' && roastError && (
             <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
               {roastError}
