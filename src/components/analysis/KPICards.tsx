@@ -5,6 +5,7 @@ import { useInView } from 'framer-motion';
 import { computeKPICards, type KPICardData } from '@/lib/analysis/kpi-utils';
 import Sparkline from '@/components/analysis/Sparkline';
 import type { QuantitativeAnalysis, ParsedConversation } from '@/lib/parsers/types';
+import { getPercentileForKPI, type PercentileResult } from '@/lib/analysis/percentiles';
 
 /* ------------------------------------------------------------------ */
 /*  Animated count-up hook using requestAnimationFrame + easeOutCubic */
@@ -196,13 +197,57 @@ function TrendArrowDown() {
   );
 }
 
-function KPICard({ card }: { card: KPICardData }) {
+
+/* ------------------------------------------------------------------ */
+/*  Percentile Badge                                                   */
+/* ------------------------------------------------------------------ */
+
+function PercentileBadge({ result }: { result: PercentileResult }) {
+  const { percentile, labelPl } = result;
+
+  let gradientClasses: string;
+  let textClass: string;
+
+  if (percentile >= 90) {
+    gradientClasses = 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30';
+    textClass = 'text-emerald-400';
+  } else if (percentile >= 70) {
+    gradientClasses = 'from-blue-500/20 to-blue-600/10 border-blue-500/30';
+    textClass = 'text-blue-400';
+  } else if (percentile >= 50) {
+    gradientClasses = 'from-zinc-500/15 to-zinc-600/10 border-zinc-500/20';
+    textClass = 'text-zinc-400';
+  } else {
+    return null;
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-full border bg-gradient-to-r px-1.5 py-0.5 font-mono text-[10px] font-semibold leading-none ${gradientClasses} ${textClass}`}
+      title={`${result.metric}: ${labelPl}`}
+    >
+      {percentile >= 90 && (
+        <svg width={10} height={10} viewBox="0 0 12 12" fill="none" className="shrink-0">
+          <path d="M6 1l1.545 3.13L11 4.635 8.5 7.07l.59 3.43L6 8.885 2.91 10.5l.59-3.43L1 4.635l3.455-.505L6 1z" fill="currentColor" />
+        </svg>
+      )}
+      {labelPl}
+    </span>
+  );
+}
+
+function KPICard({ card, conversationMonths }: { card: KPICardData; conversationMonths?: number }) {
   const IconComponent = ICON_MAP[card.iconType];
   const colorHex = ICON_COLOR_HEX[card.iconColor];
   const iconWrapClass = ICON_WRAP_CLASSES[card.iconColor];
 
   const { value: animatedValue, ref } = useAnimatedCounter(card.numericValue);
   const displayValue = formatAnimatedValue(card.id, animatedValue);
+
+  const percentile = useMemo(
+    () => getPercentileForKPI(card.id, card.numericValue, conversationMonths),
+    [card.id, card.numericValue, conversationMonths],
+  );
 
   return (
     <div ref={ref} className="relative overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-5 transition-all duration-200 hover:-translate-y-px hover:border-border-hover" style={{ borderTop: `2px solid ${colorHex}` }}>
@@ -213,7 +258,9 @@ function KPICard({ card }: { card: KPICardData }) {
         >
           <IconComponent />
         </div>
-        {card.trendDirection !== 'neutral' && (
+        <div className="flex items-center gap-1.5">
+          {percentile && <PercentileBadge result={percentile} />}
+          {card.trendDirection !== 'neutral' && (
           <div
             className={`flex items-center gap-0.5 font-display text-xs font-semibold ${
               card.trendDirection === 'up' ? 'text-success' : 'text-danger'
@@ -225,6 +272,7 @@ function KPICard({ card }: { card: KPICardData }) {
             {card.trendPercent}%
           </div>
         )}
+        </div>
       </div>
 
       {/* Value — animated count-up from 0 */}
@@ -251,10 +299,15 @@ export default function KPICards({ quantitative, conversation }: KPICardsProps) 
     [quantitative, conversation],
   );
 
+  const conversationMonths = useMemo(() => {
+    const days = conversation.metadata.durationDays;
+    return days / 30;
+  }, [conversation.metadata.durationDays]);
+
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
       {cards.map((card) => (
-        <KPICard key={card.id} card={card} />
+        <KPICard key={card.id} card={card} conversationMonths={conversationMonths} />
       ))}
     </div>
   );

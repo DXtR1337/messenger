@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono, Syne, Space_Grotesk } from "next/font/google";
 import ConditionalAnalytics from "@/components/shared/ConditionalAnalytics";
 import CookieConsent from "@/components/shared/CookieConsent";
+import ReferralCapture from "@/components/shared/ReferralCapture";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -93,6 +94,7 @@ export default function RootLayout({
           <ConditionalAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}
         <CookieConsent />
+        <ReferralCapture />
       </body>
     </html>
   );

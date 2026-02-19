@@ -149,7 +149,7 @@ export default function LandingHero() {
           className="font-story-display font-black tracking-[-0.04em] text-foreground"
           style={{ fontSize: 'clamp(2rem, 7vw, 3.5rem)', lineHeight: 1.1 }}
         >
-          <span className="block">
+          <span className="block" style={{ color: '#3b82f6' }}>
             {['Twoje', 'rozmowy', 'mówią'].map((word, i) => (
               <span
                 key={word}
@@ -163,7 +163,7 @@ export default function LandingHero() {
               </span>
             ))}
           </span>
-          <span className="block" style={{ background: 'linear-gradient(90deg, #3b82f6, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span className="block" style={{ color: '#a855f7' }}>
             {['więcej', 'niż', 'myślisz.'].map((word, i) => (
               <span
                 key={word}

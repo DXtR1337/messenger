@@ -379,7 +379,7 @@ export default function CurtainReveal() {
         ref={glowRef}
         style={{
           position: 'fixed', top: '-20%', left: '50%',
-          transform: 'translateX(-50%)', width: 600, height: 400,
+          transform: 'translateX(-50%)', width: '100vw', maxWidth: 600, height: 400,
           background: 'radial-gradient(ellipse, rgba(168,85,247,0.03) 0%, transparent 70%)',
           pointerEvents: 'none', zIndex: 998, opacity: 0,
         }}
