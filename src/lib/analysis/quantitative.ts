@@ -548,7 +548,12 @@ function buildPerPersonMetrics(
       topWords: topNWords(acc.wordFreq, 20),
       topPhrases: topNPhrases(acc.phraseFreq, 10),
       uniqueWords: acc.wordFreq.size,
-      vocabularyRichness: acc.totalWords > 0 ? acc.wordFreq.size / acc.totalWords : 0,
+      vocabularyRichness: (() => {
+        // Use total tokenized words (same pipeline as wordFreq) to avoid mismatch
+        let totalTokens = 0;
+        for (const v of acc.wordFreq.values()) totalTokens += v;
+        return totalTokens > 0 ? acc.wordFreq.size / totalTokens : 0;
+      })(),
     };
   }
   return perPerson;
