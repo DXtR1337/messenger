@@ -24,7 +24,7 @@ function getForecastLevel(score: number): ForecastLevel {
   return { icon: '🌪️', label: 'Ewakuacja!', color: '#dc2626', bg: 'rgba(220,38,38,0.1)' };
 }
 
-const sv = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } };
+const sv = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
 
 export default function GhostForecast({ viralScores, participants }: GhostForecastProps) {
   const ghostRisk = viralScores.ghostRisk;

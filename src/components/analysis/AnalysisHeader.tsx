@@ -55,8 +55,8 @@ export default function AnalysisHeader({
   return (
     <motion.div
       className="flex flex-col items-center justify-between gap-6 md:flex-row md:items-center"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.45, ease: 'easeOut' }}
     >
       {/* Left side */}

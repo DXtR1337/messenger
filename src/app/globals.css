@@ -220,6 +220,36 @@ body::after {
   scrollbar-width: none;
 }
 
+/* Thin scrollbar for horizontal scroll containers */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.07) transparent;
+}
+
+/* Touch feedback — active states for touch devices without hover */
+@media (hover: none) {
+  button:active,
+  a:active,
+  [role="button"]:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+    transition: transform 0.1s ease, opacity 0.1s ease;
+  }
+}
+
 /* Story page design tokens */
 .story-page {
   --story-bg: #09090b;
@@ -279,6 +309,23 @@ body::after {
   50% { transform: translateY(4px); }
 }
 
+/* Side texts gentle floating drift */
+@keyframes heroTextFloatLeft {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  20%  { transform: translate(18px, -10px) rotate(0.5deg); }
+  45%  { transform: translate(-12px, 8px) rotate(-0.3deg); }
+  70%  { transform: translate(10px, -5px) rotate(0.2deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes heroTextFloatRight {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(-16px, -8px) rotate(-0.5deg); }
+  50%  { transform: translate(12px, 6px) rotate(0.3deg); }
+  75%  { transform: translate(-8px, -12px) rotate(-0.2deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
 /* Accessibility: respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -306,6 +353,12 @@ body::after {
   .wrapped-progress-fill {
     animation-duration: inherit !important;
     animation-iteration-count: 1 !important;
+  }
+
+  /* CurtainReveal fallback — ensure landing page is visible
+     when animations are disabled (reduced-motion preference) */
+  .landing-content {
+    opacity: 1 !important;
   }
 }
 

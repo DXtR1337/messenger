@@ -183,7 +183,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
           </div>
           <div
             style={{
-              fontSize: '0.56rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.2em',
               color: faded,
               marginTop: 1,
@@ -199,7 +199,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
         {/* Meta */}
         <div
           style={{
-            fontSize: '0.6rem',
+            fontSize: '0.63rem',
             color: '#555',
             display: 'flex',
             flexDirection: 'column',
@@ -263,7 +263,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
         <div style={{ textAlign: 'center', padding: '4px 0', position: 'relative', zIndex: 1 }}>
           <div
             style={{
-              fontSize: '0.56rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.18em',
               color: faded,
               marginBottom: 4,
@@ -282,10 +282,10 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
           >
             {delusionScore}
           </div>
-          <div style={{ fontSize: '0.6rem', color: faded, marginTop: 2 }}>/100</div>
+          <div style={{ fontSize: '0.63rem', color: faded, marginTop: 2 }}>/100</div>
           <div
             style={{
-              fontSize: '0.56rem',
+              fontSize: '0.63rem',
               fontWeight: 700,
               color: getDelusionColor(delusionScore),
               marginTop: 6,
@@ -301,8 +301,8 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
 
         {/* Footer */}
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <div style={{ fontSize: '0.6rem', color: faded }}>Dziękujemy za zakupy! 🧾</div>
-          <div style={{ fontSize: '0.56rem', color: '#aaa', marginTop: 3, letterSpacing: '0.1em' }}>
+          <div style={{ fontSize: '0.63rem', color: faded }}>Dziękujemy za zakupy! 🧾</div>
+          <div style={{ fontSize: '0.63rem', color: '#aaa', marginTop: 3, letterSpacing: '0.1em' }}>
             podtekst.app
           </div>
         </div>

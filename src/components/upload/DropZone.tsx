@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { Upload, X, FileJson, FileText, AlertTriangle } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Upload, X, FileJson, FileText, AlertTriangle, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -12,6 +12,67 @@ interface DropZoneProps {
 
 const MAX_FILE_SIZE_MB = 500;
 const WARN_FILE_SIZE_MB = 200;
+
+// Recursively read all files from a dropped directory
+async function readDirectoryEntries(entry: FileSystemDirectoryEntry): Promise<File[]> {
+  const files: File[] = [];
+  const reader = entry.createReader();
+
+  const readBatch = (): Promise<FileSystemEntry[]> =>
+    new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+
+  // readEntries returns batches — keep reading until empty
+  let batch: FileSystemEntry[];
+  do {
+    batch = await readBatch();
+    for (const item of batch) {
+      if (item.isFile) {
+        const file = await new Promise<File>((resolve, reject) =>
+          (item as FileSystemFileEntry).file(resolve, reject)
+        );
+        files.push(file);
+      } else if (item.isDirectory) {
+        const subFiles = await readDirectoryEntries(item as FileSystemDirectoryEntry);
+        files.push(...subFiles);
+      }
+    }
+  } while (batch.length > 0);
+
+  return files;
+}
+
+// Extract files from DataTransfer, supporting both flat files and directories
+async function extractFilesFromDrop(dataTransfer: DataTransfer): Promise<File[]> {
+  const items = dataTransfer.items;
+  const hasEntryApi = items.length > 0 && typeof items[0].webkitGetAsEntry === 'function';
+
+  if (!hasEntryApi) {
+    return Array.from(dataTransfer.files);
+  }
+
+  const files: File[] = [];
+  const entries: FileSystemEntry[] = [];
+
+  // Collect entries first (items collection changes during async ops)
+  for (let i = 0; i < items.length; i++) {
+    const entry = items[i].webkitGetAsEntry();
+    if (entry) entries.push(entry);
+  }
+
+  for (const entry of entries) {
+    if (entry.isFile) {
+      const file = await new Promise<File>((resolve, reject) =>
+        (entry as FileSystemFileEntry).file(resolve, reject)
+      );
+      files.push(file);
+    } else if (entry.isDirectory) {
+      const dirFiles = await readDirectoryEntries(entry as FileSystemDirectoryEntry);
+      files.push(...dirFiles);
+    }
+  }
+
+  return files;
+}
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -25,31 +86,53 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
   const [sizeWarning, setSizeWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
 
+  // Set webkitdirectory attribute imperatively (non-standard, not in React types)
+  useEffect(() => {
+    if (folderInputRef.current) {
+      folderInputRef.current.setAttribute('webkitdirectory', '');
+    }
+  }, []);
+
+  // Use ref to access current files without adding to useCallback deps
+  const selectedFilesRef = useRef<File[]>([]);
+  selectedFilesRef.current = selectedFiles;
+
   const validateAndSetFiles = useCallback(
-    (files: File[]) => {
+    (files: File[], replace = false) => {
       setError(null);
       setSizeWarning(null);
 
       // Filter to .json and .txt files
-      const validFiles = files.filter((file) => file.name.endsWith('.json') || file.name.endsWith('.txt'));
-      if (validFiles.length === 0) {
+      const validNewFiles = files.filter((file) => file.name.endsWith('.json') || file.name.endsWith('.txt'));
+      if (validNewFiles.length === 0) {
         setError('Akceptowane są tylko pliki .json i .txt. Wybierz eksport rozmowy z Messengera, Instagrama, Telegrama lub WhatsAppa.');
         return;
       }
 
-      if (validFiles.length < files.length) {
+      if (validNewFiles.length < files.length) {
         setError(
-          `${files.length - validFiles.length} plik(i) o nieobsługiwanym formacie zostały pominięte.`
+          `${files.length - validNewFiles.length} plik(i) o nieobsługiwanym formacie zostały pominięte.`
         );
       }
 
+      // Append to existing files (deduplicate by name), or replace if folder upload
+      let merged: File[];
+      if (replace || selectedFilesRef.current.length === 0) {
+        merged = validNewFiles;
+      } else {
+        const existingNames = new Set(selectedFilesRef.current.map(f => f.name));
+        const newOnly = validNewFiles.filter(f => !existingNames.has(f.name));
+        merged = [...selectedFilesRef.current, ...newOnly];
+      }
+
       // Check individual file sizes
-      const totalSize = validFiles.reduce((sum, file) => sum + file.size, 0);
+      const totalSize = merged.reduce((sum, file) => sum + file.size, 0);
       const totalSizeMB = totalSize / (1024 * 1024);
 
-      for (const file of validFiles) {
+      for (const file of merged) {
         const fileSizeMB = file.size / (1024 * 1024);
         if (fileSizeMB > MAX_FILE_SIZE_MB) {
           setError(
@@ -72,8 +155,8 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
         );
       }
 
-      setSelectedFiles(validFiles);
-      onFilesSelected(validFiles);
+      setSelectedFiles(merged);
+      onFilesSelected(merged);
     },
     [onFilesSelected]
   );
@@ -111,7 +194,7 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
   );
 
   const handleDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
+    async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.stopPropagation();
       setIsDragging(false);
@@ -119,9 +202,17 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
 
       if (disabled) return;
 
-      const droppedFiles = Array.from(event.dataTransfer.files);
-      if (droppedFiles.length > 0) {
-        validateAndSetFiles(droppedFiles);
+      try {
+        const droppedFiles = await extractFilesFromDrop(event.dataTransfer);
+        if (droppedFiles.length > 0) {
+          validateAndSetFiles(droppedFiles);
+        }
+      } catch {
+        // Fallback to flat file list
+        const flatFiles = Array.from(event.dataTransfer.files);
+        if (flatFiles.length > 0) {
+          validateAndSetFiles(flatFiles);
+        }
       }
     },
     [disabled, validateAndSetFiles]
@@ -142,6 +233,22 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
     if (disabled) return;
     fileInputRef.current?.click();
   }, [disabled]);
+
+  const handleFolderClick = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (disabled) return;
+    folderInputRef.current?.click();
+  }, [disabled]);
+
+  const handleFolderInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const inputFiles = event.target.files;
+      if (!inputFiles || inputFiles.length === 0) return;
+      validateAndSetFiles(Array.from(inputFiles), true);
+      event.target.value = '';
+    },
+    [validateAndSetFiles]
+  );
 
   const removeFile = useCallback(
     (index: number) => {
@@ -204,6 +311,14 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
           disabled={disabled}
           aria-label="Select JSON files"
         />
+        <input
+          ref={folderInputRef}
+          type="file"
+          onChange={handleFolderInputChange}
+          className="hidden"
+          disabled={disabled}
+          aria-label="Select conversation folder"
+        />
 
         <div
           className={cn(
@@ -216,10 +331,24 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
 
         <div className="text-center space-y-1.5">
           <p className="text-sm font-medium text-foreground">
-            {isDragging ? 'Upuść pliki tutaj' : 'Upuść eksport rozmowy (.json lub .txt)'}
+            {isDragging ? 'Upuść pliki lub folder tutaj' : 'Upuść eksport rozmowy (.json lub .txt)'}
           </p>
           <p className="text-xs text-muted-foreground">
-            lub kliknij, żeby wybrać
+            lub kliknij, żeby wybrać pliki
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleFolderClick}
+            disabled={disabled}
+            className="mt-1 gap-1.5 text-xs"
+          >
+            <FolderOpen className="size-3.5" />
+            Wybierz cały folder rozmowy
+          </Button>
+          <p className="text-[10px] text-primary/70">
+            Zalecane dla Messengera — automatycznie połączy wszystkie pliki
           </p>
           <p className="text-xs text-muted-foreground/70">
             Messenger · Instagram · Telegram (JSON) · WhatsApp (TXT)

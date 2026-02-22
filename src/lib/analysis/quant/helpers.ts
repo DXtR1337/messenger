@@ -56,12 +56,15 @@ export function percentile(sorted: number[], p: number): number {
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
-/** Filter out extreme outliers: cap at 95th percentile. */
+/** Filter out extreme outliers using IQR method (keeps legitimate slow responses). */
 export function filterResponseTimeOutliers(times: number[]): number[] {
   if (times.length < 10) return times;
   const sorted = [...times].sort((a, b) => a - b);
-  const p95 = percentile(sorted, 95);
-  return times.filter(t => t <= p95);
+  const q1 = percentile(sorted, 25);
+  const q3 = percentile(sorted, 75);
+  const iqr = q3 - q1;
+  const upperFence = q3 + 3 * iqr;
+  return times.filter(t => t <= upperFence);
 }
 
 // ============================================================

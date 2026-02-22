@@ -38,6 +38,16 @@ export interface PersonAccumulator {
   wordFreq: Map<string, number>;
   /** Bigram frequency map */
   phraseFreq: Map<string, number>;
+  /** @mentions made by this person (Discord) */
+  mentionsMade: number;
+  /** Times this person was @mentioned (Discord) */
+  mentionsReceived: number;
+  /** Reply messages sent (Discord) */
+  repliesSent: number;
+  /** Times others replied to this person (Discord) */
+  repliesReceived: number;
+  /** Messages edited after sending (Discord) */
+  editedMessages: number;
 }
 
 /** Create a fresh PersonAccumulator with default values. */
@@ -47,7 +57,7 @@ export function createPersonAccumulator(): PersonAccumulator {
     totalWords: 0,
     totalCharacters: 0,
     longestMessage: { content: '', length: 0, timestamp: 0 },
-    shortestMessage: { content: '', length: Infinity, timestamp: 0 },
+    shortestMessage: { content: '', length: Number.MAX_SAFE_INTEGER, timestamp: 0 },
     messagesWithEmoji: 0,
     emojiCount: 0,
     emojiFreq: new Map(),
@@ -64,5 +74,10 @@ export function createPersonAccumulator(): PersonAccumulator {
     messagesReceived: 0,
     wordFreq: new Map(),
     phraseFreq: new Map(),
+    mentionsMade: 0,
+    mentionsReceived: 0,
+    repliesSent: 0,
+    repliesReceived: 0,
+    editedMessages: 0,
   };
 }

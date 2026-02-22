@@ -8,6 +8,9 @@ export default function ConditionalAnalytics({ gaId }: { gaId: string }) {
 
   useEffect(() => {
     setConsent(localStorage.getItem('podtekst-cookie-consent') === 'true');
+    const onConsent = () => setConsent(true);
+    window.addEventListener('podtekst-consent', onConsent);
+    return () => window.removeEventListener('podtekst-consent', onConsent);
   }, []);
 
   if (!consent) return null;

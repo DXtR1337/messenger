@@ -267,8 +267,8 @@ export default function NetworkGraph({ networkMetrics, participants }: NetworkGr
   return (
     <motion.div
       ref={containerRef}
-      initial={{ opacity: 0, y: 20 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      initial={{ opacity: 0 }}
+      animate={isInView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
       <div role="img" aria-label="Graf interakcji między uczestnikami" className="overflow-hidden rounded-xl border border-border bg-card">

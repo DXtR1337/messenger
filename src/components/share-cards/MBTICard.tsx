@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useCardDownload } from './useCardDownload';
 import type { PersonProfile } from '@/lib/analysis/types';
 
@@ -9,34 +9,70 @@ interface MBTICardProps {
   participants: string[];
 }
 
-const PERSON_COLORS = ['#6d9fff', '#b38cff'] as const;
-const PERSON_BG = ['rgba(109,159,255,0.08)', 'rgba(179,140,255,0.08)'] as const;
-
-const DIMENSION_LABELS: Record<string, [string, string]> = {
-  ie: ['I', 'E'],
-  sn: ['S', 'N'],
-  tf: ['T', 'F'],
-  jp: ['J', 'P'],
+const MBTI_POLISH: Record<string, string> = {
+  INTJ: 'Architekt',
+  INTP: 'Logik',
+  ENTJ: 'Dowodca',
+  ENTP: 'Debater',
+  INFJ: 'Adwokat',
+  INFP: 'Mediator',
+  ENFJ: 'Protagonista',
+  ENFP: 'Aktywista',
+  ISTJ: 'Logistyk',
+  ISFJ: 'Obronca',
+  ESTJ: 'Dyrektor',
+  ESFJ: 'Konsul',
+  ISTP: 'Wirtuoz',
+  ISFP: 'Poszukiwacz',
+  ESTP: 'Przedsiebiorca',
+  ESFP: 'Animator',
 };
 
-const DIM_FULL: Record<string, [string, string]> = {
-  ie: ['Introwertyk', 'Ekstrawertyk'],
-  sn: ['Sensoryk', 'Intuicyjny'],
-  tf: ['Myśliciel', 'Uczuciowy'],
-  jp: ['Osądzający', 'Percepcyjny'],
+const LOVE_LANG_SHORT: Record<string, string> = {
+  words_of_affirmation: 'WA',
+  quality_time: 'QT',
+  acts_of_service: 'AS',
+  gifts_pebbling: 'GP',
+  physical_touch: 'PT',
+};
+
+const DIM_COLORS: Record<string, { left: string; right: string }> = {
+  ie: { left: '#2563eb', right: '#7c3aed' },
+  sn: { left: '#059669', right: '#d97706' },
+  tf: { left: '#0891b2', right: '#e11d48' },
+  jp: { left: '#4f46e5', right: '#ea580c' },
 };
 
 export default function MBTICard({ profiles, participants }: MBTICardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-mbti');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-mbti', { backgroundColor: '#ffffff' });
 
   const participantsWithMBTI = participants.filter(
     (name) => profiles[name]?.mbti,
   );
 
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  const flightCode = useMemo(() => {
+    const num = Math.floor(Math.random() * 900) + 100;
+    return num;
+  }, []);
+
   if (participantsWithMBTI.length === 0) return null;
 
-  const isTwoPlayer = participantsWithMBTI.length >= 2;
+  const currentName = participantsWithMBTI[selectedIdx] ?? participantsWithMBTI[0];
+  const profile = profiles[currentName];
+  const mbti = profile?.mbti;
+  if (!mbti) return null;
+
+  const polishName = MBTI_POLISH[mbti.type] ?? mbti.type;
+  const attachmentStyle = profile.attachment_indicators?.primary_style ?? '???';
+  const loveLang = profile.love_language?.primary
+    ? LOVE_LANG_SHORT[profile.love_language.primary] ?? '??'
+    : '??';
+
+  const today = new Date();
+  const dateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -45,299 +81,494 @@ export default function MBTICard({ profiles, participants }: MBTICardProps) {
         style={{
           width: 360,
           height: 640,
-          background: '#050510',
+          background: 'linear-gradient(180deg, #f0f5ff 0%, #ffffff 30%, #ffffff 100%)',
           position: 'relative',
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
         }}
       >
-        {/* Grid scanlines */}
+        {/* Left stub (tear-off) */}
         <div
           style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(100,100,255,0.02) 3px, rgba(100,100,255,0.02) 4px)',
-            pointerEvents: 'none',
-            zIndex: 1,
-          }}
-        />
-
-        {/* Corner accents */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: 40, height: 40, borderTop: '2px solid #ff336644', borderLeft: '2px solid #ff336644', zIndex: 2 }} />
-        <div style={{ position: 'absolute', top: 0, right: 0, width: 40, height: 40, borderTop: '2px solid #ff336644', borderRight: '2px solid #ff336644', zIndex: 2 }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, width: 40, height: 40, borderBottom: '2px solid #ff336644', borderLeft: '2px solid #ff336644', zIndex: 2 }} />
-        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 40, height: 40, borderBottom: '2px solid #ff336644', borderRight: '2px solid #ff336644', zIndex: 2 }} />
-
-        {/* Header — fighting game title */}
-        <div
-          style={{
-            padding: '18px 16px 10px',
-            textAlign: 'center',
+            width: 70,
+            flexShrink: 0,
+            borderRight: '2px dashed #c0c8d8',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px 6px',
+            background: 'linear-gradient(180deg, #dfe6f2 0%, #eaeff7 100%)',
             position: 'relative',
-            zIndex: 2,
           }}
         >
+          {/* Perforated holes */}
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                right: -5,
+                top: 20 + i * 34,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#f0f5ff',
+                border: '1px solid #d0d8e8',
+              }}
+            />
+          ))}
+
+          {/* PODTEKST AIR vertical */}
           <div
             style={{
-              fontFamily: 'var(--font-syne)',
-              fontWeight: 900,
-              fontSize: '0.72rem',
-              color: '#ff3366',
-              letterSpacing: '0.2em',
-              textTransform: 'uppercase',
-              textShadow: '0 0 10px rgba(255,51,102,0.4)',
+              fontFamily: 'var(--font-geist-mono)',
+              fontSize: '0.63rem',
+              color: '#0055a4',
+              letterSpacing: '0.14em',
+              writingMode: 'vertical-rl',
+              textOrientation: 'mixed',
+              transform: 'rotate(180deg)',
+              marginBottom: 16,
             }}
           >
-            WYBIERZ WOJOWNIKA
+            PODTEKST AIR
           </div>
+
+          {/* MBTI type large */}
           <div
             style={{
               fontFamily: 'var(--font-syne)',
               fontWeight: 900,
-              fontSize: '1.4rem',
-              color: '#ffffff',
-              letterSpacing: '0.08em',
-              textShadow: '0 0 20px rgba(255,255,255,0.2)',
-              marginTop: 2,
+              fontSize: '1.5rem',
+              color: '#0055a4',
+              letterSpacing: '0.06em',
+              lineHeight: 1,
+              marginBottom: 12,
             }}
           >
-            STARCIE MBTI
+            {mbti.type}
+          </div>
+
+          {/* KLASA: attachment */}
+          <div
+            style={{
+              fontFamily: 'var(--font-geist-mono)',
+              fontSize: '0.63rem',
+              color: '#7a8599',
+              textAlign: 'center',
+              lineHeight: 1.3,
+            }}
+          >
+            KLASA
           </div>
           <div
             style={{
               fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.42rem',
-              color: '#333355',
-              letterSpacing: '0.1em',
-              marginTop: 4,
+              fontSize: '0.68rem',
+              color: '#0055a4',
+              textAlign: 'center',
+              fontWeight: 600,
+              marginTop: 2,
+              textTransform: 'capitalize',
+              maxWidth: 90,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            PODTEKST MISTRZOSTWA WALKI
+            {attachmentStyle}
           </div>
         </div>
 
-        {/* VS divider for two players */}
-        {isTwoPlayer && (
+        {/* Main ticket area */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Top bar: blue with KARTA POKLADOWA */}
           <div
             style={{
-              textAlign: 'center',
-              padding: '6px 0',
-              position: 'relative',
-              zIndex: 2,
+              background: '#0055a4',
+              padding: '10px 14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'var(--font-syne)',
+                fontWeight: 800,
+                fontSize: '1.0rem',
+                color: '#ffffff',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+              }}
+            >
+              KARTA POKLADOWA
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: '0.78rem',
+                color: 'rgba(255,255,255,0.6)',
+              }}
+            >
+              BOARDING PASS
+            </span>
+          </div>
+
+          {/* Route display: FROM -> airplane -> TO */}
+          <div
+            style={{
+              padding: '14px 14px 10px',
+              borderBottom: '1px solid #e4e8ef',
             }}
           >
             <div
               style={{
-                display: 'inline-block',
-                fontFamily: 'var(--font-syne)',
-                fontWeight: 900,
-                fontSize: '1.2rem',
-                color: '#ff3366',
-                textShadow: '0 0 20px rgba(255,51,102,0.6), 0 0 40px rgba(255,51,102,0.3)',
-                letterSpacing: '0.15em',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
               }}
             >
-              VS
-            </div>
-          </div>
-        )}
-
-        {/* Character panels */}
-        <div
-          style={{
-            flex: 1,
-            padding: '8px 16px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: isTwoPlayer ? 10 : 20,
-            justifyContent: 'center',
-            position: 'relative',
-            zIndex: 2,
-          }}
-        >
-          {participantsWithMBTI.map((name, idx) => {
-            const mbti = profiles[name].mbti!;
-            const color = PERSON_COLORS[idx] ?? PERSON_COLORS[0];
-            const bg = PERSON_BG[idx] ?? PERSON_BG[0];
-            const isRight = idx === 1;
-
-            return (
-              <div
-                key={name}
-                style={{
-                  background: bg,
-                  border: `1px solid ${color}33`,
-                  borderRadius: 4,
-                  padding: '14px 16px',
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Character side indicator */}
+              {/* FROM */}
+              <div style={{ flex: 1 }}>
                 <div
                   style={{
-                    position: 'absolute',
-                    top: 0,
-                    [isRight ? 'right' : 'left']: 0,
-                    width: 3,
-                    height: '100%',
-                    background: color,
-                    boxShadow: `0 0 8px ${color}66`,
+                    fontFamily: 'var(--font-geist-mono)',
+                    fontSize: '0.63rem',
+                    color: '#7a8599',
+                    letterSpacing: '0.08em',
+                    marginBottom: 2,
                   }}
-                />
+                >
+                  FROM
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-syne)',
+                    fontWeight: 700,
+                    fontSize: '0.92rem',
+                    color: '#1a1a2e',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: 90,
+                  }}
+                >
+                  {currentName}
+                </div>
+              </div>
 
-                {/* Name + MBTI type */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div>
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-geist-mono)',
-                        fontSize: '0.46rem',
-                        color: '#555577',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                      }}
-                    >
-                      GRACZ {idx + 1}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-syne)',
-                        fontWeight: 700,
-                        fontSize: '0.72rem',
-                        color,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        maxWidth: 160,
-                      }}
-                    >
-                      {name}
-                    </div>
-                  </div>
-                  {/* Big MBTI badge */}
-                  <div
-                    style={{
-                      background: `${color}22`,
-                      border: `2px solid ${color}`,
-                      borderRadius: 4,
-                      padding: '6px 14px',
-                      boxShadow: `0 0 16px ${color}33`,
-                    }}
-                  >
+              {/* Airplane route line */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ width: 20, height: 1, background: 'linear-gradient(90deg, #0055a4, #c0c8d8)' }} />
+                <span style={{ fontSize: '1rem', color: '#0055a4', lineHeight: 1 }}>&#9992;&#65039;</span>
+                <div style={{ width: 20, height: 1, background: 'linear-gradient(90deg, #c0c8d8, #0055a4)' }} />
+              </div>
+
+              {/* TO */}
+              <div style={{ flex: 1, textAlign: 'right' }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-geist-mono)',
+                    fontSize: '0.63rem',
+                    color: '#7a8599',
+                    letterSpacing: '0.08em',
+                    marginBottom: 2,
+                  }}
+                >
+                  TO
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-syne)',
+                    fontWeight: 700,
+                    fontSize: '0.92rem',
+                    color: '#0055a4',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {polishName}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 dimension bars */}
+          <div
+            style={{
+              padding: '12px 14px',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              gap: 14,
+              borderBottom: '1px solid #e4e8ef',
+            }}
+          >
+            {(['ie', 'sn', 'tf', 'jp'] as const).map((dim) => {
+              const d = mbti.reasoning[dim];
+              const dimLabels: Record<string, [string, string]> = {
+                ie: ['E', 'I'],
+                sn: ['S', 'N'],
+                tf: ['T', 'F'],
+                jp: ['J', 'P'],
+              };
+              const labels = dimLabels[dim];
+              const colors = DIM_COLORS[dim];
+              const isFirst = d.letter === labels[0];
+              const position = isFirst
+                ? Math.max(5, 50 - (d.confidence / 2))
+                : Math.min(95, 50 + (d.confidence / 2));
+
+              return (
+                <div key={dim}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span
                       style={{
                         fontFamily: 'var(--font-syne)',
-                        fontWeight: 900,
-                        fontSize: '1.4rem',
-                        color: '#ffffff',
-                        letterSpacing: '0.08em',
+                        fontWeight: d.letter === labels[0] ? 800 : 500,
+                        fontSize: '0.78rem',
+                        color: d.letter === labels[0] ? colors.left : '#aab4c4',
                       }}
                     >
-                      {mbti.type}
+                      {labels[0]}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-syne)',
+                        fontWeight: d.letter === labels[1] ? 800 : 500,
+                        fontSize: '0.78rem',
+                        color: d.letter === labels[1] ? colors.right : '#aab4c4',
+                      }}
+                    >
+                      {labels[1]}
                     </span>
                   </div>
+                  {/* Bar with confidence label */}
+                  <div style={{ position: 'relative' }}>
+                    <div
+                      style={{
+                        height: 10,
+                        borderRadius: 5,
+                        background: `linear-gradient(90deg, ${colors.left}20, #f0f2f5, ${colors.right}20)`,
+                        border: '1px solid #e0e4ec',
+                        position: 'relative',
+                      }}
+                    >
+                      {/* Position marker dot */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: `${position}%`,
+                          transform: 'translate(-50%, -50%)',
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          background: isFirst ? colors.left : colors.right,
+                          border: '2px solid #ffffff',
+                          boxShadow: `0 1px 4px rgba(0,0,0,0.15), 0 0 0 1px ${isFirst ? colors.left : colors.right}33`,
+                        }}
+                      />
+                      {/* Center line */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: '50%',
+                          width: 1,
+                          height: '100%',
+                          background: '#d0d4dc',
+                        }}
+                      />
+                    </div>
+                    {/* Confidence percentage label */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: `${position}%`,
+                        transform: 'translateX(-50%) translateY(-50%)',
+                        fontSize: '0.63rem',
+                        fontFamily: 'var(--font-geist-mono)',
+                        color: isFirst ? colors.left : colors.right,
+                        fontWeight: 600,
+                        opacity: 0.85,
+                        lineHeight: 1,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {d.confidence}%
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Dimension bars — health bar style */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {(['ie', 'sn', 'tf', 'jp'] as const).map((dim) => {
-                    const d = mbti.reasoning[dim];
-                    const labels = DIMENSION_LABELS[dim];
-                    const fullLabels = DIM_FULL[dim];
-                    const isFirst = d.letter === labels[0];
-                    const confidence = d.confidence;
-
-                    return (
-                      <div key={dim}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                          <span
-                            style={{
-                              fontFamily: 'var(--font-geist-mono)',
-                              fontSize: '0.42rem',
-                              color: isFirst ? color : '#555577',
-                              fontWeight: isFirst ? 700 : 400,
-                            }}
-                          >
-                            {labels[0]} {fullLabels[0]}
-                          </span>
-                          <span
-                            style={{
-                              fontFamily: 'var(--font-geist-mono)',
-                              fontSize: '0.42rem',
-                              color: !isFirst ? color : '#555577',
-                              fontWeight: !isFirst ? 700 : 400,
-                            }}
-                          >
-                            {fullLabels[1]} {labels[1]}
-                          </span>
-                        </div>
-                        {/* Bar */}
-                        <div
-                          style={{
-                            height: 6,
-                            borderRadius: 1,
-                            background: '#0a0a1a',
-                            border: '1px solid #1a1a2e',
-                            overflow: 'hidden',
-                            display: 'flex',
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: `${isFirst ? confidence : 100 - confidence}%`,
-                              height: '100%',
-                              background: isFirst ? color : '#1a1a2e',
-                            }}
-                          />
-                          <div
-                            style={{
-                              flex: 1,
-                              height: '100%',
-                              background: !isFirst ? color : '#1a1a2e',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Confidence */}
+          {/* Flight details grid */}
+          <div
+            style={{
+              padding: '10px 14px',
+              display: 'flex',
+              gap: 0,
+              borderBottom: '1px solid #e4e8ef',
+            }}
+          >
+            {[
+              { label: 'LOT', value: `PT-${mbti.type}` },
+              { label: 'DATA', value: dateStr },
+              { label: 'GATE', value: loveLang },
+            ].map((item, i) => (
+              <div
+                key={item.label}
+                style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  borderLeft: i > 0 ? '1px solid #e4e8ef' : 'none',
+                  padding: '0 6px',
+                }}
+              >
                 <div
                   style={{
-                    marginTop: 8,
                     fontFamily: 'var(--font-geist-mono)',
-                    fontSize: '0.42rem',
-                    color: '#555577',
-                    textAlign: 'center',
+                    fontSize: '0.63rem',
+                    color: '#7a8599',
+                    letterSpacing: '0.08em',
+                    marginBottom: 3,
                   }}
                 >
-                  POZIOM MOCY: {mbti.confidence}%
+                  {item.label}
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-syne)',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    color: '#1a1a2e',
+                  }}
+                >
+                  {item.value}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
 
-        {/* Footer */}
-        <div
-          style={{
-            padding: '10px 16px 16px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            position: 'relative',
-            zIndex: 2,
-          }}
-        >
-          <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#333355' }}>
-            podtekst.app
-          </span>
-          <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.42rem', color: '#ff3366', textShadow: '0 0 6px rgba(255,51,102,0.3)' }}>
-            WALKA!
-          </span>
+          {/* Person picker (tabs) if multiple participants */}
+          {participantsWithMBTI.length > 1 && (
+            <div
+              style={{
+                padding: '8px 14px',
+                display: 'flex',
+                gap: 6,
+                borderBottom: '1px solid #e4e8ef',
+              }}
+            >
+              {participantsWithMBTI.map((name, i) => {
+                const isSelected = i === selectedIdx;
+                return (
+                  <button
+                    key={name}
+                    onClick={() => setSelectedIdx(i)}
+                    style={{
+                      flex: 1,
+                      padding: '5px 6px',
+                      fontFamily: 'var(--font-geist-mono)',
+                      fontSize: '0.63rem',
+                      fontWeight: isSelected ? 700 : 400,
+                      color: isSelected ? '#ffffff' : '#7a8599',
+                      background: isSelected ? '#0055a4' : 'transparent',
+                      border: isSelected ? 'none' : '1px solid #d0d8e8',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Barcode-like decoration */}
+          <div
+            style={{
+              padding: '6px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              background: 'linear-gradient(180deg, rgba(240,245,255,0) 0%, rgba(224,232,248,0.4) 30%, rgba(224,232,248,0.4) 70%, rgba(240,245,255,0) 100%)',
+            }}
+          >
+            {Array.from({ length: 40 }).map((_, i) => {
+              const w = (i * 7 + 13) % 3 === 0 ? 3 : (i * 11 + 7) % 4 === 0 ? 2 : 1;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    width: w,
+                    height: 20,
+                    background: '#1a1a2e',
+                    opacity: 0.9,
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              padding: '4px 14px 10px',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: '0.63rem',
+                color: '#7a8599',
+                letterSpacing: '0.04em',
+              }}
+            >
+              Życzymy milego lotu! — PodTeksT Airlines
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: '0.63rem',
+                color: '#aab4c4',
+                marginTop: 2,
+              }}
+            >
+              podtekst.app | LOT PT-{flightCode}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -357,7 +588,7 @@ export default function MBTICard({ profiles, participants }: MBTICardProps) {
           opacity: isDownloading ? 0.5 : 1,
         }}
       >
-        {isDownloading ? 'Pobieranie...' : 'Pobierz kartę'}
+        {isDownloading ? 'Pobieranie...' : 'Pobierz karte'}
       </button>
     </div>
   );

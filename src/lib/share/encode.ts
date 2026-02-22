@@ -61,21 +61,25 @@ export function encodeShareData(analysis: StoredAnalysis): string {
   if (quantitative.viralScores) {
     const vs = quantitative.viralScores;
     viralScores = {
-      compatibilityScore: vs.compatibilityScore,
-      delusionScore: vs.delusionScore,
-      interestScores: anonymizeRecord(vs.interestScores, nameMap),
-      ghostRisk: anonymizeRecord(
-        Object.fromEntries(
-          Object.entries(vs.ghostRisk).map(([name, data]) => [
-            name,
-            {
-              score: data.score,
-              factors: data.factors.map((f) => anonymizeString(f, nameMap)),
-            },
-          ]),
-        ),
-        nameMap,
-      ),
+      compatibilityScore: vs.compatibilityScore ?? 0,
+      delusionScore: vs.delusionScore ?? 0,
+      interestScores: vs.interestScores ? anonymizeRecord(vs.interestScores, nameMap) : {},
+      ghostRisk: vs.ghostRisk
+        ? anonymizeRecord(
+            Object.fromEntries(
+              Object.entries(vs.ghostRisk).map(([name, data]) => [
+                name,
+                {
+                  score: data?.score ?? 0,
+                  factors: Array.isArray(data?.factors)
+                    ? data.factors.map((f) => anonymizeString(f, nameMap))
+                    : [],
+                },
+              ]),
+            ),
+            nameMap,
+          )
+        : {},
     };
   }
 

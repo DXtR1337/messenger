@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -20,6 +20,12 @@ import CompatibilityCardV2 from './CompatibilityCardV2';
 import GhostForecastCard from './GhostForecastCard';
 import PersonalityPassportCard from './PersonalityPassportCard';
 import CPSCard from './CPSCard';
+import SubtextCard from './SubtextCard';
+import DelusionCard from './DelusionCard';
+import MugshotCard from './MugshotCard';
+import DatingProfileCard from './DatingProfileCard';
+import SimulatorCard from './SimulatorCard';
+import CoupleQuizCard from './CoupleQuizCard';
 import { buildShareUrl } from '@/lib/share/encode';
 
 
@@ -36,24 +42,31 @@ interface CardConfig {
 }
 
 const CARD_CONFIGS: CardConfig[] = [
-  // V2 cards â€” anti-slop (highlighted first)
-  { id: 'receipt', title: 'Paragon', emoji: 'đź§ľ', requiresQualitative: false },
-  { id: 'versus-v2', title: 'Versus V2', emoji: 'âšˇ', requiresQualitative: false, size: '1080Ă—1080' },
-  { id: 'redflag', title: 'Czerwona flaga', emoji: 'đźš©', requiresQualitative: false },
-  { id: 'ghost-forecast', title: 'Prognoza ghostingu', emoji: 'đź‘»', requiresQualitative: false },
-  { id: 'compatibility-v2', title: 'Match', emoji: 'đź’•', requiresQualitative: false, size: '1080Ă—1080' },
-  { id: 'label', title: 'Etykietka', emoji: 'đźŹ·ď¸Ź', requiresQualitative: true, size: '1080Ă—1080' },
-  { id: 'passport', title: 'Paszport', emoji: 'đź›‚', requiresQualitative: true },
+  // V2 cards — anti-slop (highlighted first)
+  { id: 'receipt', title: 'Paragon', emoji: '\u{1F9FE}', requiresQualitative: false },
+  { id: 'versus-v2', title: 'Versus V2', emoji: '\u26A1', requiresQualitative: false },
+  { id: 'redflag', title: 'Czerwona flaga', emoji: '\u{1F6A9}', requiresQualitative: false },
+  { id: 'ghost-forecast', title: 'Prognoza ghostingu', emoji: '\u{1F47B}', requiresQualitative: false },
+  { id: 'compatibility-v2', title: 'Match', emoji: '\u{1F495}', requiresQualitative: false },
+  { id: 'label', title: 'Etykietka', emoji: '\u{1F3F7}\uFE0F', requiresQualitative: true },
+  { id: 'passport', title: 'Paszport', emoji: '\u{1F6C2}', requiresQualitative: true },
   // Classic cards
-  { id: 'stats', title: 'Statystyki', emoji: 'đź“Š', requiresQualitative: false },
-  { id: 'versus', title: 'Versus', emoji: 'âš”ď¸Ź', requiresQualitative: false },
-  { id: 'health', title: 'Wynik zdrowia', emoji: 'đź’š', requiresQualitative: true },
-  { id: 'flags', title: 'Flagi', emoji: 'đźš©', requiresQualitative: true },
-  { id: 'personality', title: 'OsobowoĹ›Ä‡', emoji: 'đź§ ', requiresQualitative: true },
-  { id: 'scores', title: 'Wyniki viralowe', emoji: 'đź”Ą', requiresQualitative: false },
-  { id: 'badges', title: 'OsiÄ…gniÄ™cia', emoji: 'đźŹ†', requiresQualitative: false },
-  { id: 'mbti', title: 'MBTI', emoji: 'đź§¬', requiresQualitative: true },
-  { id: 'cps', title: 'Wzorce', emoji: 'đź§ ', requiresQualitative: true },
+  { id: 'stats', title: 'Statystyki', emoji: '\u{1F4CA}', requiresQualitative: false },
+  { id: 'versus', title: 'Versus', emoji: '\u2694\uFE0F', requiresQualitative: false },
+  { id: 'health', title: 'Wynik zdrowia', emoji: '\u{1F49A}', requiresQualitative: true },
+  { id: 'flags', title: 'Flagi', emoji: '\u{1F6A9}', requiresQualitative: true },
+  { id: 'personality', title: 'Osobowość', emoji: '\u{1F9E0}', requiresQualitative: true },
+  { id: 'scores', title: 'Wyniki viralowe', emoji: '\u{1F525}', requiresQualitative: false },
+  { id: 'badges', title: 'Osiągnięcia', emoji: '\u{1F3C6}', requiresQualitative: false },
+  { id: 'mbti', title: 'MBTI', emoji: '\u{1F9EC}', requiresQualitative: true },
+  { id: 'cps', title: 'Wzorce', emoji: '\u{1F9E0}', requiresQualitative: true },
+  { id: 'subtext', title: 'Podtekst', emoji: '\u{1F50D}', requiresQualitative: true },
+  // Faza 20 — Viral Features
+  { id: 'delusion', title: 'Deluzja', emoji: '\u{1F921}', requiresQualitative: false },
+  { id: 'mugshot', title: 'Mugshot', emoji: '\u2696\uFE0F', requiresQualitative: false },
+  { id: 'dating-profile', title: 'Profil randkowy', emoji: '\u{1F498}', requiresQualitative: false },
+  { id: 'simulator', title: 'Symulacja', emoji: '\u{1F916}', requiresQualitative: false },
+  { id: 'couple-quiz', title: 'Quiz parowy', emoji: '\u{1F491}', requiresQualitative: false },
 ];
 
 export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
@@ -68,20 +81,29 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
     (c) => !c.requiresQualitative || hasQualitative,
   );
 
-  
-  const copyShareLink = useCallback(() => {
+  const copyShareLink = useCallback(async () => {
     try {
       const shareUrl = buildShareUrl(analysis);
-      if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(shareUrl).then(() => {
-          setLinkCopied(true);
-          setTimeout(() => setLinkCopied(false), 2000);
-        });
+      // Try modern clipboard API first, fallback to execCommand
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+      } catch {
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
       }
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
-      void err;
+      console.error('Share link copy failed:', err);
     }
   }, [analysis]);
+
   const renderFullCard = (id: string) => {
     switch (id) {
       // V2 cards
@@ -175,6 +197,30 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
       case 'cps':
         if (!qualitative?.cps) return null;
         return <CPSCard cpsResult={qualitative.cps} />;
+      case 'subtext':
+        if (!qualitative?.subtext) return null;
+        return <SubtextCard subtextResult={qualitative.subtext} participants={participants} />;
+      // Faza 20 — Viral Feature Cards
+      case 'delusion':
+        if (!qualitative?.delusionQuiz) return null;
+        return <DelusionCard result={qualitative.delusionQuiz} participants={participants} />;
+      case 'mugshot': {
+        if (!qualitative?.courtTrial) return null;
+        const firstPerson = Object.values(qualitative.courtTrial.perPerson)[0];
+        if (!firstPerson) return null;
+        return <MugshotCard personVerdict={firstPerson} caseNumber={qualitative.courtTrial.caseNumber} />;
+      }
+      case 'dating-profile': {
+        if (!qualitative?.datingProfile) return null;
+        const firstProfile = Object.values(qualitative.datingProfile.profiles)[0];
+        if (!firstProfile) return null;
+        return <DatingProfileCard profile={firstProfile} />;
+      }
+      case 'simulator':
+        return null; // Simulator card requires active session data, not persisted
+      case 'couple-quiz':
+        if (!qualitative?.coupleQuiz) return null;
+        return <CoupleQuizCard comparison={qualitative.coupleQuiz} />;
       default:
         return null;
     }
@@ -191,7 +237,7 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
           {linkCopied ? (
             <><Check className="size-3.5" /> Skopiowano!</>
           ) : (
-            <><Link2 className="size-3.5" /> Udost\u0119pnij link</>
+            <><Link2 className="size-3.5" /> Udostępnij link</>
           )}
         </button>
       </div>
@@ -201,7 +247,7 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
           <button
             key={card.id}
             onClick={() => setActiveCard(activeCard === card.id ? null : card.id)}
-            className="group flex min-w-0 sm:w-[120px] sm:shrink-0 flex-col items-center gap-1.5 sm:gap-2 rounded-xl border border-border bg-card p-3 sm:p-4 transition-all hover:border-border-hover hover:bg-card-hover"
+            className="group flex min-w-0 sm:w-[120px] sm:shrink-0 flex-col items-center gap-1.5 sm:gap-2 rounded-xl border border-border bg-card p-3 sm:p-4 min-h-[68px] transition-all hover:border-border-hover hover:bg-card-hover active:scale-[0.97] active:opacity-80"
             style={{
               width: undefined,
               borderColor: activeCard === card.id ? '#3b82f6' : undefined,
@@ -211,7 +257,7 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
             <span className="text-xs font-medium text-foreground">{card.title}</span>
             <span className="hidden sm:flex items-center gap-1 text-[10px] text-text-muted">
               <Download className="size-3" />
-              {card.size ?? '1080Ă—1920'}
+              {card.size ?? '1080\u00D71920'}
             </span>
           </button>
         ))}
@@ -246,4 +292,3 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
     </div>
   );
 }
-

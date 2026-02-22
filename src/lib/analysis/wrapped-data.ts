@@ -172,7 +172,7 @@ export function generateWrappedSlides(
   const totalWords = Object.values(quantitative.perPerson).reduce(
     (sum: number, p: PersonMetrics) => sum + p.totalWords, 0,
   );
-  const books = (totalWords / 50_000).toFixed(1);
+  const books = (totalWords / 70_000).toFixed(1);
   slides.push({
     type: 'total-messages',
     gradient: GRADIENTS[1],
@@ -227,8 +227,8 @@ export function generateWrappedSlides(
       value: fasterName,
       subtitle: `\u015Arednio w ${formatMinutes(fasterTime)}`,
       detail: `Wolniejsza osoba odpowiada w ${formatMinutes(slowerTime)}`,
-      personA: { name: nameA, value: formatMinutes(rtA), percent: rtA <= rtB ? 100 : Math.round((rtB / (rtA || 1)) * 100) },
-      personB: { name: nameB, value: formatMinutes(rtB), percent: rtB <= rtA ? 100 : Math.round((rtA / (rtB || 1)) * 100) },
+      personA: { name: nameA, value: formatMinutes(rtA), percent: rtA <= rtB ? 100 : Math.min(100, Math.round((rtB / (rtA || 1)) * 100)) },
+      personB: { name: nameB, value: formatMinutes(rtB), percent: rtB <= rtA ? 100 : Math.min(100, Math.round((rtA / (rtB || 1)) * 100)) },
     });
   }
 

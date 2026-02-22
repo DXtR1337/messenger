@@ -46,6 +46,7 @@ export function detectBursts(
       rollingAvg = sum / 7;
     }
 
+    // 3× rolling average is a standard outlier threshold (similar to 3-sigma rule)
     if (dayValues[i].count > 3 * rollingAvg && rollingAvg > 0) {
       burstDays.push(dayValues[i]);
     }

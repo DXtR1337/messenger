@@ -26,9 +26,13 @@ import {
     ENHANCED_ROAST_SYSTEM,
     STANDUP_ROAST_SYSTEM,
     formatMessagesForAnalysis,
+    SUBTEXT_SYSTEM,
+    formatWindowsForSubtext,
 } from './prompts';
 import type { CPSResult, CPSAnswer } from './communication-patterns';
 import { calculatePatternResults, CPS_DISCLAIMER } from './communication-patterns';
+import type { SubtextResult, SubtextItem, SimplifiedMsg, ExchangeWindow } from './subtext';
+import { extractExchangeWindows, SUBTEXT_DISCLAIMER } from './subtext';
 
 import type { AnalysisSamples } from './qualitative';
 
@@ -43,10 +47,10 @@ function getClient() {
 }
 
 const SAFETY_SETTINGS = [
-    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
 async function callGeminiWithRetry(
@@ -75,11 +79,13 @@ async function callGeminiWithRetry(
 
             // Check for safety blocks
             if (response.promptFeedback?.blockReason) {
+                console.error('[Gemini Safety] Prompt blocked:', response.promptFeedback?.blockReason);
                 throw new Error(`Prompt zablokowany przez filtr bezpieczeństwa: ${response.promptFeedback.blockReason}`);
             }
 
             const candidate = response.candidates?.[0];
             if (candidate?.finishReason === 'SAFETY') {
+                console.error('[Gemini Safety] Response filtered:', candidate.finishReason);
                 throw new Error('Odpowiedź zablokowana przez filtr bezpieczeństwa');
             }
 
@@ -102,7 +108,56 @@ async function callGeminiWithRetry(
             }
         }
     }
+    console.error('[Gemini Error] All retries exhausted:', lastError?.message);
     throw new Error(`Błąd analizy AI: ${lastError?.message ?? 'nieznany błąd'}`);
+}
+
+function sanitizeJsonString(raw: string): string {
+    // Fix unescaped control characters inside JSON string values.
+    // Walk through the string tracking whether we're inside a quoted value;
+    // replace raw control chars (tabs, newlines) with their escape sequences.
+    const out: string[] = [];
+    let inString = false;
+    let escaped = false;
+
+    for (let i = 0; i < raw.length; i++) {
+        const ch = raw[i];
+
+        if (escaped) {
+            out.push(ch);
+            escaped = false;
+            continue;
+        }
+
+        if (ch === '\\' && inString) {
+            out.push(ch);
+            escaped = true;
+            continue;
+        }
+
+        if (ch === '"') {
+            inString = !inString;
+            out.push(ch);
+            continue;
+        }
+
+        if (inString) {
+            // Replace unescaped control characters
+            const code = ch.charCodeAt(0);
+            if (code < 0x20) {
+                if (ch === '\n') { out.push('\\n'); continue; }
+                if (ch === '\r') { out.push('\\r'); continue; }
+                if (ch === '\t') { out.push('\\t'); continue; }
+                // Other control chars — unicode escape
+                out.push('\\u' + code.toString(16).padStart(4, '0'));
+                continue;
+            }
+        }
+
+        out.push(ch);
+    }
+
+    return out.join('');
 }
 
 function parseGeminiJSON<T>(raw: string): T {
@@ -119,10 +174,20 @@ function parseGeminiJSON<T>(raw: string): T {
         const lastClose = cleaned.lastIndexOf(closingChar);
         if (lastClose >= 0) cleaned = cleaned.slice(0, lastClose + 1);
     }
+
+    // Attempt 1: direct parse
     try {
         return JSON.parse(cleaned) as T;
     } catch {
-        throw new Error('Błąd parsowania odpowiedzi AI — odpowiedź nie jest poprawnym JSON');
+        // Attempt 2: fix unescaped control characters and trailing commas
+        try {
+            const sanitized = sanitizeJsonString(cleaned)
+                .replace(/,\s*([}\]])/g, '$1'); // strip trailing commas
+            return JSON.parse(sanitized) as T;
+        } catch {
+            console.error('[Gemini Parse] Failed to parse response, length:', raw?.length, 'first 500 chars:', raw?.slice(0, 500));
+            throw new Error('Błąd parsowania odpowiedzi AI — odpowiedź nie jest poprawnym JSON');
+        }
     }
 }
 
@@ -681,4 +746,193 @@ STYLE INSTRUCTIONS:
             error: error instanceof Error ? error.message : 'Błąd generowania obrazu',
         };
     }
+}
+
+// ============================================================
+// SUBTEXT DECODER
+// ============================================================
+
+interface SubtextBatchRaw {
+    items?: Array<{
+        originalMessage?: string;
+        sender?: string;
+        timestamp?: number;
+        subtext?: string;
+        emotion?: string;
+        confidence?: number;
+        category?: string;
+        isHighlight?: boolean;
+        exchangeContext?: string;
+        windowId?: number;
+        surroundingMessages?: Array<{
+            sender?: string;
+            content?: string;
+            timestamp?: number;
+        }>;
+    }>;
+}
+
+const VALID_CATEGORIES = new Set([
+    'deflection', 'hidden_anger', 'seeking_validation', 'power_move',
+    'genuine', 'testing', 'guilt_trip', 'passive_aggressive',
+    'love_signal', 'insecurity', 'distancing', 'humor_shield',
+]);
+
+function parseSubtextBatch(raw: SubtextBatchRaw, fallbackWindowId: number): SubtextItem[] {
+    if (!raw.items || !Array.isArray(raw.items)) return [];
+
+    return raw.items
+        .filter(item => item.originalMessage && item.sender && item.subtext)
+        .map(item => ({
+            originalMessage: item.originalMessage ?? '',
+            sender: item.sender ?? '',
+            timestamp: typeof item.timestamp === 'number' ? item.timestamp : 0,
+            subtext: item.subtext ?? '',
+            emotion: item.emotion ?? 'nieznana',
+            confidence: Math.max(0, Math.min(100, typeof item.confidence === 'number' ? item.confidence : 50)),
+            category: (VALID_CATEGORIES.has(item.category ?? '') ? item.category : 'genuine') as SubtextItem['category'],
+            isHighlight: item.isHighlight === true,
+            exchangeContext: item.exchangeContext ?? '',
+            windowId: typeof item.windowId === 'number' ? item.windowId : fallbackWindowId,
+            surroundingMessages: Array.isArray(item.surroundingMessages)
+                ? item.surroundingMessages.slice(0, 6).map(m => ({
+                    sender: m?.sender ?? '',
+                    content: m?.content ?? '',
+                    timestamp: typeof m?.timestamp === 'number' ? m.timestamp : 0,
+                }))
+                : [],
+        }));
+}
+
+/**
+ * Run Subtext Decoder analysis.
+ * Extracts exchange windows from the full conversation, sends to Gemini in batches,
+ * and returns decoded subtexts with context.
+ */
+export async function runSubtextAnalysis(
+    messages: SimplifiedMsg[],
+    participants: string[],
+    onProgress?: (status: string) => void,
+    relationshipContext?: Record<string, unknown>,
+    quantitativeContext?: string,
+): Promise<SubtextResult> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error('GEMINI_API_KEY is not set in .env.local');
+    }
+
+    onProgress?.('Wyodrębnianie wymian zdań...');
+
+    // Extract exchange windows (30+ messages each, ~25 windows)
+    const windows = extractExchangeWindows(messages, 25, 15);
+    if (windows.length === 0) {
+        throw new Error('Nie znaleziono wystarczającej liczby wymian zdań do analizy podtekstów');
+    }
+
+    // Build relationship context prefix
+    let contextPrefix = '';
+    if (relationshipContext) {
+        contextPrefix = `\nRELATIONSHIP CONTEXT (from earlier analysis):\n${JSON.stringify(relationshipContext, null, 2)}\n`;
+    }
+    if (quantitativeContext) {
+        contextPrefix += `\nQUANTITATIVE CONTEXT:\n${quantitativeContext}\n`;
+    }
+
+    // Split windows into batches of ~8
+    const BATCH_SIZE = 8;
+    const batches: ExchangeWindow[][] = [];
+    for (let i = 0; i < windows.length; i += BATCH_SIZE) {
+        batches.push(windows.slice(i, i + BATCH_SIZE));
+    }
+
+    const allItems: SubtextItem[] = [];
+
+    for (let i = 0; i < batches.length; i++) {
+        onProgress?.(`Dekodowanie podtekstów ${i + 1}/${batches.length}...`);
+
+        const batchWindows = batches[i];
+        const formattedWindows = formatWindowsForSubtext(batchWindows);
+        const userContent = contextPrefix
+            ? `${contextPrefix}\n\nPARTICIPANTS: ${participants.join(', ')}\n\n${formattedWindows}`
+            : `PARTICIPANTS: ${participants.join(', ')}\n\n${formattedWindows}`;
+
+        const raw = await callGeminiWithRetry(SUBTEXT_SYSTEM, userContent, 3, 16384);
+        const parsed = parseGeminiJSON<SubtextBatchRaw>(raw);
+        const batchItems = parseSubtextBatch(parsed, i * BATCH_SIZE);
+        allItems.push(...batchItems);
+    }
+
+    onProgress?.('Analiza wzorców ukrywania...');
+
+    if (allItems.length === 0) {
+        throw new Error('Analiza podtekstów nie zwróciła wyników — spróbuj ponownie');
+    }
+
+    // Sort by confidence descending, limit to 60
+    allItems.sort((a, b) => b.confidence - a.confidence);
+    const items = allItems.slice(0, 60);
+
+    // Ensure max 8 highlights
+    let highlightCount = 0;
+    for (const item of items) {
+        if (item.isHighlight) {
+            highlightCount++;
+            if (highlightCount > 8) item.isHighlight = false;
+        }
+    }
+
+    // Build summary
+    const categoryCount: Record<string, number> = {};
+    const hiddenPerPerson: Record<string, { hidden: number; total: number }> = {};
+
+    for (const item of items) {
+        categoryCount[item.category] = (categoryCount[item.category] ?? 0) + 1;
+        if (!hiddenPerPerson[item.sender]) {
+            hiddenPerPerson[item.sender] = { hidden: 0, total: 0 };
+        }
+        hiddenPerPerson[item.sender].total++;
+        if (item.category !== 'genuine') {
+            hiddenPerPerson[item.sender].hidden++;
+        }
+    }
+
+    const hiddenEmotionBalance: Record<string, number> = {};
+    const deceptionScore: Record<string, number> = {};
+    let maxDeception = 0;
+    let mostDeceptivePerson = participants[0] ?? '';
+
+    for (const [name, stats] of Object.entries(hiddenPerPerson)) {
+        const pct = stats.total > 0 ? Math.round((stats.hidden / stats.total) * 100) : 0;
+        hiddenEmotionBalance[name] = pct;
+        deceptionScore[name] = pct;
+        if (pct > maxDeception) {
+            maxDeception = pct;
+            mostDeceptivePerson = name;
+        }
+    }
+
+    const topCategories = Object.entries(categoryCount)
+        .map(([category, count]) => ({ category: category as SubtextItem['category'], count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+    const biggestReveal = items.find(i => i.isHighlight) ?? items[0];
+
+    // Re-sort chronologically for display
+    items.sort((a, b) => a.timestamp - b.timestamp);
+
+    onProgress?.('Analiza zakończona');
+
+    return {
+        items,
+        summary: {
+            hiddenEmotionBalance,
+            mostDeceptivePerson,
+            deceptionScore,
+            topCategories,
+            biggestReveal,
+        },
+        disclaimer: SUBTEXT_DISCLAIMER,
+        analyzedAt: Date.now(),
+    };
 }

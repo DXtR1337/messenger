@@ -1,7 +1,31 @@
 'use client';
 
-import { Suspense, lazy, useRef, useState, useEffect, useCallback } from 'react';
+import { Component, Suspense, lazy, useRef, useState, useEffect, useCallback } from 'react';
 import type { Application } from '@splinetool/runtime';
+import type { ReactNode, ErrorInfo } from 'react';
+
+class SplineErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; fallback: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(_error: Error, _info: ErrorInfo) {
+    // Spline fetch failure — degrade gracefully
+  }
+
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
 
 /**
  * Internal/undocumented Spline runtime APIs used to force transparent background
@@ -23,6 +47,36 @@ interface SplineInternalApp {
 
 const Spline = lazy(() => import('@splinetool/react-spline'));
 
+/**
+ * Probe WebGL2 for features Spline requires.
+ * Returns false if clearBufferfv is missing or float textures aren't supported
+ * (common Firefox issue that causes runtime crashes).
+ */
+function checkWebGL2Support(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2');
+    if (!gl) return false;
+
+    // Spline runtime calls clearBufferfv — Firefox sometimes stubs it out
+    if (typeof gl.clearBufferfv !== 'function') {
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      return false;
+    }
+
+    // Float textures needed for depth buffers
+    const hasColorBufferFloat = !!gl.getExtension('EXT_color_buffer_float');
+    const hasFloatBlend = !!gl.getExtension('EXT_float_blend');
+
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+
+    // EXT_color_buffer_float is the critical one
+    return hasColorBufferFloat;
+  } catch {
+    return false;
+  }
+}
+
 interface SplineSceneProps {
   scene: string;
   className?: string;
@@ -32,9 +86,17 @@ interface SplineSceneProps {
 export function SplineScene({ scene, className, onLoad }: SplineSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showSpline, setShowSpline] = useState(false);
+  const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
 
-  // Defer Spline loading until browser is idle
+  // Check WebGL2 support once on mount
   useEffect(() => {
+    setWebglSupported(checkWebGL2Support());
+  }, []);
+
+  // Defer Spline loading until browser is idle (only if WebGL2 is supported)
+  useEffect(() => {
+    if (webglSupported !== true) return;
+
     if ('requestIdleCallback' in window) {
       const id = requestIdleCallback(() => setShowSpline(true), { timeout: 2000 });
       return () => cancelIdleCallback(id);
@@ -42,7 +104,7 @@ export function SplineScene({ scene, className, onLoad }: SplineSceneProps) {
       const timer = setTimeout(() => setShowSpline(true), 2000);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [webglSupported]);
 
   // Block wheel events on the Spline canvas so page scrolls normally
   useEffect(() => {
@@ -125,6 +187,18 @@ export function SplineScene({ scene, className, onLoad }: SplineSceneProps) {
     [onLoad],
   );
 
+  // WebGL2 not supported — show static gradient fallback
+  if (webglSupported === false) {
+    return (
+      <div
+        className="h-full w-full"
+        style={{
+          background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.06) 0%, rgba(168,85,247,0.04) 40%, transparent 70%)',
+        }}
+      />
+    );
+  }
+
   return (
     <div
       ref={containerRef}
@@ -136,15 +210,17 @@ export function SplineScene({ scene, className, onLoad }: SplineSceneProps) {
       }}
     >
       {showSpline ? (
-        <Suspense
-          fallback={
-            <div className="flex h-full w-full items-center justify-center">
-              <span className="size-10 animate-spin rounded-full border-[3px] border-white/20 border-t-white" />
-            </div>
-          }
-        >
-          <Spline scene={scene} className={className} onLoad={handleLoad} />
-        </Suspense>
+        <SplineErrorBoundary fallback={null}>
+          <Suspense
+            fallback={
+              <div className="flex h-full w-full items-center justify-center">
+                <span className="size-10 animate-spin rounded-full border-[3px] border-white/20 border-t-white" />
+              </div>
+            }
+          >
+            <Spline scene={scene} className={className} onLoad={handleLoad} />
+          </Suspense>
+        </SplineErrorBoundary>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
           <span className="size-10 animate-spin rounded-full border-[3px] border-white/20 border-t-white" />

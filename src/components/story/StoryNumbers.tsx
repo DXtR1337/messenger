@@ -100,9 +100,9 @@ export default function StoryNumbers({
   const secondaryStats = [
     {
       emoji: '⚡',
-      value: Math.round(overallMedianResponse / 60000),
-      label: 'Mediana odpowiedzi (min)',
-      suffix: ' min',
+      value: overallMedianResponse < 60000 ? Math.round(overallMedianResponse / 1000) : Math.round(overallMedianResponse / 60000),
+      label: overallMedianResponse < 60000 ? 'Mediana odpowiedzi (s)' : 'Mediana odpowiedzi (min)',
+      suffix: overallMedianResponse < 60000 ? 's' : ' min',
     },
     {
       emoji: '🌙',

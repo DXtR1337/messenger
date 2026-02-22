@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { X, Brain, GitCompareArrows, MessageSquareText, BarChart3, ArrowRight } from 'lucide-react';
+import { X, Brain, GitCompareArrows, MessageSquareText, BarChart3, ArrowRight, Layers } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [analyses, setAnalyses] = useState<AnalysisIndexEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [groupByConversation, setGroupByConversation] = useState(false);
 
   useEffect(() => {
     listAnalyses().then(entries => {
@@ -150,16 +151,39 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold">Twoje analizy</h1>
-        {analyses.length >= 2 && (
-          <Button variant="outline" size="sm" asChild className="gap-2">
-            <Link href="/analysis/compare">
-              <GitCompareArrows className="size-4" />
-              Porównaj analizy
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {analyses.some(e => e.conversationFingerprint) && (
+            <Button
+              variant={groupByConversation ? 'default' : 'outline'}
+              size="sm"
+              className="gap-2"
+              onClick={() => setGroupByConversation(g => !g)}
+            >
+              <Layers className="size-4" />
+              Pogrupuj
+            </Button>
+          )}
+          {analyses.length >= 2 && (
+            <Button variant="outline" size="sm" asChild className="gap-2">
+              <Link href="/analysis/compare">
+                <GitCompareArrows className="size-4" />
+                Porównaj analizy
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
+      {groupByConversation ? (
+        <GroupedAnalysesList
+          analyses={analyses}
+          pendingDeleteId={pendingDeleteId}
+          onDeleteClick={handleDeleteClick}
+          onConfirmDelete={handleConfirmDelete}
+          onCancelDelete={handleCancelDelete}
+          router={router}
+        />
+      ) : (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {analyses.map((entry, index) => (
           <motion.div
@@ -250,6 +274,138 @@ export default function DashboardPage() {
           </motion.div>
         ))}
       </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Grouped view — analyses grouped by conversation fingerprint
+// ============================================================
+
+interface GroupedListProps {
+  analyses: AnalysisIndexEntry[];
+  pendingDeleteId: string | null;
+  onDeleteClick: (event: React.MouseEvent, id: string) => void;
+  onConfirmDelete: (event: React.MouseEvent, id: string) => void;
+  onCancelDelete: (event: React.MouseEvent) => void;
+  router: ReturnType<typeof useRouter>;
+}
+
+function GroupedAnalysesList({ analyses, pendingDeleteId, onDeleteClick, onConfirmDelete, onCancelDelete, router }: GroupedListProps) {
+  // Group by fingerprint; ungrouped entries get their own group
+  const groups = new Map<string, AnalysisIndexEntry[]>();
+  const ungrouped: AnalysisIndexEntry[] = [];
+
+  for (const entry of analyses) {
+    if (entry.conversationFingerprint) {
+      const existing = groups.get(entry.conversationFingerprint) || [];
+      existing.push(entry);
+      groups.set(entry.conversationFingerprint, existing);
+    } else {
+      ungrouped.push(entry);
+    }
+  }
+
+  const sortedGroups = [...groups.entries()].sort(
+    (a, b) => b[1][0].createdAt - a[1][0].createdAt,
+  );
+
+  return (
+    <div className="space-y-6">
+      {sortedGroups.map(([fingerprint, entries]) => (
+        <div key={fingerprint} className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Layers className="size-4 text-muted-foreground" />
+            <h3 className="text-sm font-bold text-foreground">{entries[0].title}</h3>
+            <Badge variant="secondary" className="text-[10px]">{entries.length} {entries.length === 1 ? 'analiza' : entries.length < 5 ? 'analizy' : 'analiz'}</Badge>
+          </div>
+          <div className="grid grid-cols-1 gap-3 pl-6 md:grid-cols-2 lg:grid-cols-3">
+            {entries.map((entry, index) => (
+              <motion.div
+                key={entry.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03, duration: 0.25 }}
+              >
+                <Card
+                  className="relative cursor-pointer overflow-hidden border-border transition-all duration-200 hover:border-border-hover hover:-translate-y-[2px]"
+                  onClick={() => router.push(`/analysis/${entry.id}`)}
+                >
+                  <CardContent className="space-y-2 pt-3 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>{formatDate(entry.createdAt)}</span>
+                        <span className="font-mono">{formatNumber(entry.messageCount)} wiad.</span>
+                      </div>
+                      <Button variant="ghost" size="icon-xs" onClick={(e) => onDeleteClick(e, entry.id)} aria-label="Usuń">
+                        <X className="size-3" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap gap-1">
+                        {entry.hasQualitative && (
+                          <Badge variant="outline" className="gap-1 text-[10px]">
+                            <Brain className="size-3" />
+                            AI
+                          </Badge>
+                        )}
+                      </div>
+                      {entry.healthScore != null && (
+                        <MiniHealthRing score={entry.healthScore} />
+                      )}
+                    </div>
+                  </CardContent>
+
+                  {pendingDeleteId === entry.id && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-card/95 backdrop-blur-sm"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    >
+                      <p className="text-xs font-medium">Usun{'\u0105\u0107'}?</p>
+                      <div className="flex gap-2">
+                        <Button variant="destructive" size="sm" onClick={(e) => onConfirmDelete(e, entry.id)}>Tak</Button>
+                        <Button variant="outline" size="sm" onClick={onCancelDelete}>Nie</Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {ungrouped.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-bold text-text-muted">Inne</h3>
+          <div className="grid grid-cols-1 gap-3 pl-6 md:grid-cols-2 lg:grid-cols-3">
+            {ungrouped.map((entry, index) => (
+              <motion.div
+                key={entry.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03, duration: 0.25 }}
+              >
+                <Card
+                  className="relative cursor-pointer overflow-hidden border-border transition-all duration-200 hover:border-border-hover"
+                  onClick={() => router.push(`/analysis/${entry.id}`)}
+                >
+                  <CardContent className="space-y-2 pt-3 pb-3">
+                    <div className="text-xs font-medium truncate">{entry.title}</div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{formatDate(entry.createdAt)}</span>
+                      <span className="font-mono">{formatNumber(entry.messageCount)} wiad.</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

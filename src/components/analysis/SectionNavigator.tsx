@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronUp } from 'lucide-react';
 
-const SECTIONS = [
+const BASE_SECTIONS = [
   { id: 'section-metrics', label: 'Metryki', icon: '▦', accent: false },
   { id: 'section-activity', label: 'Aktywność', icon: '◔', accent: false },
   { id: 'section-communication', label: 'Komunikacja', icon: '◈', accent: false },
@@ -13,7 +13,24 @@ const SECTIONS = [
   { id: 'section-ai', label: 'AI', icon: '◎', accent: false },
 ];
 
-export default function SectionNavigator() {
+const SERVER_SECTIONS = [
+  { id: 'section-server', label: 'Serwer', icon: '⊞', accent: false },
+  { id: 'section-team', label: 'Zespół', icon: '⊛', accent: true },
+  { id: 'section-metrics', label: 'Metryki', icon: '▦', accent: false },
+  { id: 'section-participants', label: 'Osoby', icon: '◉', accent: true },
+  { id: 'section-activity', label: 'Aktywność', icon: '◔', accent: false },
+  { id: 'section-communication', label: 'Komunikacja', icon: '◈', accent: false },
+  { id: 'section-ranking', label: 'Ranking', icon: '⊿', accent: false },
+  { id: 'section-share', label: 'Udostępnij', icon: '⬡', accent: false },
+  { id: 'section-ai', label: 'AI', icon: '◎', accent: false },
+];
+
+interface SectionNavigatorProps {
+  isServerView?: boolean;
+}
+
+export default function SectionNavigator({ isServerView }: SectionNavigatorProps) {
+  const SECTIONS = isServerView ? SERVER_SECTIONS : BASE_SECTIONS;
   const [activeId, setActiveId] = useState<string>('');
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -100,24 +117,30 @@ export default function SectionNavigator() {
 
       {/* Mobile: horizontal bottom bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden">
-        <div className="flex items-center gap-1 overflow-x-auto border-t border-border/50 bg-card/95 pl-2 pr-6 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md scrollbar-none">
-          {SECTIONS.map(({ id, label, icon, accent }) => (
-            <button
-              key={id}
-              onClick={() => handleClick(id)}
-              className={cn(
-                'flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap',
-                activeId === id
-                  ? accent
-                    ? 'bg-cyan/15 text-cyan'
-                    : 'bg-primary/15 text-primary'
-                  : 'text-muted-foreground',
-              )}
-            >
-              <span>{icon}</span>
-              <span>{label}</span>
-            </button>
-          ))}
+        <div className="relative">
+          {/* Gradient fade indicators for scroll affordance */}
+          <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-3 bg-gradient-to-r from-[#111111]/95 to-transparent" />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-6 bg-gradient-to-l from-[#111111]/95 to-transparent" />
+
+          <div className="flex items-center gap-1 overflow-x-auto border-t border-border/50 bg-card/95 px-3 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md scrollbar-none">
+            {SECTIONS.map(({ id, label, icon, accent }) => (
+              <button
+                key={id}
+                onClick={() => handleClick(id)}
+                className={cn(
+                  'flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap active:scale-95 active:opacity-80',
+                  activeId === id
+                    ? accent
+                      ? 'bg-cyan/15 text-cyan'
+                      : 'bg-primary/15 text-primary'
+                    : 'text-muted-foreground',
+                )}
+              >
+                <span>{icon}</span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </nav>
 

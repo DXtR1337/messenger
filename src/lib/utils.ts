@@ -66,6 +66,8 @@ export async function saveAnalysis(analysis: StoredAnalysis): Promise<void> {
     participants: analysis.conversation.participants.map(p => p.name),
     hasQualitative: analysis.qualitative?.status === 'complete',
     healthScore: analysis.qualitative?.pass4?.health_score?.overall,
+    conversationFingerprint: analysis.conversationFingerprint,
+    platform: analysis.conversation.platform,
   };
 
   await new Promise<void>((resolve, reject) => {
@@ -99,6 +101,11 @@ export async function listAnalyses(): Promise<AnalysisIndexEntry[]> {
     };
     req.onerror = () => reject(req.error);
   });
+}
+
+export async function listAnalysesByFingerprint(fingerprint: string): Promise<AnalysisIndexEntry[]> {
+  const all = await listAnalyses();
+  return all.filter(e => e.conversationFingerprint === fingerprint);
 }
 
 export async function deleteAnalysis(id: string): Promise<void> {

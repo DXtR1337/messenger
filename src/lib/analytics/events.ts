@@ -18,7 +18,9 @@ type PodTeksTEvent =
   | { name: 'cps_complete'; params: { participant: string } }
   | { name: 'share_link_created'; params: { cardType?: string } }
   | { name: 'share_link_opened'; params: { source?: string } }
-  | { name: 'referral_conversion'; params: { referredBy?: string } };
+  | { name: 'referral_conversion'; params: { referredBy?: string } }
+  | { name: 'court_trial_start'; params?: undefined }
+  | { name: 'court_trial_complete'; params?: undefined };
 
 declare global {
   interface Window {
@@ -31,7 +33,7 @@ export function trackEvent(event: PodTeksTEvent): void {
   if (!window.gtag) return;
 
   try {
-    window.gtag('event', event.name, event.params);
+    window.gtag('event', event.name, 'params' in event ? event.params : undefined);
   } catch {
     // Silently fail — analytics should never break the app
   }

@@ -312,8 +312,13 @@ export function buildQuantitativeContext(
   for (const name of names) {
     const timing = quantitative.timing.perPerson[name];
     if (timing) {
-      const medianMinutes = Math.round(timing.medianResponseTimeMs / 60_000);
-      lines.push(`  ${name}: median ${medianMinutes} min`);
+      const medianMs = timing.medianResponseTimeMs;
+      const timeStr = medianMs < 60_000
+        ? `${Math.round(medianMs / 1_000)}s`
+        : medianMs < 3_600_000
+          ? `${Math.round(medianMs / 60_000)} min`
+          : `${(medianMs / 3_600_000).toFixed(1)}h`;
+      lines.push(`  ${name}: median ${timeStr} (avg ${Math.round(timing.averageResponseTimeMs / 1_000)}s)`);
     }
   }
 

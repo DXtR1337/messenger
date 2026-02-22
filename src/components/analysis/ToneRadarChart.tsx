@@ -17,24 +17,35 @@ const PERSON_B_COLOR = '#a855f7';
 function mapToneData(personTone: PersonTone): number[] {
   const warmth = (personTone.warmth ?? 5) / 10;
   const humor = (personTone.humor_presence ?? 5) / 10;
-  const analytical = (10 - (personTone.formality_level ?? 5)) / 10;
 
-  const anxious = personTone.secondary_tones?.some(
+  // Analytical: higher formality + lower warmth = more analytical
+  const formality = (personTone.formality_level ?? 5) / 10;
+  const analytical = Math.min(1, formality * 0.6 + (1 - warmth) * 0.4);
+
+  // Anxious: check secondary_tones for anxiety keywords, plus use warmth as inverse signal
+  const hasAnxiousTone = personTone.secondary_tones?.some(
     (t) =>
-      t.toLowerCase().includes('anxi') || t.toLowerCase().includes('lęk'),
-  )
-    ? 0.6
-    : 0.2;
+      t.toLowerCase().includes('anxi') ||
+      t.toLowerCase().includes('lęk') ||
+      t.toLowerCase().includes('nervous') ||
+      t.toLowerCase().includes('worry'),
+  );
+  const anxious = hasAnxiousTone ? 0.7 : Math.max(0.05, (1 - warmth) * 0.3);
 
+  // Romantic: check primary and secondary tones
   const primaryLower = personTone.primary_tone?.toLowerCase() ?? '';
   const secondaryLower = personTone.secondary_tones?.map((t) => t.toLowerCase()) ?? [];
-  const romantic = primaryLower.includes('roman')
-    ? 0.8
-    : secondaryLower.some((t) => t.includes('roman'))
-      ? 0.5
-      : 0.2;
+  const romanticFromTone = primaryLower.includes('roman')
+    ? 0.85
+    : secondaryLower.some((t) => t.includes('roman') || t.includes('flirt') || t.includes('intim'))
+      ? 0.6
+      : 0.15;
+  // Warmth boosts romantic
+  const romantic = Math.min(1, romanticFromTone + warmth * 0.15);
 
-  const neutral = Math.max(0.1, 1 - warmth - humor * 0.5);
+  // Neutral: inverse of all other dimensions — low emotional engagement
+  const otherAvg = (warmth + humor + analytical + anxious + romantic) / 5;
+  const neutral = Math.max(0.05, Math.min(0.9, 1 - otherAvg));
 
   return [warmth, humor, analytical, anxious, romantic, neutral];
 }
@@ -49,7 +60,7 @@ function drawRadarChart(
 ) {
   const cx = width / 2;
   const cy = height / 2;
-  const radius = 85 * dpr;
+  const radius = 80 * dpr;
   const startAngle = -Math.PI / 2;
 
   ctx.clearRect(0, 0, width, height);
@@ -134,7 +145,7 @@ function drawRadarChart(
   ctx.textBaseline = 'middle';
 
   for (let i = 0; i < DIMENSION_COUNT; i++) {
-    const { x, y } = getVertex(i, 1.18);
+    const { x, y } = getVertex(i, 1.28);
     ctx.fillText(DIMENSIONS[i], x, y);
   }
 }
@@ -164,8 +175,8 @@ export default function ToneRadarChart({
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const displayWidth = 220;
-    const displayHeight = 220;
+    const displayWidth = 280;
+    const displayHeight = 280;
 
     canvas.width = displayWidth * dpr;
     canvas.height = displayHeight * dpr;
@@ -197,9 +208,9 @@ export default function ToneRadarChart({
         >
           <canvas
             ref={canvasRef}
-            width={220}
-            height={220}
-            style={{ width: 220, height: 220 }}
+            width={280}
+            height={280}
+            style={{ width: 280, height: 280 }}
           />
         </motion.div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2.5 text-[0.72rem] text-muted-foreground">
@@ -210,6 +221,22 @@ export default function ToneRadarChart({
           <span>&#10084;&#65039; Romantyczny</span>
           <span>&#128528; Neutralny</span>
         </div>
+        {participants.length > 1 && (
+          <div className="flex gap-4 mt-2">
+            {personA && (
+              <span className="flex items-center gap-1.5 text-[0.72rem] text-muted-foreground">
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: PERSON_A_COLOR }} />
+                {personA}
+              </span>
+            )}
+            {personB && (
+              <span className="flex items-center gap-1.5 text-[0.72rem] text-muted-foreground">
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: PERSON_B_COLOR }} />
+                {personB}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useSidebar } from '@/components/shared/SidebarContext';
+import PTLogo from '@/components/shared/PTLogo';
 
 /* ------------------------------------------------------------------ */
 /*  Inline SVG icons                                                   */
@@ -73,6 +74,11 @@ export function Topbar() {
         >
           <HamburgerIcon />
         </button>
+
+        {/* Small logo — visible on mobile only */}
+        <Link href="/" className="flex sm:hidden items-center" aria-label="PodTeksT">
+          <PTLogo size={20} />
+        </Link>
 
         <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-1.5">
           {breadcrumb.map((item, idx) => (

@@ -12,7 +12,7 @@ const participantsSchema = z.array(z.string().min(1)).min(1, 'participants must 
 export const analyzeRequestSchema = z.object({
   samples: samplesSchema,
   participants: participantsSchema,
-  relationshipContext: z.optional(z.string()),
+  relationshipContext: z.optional(z.enum(['romantic', 'friendship', 'colleague', 'professional', 'family', 'other'])),
   mode: z.optional(z.enum(['standard', 'roast'])),
   quantitativeContext: z.optional(z.string()),
 });
@@ -63,6 +63,33 @@ export const imageRequestSchema = z.object({
   ),
 });
 export type ImageRequestParsed = z.infer<typeof imageRequestSchema>;
+
+const simplifiedMessageSchema = z.object({
+  sender: z.string(),
+  content: z.string(),
+  timestamp: z.number(),
+  index: z.number(),
+});
+
+export const subtextRequestSchema = z.object({
+  messages: z.array(simplifiedMessageSchema).min(100, 'Minimum 100 messages required for subtext analysis'),
+  participants: participantsSchema,
+  relationshipContext: z.optional(z.object({}).passthrough()),
+  quantitativeContext: z.optional(z.string()),
+});
+export type SubtextRequestParsed = z.infer<typeof subtextRequestSchema>;
+
+export const courtRequestSchema = z.object({
+  samples: samplesSchema,
+  participants: participantsSchema,
+  quantitativeContext: z.string(),
+  existingAnalysis: z.optional(z.object({
+    pass1: z.optional(z.unknown()),
+    pass2: z.optional(z.unknown()),
+    pass4: z.optional(z.unknown()),
+  })),
+});
+export type CourtRequestParsed = z.infer<typeof courtRequestSchema>;
 
 // --- Helper to format Zod errors into a user-friendly string ---
 

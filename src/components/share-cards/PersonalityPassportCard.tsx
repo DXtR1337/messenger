@@ -102,7 +102,7 @@ export default function PersonalityPassportCard({
             <div
               style={{
                 fontFamily: mono,
-                fontSize: '0.42rem',
+                fontSize: '0.63rem',
                 letterSpacing: '0.2em',
                 color: accent,
                 opacity: 0.7,
@@ -145,7 +145,7 @@ export default function PersonalityPassportCard({
 
         {/* Name */}
         <div style={{ padding: '14px 20px 0' }}>
-          <div style={{ fontFamily: mono, fontSize: '0.42rem', letterSpacing: '0.15em', color: '#555' }}>
+          <div style={{ fontFamily: mono, fontSize: '0.63rem', letterSpacing: '0.15em', color: '#555' }}>
             POSIADACZ
           </div>
           <div
@@ -177,7 +177,7 @@ export default function PersonalityPassportCard({
             { label: 'STYL KOMUNIKACJI', value: commStyle },
           ].map((item) => (
             <div key={item.label} style={{ padding: '8px 0' }}>
-              <div style={{ fontFamily: mono, fontSize: '0.38rem', letterSpacing: '0.12em', color: '#555' }}>
+              <div style={{ fontFamily: mono, fontSize: '0.63rem', letterSpacing: '0.12em', color: '#555' }}>
                 {item.label}
               </div>
               <div
@@ -204,19 +204,19 @@ export default function PersonalityPassportCard({
         {/* Big Five top 3 */}
         {bigFive.length > 0 && (
           <div style={{ padding: '10px 20px' }}>
-            <div style={{ fontFamily: mono, fontSize: '0.38rem', letterSpacing: '0.15em', color: '#555', marginBottom: 8 }}>
+            <div style={{ fontFamily: mono, fontSize: '0.63rem', letterSpacing: '0.15em', color: '#555', marginBottom: 8 }}>
               GŁÓWNE CECHY
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {bigFive.map((t) => (
                 <div key={t.trait} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontFamily: grotesk, fontSize: '0.55rem', color: '#aaa', width: 90, textTransform: 'capitalize' }}>
+                  <span style={{ fontFamily: grotesk, fontSize: '0.63rem', color: '#aaa', width: 90, textTransform: 'capitalize' }}>
                     {t.trait}
                   </span>
                   <div style={{ flex: 1, height: 3, borderRadius: 2, background: '#1a1a1a', overflow: 'hidden' }}>
                     <div style={{ width: `${t.score}%`, height: '100%', background: accent, borderRadius: 2 }} />
                   </div>
-                  <span style={{ fontFamily: mono, fontSize: '0.45rem', color: accent, width: 24, textAlign: 'right' }}>
+                  <span style={{ fontFamily: mono, fontSize: '0.63rem', color: accent, width: 24, textAlign: 'right' }}>
                     {t.score}
                   </span>
                 </div>
@@ -229,14 +229,14 @@ export default function PersonalityPassportCard({
         <div style={{ height: 1, background: `${accent}10`, margin: '0 20px' }} />
 
         {/* Flags */}
-        <div style={{ padding: '10px 20px', flex: 1 }}>
+        <div style={{ padding: '10px 20px', flex: 1, overflow: 'hidden', minHeight: 0 }}>
           {greenFlags.length > 0 && (
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontFamily: mono, fontSize: '0.38rem', letterSpacing: '0.12em', color: '#16a34a', marginBottom: 4 }}>
+              <div style={{ fontFamily: mono, fontSize: '0.63rem', letterSpacing: '0.12em', color: '#16a34a', marginBottom: 4 }}>
                 🟢 ZIELONE FLAGI
               </div>
               {greenFlags.map((f, i) => (
-                <div key={i} style={{ fontFamily: grotesk, fontSize: '0.5rem', color: '#888', lineHeight: 1.5 }}>
+                <div key={i} style={{ fontFamily: grotesk, fontSize: '0.63rem', color: '#888', lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   • {f.pattern}
                 </div>
               ))}
@@ -244,11 +244,11 @@ export default function PersonalityPassportCard({
           )}
           {redFlags.length > 0 && (
             <div>
-              <div style={{ fontFamily: mono, fontSize: '0.38rem', letterSpacing: '0.12em', color: '#dc2626', marginBottom: 4 }}>
+              <div style={{ fontFamily: mono, fontSize: '0.63rem', letterSpacing: '0.12em', color: '#dc2626', marginBottom: 4 }}>
                 🔴 CZERWONE FLAGI
               </div>
               {redFlags.map((f, i) => (
-                <div key={i} style={{ fontFamily: grotesk, fontSize: '0.5rem', color: '#888', lineHeight: 1.5 }}>
+                <div key={i} style={{ fontFamily: grotesk, fontSize: '0.63rem', color: '#888', lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   • {f.pattern}
                 </div>
               ))}
@@ -262,12 +262,13 @@ export default function PersonalityPassportCard({
             background: `${accent}08`,
             padding: '8px 20px',
             borderTop: `1px solid ${accent}10`,
+            flexShrink: 0,
           }}
         >
           <div
             style={{
               fontFamily: mono,
-              fontSize: '0.4rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.06em',
               color: '#333',
               lineHeight: 1.6,
@@ -279,7 +280,7 @@ export default function PersonalityPassportCard({
           <div
             style={{
               fontFamily: mono,
-              fontSize: '0.4rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.06em',
               color: '#333',
               lineHeight: 1.6,
@@ -299,7 +300,7 @@ export default function PersonalityPassportCard({
           <span
             style={{
               fontFamily: mono,
-              fontSize: '0.38rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.12em',
               color: 'rgba(255,255,255,0.15)',
             }}

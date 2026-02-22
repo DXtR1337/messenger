@@ -179,28 +179,29 @@ export function computeBadges(
 
   // ── 2. Early Bird — "Ranny Ptaszek" ─────────────────────
   {
-    const earlyBirdCount: Record<string, number> = {};
+    const earlyBirdPct: Record<string, number> = {};
     for (const name of names) {
-      let count = 0;
+      const total = perPerson[name]?.totalMessages ?? 0;
+      let earlyCount = 0;
       const matrix = heatmap.perPerson[name];
       if (matrix) {
         for (let day = 0; day < 7; day++) {
           for (let hour = 0; hour < 8; hour++) {
-            count += matrix[day][hour];
+            earlyCount += matrix[day][hour];
           }
         }
       }
-      earlyBirdCount[name] = count;
+      earlyBirdPct[name] = total > 0 ? (earlyCount / total) * 100 : 0;
     }
-    const winner = findWinner(earlyBirdCount);
+    const winner = findWinner(earlyBirdPct);
     if (winner && winner.value > 0) {
       badges.push({
         id: 'early-bird',
         name: 'Ranny Ptaszek',
         emoji: '\u{1F426}',
-        description: 'Najwyższa liczba wiadomości wysłanych przed 8:00',
+        description: 'Najwyższy % wiadomości wysłanych przed 8:00',
         holder: winner.name,
-        evidence: `${winner.value} wiadomości przed 8:00`,
+        evidence: `${winner.value.toFixed(1)}% wiadomości przed 8:00`,
       });
     }
   }
@@ -314,30 +315,32 @@ export function computeBadges(
     }
   }
 
-  // ── 9. Heart Bomber ──────────────────────────────────────
+  // ── 9. Heart Bomber (skip for Discord — reactionsGiven is always 0) ──
   {
-    const heartCounts: Record<string, number> = {};
-    for (const name of names) {
-      const reactions = perPerson[name]?.topReactionsGiven ?? [];
-      let hearts = 0;
-      for (const reaction of reactions) {
-        // Match all heart emoji variants
-        if (/\u2764|\u{1F493}|\u{1F496}|\u{1F497}|\u{1F498}|\u{1F499}|\u{1F49A}|\u{1F49B}|\u{1F49C}|\u{1F5A4}|\u{1F90D}|\u{1F90E}|\u{1FA77}|\u{2763}|\u{1F9E1}/u.test(reaction.emoji)) {
-          hearts += reaction.count;
+    const hasReactionData = names.some((n) => (perPerson[n]?.topReactionsGiven ?? []).length > 0);
+    if (hasReactionData) {
+      const heartCounts: Record<string, number> = {};
+      for (const name of names) {
+        const reactions = perPerson[name]?.topReactionsGiven ?? [];
+        let hearts = 0;
+        for (const reaction of reactions) {
+          if (/\u2764|\u{1F493}|\u{1F496}|\u{1F497}|\u{1F498}|\u{1F499}|\u{1F49A}|\u{1F49B}|\u{1F49C}|\u{1F5A4}|\u{1F90D}|\u{1F90E}|\u{1FA77}|\u{2763}|\u{1F9E1}/u.test(reaction.emoji)) {
+            hearts += reaction.count;
+          }
         }
+        heartCounts[name] = hearts;
       }
-      heartCounts[name] = hearts;
-    }
-    const winner = findWinner(heartCounts);
-    if (winner && winner.value > 0) {
-      badges.push({
-        id: 'heart-bomber',
-        name: 'Heart Bomber',
-        emoji: '\u{2764}\u{FE0F}',
-        description: 'Najwięcej reakcji serduszkowych',
-        holder: winner.name,
-        evidence: `${winner.value} reakcji \u{2764}\u{FE0F}`,
-      });
+      const winner = findWinner(heartCounts);
+      if (winner && winner.value > 0) {
+        badges.push({
+          id: 'heart-bomber',
+          name: 'Heart Bomber',
+          emoji: '\u{2764}\u{FE0F}',
+          description: 'Najwięcej reakcji serduszkowych',
+          holder: winner.name,
+          evidence: `${winner.value} reakcji \u{2764}\u{FE0F}`,
+        });
+      }
     }
   }
 
@@ -391,6 +394,63 @@ export function computeBadges(
         description: 'Najwięcej zadanych pytań',
         holder: winner.name,
         evidence: `Zadał(a) ${winner.value} pytań`,
+      });
+    }
+  }
+
+  // ── 13. Mention Magnet — "Magnes na @" (Discord) ────────
+  {
+    const mentionCounts: Record<string, number> = {};
+    for (const name of names) {
+      mentionCounts[name] = perPerson[name]?.mentionsReceived ?? 0;
+    }
+    const winner = findWinner(mentionCounts);
+    if (winner && winner.value > 5) {
+      badges.push({
+        id: 'mention-magnet',
+        name: 'Magnes na @',
+        emoji: '\u{1F4E2}',
+        description: 'Najczęściej wspominany (@) przez innych',
+        holder: winner.name,
+        evidence: `${winner.value} wzmianek`,
+      });
+    }
+  }
+
+  // ── 14. Reply King — "Król odpowiedzi" (Discord) ────────
+  {
+    const replyCounts: Record<string, number> = {};
+    for (const name of names) {
+      replyCounts[name] = perPerson[name]?.repliesSent ?? 0;
+    }
+    const winner = findWinner(replyCounts);
+    if (winner && winner.value > 10) {
+      badges.push({
+        id: 'reply-king',
+        name: 'Król odpowiedzi',
+        emoji: '\u{21A9}\u{FE0F}',
+        description: 'Najczęściej odpowiadał(a) na wiadomości (reply)',
+        holder: winner.name,
+        evidence: `${winner.value} odpowiedzi`,
+      });
+    }
+  }
+
+  // ── 15. Edit Lord — "Perfekcjonista" (Discord) ──────────
+  {
+    const editCounts: Record<string, number> = {};
+    for (const name of names) {
+      editCounts[name] = perPerson[name]?.editedMessages ?? 0;
+    }
+    const winner = findWinner(editCounts);
+    if (winner && winner.value > 5) {
+      badges.push({
+        id: 'edit-lord',
+        name: 'Perfekcjonista',
+        emoji: '\u{270F}\u{FE0F}',
+        description: 'Najczęściej edytował(a) swoje wiadomości',
+        holder: winner.name,
+        evidence: `${winner.value} edytowanych wiadomości`,
       });
     }
   }

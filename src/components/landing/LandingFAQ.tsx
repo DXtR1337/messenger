@@ -23,7 +23,7 @@ const FAQ_ITEMS: FAQItem[] = [
   {
     question: 'Jakie formaty plików są obsługiwane?',
     answer:
-      'Aktualnie obsługujemy eksport z Facebook Messengera w formacie JSON. Wsparcie dla WhatsApp, Instagram i Telegrama jest planowane.',
+      'Obsługujemy 5 platform: Facebook Messenger (JSON), WhatsApp (TXT), Instagram DM (JSON), Telegram (JSON) oraz Discord (import przez bota). Automatycznie rozpoznajemy format pliku — wystarczy go przeciągnąć.',
   },
   {
     question: 'Ile wiadomości potrzeba do analizy?',
@@ -38,7 +38,17 @@ const FAQ_ITEMS: FAQItem[] = [
   {
     question: 'Czy mogę porównać wiele rozmów?',
     answer:
-      'Każda rozmowa jest analizowana osobno. Funkcja porównywania rozmów jest w planach na przyszłe aktualizacje.',
+      'Tak! Na stronie /analysis/compare możesz porównać wiele rozmów obok siebie — statystyki, wzorce komunikacyjne, wyniki zdrowia relacji i więcej.',
+  },
+  {
+    question: 'Ile to kosztuje?',
+    answer:
+      '100% za darmo. Bez rejestracji. Bez karty kredytowej. Twoje dane nigdy nie opuszczają przeglądarki — analiza statystyczna dzieje się lokalnie, a AI otrzymuje tylko ~2% próbkę wiadomości.',
+  },
+  {
+    question: 'Jaki AI używacie?',
+    answer:
+      'Google Gemini — najnowszy model AI do analizy tekstu. Każda rozmowa przechodzi przez 4 przebiegi AI: przegląd, dynamika, profile osobowości i synteza z oceną zdrowia relacji.',
   },
 ];
 
@@ -52,7 +62,7 @@ export default function LandingFAQ() {
   }
 
   return (
-    <section ref={ref} className="bg-background px-6 py-24">
+    <section id="faq" ref={ref} className="bg-background px-6 py-24">
       <div className="mx-auto max-w-3xl">
         {/* Section header */}
         <motion.div

@@ -12,6 +12,10 @@ interface RoastImageCardProps {
     participants: string[];
     /** Raw conversation messages for picking a random excerpt */
     messages?: Array<{ sender: string; content: string; timestamp: number }>;
+    /** Previously saved image (base64 data URL) */
+    savedImage?: string;
+    /** Callback to persist generated image */
+    onImageSaved?: (dataUrl: string) => void;
 }
 
 /** Pick a random contiguous slice of interesting messages for the roast comic. */
@@ -37,8 +41,10 @@ export default function RoastImageCard({
     roast,
     participants,
     messages,
+    savedImage,
+    onImageSaved,
 }: RoastImageCardProps) {
-    const [imageData, setImageData] = useState<string | null>(null);
+    const [imageData, setImageData] = useState<string | null>(savedImage ?? null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -81,13 +87,15 @@ export default function RoastImageCard({
             }
 
             const { imageBase64, mimeType } = await response.json();
-            setImageData(`data:${mimeType};base64,${imageBase64}`);
+            const dataUrl = `data:${mimeType};base64,${imageBase64}`;
+            setImageData(dataUrl);
+            onImageSaved?.(dataUrl);
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setLoading(false);
         }
-    }, [roast, participants, messages]);
+    }, [roast, participants, messages, onImageSaved]);
 
     const handleDownload = useCallback(() => {
         if (!imageData) return;

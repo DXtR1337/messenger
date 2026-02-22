@@ -187,10 +187,10 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
             <span
               style={{
                 fontFamily: syne,
-                fontSize: '1.3rem',
+                fontSize: '1.05rem',
                 fontWeight: 900,
                 color: '#dc2626',
-                letterSpacing: '0.08em',
+                letterSpacing: '0.05em',
               }}
             >
               RAPORT CZERWONYCH FLAG
@@ -208,7 +208,7 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
         {/* Document meta */}
         <div
           style={{
-            fontSize: '0.6rem',
+            fontSize: '0.63rem',
             color: '#888',
             display: 'flex',
             flexDirection: 'column',
@@ -235,7 +235,7 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
                 padding: '1px 8px',
                 border: `1px solid ${classColor}`,
                 borderRadius: 3,
-                fontSize: '0.55rem',
+                fontSize: '0.63rem',
               }}
             >
               {classLabel}
@@ -256,7 +256,7 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
         >
           <div
             style={{
-              fontSize: '0.55rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.15em',
               color: '#555',
               marginBottom: 2,
@@ -293,7 +293,7 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
                 </div>
                 <div
                   style={{
-                    fontSize: '0.48rem',
+                    fontSize: '0.63rem',
                     color: getSeverityDot(flag.severity),
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
@@ -333,7 +333,7 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
         >
           <div
             style={{
-              fontSize: '0.5rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.15em',
               color: '#555',
               marginBottom: 6,
@@ -347,7 +347,7 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
           {delusionScore > 0 && (
             <div
               style={{
-                fontSize: '0.5rem',
+                fontSize: '0.63rem',
                 color: '#666',
                 marginTop: 8,
               }}
@@ -369,8 +369,8 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
           <div
             style={{
               fontFamily: mono,
-              fontSize: '0.4rem',
-              color: 'rgba(255,255,255,0.18)',
+              fontSize: '0.63rem',
+              color: 'rgba(255,255,255,0.35)',
               marginBottom: 4,
               lineHeight: 1.4,
             }}
@@ -380,9 +380,9 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
           <span
             style={{
               fontFamily: mono,
-              fontSize: '0.45rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.12em',
-              color: 'rgba(255,255,255,0.2)',
+              color: 'rgba(255,255,255,0.35)',
             }}
           >
             podtekst.app

@@ -56,6 +56,21 @@ export const MONTHS_PL = [
   'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru',
 ] as const;
 
+/** Format YYYY-MM to "Sty 2024" — for chart tooltip labels. */
+export function formatMonthWithYear(ym: string): string {
+  const parts = ym.split('-');
+  const m = parseInt(parts[1] ?? '0', 10);
+  const y = parts[0] ?? '';
+  return `${MONTHS_PL[m - 1] ?? parts[1]} ${y}`;
+}
+
+/** Recharts Tooltip labelFormatter that reads the `month` field from payload and shows year. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function monthYearLabelFormatter(_label: any, items: readonly any[]): string {
+  const month = items?.[0]?.payload?.month as string | undefined;
+  return month ? formatMonthWithYear(month) : String(_label ?? '');
+}
+
 /** Returns true when viewport width < 640px. Updates on resize. */
 export function useIsMobile(): boolean {
   const [mobile, setMobile] = useState(false);
@@ -66,6 +81,24 @@ export function useIsMobile(): boolean {
     return () => window.removeEventListener('resize', update);
   }, []);
   return mobile;
+}
+
+/** Responsive YAxis width for horizontal bar charts (participant names).
+ *  60 on narrow mobile, 70 on wide mobile, 90 on desktop. */
+export function useBarAxisWidth(): number {
+  const [w, setW] = useState(90);
+  useEffect(() => {
+    const update = () => {
+      const vw = window.innerWidth;
+      if (vw < 380) setW(60);
+      else if (vw < 640) setW(70);
+      else setW(90);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return w;
 }
 
 /** Responsive YAxis width — 30 on mobile, 40 on tablet, 50 on desktop. */

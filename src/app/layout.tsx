@@ -46,11 +46,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://podtekst.app"),
-  title: "PodTeksT — Analizator rozmów z Messengera",
+  title: "PodTeksT — odkryj to, co kryje się między wierszami",
   description:
     "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji. 28 metryk + analiza AI osobowości i dynamiki.",
   openGraph: {
-    title: "PodTeksT — Analizator rozmów z Messengera",
+    title: "PodTeksT — odkryj to, co kryje się między wierszami",
     description:
       "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji.",
     locale: "pl_PL",
@@ -60,13 +60,13 @@ export const metadata: Metadata = {
         url: "/og/podtekst-og.png",
         width: 1200,
         height: 630,
-        alt: "PodTeksT — Zobacz swoje relacje przez dane",
+        alt: "PodTeksT — odkryj to, co kryje się między wierszami",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PodTeksT — Analizator rozmów z Messengera",
+    title: "PodTeksT — odkryj to, co kryje się między wierszami",
     description:
       "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji.",
     images: ["/og/podtekst-og.png"],

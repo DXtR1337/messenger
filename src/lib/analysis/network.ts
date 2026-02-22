@@ -6,14 +6,18 @@
  * same conversation session), that counts as a B->A interaction edge.
  */
 
-import type { UnifiedMessage, NetworkMetrics, NetworkNode, NetworkEdge } from '@/lib/parsers/types';
+import type { UnifiedMessage, NetworkMetrics, NetworkNode, NetworkEdge, ParsedConversation } from '@/lib/parsers/types';
 
-const SESSION_GAP_MS = 6 * 60 * 60 * 1000; // 6 hours
+function getSessionGapMs(platform: ParsedConversation['platform']): number {
+  return platform === 'discord' ? 2 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000;
+}
 
 export function computeNetworkMetrics(
   messages: UnifiedMessage[],
   participants: string[],
+  platform: ParsedConversation['platform'] = 'messenger',
 ): NetworkMetrics {
+  const SESSION_GAP_MS = getSessionGapMs(platform);
   // Build interaction matrix
   const interactions: Record<string, Record<string, number>> = {};
   for (const p of participants) {

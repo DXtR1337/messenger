@@ -124,7 +124,7 @@ function buildAwards(q: QuantitativeAnalysis, c: ParsedConversation): Award[] {
   return awards;
 }
 
-const sv = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } };
+const sv = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
 
 export default function GroupChatAwards({ quantitative, conversation }: GroupChatAwardsProps) {
   const awards = buildAwards(quantitative, conversation);

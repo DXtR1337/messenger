@@ -5,6 +5,11 @@
 
 import type { ParsedConversation, QuantitativeAnalysis } from '../parsers/types';
 import type { CPSResult } from './communication-patterns';
+import type { SubtextResult } from './subtext';
+import type { DelusionQuizResult } from './delusion-quiz';
+import type { CourtResult } from './court-prompts';
+import type { DatingProfileResult } from './dating-profile-prompts';
+import type { CoupleQuizComparison } from './couple-quiz';
 
 // ============================================================
 // PASS 1: Overview — Tone, Style, Relationship Type
@@ -354,12 +359,20 @@ export interface ConversationPersonality {
   };
 }
 
+export interface Prediction {
+  prediction: string;
+  confidence: number;
+  timeframe: string;
+  basis: string;
+}
+
 export interface Pass4Result {
   executive_summary: string;
   health_score: HealthScore;
   key_findings: KeyFinding[];
   relationship_trajectory: RelationshipTrajectory;
   insights: Insight[];
+  predictions?: Prediction[];
   conversation_personality: ConversationPersonality;
 }
 
@@ -420,8 +433,18 @@ export interface QualitativeAnalysis {
   roast?: RoastResult;
   /** Communication Pattern Screening (optional Pass 5) */
   cps?: CPSResult;
+  /** Subtext Decoder (optional) */
+  subtext?: SubtextResult;
   /** Stand-Up Comedy Roast (optional) */
   standupRoast?: StandUpRoastResult;
+  /** Stawiam Zakład — Delusion Quiz (optional, client-side) */
+  delusionQuiz?: DelusionQuizResult;
+  /** Twój Chat w Sądzie — Court Trial (optional) */
+  courtTrial?: CourtResult;
+  /** Szczery Profil Randkowy — Dating Profile (optional) */
+  datingProfile?: DatingProfileResult;
+  /** Quiz parowy — Couple Mode comparison (optional, client-side) */
+  coupleQuiz?: CoupleQuizComparison;
   completedAt?: number;
 }
 
@@ -434,6 +457,12 @@ export interface StoredAnalysis {
   conversation: ParsedConversation;
   quantitative: QuantitativeAnalysis;
   qualitative?: QualitativeAnalysis;
+  /** Deterministic hash identifying the same conversation across uploads */
+  conversationFingerprint?: string;
+  /** Optional profile photos per participant (base64 JPEG data URLs) */
+  participantPhotos?: Record<string, string>;
+  /** AI-generated images keyed by type (e.g. 'comic', 'roast') — persisted across reloads */
+  generatedImages?: Record<string, string>;
 }
 
 /** Lightweight entry for the dashboard analysis list */
@@ -445,4 +474,8 @@ export interface AnalysisIndexEntry {
   participants: string[];
   hasQualitative: boolean;
   healthScore?: number;
+  /** Deterministic hash identifying the same conversation across uploads */
+  conversationFingerprint?: string;
+  /** Source platform */
+  platform?: string;
 }

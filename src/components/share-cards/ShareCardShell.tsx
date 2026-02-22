@@ -42,15 +42,14 @@ export default function ShareCardShell({
         display: 'flex',
         justifyContent: 'center',
         width: '100%',
-        height: Math.ceil(640 * scale),
-        overflow: 'hidden',
+        minHeight: Math.ceil(640 * scale),
       }}
     >
       <div
         ref={cardRef}
         style={{
           width: 360,
-          height: 640,
+          minHeight: 640,
           background: gradient,
           borderRadius: 20,
           padding: 28,
@@ -107,17 +106,32 @@ export default function ShareCardShell({
               fontFamily: 'var(--font-syne)',
               fontWeight: 800,
               fontSize: '1rem',
-              background: 'linear-gradient(135deg, #818cf8, #c084fc)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              display: 'inline-flex',
+              alignItems: 'baseline',
             }}
           >
-            PodTeksT
+            {/* P with chat bubble cutout */}
+            <svg viewBox="0 0 310 370" fill="none" aria-hidden="true" style={{ height: '0.85em', width: 'auto', display: 'inline-block', verticalAlign: 'baseline', marginBottom: '-0.03em' }}>
+              <defs>
+                <linearGradient id="cardHeaderP" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#818cf8" />
+                  <stop offset="100%" stopColor="#c084fc" />
+                </linearGradient>
+                <mask id="cardHeaderPm">
+                  <rect width="310" height="370" fill="white" />
+                  <path d="M 100,40 Q 100,30 112,30 L 230,30 Q 242,30 242,42 L 242,125 Q 242,137 230,137 L 165,137 L 145,165 L 140,137 L 112,137 Q 100,137 100,125 Z" fill="black" />
+                </mask>
+              </defs>
+              <g mask="url(#cardHeaderPm)">
+                <path d="M 0,0 L 240,0 Q 310,0 310,70 L 310,130 Q 310,200 240,200 L 85,200 L 85,370 L 0,370 Z" fill="url(#cardHeaderP)" />
+              </g>
+            </svg>
+            <span style={{ background: 'linear-gradient(135deg, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>odTeksT</span>
           </span>
           <span
             style={{
               fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.58rem',
+              fontSize: '0.63rem',
               fontWeight: 600,
               letterSpacing: '0.06em',
               color: 'rgba(255,255,255,0.5)',
@@ -150,26 +164,35 @@ export default function ShareCardShell({
             zIndex: 1,
           }}
         >
-          <span
-            style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.58rem',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase' as const,
-              color: 'rgba(255,255,255,0.25)',
-            }}
-          >
-            podtekst.app
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-space-grotesk)',
-              fontSize: '0.52rem',
-              color: 'rgba(255,255,255,0.18)',
-            }}
-          >
-            Zobacz swoje relacje przez dane
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg width={18} height={12} viewBox="0 0 580 370" fill="none" aria-hidden="true" style={{ opacity: 0.4 }}>
+              <defs>
+                <linearGradient id="ptcard" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#818cf8" />
+                  <stop offset="100%" stopColor="#c084fc" />
+                </linearGradient>
+                <mask id="ptcardm">
+                  <rect width="580" height="370" fill="white" />
+                  <path d="M 100,40 Q 100,30 112,30 L 230,30 Q 242,30 242,42 L 242,125 Q 242,137 230,137 L 165,137 L 145,165 L 140,137 L 112,137 Q 100,137 100,125 Z" fill="black" />
+                </mask>
+              </defs>
+              <g mask="url(#ptcardm)">
+                <path d="M 0,0 L 240,0 Q 310,0 310,70 L 310,130 Q 310,200 240,200 L 85,200 L 85,370 L 0,370 Z" fill="url(#ptcard)" />
+              </g>
+              <path d="M 330,0 L 580,0 L 580,85 L 497,85 L 497,370 L 413,370 L 413,85 L 330,85 Z" fill="url(#ptcard)" />
+            </svg>
+            <span
+              style={{
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: '0.63rem',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase' as const,
+                color: 'rgba(255,255,255,0.4)',
+              }}
+            >
+              podtekst.app
+            </span>
+          </div>
         </div>
       </div>
     </div>

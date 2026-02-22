@@ -21,6 +21,7 @@ import {
   PERSON_COLORS_HEX,
   MONTHS_PL,
   useAxisWidth,
+  monthYearLabelFormatter,
 } from './chart-config';
 
 interface MessageLengthSectionProps {
@@ -179,6 +180,7 @@ export default function MessageLengthSection({
               <Tooltip
                 contentStyle={CHART_TOOLTIP_STYLE}
                 labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+                labelFormatter={monthYearLabelFormatter}
                 formatter={(value?: number | string) => [
                   `${Number(value ?? 0).toFixed(1)} słów`,
                 ]}

@@ -15,8 +15,7 @@ export default function CookieConsent() {
   const handleAccept = () => {
     localStorage.setItem('podtekst-cookie-consent', 'true');
     setConsent(true);
-    // Reload to activate GA4
-    window.location.reload();
+    window.dispatchEvent(new Event('podtekst-consent'));
   };
 
   const handleReject = () => {

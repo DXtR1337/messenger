@@ -141,7 +141,7 @@ export function computeCatchphrases(
         if (count < 3) continue;
         const globalCount = globalPhraseCount.get(phrase) ?? count;
         const uniqueness = globalCount > 0 ? count / globalCount : 0;
-        if (uniqueness < 0.6) continue;
+        if (uniqueness < 0.75) continue;
         candidates.push({
           phrase,
           count,
@@ -156,7 +156,7 @@ export function computeCatchphrases(
         if (count < 3) continue;
         const globalCount = globalPhraseCount.get(phrase) ?? count;
         const uniqueness = globalCount > 0 ? count / globalCount : 0;
-        if (uniqueness < 0.6) continue;
+        if (uniqueness < 0.75) continue;
         candidates.push({
           phrase,
           count,
@@ -211,9 +211,9 @@ export function computeBestTimeToText(
       }
     }
 
-    // Build 2-hour window (centered if possible, but snap to even boundaries)
-    const windowStart = bestHour > 0 ? bestHour : 0;
-    const windowEnd = Math.min(windowStart + 2, 24);
+    // Build 2-hour window, wrapping around midnight (e.g. 23:00-01:00)
+    const windowStart = bestHour;
+    const windowEnd = (bestHour + 2) % 24;
 
     const dayName = POLISH_DAYS[bestDay] ?? 'Brak danych';
     const dayPlural = POLISH_DAYS_PLURAL[bestDay] ?? dayName;

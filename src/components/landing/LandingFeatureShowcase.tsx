@@ -132,7 +132,7 @@ export default function LandingFeatureShowcase() {
       </motion.div>
 
       {/* Bento grid */}
-      <div className="grid auto-rows-[180px] grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid auto-rows-[minmax(160px,auto)] grid-cols-1 gap-3 sm:auto-rows-[180px] sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((feature, i) => {
           const isHero = feature.span === 'hero';
           const isWide = feature.span === 'wide';

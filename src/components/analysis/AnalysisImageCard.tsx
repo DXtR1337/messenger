@@ -12,6 +12,10 @@ interface AnalysisImageCardProps {
     participants: string[];
     /** Raw conversation messages for picking a random excerpt */
     messages?: Array<{ sender: string; content: string; timestamp: number }>;
+    /** Previously saved image (base64 data URL) */
+    savedImage?: string;
+    /** Callback to persist generated image */
+    onImageSaved?: (dataUrl: string) => void;
 }
 
 /** Pick a random contiguous slice of 8-15 interesting messages. */
@@ -38,8 +42,10 @@ export default function AnalysisImageCard({
     pass4,
     participants,
     messages,
+    savedImage,
+    onImageSaved,
 }: AnalysisImageCardProps) {
-    const [imageData, setImageData] = useState<string | null>(null);
+    const [imageData, setImageData] = useState<string | null>(savedImage ?? null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -73,13 +79,15 @@ export default function AnalysisImageCard({
             }
 
             const { imageBase64, mimeType } = await response.json();
-            setImageData(`data:${mimeType};base64,${imageBase64}`);
+            const dataUrl = `data:${mimeType};base64,${imageBase64}`;
+            setImageData(dataUrl);
+            onImageSaved?.(dataUrl);
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setLoading(false);
         }
-    }, [pass4, participants, messages]);
+    }, [pass4, participants, messages, onImageSaved]);
 
     const handleDownload = useCallback(() => {
         if (!imageData) return;

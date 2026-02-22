@@ -3,14 +3,17 @@
 import { useMemo, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import type { HeatmapData } from '@/lib/parsers/types';
+import { useIsMobile } from './chart-config';
 
 interface HeatmapChartProps {
   heatmap: HeatmapData;
   participants: string[];
 }
 
-const DAYS_PL = ['Pon', 'Wt', 'Sr', 'Czw', 'Pt', 'Sob', 'Nd'] as const;
+const DAYS_PL = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'] as const;
+const DAYS_SHORT = ['P', 'W', 'Ś', 'C', 'P', 'S', 'N'] as const;
 const HOUR_LABELS = [0, 4, 8, 12, 16, 20] as const;
+const HOUR_LABELS_NARROW = [0, 6, 12, 18] as const;
 
 function getHeatColor(intensity: number): string {
   if (intensity < 0.1) return 'rgba(59,130,246,0.03)';
@@ -24,6 +27,9 @@ function getHeatColor(intensity: number): string {
 export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inView = useInView(containerRef, { once: true, margin: '-50px' });
+  const isMobile = useIsMobile();
+  const hourLabels = isMobile ? HOUR_LABELS_NARROW : HOUR_LABELS;
+  const dayLabels = isMobile ? DAYS_SHORT : DAYS_PL;
 
   const { cells } = useMemo(() => {
     const combined = heatmap.combined;
@@ -61,8 +67,8 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
       ref={containerRef}
       role="img"
       aria-label="Mapa aktywności: godzina vs dzień tygodnia"
-      initial={{ opacity: 0, y: 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      initial={{ opacity: 0 }}
+      animate={inView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.5 }}
       className="overflow-hidden rounded-xl border border-border bg-card"
     >
@@ -78,7 +84,7 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
         <div className="flex gap-2">
           {/* Y-axis labels (hours) — uses relative positioning, height driven by grid */}
           <div className="relative shrink-0" style={{ width: 24 }}>
-            {HOUR_LABELS.map((hour) => (
+            {hourLabels.map((hour) => (
               <span
                 key={hour}
                 className="absolute right-0 font-display text-[10px] sm:text-[11px] text-text-muted leading-none"
@@ -118,9 +124,9 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
               className="mt-1.5 grid"
               style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}
             >
-              {DAYS_PL.map((day) => (
+              {dayLabels.map((day, di) => (
                 <span
-                  key={day}
+                  key={`${day}-${di}`}
                   className="text-center font-display text-[10px] text-text-muted"
                 >
                   {day}

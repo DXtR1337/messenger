@@ -39,14 +39,14 @@ export function computeTrends(
     },
   );
 
-  // Message length trend: monthly average word count per person
+  // Message length trend: monthly median word count per person (robust to outliers)
   const messageLengthTrend: TrendData['messageLengthTrend'] = sortedMonths.map(
     (month) => {
       const pp: Record<string, number> = {};
       for (const [name, acc] of accumulators) {
         const words = acc.monthlyWordCounts.get(month);
         if (words && words.length > 0) {
-          pp[name] = words.reduce((a, b) => a + b, 0) / words.length;
+          pp[name] = median(words);
         } else {
           pp[name] = 0;
         }
@@ -79,5 +79,58 @@ export function computeTrends(
     responseTimeTrend,
     messageLengthTrend,
     initiationTrend,
+  };
+}
+
+
+// ============================================================
+// Year Milestones
+// ============================================================
+
+const MONTH_NAMES_PL = ['Sty', 'Lut', 'Mar', 'Kwi', 'Maj', 'Cze', 'Lip', 'Sie', 'Wrz', 'Paź', 'Lis', 'Gru'];
+
+/**
+ * Compute year milestones from monthly volume data.
+ *
+ * Identifies peak month, worst month, and year-over-year trend
+ * by comparing the recent half of the conversation to the older half.
+ */
+export function computeYearMilestones(
+  monthlyVolume: Array<{ month: string; perPerson: Record<string, number>; total: number }>,
+): import('../../parsers/types').YearMilestones | undefined {
+  if (monthlyVolume.length < 2) return undefined;
+
+  let peakIdx = 0;
+  let worstIdx = 0;
+  for (let i = 1; i < monthlyVolume.length; i++) {
+    if (monthlyVolume[i].total > monthlyVolume[peakIdx].total) peakIdx = i;
+    if (monthlyVolume[i].total < monthlyVolume[worstIdx].total) worstIdx = i;
+  }
+
+  const formatMonth = (m: string): string => {
+    const [year, month] = m.split('-');
+    const monthIdx = parseInt(month, 10) - 1;
+    return `${MONTH_NAMES_PL[monthIdx]} ${year}`;
+  };
+
+  // YoY: compare recent half vs older half
+  const mid = Math.floor(monthlyVolume.length / 2);
+  const olderHalf = monthlyVolume.slice(0, mid).reduce((s, v) => s + v.total, 0);
+  const recentHalf = monthlyVolume.slice(mid).reduce((s, v) => s + v.total, 0);
+  const yoyTrend = olderHalf > 0 ? (recentHalf / olderHalf) - 1 : 0;
+
+  return {
+    peakMonth: {
+      month: monthlyVolume[peakIdx].month,
+      label: formatMonth(monthlyVolume[peakIdx].month),
+      count: monthlyVolume[peakIdx].total,
+    },
+    worstMonth: {
+      month: monthlyVolume[worstIdx].month,
+      label: formatMonth(monthlyVolume[worstIdx].month),
+      count: monthlyVolume[worstIdx].total,
+    },
+    yoyTrend,
+    totalMonths: monthlyVolume.length,
   };
 }

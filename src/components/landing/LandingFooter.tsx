@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import BrandP from '@/components/shared/BrandP';
 
 export default function LandingFooter() {
   return (
@@ -22,7 +23,7 @@ export default function LandingFooter() {
               href="/"
               className="brand-logo font-display text-lg font-extrabold tracking-tight text-foreground"
             >
-              <span className="text-[#3b82f6]">Pod</span><span className="text-[#a855f7]">T</span><span className="brand-eks text-[#a855f7]">eks</span><span className="text-[#a855f7]">T</span>
+              <BrandP height="0.85em" /><span className="text-[#3b82f6]">od</span><span className="text-[#a855f7]">T</span><span className="brand-eks text-[#a855f7]">eks</span><span className="text-[#a855f7]">T</span>
             </Link>
             <p className="font-story-body text-sm text-muted-foreground">
               Zobacz swoje relacje przez dane
@@ -45,7 +46,7 @@ export default function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="#social-proof"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
                   Karty do pobrania
@@ -53,7 +54,7 @@ export default function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="#demo"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
                   Wzorce komunikacyjne
@@ -78,7 +79,7 @@ export default function LandingFooter() {
             <ul className="flex flex-col gap-3">
               <li>
                 <a
-                  href="#"
+                  href="#demo"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
                   Profil osobowości
@@ -86,7 +87,7 @@ export default function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="#demo"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
                   Viral Scores
@@ -94,7 +95,7 @@ export default function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="#demo"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
                   Red Flag Report
@@ -102,7 +103,7 @@ export default function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="#demo"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
                   Styl przywiązania
@@ -119,7 +120,7 @@ export default function LandingFooter() {
             <ul className="flex flex-col gap-3">
               <li>
                 <a
-                  href="#"
+                  href="#faq"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
                   Jak eksportować
@@ -127,7 +128,7 @@ export default function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="#faq"
                   className="text-sm text-[#555555] hover:text-foreground transition-colors"
                 >
                   Prywatność

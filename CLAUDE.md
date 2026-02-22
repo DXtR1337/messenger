@@ -19,7 +19,7 @@ PodTeksT (formerly ChatScope) is a local-first web app that analyzes conversatio
 - **Charts/Visualization:** Recharts + custom SVG visualizations
 - **Animations:** Framer Motion + CSS keyframes
 - **3D:** Spline (landing page scenes)
-- **AI Analysis:** Google Gemini API (gemini-2.5-flash-preview-04-17)
+- **AI Analysis:** Google Gemini API (gemini-3-flash-preview)
 - **Development AI:** Claude Opus 4.6 (claude-opus-4-6)
 - **Storage:** localStorage + IndexedDB (DB name: 'podtekst', legacy fallback: 'chatscope')
 - **PDF Export:** jsPDF (client-side generation)
@@ -44,8 +44,10 @@ PodTeksT (formerly ChatScope) is a local-first web app that analyzes conversatio
 | WhatsApp | `src/lib/parsers/whatsapp.ts` | TXT | Full support |
 | Instagram DM | `src/lib/parsers/instagram.ts` | JSON | Supported |
 | Telegram | `src/lib/parsers/telegram.ts` | JSON | Supported |
+| Discord | `src/lib/parsers/discord.ts` | API (Bot) | Supported |
 
 Auto-detect: `src/lib/parsers/detect.ts` — identifies platform from file structure.
+Discord uses direct API import via bot token (no file upload).
 
 ## API Endpoints
 
@@ -55,7 +57,12 @@ Auto-detect: `src/lib/parsers/detect.ts` — identifies platform from file struc
 | `/api/analyze/enhanced-roast` | POST | Enhanced roast with full psychological context (SSE) | 5/10min |
 | `/api/analyze/standup` | POST | Stand-Up Comedy Roast — 7 acts (SSE) | 5/10min |
 | `/api/analyze/cps` | POST | Communication Pattern Screening — 63 questions (SSE) | 5/10min |
+| `/api/analyze/subtext` | POST | Subtext Decoder — hidden meanings in messages (SSE) | 5/10min |
+| `/api/analyze/court` | POST | Chat Court Trial — AI courtroom verdict (SSE) | 5/10min |
+| `/api/analyze/dating-profile` | POST | Honest Dating Profile generator (SSE) | 5/10min |
+| `/api/analyze/simulate` | POST | Reply Simulator — predicts responses (SSE) | 5/10min |
 | `/api/analyze/image` | POST | Gemini image generation | 10/10min |
+| `/api/discord/fetch-messages` | POST | Discord Bot message fetcher (SSE) | 3/10min |
 | `/api/health` | GET | Health check | none |
 
 All SSE endpoints: heartbeat 15s, abort signal support, proper HTTP error codes (400, 413, 429).
@@ -86,7 +93,13 @@ src/
 │       │   ├── enhanced-roast/route.ts
 │       │   ├── standup/route.ts
 │       │   ├── cps/route.ts
+│       │   ├── subtext/route.ts        # Subtext Decoder (30+ msg context windows)
+│       │   ├── court/route.ts          # Chat Court Trial
+│       │   ├── dating-profile/route.ts # Honest Dating Profile
+│       │   ├── simulate/route.ts       # Reply Simulator
 │       │   └── image/route.ts
+│       ├── discord/
+│       │   └── fetch-messages/route.ts # Discord Bot message fetcher (SSE)
 │       └── health/route.ts
 ├── components/
 │   ├── ui/                           # shadcn/ui base
@@ -100,6 +113,8 @@ src/
 │   │   ├── LandingFooter.tsx
 │   │   ├── CurtainReveal.tsx         # Theatrical curtain animation overlay
 │   │   ├── ParticleBackground.tsx
+│   │   ├── ScrollProgress.tsx        # Gradient scroll progress bar (top)
+│   │   ├── HangingLetters.tsx        # Physics-based animated hanging letters
 │   │   └── SplineInterlude.tsx
 │   ├── analysis/
 │   │   ├── AIAnalysisButton.tsx      # Main AI analysis trigger (4 passes + roast)
@@ -107,6 +122,13 @@ src/
 │   │   ├── ExportPDFButton.tsx       # Standard PDF export
 │   │   ├── StandUpPDFButton.tsx      # Stand-Up Comedy PDF
 │   │   ├── CPSScreener.tsx           # Communication Pattern Screening
+│   │   ├── SubtextDecoder.tsx        # Subtext Decoder — hidden meanings UI
+│   │   ├── ChatCourtButton.tsx       # Court Trial trigger
+│   │   ├── CourtVerdict.tsx          # Court Trial verdict display
+│   │   ├── DatingProfileButton.tsx   # Dating Profile trigger
+│   │   ├── DatingProfileResult.tsx   # Dating Profile result display
+│   │   ├── ReplySimulator.tsx        # Reply Simulator interactive UI
+│   │   ├── DelusionQuiz.tsx          # Delusion Quiz (self-awareness test)
 │   │   ├── SectionNavigator.tsx      # Sticky section nav
 │   │   ├── HeatmapChart.tsx
 │   │   ├── TimelineChart.tsx
@@ -118,11 +140,21 @@ src/
 │   │   ├── TopWordsCard.tsx
 │   │   ├── MessageLengthSection.tsx
 │   │   ├── WeekdayWeekendCard.tsx
+│   │   ├── ResponseTimeHistogram.tsx # Response time distribution histogram
+│   │   ├── HourlyActivityChart.tsx  # 24-hour stacked bar chart
+│   │   ├── YearMilestones.tsx       # Peak/worst month + YoY trend
+│   │   ├── ThreatMeters.tsx         # Ghost/Codependency/Manipulation/Trust gauges
+│   │   ├── DamageReport.tsx         # Emotional Damage/Comm Grade/Repair/Therapy
+│   │   ├── CognitiveFunctionsClash.tsx # MBTI cognitive function comparison
+│   │   ├── PursuitWithdrawalCard.tsx # Pursuit-withdrawal cycle detection
+│   │   ├── RankingBadges.tsx        # Heuristic percentile rankings
+│   │   ├── AIPredictions.tsx        # AI-generated predictions with confidence
+│   │   ├── GottmanHorsemen.tsx      # Gottman Four Horsemen visualization
 │   │   ├── ShareCaptionModal.tsx
 │   │   ├── AnalysisImageCard.tsx
 │   │   ├── RoastImageCard.tsx
 │   │   └── chart-config.ts
-│   ├── share-cards/                  # 15+ shareable card types for social
+│   ├── share-cards/                  # 20+ shareable card types for social
 │   │   ├── ShareCardGallery.tsx
 │   │   ├── ShareCardShell.tsx
 │   │   ├── PersonalityCard.tsx
@@ -138,15 +170,23 @@ src/
 │   │   ├── FlagsCard.tsx
 │   │   ├── LabelCard.tsx
 │   │   ├── ScoresCard.tsx
-│   │   └── StatsCard.tsx
+│   │   ├── StatsCard.tsx
+│   │   ├── SubtextCard.tsx           # Subtext Decoder share card
+│   │   ├── DatingProfileCard.tsx     # Dating Profile share card
+│   │   ├── DelusionCard.tsx          # Delusion Quiz share card
+│   │   ├── MugshotCard.tsx           # Court Trial mugshot card
+│   │   └── SimulatorCard.tsx         # Reply Simulator share card
 │   ├── wrapped/                      # Spotify Wrapped-style story scenes
 │   ├── story/
 │   │   ├── StoryIntro.tsx
 │   │   └── StoryShareCard.tsx
 │   ├── upload/
-│   │   └── DropZone.tsx              # Drag-and-drop upload for all 4 platforms
+│   │   ├── DropZone.tsx              # Drag-and-drop upload for all 4 platforms
+│   │   └── DiscordImport.tsx         # Discord Bot import (token + channel ID)
 │   └── shared/
 │       ├── BrandLogo.tsx             # PodTeksT logo component
+│       ├── PTLogo.tsx               # SVG "PT" logo with gradient
+│       ├── BrandP.tsx               # Brand P component
 │       ├── Navigation.tsx
 │       ├── SidebarContext.tsx
 │       ├── ConditionalAnalytics.tsx
@@ -157,10 +197,28 @@ src/
 │   │   ├── whatsapp.ts
 │   │   ├── instagram.ts
 │   │   ├── telegram.ts
+│   │   ├── discord.ts                # Discord API message parser
 │   │   ├── detect.ts                 # Auto-detect platform from file
 │   │   └── types.ts                  # Unified ParsedConversation type
 │   ├── analysis/
-│   │   ├── quantitative.ts           # 60+ metrics, pure math, client-side
+│   │   ├── quantitative.ts           # 60+ metrics orchestrator, delegates to quant/
+│   │   ├── quant/
+│   │   │   ├── index.ts              # Barrel export
+│   │   │   ├── helpers.ts            # extractEmojis, countWords, median, percentile, topN
+│   │   │   ├── types.ts              # PersonAccumulator interface + factory
+│   │   │   ├── bursts.ts             # detectBursts() — activity burst detection
+│   │   │   ├── trends.ts             # computeTrends() — monthly trend computation
+│   │   │   ├── reciprocity.ts        # computeReciprocityIndex()
+│   │   │   ├── sentiment.ts          # computeSentimentScore()
+│   │   │   ├── conflicts.ts          # detectConflicts()
+│   │   │   ├── intimacy.ts           # computeIntimacyProgression()
+│   │   │   ├── pursuit-withdrawal.ts # detectPursuitWithdrawal()
+│   │   │   └── response-time-distribution.ts # computeResponseTimeDistribution()
+│   │   ├── threat-meters.ts          # Codependency/Manipulation/Trust indexes
+│   │   ├── damage-report.ts          # Emotional damage + communication grade
+│   │   ├── cognitive-functions.ts     # MBTI → cognitive functions derivation
+│   │   ├── gottman-horsemen.ts        # Gottman Four Horsemen from CPS data
+│   │   ├── ranking-percentiles.ts     # Heuristic percentile rankings
 │   │   ├── qualitative.ts            # Message sampling, context building
 │   │   ├── gemini.ts                 # Gemini API calls (all passes + roasts)
 │   │   ├── prompts.ts                # System prompts for all AI passes
@@ -170,16 +228,24 @@ src/
 │   │   ├── constants.ts
 │   │   ├── viral-scores.ts           # Compatibility, Interest, Delusion scores
 │   │   ├── communication-patterns.ts
-│   │   └── wrapped-data.ts           # Data aggregation for Wrapped mode
+│   │   ├── wrapped-data.ts           # Data aggregation for Wrapped mode
+│   │   ├── subtext.ts               # Subtext types + exchange window extraction
+│   │   ├── court-prompts.ts          # Court Trial AI prompts
+│   │   ├── dating-profile-prompts.ts # Dating Profile AI prompts
+│   │   ├── simulator-prompts.ts      # Reply Simulator AI prompts
+│   │   └── delusion-quiz.ts          # Delusion Quiz questions + scoring
 │   ├── export/
 │   │   ├── pdf-export.ts             # Standard analysis PDF
-│   │   └── standup-pdf.ts            # Stand-Up Comedy PDF
+│   │   ├── standup-pdf.ts            # Stand-Up Comedy PDF
+│   │   ├── pdf-fonts.ts              # Embedded font data for jsPDF
+│   │   └── pdf-images.ts             # Embedded image data for PDFs
 │   ├── analytics/
 │   │   └── events.ts                 # Typed GA4 event tracking
 │   └── utils.ts
 ├── hooks/
 │   ├── useShareCard.ts               # Web Share API + PNG download
-│   └── useCPSAnalysis.ts
+│   ├── useCPSAnalysis.ts
+│   └── useSubtextAnalysis.ts         # Subtext Decoder SSE hook
 └── types/
 ```
 
@@ -209,17 +275,22 @@ Apply to EVERY string field: `sender_name`, `content`, `participants[].name`, `r
 - Decode Facebook unicode encoding
 
 ### Stage 2: Quantitative Analysis (client-side, no AI)
-60+ metrics: volume, timing, engagement, patterns. Pure math, free, fast.
+80+ metrics: volume, timing, engagement, patterns, sentiment, conflicts, intimacy, pursuit-withdrawal, threat meters, damage report, ranking percentiles. Pure math, free, fast.
 
 ### Stage 3: Qualitative Analysis (server-side, Gemini API via SSE)
 - **Pass 1 — Overview:** Tone, style, relationship type
 - **Pass 2 — Dynamics:** Power balance, conflict, intimacy, emotional labor
 - **Pass 3 — Individual profiles:** Big Five, MBTI, attachment style, love languages per person
-- **Pass 4 — Synthesis:** Health Score (0-100), red/green flags, turning points, recommendations
+- **Pass 4 — Synthesis:** Health Score (0-100), red/green flags, turning points, recommendations, AI predictions
 - **Roast:** Humorous, provocative analysis
 - **Enhanced Roast:** Post-analysis roast with full psychological context from Pass 1-4
 - **Stand-Up:** 7-act comedy roast with PDF generation
 - **CPS:** Communication Pattern Screening (63 questions)
+- **Subtext Decoder:** Decodes hidden meanings in messages using 30+ message context windows per exchange
+- **Court Trial:** AI courtroom trial — charges, prosecution, defense, verdict + mugshot cards
+- **Dating Profile:** Brutally honest dating profile based on actual texting behavior
+- **Reply Simulator:** Simulates how the other person would reply based on their communication patterns
+- **Delusion Quiz:** Self-awareness test — guesses vs actual data, produces Delusion Index
 
 ### Sampling Strategy
 200-500 messages per pass. Weight recent 3 months at 60%. Select: representative exchanges, inflection points, longest messages, messages with reactions.
@@ -234,16 +305,33 @@ Apply to EVERY string field: `sender_name`, `content`, `participants[].name`, `r
 
 ### Viral / Entertainment
 - 12+ achievement badges (Night Owl, Chatterbox, Double-Texter, etc.)
-- 15+ shareable card types (Receipt, Versus, Red Flag, Ghost Forecast, MBTI, etc.)
+- 20+ shareable card types (Receipt, Versus, Red Flag, Ghost Forecast, MBTI, Subtext, Mugshot, etc.)
 - Story Mode — Spotify Wrapped-style 12-scene animated story
 - Stand-Up Comedy Roast — 7-act comedy PDF
+- Subtext Decoder (Translator Podtekstów) — AI decodes what people REALLY meant
+- Court Trial (Twój Chat w Sądzie) — AI courtroom with charges, verdict, mugshots
+- Dating Profile Generator — honest dating profile from texting patterns
+- Reply Simulator — predict responses in the other person's voice
+- Delusion Quiz — self-awareness test with Delusion Index score
 - Compatibility Score, Interest Score, Delusion Score
 - Best Time to Text calculator
+- Threat Meters (Codependency, Manipulation, Trust, Ghost Risk gauges)
+- Damage Report (Emotional Damage%, Communication Grade, Repair Potential, Therapy Needed)
+- Cognitive Functions Clash (MBTI cognitive function comparison between participants)
+- Pursuit-Withdrawal Detection (cyclical pursuit/silence pattern analysis)
+- Ranking Percentiles (heuristic TOP X% rankings for key metrics)
+- AI Predictions (future relationship trajectory forecasts with confidence%)
+- Gottman Four Horsemen (Criticism, Contempt, Defensiveness, Stonewalling mapping)
+- Response Time Distribution Histogram
+- 24-Hour Activity Stacked Bar Chart
+- Year Milestones (peak/worst month, YoY trend)
 
 ### Landing Page
 - Theatrical curtain animation (`CurtainReveal`) with neon logo effect
-- Particle network background
+- Particle network background (desktop) / gradient (mobile)
 - Spline 3D interlude scenes
+- Scroll progress bar — gradient blue→purple→green (`ScrollProgress.tsx`)
+- Mobile: diagonal hero text layout with skew animation
 - Interactive demo with sample analysis
 
 ### Export
@@ -310,16 +398,45 @@ Danger:      #ef4444
 - Stand-Up Comedy Roast + PDF
 - Web Share API, CPS screener
 
-### Faza 19 — Current ✅
+### Faza 19 ✅
 - Theatrical curtain animation on landing page (`CurtainReveal`)
 - Enhanced Roast — AI roast using full psychological analysis context
 - StandUp PDF fix — emoji fallback for jsPDF, result validation
+
+### Faza 20 — Entertainment Features ✅
+- Subtext Decoder (Translator Podtekstów) — full pipeline: types, API, hook, UI, share card
+- Court Trial (Twój Chat w Sądzie) — charges, prosecution, defense, verdict, mugshot cards
+- Dating Profile Generator — honest dating profiles from texting behavior
+- Reply Simulator — AI predicts responses in partner's voice
+- Delusion Quiz — self-awareness test with Delusion Index
+- 5 new share cards (Subtext, Mugshot, DatingProfile, Delusion, Simulator)
+
+### Faza 21 — Polish & Deploy (Current) ✅
+- Mobile landing page: diagonal hero text with skew, removed badge, CTA pinned to bottom
+- ScrollProgress bar (gradient, fixed top)
+- Timeline overflow fix (LandingHowItWorks mobile)
+- Deployed to Google Cloud Run (europe-west1)
+
+### Deployment
+- **Platform:** Google Cloud Run (Docker, standalone output)
+- **Project:** chatscope-app-2026
+- **Region:** europe-west1
+- **Service:** chatscope
+- **URL:** https://chatscope-9278095424.europe-west1.run.app
+- **Deploy command:** `gcloud run deploy chatscope --source . --region europe-west1 --allow-unauthenticated --port 8080 --memory 1Gi`
+
+### Faza 22 — Discord Integration (Current)
+- Discord Bot API integration — fetch channel messages via bot token
+- New parser: `src/lib/parsers/discord.ts` (API → ParsedConversation)
+- New API route: `/api/discord/fetch-messages` (SSE with pagination + rate limit handling)
+- New UI: `DiscordImport.tsx` (token + channel ID form, progress, setup guide)
+- Tab switcher on `/analysis/new` — "Plik eksportu" vs "Discord Bot"
 
 ### Future (not started)
 - Supabase Auth + PostgreSQL
 - Stripe payments (Free / Pro $9.99 / Unlimited $24.99)
 - i18n (EN, DE, ES)
-- Discord, Teams parsers
+- Teams parser
 - Public API, SDK
 
 ## Commands
@@ -329,6 +446,18 @@ pnpm dev          # Start dev server
 pnpm build        # Production build
 pnpm lint         # ESLint
 ```
+
+## Maintenance Rules
+
+**IMPORTANT: After completing any feature, bugfix, or architectural change, ALWAYS update this CLAUDE.md file to reflect the changes.** This includes:
+- New API endpoints → add to API Endpoints table
+- New files → add to Project Structure tree
+- New features → add to Key Features + Analysis Pipeline sections
+- Phase completion → update Development Phases section
+- Model changes → update Tech Stack
+- Deployment changes → update Deployment section
+
+This file is the single source of truth for the project. Keep it current.
 
 ## Code Style
 

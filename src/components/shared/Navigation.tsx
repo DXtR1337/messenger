@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/shared/SidebarContext';
+import PTLogo from '@/components/shared/PTLogo';
+import BrandP from '@/components/shared/BrandP';
 
 /* ------------------------------------------------------------------ */
 /*  Nav item definitions                                               */
@@ -151,22 +153,17 @@ function SidebarContent({
     <>
       {/* ---- Brand ---- */}
       <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-[#1a1a1a]">
-        <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-80">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="shrink-0" aria-hidden="true">
-            <path d="M14 2C7.4 2 2 6.9 2 13c0 3.1 1.5 5.8 3.8 7.7V26l4.9-2.7c1 .3 2.1.4 3.3.4 6.6 0 12-4.9 12-10.7S20.6 2 14 2z" fill="url(#brand)" opacity="0.9" />
-            <circle cx="9" cy="13" r="1.5" fill="#fafafa" />
-            <circle cx="14" cy="13" r="1.5" fill="#fafafa" />
-            <circle cx="19" cy="13" r="1.5" fill="#fafafa" />
-            <defs>
-              <linearGradient id="brand" x1="2" y1="2" x2="26" y2="26">
-                <stop stopColor="#3b82f6" />
-                <stop offset="1" stopColor="#a855f7" />
-              </linearGradient>
-            </defs>
-          </svg>
+        <Link
+          href="/"
+          className={cn(
+            'flex items-center gap-3 transition-opacity hover:opacity-80',
+            collapsed ? 'justify-center w-full' : ''
+          )}
+        >
+          <PTLogo size={collapsed ? 24 : 28} className="shrink-0" />
           {!collapsed && (
-            <span className="brand-logo font-display text-base font-bold tracking-tight whitespace-nowrap">
-              <span className="text-[#3b82f6]">Pod</span><span className="text-[#a855f7]">T</span><span className="brand-eks text-[#a855f7]">eks</span><span className="text-[#a855f7]">T</span>
+            <span className="brand-logo font-display text-base font-bold tracking-tight whitespace-nowrap leading-none flex items-center">
+              <BrandP height="0.85em" /><span className="text-[#3b82f6]">od</span><span className="text-[#a855f7]">T</span><span className="brand-eks text-[#a855f7]">eks</span><span className="text-[#a855f7]">T</span>
             </span>
           )}
         </Link>

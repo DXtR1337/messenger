@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, RotateCcw, ChevronDown } from 'lucide-react';
+import { useState, useCallback, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowRight, RotateCcw, ChevronDown, Upload, Bot, AlertTriangle } from 'lucide-react';
 import { DropZone } from '@/components/upload/DropZone';
 import { ProcessingState } from '@/components/upload/ProcessingState';
+import DiscordImport from '@/components/upload/DiscordImport';
 import { Button } from '@/components/ui/button';
 import { parseMessengerJSON, mergeMessengerFiles } from '@/lib/parsers/messenger';
 import { parseWhatsAppText } from '@/lib/parsers/whatsapp';
@@ -13,9 +14,12 @@ import { parseWhatsAppText } from '@/lib/parsers/whatsapp';
 import { parseTelegramJSON } from '@/lib/parsers/telegram';
 import { detectFormat } from '@/lib/parsers/detect';
 import { computeQuantitativeAnalysis } from '@/lib/analysis/quantitative';
+import { computeConversationFingerprint } from '@/lib/analysis/fingerprint';
 import { saveAnalysis, generateId } from '@/lib/utils';
 import type { StoredAnalysis, RelationshipContext } from '@/lib/analysis/types';
 import { trackEvent } from '@/lib/analytics/events';
+
+type ImportMode = 'file' | 'discord';
 
 type Stage = 'idle' | 'parsing' | 'analyzing' | 'saving' | 'complete';
 
@@ -46,7 +50,18 @@ const RELATIONSHIP_OPTIONS: { value: RelationshipContext; emoji: string; label: 
 ];
 
 export default function NewAnalysisPage() {
+  return (
+    <Suspense>
+      <NewAnalysisContent />
+    </Suspense>
+  );
+}
+
+function NewAnalysisContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const autoChannelId = searchParams.get('channel');
+  const [importMode, setImportMode] = useState<ImportMode>(autoChannelId ? 'discord' : 'file');
   const [files, setFiles] = useState<File[]>([]);
   const [relationshipType, setRelationshipType] = useState<RelationshipContext | null>(null);
   const [stage, setStage] = useState<Stage>('idle');
@@ -145,6 +160,15 @@ export default function NewAnalysisPage() {
 
       const quantitative = computeQuantitativeAnalysis(conversation);
 
+      // Compute conversation fingerprint for longitudinal tracking
+      const firstTimestamp = conversation.messages[0]?.timestamp ?? Date.now();
+      const participantNames = conversation.participants.map(p => p.name);
+      const conversationFingerprint = await computeConversationFingerprint(
+        participantNames,
+        conversation.platform,
+        firstTimestamp,
+      );
+
       // Stage 3: Save results
       setStage('saving');
 
@@ -156,6 +180,7 @@ export default function NewAnalysisPage() {
         relationshipContext: relationshipType ?? undefined,
         conversation,
         quantitative,
+        conversationFingerprint,
       };
 
       await saveAnalysis(analysis);
@@ -199,27 +224,81 @@ export default function NewAnalysisPage() {
   const showProcessingState = stage !== 'idle';
   const processingStage = stage === 'idle' ? 'parsing' : stage;
 
+  const isKioskMode = !!autoChannelId;
+
+  // Warn when a single message_N.json is uploaded — likely missing other parts
+  const messengerFileWarning = useMemo(() => {
+    if (files.length !== 1 || isProcessing) return null;
+    const name = files[0].name;
+    if (/^message_\d+\.json$/i.test(name)) {
+      return 'Wygląda na to, że masz więcej plików (message_1.json, message_2.json...). Dodaj wszystkie pliki lub użyj przycisku "Wybierz cały folder", aby uzyskać pełną analizę.';
+    }
+    return null;
+  }, [files, isProcessing]);
+
   return (
     <div className="mx-auto w-full max-w-[640px] px-4 py-12">
       {/* Header */}
       <div className="mb-8 space-y-2">
         <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
-          Nowa analiza
+          {isKioskMode ? 'Analiza kanału Discord' : 'Nowa analiza'}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Wgraj eksport rozmowy z Messengera, Instagrama, Telegrama lub WhatsAppa
+          {isKioskMode
+            ? 'Automatyczne pobieranie i analiza wiadomości z kanału'
+            : 'Wgraj eksport rozmowy lub pobierz wiadomości z Discorda'}
         </p>
       </div>
 
+      {/* Import mode tabs — hidden in kiosk mode */}
+      {!isKioskMode && (
+        <div className="mb-6 flex gap-1 rounded-lg border border-border bg-card/50 p-1">
+          <button
+            type="button"
+            onClick={() => setImportMode('file')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              importMode === 'file'
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Upload className="size-4" />
+            Plik eksportu
+          </button>
+          <button
+            type="button"
+            onClick={() => setImportMode('discord')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              importMode === 'discord'
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Bot className="size-4" />
+            Discord Bot
+          </button>
+        </div>
+      )}
+
       {/* Upload section */}
       <div className="space-y-6">
+        {importMode === 'file' && (
         <DropZone
           onFilesSelected={handleFilesSelected}
           disabled={isProcessing}
         />
+        )}
 
-        {/* Relationship type selector */}
-        {files.length > 0 && !isProcessing && (
+        {/* Incomplete Messenger upload warning */}
+        {importMode === 'file' && messengerFileWarning && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-xs text-amber-200/70">
+            <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-500" />
+            <span>{messengerFileWarning}</span>
+          </div>
+        )}
+
+        {/* Relationship type selector — shared between modes, hidden in kiosk */}
+        {!isKioskMode && ((importMode === 'file' && files.length > 0 && !isProcessing) || importMode === 'discord') && (
           <div className="space-y-3">
             <label className="text-sm font-medium text-muted-foreground">
               Typ relacji <span className="text-text-muted">(opcjonalne)</span>
@@ -243,8 +322,8 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {/* Analyze button */}
-        {files.length > 0 && !isProcessing && (
+        {/* File mode: Analyze button + processing */}
+        {importMode === 'file' && files.length > 0 && !isProcessing && (
           <div className="flex justify-end">
             <Button
               onClick={handleAnalyze}
@@ -257,8 +336,7 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {/* Processing state */}
-        {showProcessingState && (
+        {importMode === 'file' && showProcessingState && (
           <ProcessingState
             stage={processingStage}
             progress={progress}
@@ -266,8 +344,7 @@ export default function NewAnalysisPage() {
           />
         )}
 
-        {/* Retry button on error */}
-        {error && (
+        {importMode === 'file' && error && (
           <div className="flex justify-end">
             <Button
               onClick={handleRetry}
@@ -280,17 +357,26 @@ export default function NewAnalysisPage() {
             </Button>
           </div>
         )}
+
+        {/* Discord mode */}
+        {importMode === 'discord' && (
+          <DiscordImport relationshipType={relationshipType} autoChannelId={autoChannelId} />
+        )}
       </div>
 
-      {/* Privacy notice */}
-      <div className="mt-10 rounded-md border border-border bg-card/50 px-4 py-3">
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Twoje wiadomości są przetwarzane lokalnie w przeglądarce. Żadne dane nie trafiają na serwer. Tylko zagregowane wyniki zapisywane są w pamięci lokalnej.
-        </p>
-      </div>
+      {/* Privacy notice — hidden in kiosk mode */}
+      {!isKioskMode && (
+        <div className="mt-10 rounded-md border border-border bg-card/50 px-4 py-3">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {importMode === 'file'
+              ? 'Twoje wiadomości są przetwarzane lokalnie w przeglądarce. Żadne dane nie trafiają na serwer. Tylko zagregowane wyniki zapisywane są w pamięci lokalnej.'
+              : 'Token bota jest używany jednorazowo do pobrania wiadomości i nie jest nigdzie zapisywany. Wiadomości są przetwarzane lokalnie w przeglądarce.'}
+          </p>
+        </div>
+      )}
 
-      {/* Export instructions */}
-      <div className="mt-3 rounded-md border border-border bg-card/50 px-4 py-3">
+      {/* Export instructions — file mode only, hidden in kiosk mode */}
+      {!isKioskMode && importMode === 'file' && <div className="mt-3 rounded-md border border-border bg-card/50 px-4 py-3">
         <div
           className="flex cursor-pointer items-center justify-between"
           onClick={() => setShowInstructions((prev) => !prev)}
@@ -414,7 +500,7 @@ export default function NewAnalysisPage() {
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -11,13 +11,16 @@ import {
   Trash2,
   BookText,
   MessagesSquare,
+  AtSign,
+  Pencil,
 } from 'lucide-react';
 import { formatDuration, formatNumber } from '@/lib/utils';
-import type { QuantitativeAnalysis } from '@/lib/parsers/types';
+import type { QuantitativeAnalysis, ParsedConversation } from '@/lib/parsers/types';
 
 interface StatsGridProps {
   quantitative: QuantitativeAnalysis;
   participants: string[];
+  platform?: ParsedConversation['platform'];
 }
 
 interface StatCardProps {
@@ -44,8 +47,8 @@ function StatCard({ icon, label, value, breakdown, delay }: StatCardProps) {
     <motion.div
       ref={ref}
       className="h-full"
-      initial={{ opacity: 0, y: 20 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      initial={{ opacity: 0 }}
+      animate={isInView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.4, delay }}
     >
       <div className="h-full rounded-xl border border-border bg-card p-3 sm:p-5 transition-colors">
@@ -77,8 +80,9 @@ function StatCard({ icon, label, value, breakdown, delay }: StatCardProps) {
   );
 }
 
-export default function StatsGrid({ quantitative, participants }: StatsGridProps) {
+export default function StatsGrid({ quantitative, participants, platform }: StatsGridProps) {
   const { timing, engagement, perPerson } = quantitative;
+  const isDiscord = platform === 'discord';
 
   const stats: Array<Omit<StatCardProps, 'delay'>> = [
     {
@@ -93,22 +97,36 @@ export default function StatsGrid({ quantitative, participants }: StatsGridProps
         index,
       })),
     },
-    {
-      icon: <Heart className="size-4" />,
-      label: 'Wskaźnik reakcji',
-      value: (() => {
-        const rates = participants
-          .map((p) => engagement.reactionRate[p])
-          .filter((v): v is number => v !== undefined);
-        const avg = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
-        return `${(avg * 100).toFixed(1)}%`;
-      })(),
-      breakdown: participants.map((name, index) => ({
-        name,
-        value: `${((engagement.reactionRate[name] ?? 0) * 100).toFixed(1)}%`,
-        index,
-      })),
-    },
+    // Card 2: Reaction rate (other platforms) or Mentions (Discord)
+    isDiscord
+      ? {
+          icon: <AtSign className="size-4" />,
+          label: 'Wzmianki (@)',
+          value: formatNumber(
+            participants.reduce((sum, p) => sum + (perPerson[p]?.mentionsReceived ?? 0), 0),
+          ),
+          breakdown: participants.map((name, index) => ({
+            name,
+            value: formatNumber(perPerson[name]?.mentionsReceived ?? 0),
+            index,
+          })),
+        }
+      : {
+          icon: <Heart className="size-4" />,
+          label: 'Wskaźnik reakcji',
+          value: (() => {
+            const rates = participants
+              .map((p) => engagement.reactionRate[p])
+              .filter((v): v is number => v !== undefined);
+            const avg = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+            return `${(avg * 100).toFixed(1)}%`;
+          })(),
+          breakdown: participants.map((name, index) => ({
+            name,
+            value: `${((engagement.reactionRate[name] ?? 0) * 100).toFixed(1)}%`,
+            index,
+          })),
+        },
     {
       icon: <Layers className="size-4" />,
       label: 'Łączna liczba sesji',
@@ -133,18 +151,32 @@ export default function StatsGrid({ quantitative, participants }: StatsGridProps
         index,
       })),
     },
-    {
-      icon: <Trash2 className="size-4" />,
-      label: 'Niewysłane wiadomości',
-      value: formatNumber(
-        participants.reduce((sum, p) => sum + (perPerson[p]?.unsentMessages ?? 0), 0),
-      ),
-      breakdown: participants.map((name, index) => ({
-        name,
-        value: formatNumber(perPerson[name]?.unsentMessages ?? 0),
-        index,
-      })),
-    },
+    // Card 6: Unsent messages (other platforms) or Edited messages (Discord)
+    isDiscord
+      ? {
+          icon: <Pencil className="size-4" />,
+          label: 'Edytowane wiadomości',
+          value: formatNumber(
+            participants.reduce((sum, p) => sum + (perPerson[p]?.editedMessages ?? 0), 0),
+          ),
+          breakdown: participants.map((name, index) => ({
+            name,
+            value: formatNumber(perPerson[name]?.editedMessages ?? 0),
+            index,
+          })),
+        }
+      : {
+          icon: <Trash2 className="size-4" />,
+          label: 'Niewysłane wiadomości',
+          value: formatNumber(
+            participants.reduce((sum, p) => sum + (perPerson[p]?.unsentMessages ?? 0), 0),
+          ),
+          breakdown: participants.map((name, index) => ({
+            name,
+            value: formatNumber(perPerson[name]?.unsentMessages ?? 0),
+            index,
+          })),
+        },
     {
       icon: <BookText className="size-4" />,
       label: 'Bogactwo słownictwa',

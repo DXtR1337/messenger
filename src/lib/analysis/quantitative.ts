@@ -20,6 +20,7 @@ import type {
   UnifiedMessage,
   QuantitativeAnalysis,
   PersonMetrics,
+  PersonSentimentStats,
   TimingMetrics,
   EngagementMetrics,
   PatternMetrics,
@@ -47,9 +48,17 @@ import {
   detectBursts,
   computeTrends,
   computeReciprocityIndex,
+  computeResponseTimeDistribution,
+  computeYearMilestones,
+  computePersonSentiment,
+  computeSentimentTrend,
+  detectConflicts,
+  computeIntimacyProgression,
+  detectPursuitWithdrawal,
   createPersonAccumulator,
 } from './quant';
 import type { PersonAccumulator } from './quant';
+import { computeRankingPercentiles } from './ranking-percentiles';
 
 // ============================================================
 // Constants
@@ -439,19 +448,65 @@ export function computeQuantitativeAnalysis(
   // ── Reciprocity Index ──────────────────────────────────────
   const reciprocityIndex = computeReciprocityIndex(engagement, timing, perPerson, participantNames);
 
-  return {
+  // -- Response Time Distribution --
+  const responseTimeDistribution = computeResponseTimeDistribution(accumulators);
+
+  // -- Year Milestones --
+  const yearMilestones = computeYearMilestones(patterns.monthlyVolume);
+
+  // -- Sentiment Analysis --
+  const sentimentPerPerson: Record<string, PersonSentimentStats> = {};
+  const messagesBySender = new Map<string, UnifiedMessage[]>();
+  for (const msg of messages) {
+    if (!messagesBySender.has(msg.sender)) messagesBySender.set(msg.sender, []);
+    messagesBySender.get(msg.sender)!.push(msg);
+  }
+  for (const name of participantNames) {
+    sentimentPerPerson[name] = computePersonSentiment(messagesBySender.get(name) ?? []);
+  }
+  const sentimentAnalysis = { perPerson: sentimentPerPerson };
+
+  // -- Sentiment Trend (added to trends) --
+  const sentimentTrend = computeSentimentTrend(accumulators, sortedMonths, messages, participantNames);
+  const trendsWithSentiment = { ...trends, sentimentTrend };
+
+  // -- Conflict Analysis --
+  const conflictAnalysis = detectConflicts(messages, participantNames);
+
+  // -- Intimacy Progression --
+  const intimacyProgression = computeIntimacyProgression(messages, participantNames, heatmap);
+
+  // -- Pursuit-Withdrawal Detection --
+  const pursuitWithdrawal = detectPursuitWithdrawal(messages, participantNames);
+
+  // Build base result for ranking percentiles
+  const baseResult: QuantitativeAnalysis = {
     perPerson,
     timing,
     engagement,
     patterns,
     heatmap,
-    trends,
+    trends: trendsWithSentiment,
     viralScores,
     badges,
     bestTimeToText,
     catchphrases,
     networkMetrics,
     reciprocityIndex,
+    responseTimeDistribution,
+    yearMilestones,
+    sentimentAnalysis,
+    conflictAnalysis,
+    intimacyProgression,
+    pursuitWithdrawal,
+  };
+
+  // -- Ranking Percentiles (needs full result) --
+  const rankingPercentiles = computeRankingPercentiles(baseResult);
+
+  return {
+    ...baseResult,
+    rankingPercentiles,
   };
 }
 
@@ -540,10 +595,16 @@ function buildEngagementMetrics(
 ): EngagementMetrics {
   const messageRatio: Record<string, number> = {};
   const reactionRate: Record<string, number> = {};
+  const reactionGiveRate: Record<string, number> = {};
+  const reactionReceiveRate: Record<string, number> = {};
   for (const [name, acc] of accumulators) {
     messageRatio[name] = totalMessages > 0 ? acc.totalMessages / totalMessages : 0;
     reactionRate[name] =
       acc.messagesReceived > 0 ? acc.reactionsGiven / acc.messagesReceived : 0;
+    reactionGiveRate[name] =
+      acc.totalMessages > 0 ? acc.reactionsGiven / acc.totalMessages : 0;
+    reactionReceiveRate[name] =
+      acc.totalMessages > 0 ? acc.reactionsReceived / acc.totalMessages : 0;
   }
 
   return {
@@ -551,6 +612,8 @@ function buildEngagementMetrics(
     maxConsecutive,
     messageRatio,
     reactionRate,
+    reactionGiveRate,
+    reactionReceiveRate,
     avgConversationLength:
       totalSessions > 0 ? totalMessages / totalSessions : totalMessages,
     totalSessions,

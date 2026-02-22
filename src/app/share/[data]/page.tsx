@@ -12,8 +12,8 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
 
   if (!payload) {
     return {
-      title: 'PodTeksT — Link wygasl lub jest nieprawidlowy',
-      description: 'Nie mozna zdekodowac udostepnionej analizy.',
+      title: 'PodTeksT \u2014 Link wygas\u0142 lub jest nieprawid\u0142owy',
+      description: 'Nie mo\u017Cna zdekodowa\u0107 udost\u0119pnionej analizy.',
     };
   }
 
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
 
   const description = payload.executiveSummary
     ? payload.executiveSummary.slice(0, 160)
-    : `${payload.messageCount.toLocaleString('pl-PL')} wiadomosci przeanalizowanych przez AI`;
+    : `${payload.messageCount.toLocaleString('pl-PL')} wiadomo\u015Bci przeanalizowanych przez AI`;
 
   return {
     title: `PodTeksT — ${healthLabel}`,

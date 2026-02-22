@@ -21,9 +21,7 @@ const DATA_FRAGMENTS = [
 export default function LandingHero() {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
-      {/* Particle network is now global (ParticleBackground in page.tsx) */}
-
-      {/* Layer 1: Spline 3D brain scene (desktop only, interactive but scroll-safe) */}
+      {/* Layer 1: Spline 3D brain scene (desktop only) */}
       <div className="absolute inset-0 hidden md:block" style={{ zIndex: 1 }}>
         <SplineScene scene="/scene.splinecode" className="h-full w-full" />
       </div>
@@ -61,12 +59,12 @@ export default function LandingHero() {
         </div>
       ))}
 
-      {/* ─── DESKTOP: diagonal text layout around brain ─── */}
+      {/* ─── DESKTOP: diagonal text layout ─── */}
       <div className="pointer-events-none relative hidden min-h-screen w-full flex-col items-center justify-center md:flex" style={{ zIndex: 10 }}>
-        {/* Upper-left text: "Twoje rozmowy mówią" — BLUE */}
+        {/* Upper-left text: "Twoje rozmowy mówią" — BLUE — gentle float */}
         <div
           className="absolute"
-          style={{ top: '18%', left: '6%', zIndex: 20 }}
+          style={{ top: '18%', left: '6%', zIndex: 20, animation: 'heroTextFloatLeft 12s ease-in-out infinite' }}
         >
           <div className="flex flex-col items-start">
             {['Twoje', 'rozmowy', 'mówią'].map((word, i) => (
@@ -86,10 +84,10 @@ export default function LandingHero() {
           </div>
         </div>
 
-        {/* Lower-right text: "więcej niż myślisz." — PURPLE */}
+        {/* Lower-right text: "więcej niż myślisz." — PURPLE — gentle float */}
         <div
           className="absolute"
-          style={{ bottom: '22%', right: '6%', zIndex: 20 }}
+          style={{ bottom: '22%', right: '6%', zIndex: 20, animation: 'heroTextFloatRight 14s ease-in-out infinite' }}
         >
           <div className="flex flex-col items-end">
             {['więcej', 'niż', 'myślisz.'].map((word, i) => (
@@ -129,48 +127,48 @@ export default function LandingHero() {
         </div>
       </div>
 
-      {/* ─── MOBILE: stacked centered layout ─── */}
-      <div className="relative z-10 flex flex-col items-center gap-8 px-6 text-center md:hidden">
-        {/* Badge */}
-        <div
-          className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5"
-          style={{ animation: 'heroFadeSlideUp 0.5s ease-out 0.1s both' }}
-        >
-          <span className="relative inline-block size-2 rounded-full bg-success">
-            <span className="absolute inset-0 animate-ping rounded-full bg-success opacity-60" />
-          </span>
-          <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            Analiza Messengera
-          </span>
-        </div>
-
-        {/* Headline — stacked, no filter blur */}
+      {/* ─── MOBILE: stacked layout with diagonal energy ─── */}
+      <div className="relative z-10 flex min-h-screen flex-col justify-center px-6 md:hidden">
+        {/* Headline — skewed, split alignment */}
         <h1
           className="font-story-display font-black tracking-[-0.04em] text-foreground"
-          style={{ fontSize: 'clamp(2rem, 7vw, 3.5rem)', lineHeight: 1.1 }}
+          style={{ fontSize: 'clamp(2.2rem, 8vw, 3.5rem)', lineHeight: 1.05 }}
         >
-          <span className="block" style={{ color: '#3b82f6' }}>
+          <span
+            className="block text-left"
+            style={{
+              color: '#3b82f6',
+              transform: 'rotate(-2deg)',
+              marginBottom: '0.6em',
+            }}
+          >
             {['Twoje', 'rozmowy', 'mówią'].map((word, i) => (
               <span
                 key={word}
                 className="inline-block"
                 style={{
                   marginRight: '0.28em',
-                  animation: `heroFadeSlideUp 0.5s ease-out ${0.05 + i * 0.03}s both`,
+                  animation: `heroFadeSlideLeft 0.5s ease-out ${0.05 + i * 0.04}s both`,
                 }}
               >
                 {word}
               </span>
             ))}
           </span>
-          <span className="block" style={{ color: '#a855f7' }}>
+          <span
+            className="block text-right"
+            style={{
+              color: '#a855f7',
+              transform: 'rotate(-2deg)',
+            }}
+          >
             {['więcej', 'niż', 'myślisz.'].map((word, i) => (
               <span
                 key={word}
                 className="inline-block"
                 style={{
                   marginRight: i < 2 ? '0.28em' : 0,
-                  animation: `heroFadeSlideUp 0.5s ease-out ${0.15 + 0.15 + i * 0.05}s both`,
+                  animation: `heroFadeSlideRight 0.5s ease-out ${0.15 + i * 0.05}s both`,
                 }}
               >
                 {word}
@@ -179,9 +177,9 @@ export default function LandingHero() {
           </span>
         </h1>
 
-        {/* ─── MOBILE CTA: Floating buttons (stacked) ─── */}
+        {/* ─── MOBILE CTA: Pinned to bottom ─── */}
         <div
-          className="flex w-full max-w-sm flex-col items-center gap-3"
+          className="absolute bottom-[6vh] left-6 right-6 mx-auto flex max-w-sm flex-col items-center gap-3"
           style={{ animation: 'heroFadeSlideUp 0.5s ease-out 0.3s both' }}
         >
           <Link

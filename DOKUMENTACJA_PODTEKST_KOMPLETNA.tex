@@ -1,0 +1,841 @@
+\documentclass[a4paper,11pt]{article}
+
+% ============================================================
+% Packages
+% ============================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{geometry}
+\geometry{margin=2cm}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black,
+  pdftitle={PodTeksT — Kompletna Dokumentacja Funkcji},
+  pdfauthor={Claude Opus 4.6},
+}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{amsmath}
+
+% ============================================================
+% Custom colors
+% ============================================================
+\definecolor{ptblue}{HTML}{3B82F6}
+\definecolor{ptpurple}{HTML}{A855F7}
+\definecolor{ptgreen}{HTML}{10B981}
+\definecolor{ptred}{HTML}{EF4444}
+\definecolor{ptyellow}{HTML}{F59E0B}
+\definecolor{ptbg}{HTML}{0A0A0A}
+\definecolor{ptcard}{HTML}{111111}
+
+% ============================================================
+% Header/Footer
+% ============================================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\textcolor{gray}{PodTeksT — Dokumentacja Funkcji}}
+\fancyhead[R]{\footnotesize\textcolor{gray}{v2.0 | Faza 24}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ============================================================
+% Title formatting
+% ============================================================
+\titleformat{\section}{\Large\bfseries\color{ptblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{ptpurple}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+% ============================================================
+% Document
+% ============================================================
+\begin{document}
+
+% ============================================================
+% Title Page
+% ============================================================
+\begin{titlepage}
+\centering
+\vspace*{4cm}
+
+{\Huge\bfseries\textcolor{ptblue}{Pod}\textcolor{ptpurple}{Teks}\textcolor{ptblue}{T}}
+
+\vspace{0.8cm}
+{\large\itshape odkryj to, co kryje się między wierszami}
+
+\vspace{2cm}
+{\LARGE\bfseries Kompletna Dokumentacja Funkcji}
+
+\vspace{0.5cm}
+{\large Wszystkie funkcje, metryki, zakresy i algorytmy}
+
+\vspace{3cm}
+
+\begin{tabular}{rl}
+  \textbf{Wersja:} & 2.0 (Faza 24) \\
+  \textbf{Data:} & \today \\
+  \textbf{AI Development:} & Claude Opus 4.6 \\
+  \textbf{AI Analysis:} & Gemini 3 Flash Preview \\
+  \textbf{Stack:} & Next.js 16+, TypeScript, Tailwind v4 \\
+\end{tabular}
+
+\vfill
+{\footnotesize Wygenerowano automatycznie na podstawie kodu źródłowego}
+\end{titlepage}
+
+% ============================================================
+% Table of Contents
+% ============================================================
+\tableofcontents
+\newpage
+
+% ============================================================
+% 1. WPROWADZENIE
+% ============================================================
+\section{Wprowadzenie}
+
+\textbf{PodTeksT} to aplikacja webowa analizująca eksporty rozmów z~komunikatorów. Użytkownik wgrywa plik eksportu, a~aplikacja oblicza \textbf{80+ metryk ilościowych} (client-side, bez AI) oraz przeprowadza \textbf{wieloprzebiegową analizę psychologiczną AI} (server-side, Gemini API).
+
+\subsection{Obsługiwane platformy}
+\begin{itemize}[nosep]
+  \item Facebook Messenger (JSON)
+  \item WhatsApp (TXT)
+  \item Instagram DM (JSON)
+  \item Telegram (JSON)
+  \item Discord (API — import przez bota)
+\end{itemize}
+
+\subsection{Architektura}
+\begin{itemize}[nosep]
+  \item \textbf{Parsing + analiza ilościowa:} Client-side (przeglądarka) — surowe wiadomości nigdy nie opuszczają urządzenia
+  \item \textbf{Analiza jakościowa AI:} Server-side API routes — wysyłane 200--500 próbkowanych wiadomości per przebieg
+  \item \textbf{Przechowywanie danych:} IndexedDB + localStorage (lokalne, bez serwera)
+  \item \textbf{Streaming:} SSE (Server-Sent Events) z heartbeatem co 15s
+\end{itemize}
+
+% ============================================================
+% 2. ANALIZA ILOŚCIOWA
+% ============================================================
+\section{Analiza ilościowa (80+ metryk)}
+
+Wszystkie metryki w~tej sekcji są obliczane \textbf{wyłącznie po stronie klienta}, bez udziału AI. Obliczenia wykonywane w~jednym przebiegu $O(n)$ przez moduł \texttt{quantitative.ts}.
+
+% ---- 2.1 Per-person ----
+\subsection{Statystyki podstawowe (per osoba)}
+
+\begin{longtable}{p{4.5cm}p{6cm}p{3cm}}
+\toprule
+\textbf{Metryka} & \textbf{Opis} & \textbf{Typ / Zakres} \\
+\midrule
+\endhead
+totalMessages & Całkowita liczba wiadomości & \texttt{number} $\geq 0$ \\
+totalWords & Całkowita liczba słów & \texttt{number} $\geq 0$ \\
+avgWordsPerMessage & Średnia słów na wiadomość & \texttt{number} $\geq 0$ \\
+longestMessage & Najdłuższa wiadomość (słowa) & \texttt{number} $\geq 0$ \\
+shortestMessage & Najkrótsza wiadomość (słowa) & \texttt{number} $\geq 1$ \\
+questionCount & Liczba pytań (znaki ?) & \texttt{number} $\geq 0$ \\
+questionRatio & Odsetek pytań & \texttt{number} 0--1 \\
+exclamationCount & Liczba wykrzykników & \texttt{number} $\geq 0$ \\
+mediaCount & Multimedia (zdjęcia, video, GIF, stickery, audio, pliki) & \texttt{number} $\geq 0$ \\
+reactionsSent & Reakcje wysłane & \texttt{number} $\geq 0$ \\
+reactionsReceived & Reakcje otrzymane & \texttt{number} $\geq 0$ \\
+reactionGiveRate & Rate reakcji dawanych & \texttt{number} 0--1 \\
+reactionReceiveRate & Rate reakcji otrzymywanych & \texttt{number} 0--1 \\
+deletedMessages & Usunięte wiadomości & \texttt{number} $\geq 0$ \\
+editedMessages & Edytowane wiadomości & \texttt{number} $\geq 0$ \\
+firstMessageDate & Data pierwszej wiadomości & \texttt{Date} \\
+lastMessageDate & Data ostatniej wiadomości & \texttt{Date} \\
+activeDays & Unikalne dni aktywności & \texttt{number} $\geq 1$ \\
+topEmojis & Top 10 emoji per osoba & \texttt{[emoji, count][]} \\
+topWords & Top 20 najczęstszych słów & \texttt{[word, count][]} \\
+topPhrases & Top 10 fraz (2--4 słowa) & \texttt{[phrase, count][]} \\
+\bottomrule
+\end{longtable}
+
+% ---- 2.2 Timing ----
+\subsection{Timing i czasy odpowiedzi}
+
+\begin{longtable}{p{5cm}p{5.5cm}p{3cm}}
+\toprule
+\textbf{Metryka} & \textbf{Opis} & \textbf{Typ / Zakres} \\
+\midrule
+\endhead
+medianResponseTimeMs & Mediana czasu odpowiedzi (ms) & \texttt{number} $\geq 0$ \\
+avgResponseTimeMs & Średni czas odpowiedzi (ms) & \texttt{number} $\geq 0$ \\
+fastestResponseMs & Najszybsza odpowiedź (ms) & \texttt{number} $\geq 0$ \\
+slowestResponseMs & Najwolniejsza odpowiedź (ms) & \texttt{number} $\geq 0$ \\
+responseTimes[] & Tablica surowych czasów & \texttt{number[]} (ms) \\
+conversationInitiations & Ile razy zainicjował rozmowę & \texttt{number} $\geq 0$ \\
+conversationInitiationRatio & Odsetek inicjacji & \texttt{number} 0--1 \\
+longestSilence & Najdłuższa cisza & \texttt{object} \\
+\quad .durationMs & Czas trwania (ms) & \texttt{number} \\
+\quad .startDate / endDate & Okres ciszy & \texttt{Date} \\
+\quad .beforeSender / afterSender & Kto pisał przed/po & \texttt{string} \\
+doubleTextRate & Odsetek podwójnych wiadomości & \texttt{number} 0--1 \\
+doubleTextCount & Liczba double-textów & \texttt{number} $\geq 0$ \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{Dystrybucja czasów odpowiedzi (Response Time Distribution)}
+Czasy odpowiedzi binowane w~8 kubełków:
+
+\begin{center}
+\begin{tabular}{cl}
+\toprule
+\textbf{Bin} & \textbf{Zakres} \\
+\midrule
+1 & $< 10$ sekund \\
+2 & 10--30 sekund \\
+3 & 30s -- 1 minuta \\
+4 & 1--5 minut \\
+5 & 5--15 minut \\
+6 & 15--30 minut \\
+7 & 30 min -- 1 godzina \\
+8 & $> 1$ godziny \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ---- 2.3 Engagement ----
+\subsection{Zaangażowanie (Engagement)}
+
+\begin{longtable}{p{5cm}p{5.5cm}p{3cm}}
+\toprule
+\textbf{Metryka} & \textbf{Opis} & \textbf{Typ / Zakres} \\
+\midrule
+\endhead
+engagementScore & Ważony wynik zaangażowania & \texttt{number} 0--100 \\
+consistencyScore & Stałość aktywności (std dev) & \texttt{number} $\geq 0$ \\
+messageRatio & Stosunek wiadomości per osoba & \texttt{number} 0--1 \\
+reactionRate & Rate reaktywności & \texttt{number} 0--1 \\
+doubleTexts & Podwójne wiadomości & \texttt{Record<string, number>} \\
+maxConsecutive & Max kolejnych wiadomości & \texttt{Record<string, number>} \\
+avgConversationLength & Śr. długość rozmowy & \texttt{number} \\
+totalSessions & Liczba sesji (przerwa > 6h) & \texttt{number} \\
+lateNightRatio & Odsetek wiadomości 0:00--5:00 & \texttt{number} 0--1 \\
+weekendRatio & Odsetek wiadomości weekend & \texttt{number} 0--1 \\
+\bottomrule
+\end{longtable}
+
+% ---- 2.4 Heatmap ----
+\subsection{Heatmapa aktywności}
+
+\begin{itemize}[nosep]
+  \item \textbf{Combined Heatmap:} Macierz $7 \times 24$ (dzień tygodnia $\times$ godzina), zsumowana po wszystkich uczestnikach
+  \item \textbf{Per-person Heatmap:} Oddzielna macierz $7 \times 24$ dla każdego uczestnika
+  \item \textbf{24-Hour Activity Chart:} Agregacja per godzina (0--23), stacked per osoba
+\end{itemize}
+
+% ---- 2.5 Trends ----
+\subsection{Trendy miesięczne}
+
+\begin{longtable}{p{5cm}p{5.5cm}p{3cm}}
+\toprule
+\textbf{Trend} & \textbf{Opis} & \textbf{Format} \\
+\midrule
+\endhead
+responseTimeTrend & Mediana czasu odpowiedzi/miesiąc & \texttt{[month, perPerson]} \\
+messageLengthTrend & Mediana długości wiadomości/miesiąc & \texttt{[month, perPerson]} \\
+initiationTrend & Inicjacje rozmów/miesiąc & \texttt{[month, perPerson]} \\
+monthlyVolume & Wolumen wiadomości/miesiąc & \texttt{[month, perPerson, total]} \\
+sentimentTrend & Trend sentymentu/miesiąc & \texttt{[month, perPerson]} \\
+volumeTrend & Kierunek zmiany wolumenu & \texttt{growing/declining/stable} \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{Year Milestones}
+Obliczane z~\texttt{monthlyVolume}:
+\begin{itemize}[nosep]
+  \item \textbf{peakMonth:} Miesiąc z~największą liczbą wiadomości (nazwa PL + count)
+  \item \textbf{worstMonth:} Miesiąc z~najmniejszą liczbą wiadomości
+  \item \textbf{yoyTrend:} Zmiana rok-do-roku: $\frac{\text{suma nowsza połowa}}{\text{suma starsza połowa}} - 1$ (wartość procentowa)
+\end{itemize}
+
+% ---- 2.6 Sentiment ----
+\subsection{Analiza sentymentu}
+
+Obliczana per osoba na podstawie słownika pozytywnych/negatywnych słów:
+
+\begin{longtable}{p{4.5cm}p{5.5cm}p{3.5cm}}
+\toprule
+\textbf{Metryka} & \textbf{Opis} & \textbf{Zakres} \\
+\midrule
+\endhead
+positiveRatio & Odsetek pozytywnych wiadomości & 0--1 \\
+negativeRatio & Odsetek negatywnych wiadomości & 0--1 \\
+neutralRatio & Odsetek neutralnych & 0--1 \\
+volatility & Zmienność emocjonalna (std dev) & $\geq 0$ \\
+dominantTone & Dominujący ton & \texttt{string} \\
+\bottomrule
+\end{longtable}
+
+% ---- 2.7 Conflicts ----
+\subsection{Wykrywanie konfliktów}
+
+Konflikty identyfikowane na podstawie nagromadzenia negatywnych słów kluczowych, krótkich gniewnych odpowiedzi i~eskalacji wzorców. Każdy konflikt zawiera:
+\begin{itemize}[nosep]
+  \item Timestamp konfliktu
+  \item Uczestnicy
+  \item Severity (niski/średni/wysoki)
+  \item Słowa-wyzwalacze
+\end{itemize}
+
+% ---- 2.8 Intimacy ----
+\subsection{Progresja intymności}
+
+Miesięczny wynik intymności (0--100) obliczany z~kombinacji:
+\begin{itemize}[nosep]
+  \item Długość wiadomości (dłuższe = bardziej intymne)
+  \item Aktywność nocna (late-night sharing)
+  \item Częstotliwość i~czas odpowiedzi
+  \item Wzajemność (reciprocity)
+\end{itemize}
+Fazy: \texttt{casual} $\rightarrow$ \texttt{deepening} $\rightarrow$ \texttt{intimate}
+
+% ---- 2.9 Pursuit-Withdrawal ----
+\subsection{Pursuit-Withdrawal Detection}
+
+Wykrywanie cyklicznych wzorców pogoni i~wycofania:
+
+\begin{itemize}[nosep]
+  \item \textbf{Pursuit:} 3+ kolejnych wiadomości od tej samej osoby w~oknie $< 30$ minut
+  \item \textbf{Withdrawal:} Następna odpowiedź po $> 2$ godzinach ciszy
+  \item \textbf{Wymagane:} Minimum 2 cykle do identyfikacji wzorca
+\end{itemize}
+
+Wynik:
+\begin{longtable}{p{4.5cm}p{5.5cm}p{3.5cm}}
+\toprule
+\textbf{Pole} & \textbf{Opis} & \textbf{Typ} \\
+\midrule
+\endhead
+pursuer & Kto goni & \texttt{string} \\
+withdrawer & Kto się wycofuje & \texttt{string} \\
+cycleCount & Liczba wykrytych cykli & \texttt{number} $\geq 2$ \\
+avgCycleDurationMs & Średni czas wycofania & \texttt{number} (ms) \\
+escalationTrend & Trend eskalacji & \texttt{number} ($>0$ = pogarsza się) \\
+\bottomrule
+\end{longtable}
+
+% ---- 2.10 Reciprocity ----
+\subsection{Indeks wzajemności (Reciprocity Index)}
+
+Kompozytowy wynik 0--1 z~4 składników:
+\[
+\text{RI} = 0.3 \cdot r_{\text{msg}} + 0.25 \cdot r_{\text{word}} + 0.25 \cdot r_{\text{init}} + 0.2 \cdot r_{\text{rt}}
+\]
+gdzie:
+\begin{itemize}[nosep]
+  \item $r_{\text{msg}}$ — stosunek wiadomości (bliżej 0.5 = lepiej)
+  \item $r_{\text{word}}$ — stosunek słów
+  \item $r_{\text{init}}$ — stosunek inicjacji rozmów
+  \item $r_{\text{rt}}$ — stosunek czasów odpowiedzi
+\end{itemize}
+
+% ---- 2.11 Burst Detection ----
+\subsection{Burst Detection}
+
+Identyfikacja nagłych wzrostów aktywności:
+\begin{itemize}[nosep]
+  \item \textbf{Próg:} 10+ wiadomości w~oknie 5 minut
+  \item \textbf{Wynik:} Lista burst events z~timestampem, liczbą wiadomości, uczestnikami
+\end{itemize}
+
+% ---- 2.12 Viral Scores ----
+\subsection{Viral Scores}
+
+\begin{longtable}{p{4cm}p{6cm}p{3.5cm}}
+\toprule
+\textbf{Score} & \textbf{Formuła} & \textbf{Zakres} \\
+\midrule
+\endhead
+Compatibility Score & Ważona kombinacja: reciprocity, balance, response consistency, shared activity & 0--100 \\
+Interest Score & Per osoba: initiation rate, response speed, message length ratio, question ratio & 0--100 \\
+Ghost Risk & Per osoba: response time trend, silence frequency, message gap growth & 0--100 \\
+Delusion Score & Per osoba: |self-perception - actual behavior| across 5+ metrics & 0--100 \\
+\bottomrule
+\end{longtable}
+
+% ---- 2.13 Threat Meters ----
+\subsection{Threat Meters (Mierniki zagrożeń)}
+
+4 kompozytowe metryki zagrożeń (0--100):
+
+\begin{longtable}{p{3.5cm}p{6.5cm}p{3.5cm}}
+\toprule
+\textbf{Miernik} & \textbf{Składniki} & \textbf{Severity Labels} \\
+\midrule
+\endhead
+Ghost Risk & Z~\texttt{viralScores.ghostRisk} & Niski / Umiarkowany / Podwyższony / Krytyczny \\
+Codependency & Initiation imbalance, double-text rate, response time asymmetry & j.w. \\
+Manipulation & CPS control + manipulation + passive aggression patterns & j.w. \\
+Trust & Reciprocity (odwrócony), response consistency, ghost frequency & j.w. \\
+\bottomrule
+\end{longtable}
+
+% ---- 2.14 Damage Report ----
+\subsection{Damage Report}
+
+\begin{longtable}{p{4cm}p{6cm}p{3.5cm}}
+\toprule
+\textbf{Metryka} & \textbf{Formuła} & \textbf{Zakres} \\
+\midrule
+\endhead
+Emotional Damage & $100 - \text{healthScore} + \text{sentiment asymmetry modifier}$ & 0--100\% \\
+Communication Grade & Z~reciprocity: A($>80$), B($>60$), C($>40$), D($>20$), F($\leq 20$) & A--F \\
+Repair Potential & Green flags count + response consistency + sentiment trend slope & 0--100\% \\
+Therapy Needed & HS $< 40$ $\rightarrow$ TAK, $< 60$ $\rightarrow$ ZALECANE, else NIE & TAK/ZALECANE/NIE \\
+\bottomrule
+\end{longtable}
+
+% ---- 2.15 Ranking Percentiles ----
+\subsection{Ranking Percentiles (heurystyczne)}
+
+Percentyle obliczane z~aproksymacji CDF rozkładu log-normalnego (Abramowitz \& Stegun):
+\[
+\Phi(z) \approx 1 - d \cdot t \cdot (a_1 + t(a_2 + t(a_3 + t(a_4 + t \cdot a_5))))
+\]
+gdzie $z = \frac{\ln(\text{value}) - \ln(\text{median})}{\sigma}$ i $t = \frac{1}{1 + 0.2316419|z|}$.
+
+\begin{longtable}{p{4cm}p{3.5cm}p{2cm}p{4cm}}
+\toprule
+\textbf{Metryka} & \textbf{Mediana ref.} & \textbf{$\sigma$} & \textbf{Wynik} \\
+\midrule
+\endhead
+Message Volume & 3000 wiad. & 1.2 & TOP X\% \\
+Response Time & 480 000 ms (8 min) & 1.0 & TOP X\% (odwrócony) \\
+Ghost Frequency & 12h & 0.8 & TOP X\% \\
+Asymmetry & 20 & 0.9 & TOP X\% \\
+\bottomrule
+\end{longtable}
+
+Kolorowanie: \textcolor{ptyellow}{TOP 10\% = złoty}, TOP 25\% = srebrny, reszta = szary.
+
+% ---- 2.16 Badges ----
+\subsection{Odznaki (Badges)}
+
+15 typów odznak automatycznie przyznawanych:
+
+\begin{longtable}{p{3.5cm}p{7cm}p{3cm}}
+\toprule
+\textbf{Badge} & \textbf{Warunek} & \textbf{Emoji} \\
+\midrule
+\endhead
+Night Owl & $>$20\% wiadomości 0:00--5:00 & 🦉 \\
+Chatterbox & $>$10000 wiadomości & 💬 \\
+Double Texter & $>$15\% double-text rate & 📱📱 \\
+Emoji King/Queen & $>$30\% wiadomości z~emoji & 👑 \\
+Ghost Buster & Szybki medianowy czas odpowiedzi & 👻 \\
+Essay Writer & Średnio $>$30 słów/wiadomość & 📝 \\
+Question Master & $>$20\% pytań & ❓ \\
+Speed Demon & Mediana odpowiedzi $< 60$s & ⚡ \\
+Conversation Starter & $>$60\% inicjacji & 🎯 \\
+Media Lover & $>$20\% wiadomości z~mediami & 📸 \\
+Weekend Warrior & $>$40\% wiadomości w~weekend & 🎉 \\
+Early Bird & $>$20\% wiadomości 5:00--8:00 & 🐦 \\
+Storyteller & Regularnie długie wiadomości & 📖 \\
+Reactor & Wysoki reaction rate & ❤️ \\
+Marathon Chatter & Długie sesje rozmów & 🏃 \\
+\bottomrule
+\end{longtable}
+
+% ---- 2.17 Catchphrases ----
+\subsection{Catchphrases i Best Time to Text}
+
+\begin{itemize}[nosep]
+  \item \textbf{Catchphrases:} Top 5 unikalnych fraz per osoba, mierzonych częstotliwością i~unikalnością (fraza używana nieproporcjonalnie często przez jedną osobę)
+  \item \textbf{Best Time to Text:} Optymalna godzina i~dzień tygodnia na podstawie najwyższego response rate i~najkrótszego response time
+\end{itemize}
+
+% ---- 2.18 Cognitive Functions ----
+\subsection{Cognitive Functions Clash}
+
+Deterministyczne mapowanie MBTI $\rightarrow$ 4 funkcje kognitywne (Jung):
+
+Każdy z~16 typów MBTI mapowany na stos: \texttt{dominant}, \texttt{auxiliary}, \texttt{tertiary}, \texttt{inferior}. Przykład:
+\begin{itemize}[nosep]
+  \item ENFJ: Fe (dom) → Ni (aux) → Se (ter) → Ti (inf)
+  \item INTP: Ti (dom) → Ne (aux) → Si (ter) → Fe (inf)
+\end{itemize}
+
+\textbf{Clash analysis:} Porównanie dominant/auxiliary obu osób — clash score 0--100 per para funkcji z~opisem konfliktu.
+
+% ---- 2.19 Gottman ----
+\subsection{Czterech Jeźdźców Gottmana}
+
+Mapowanie z~CPS patterns + sygnałów ilościowych:
+
+\begin{longtable}{p{3cm}p{7cm}p{3.5cm}}
+\toprule
+\textbf{Jeździec} & \textbf{Źródła} & \textbf{Severity} \\
+\midrule
+\endhead
+Krytyka & CPS: kontrola + egocentryzm & none/mild/moderate/severe \\
+Pogarda & CPS: manipulacja + asymetria odpowiedzi & j.w. \\
+Defensywność & CPS: pasywna agresja + podejrzliwość & j.w. \\
+Stonewalling & CPS: unikanie bliskości + dystans emocjonalny + ghost risk & j.w. \\
+\bottomrule
+\end{longtable}
+
+Risk level: Niski (0 aktywnych) → Umiarkowany (1) → Podwyższony (2) → Wysoki (3) → Krytyczny (4).
+
+% ============================================================
+% 3. ANALIZA AI (GEMINI API)
+% ============================================================
+\section{Analiza AI (Gemini API)}
+
+Wieloprzebiegowa analiza psychologiczna z~wykorzystaniem modelu \texttt{gemini-3-flash-preview}. Każdy przebieg otrzymuje 200--500 próbkowanych wiadomości. Wagi próbkowania: ostatnie 3 miesiące = 60\%.
+
+\subsection{Pass 1 — Przegląd relacji}
+
+\begin{longtable}{p{4.5cm}p{9cm}}
+\toprule
+\textbf{Pole} & \textbf{Opis} \\
+\midrule
+\endhead
+tone & Ogólny ton rozmowy (formalny, swobodny, napięty...) \\
+communicationStyle & Styl komunikacji (bezpośredni, pasywny, żartobliwy...) \\
+relationshipType & Typ relacji (romantyczna, przyjacielska, rodzinna...) \\
+dominantThemes & Główne tematy rozmów \\
+languageComplexity & Złożoność języka per osoba \\
+\bottomrule
+\end{longtable}
+
+\subsection{Pass 2 — Dynamika relacji}
+
+\begin{longtable}{p{4.5cm}p{9cm}}
+\toprule
+\textbf{Pole} & \textbf{Opis} \\
+\midrule
+\endhead
+powerBalance & Bilans władzy w~relacji \\
+conflictPatterns & Wzorce konfliktów \\
+intimacyLevel & Poziom intymności \\
+emotionalLabor & Rozkład pracy emocjonalnej \\
+redFlags[] & Czerwone flagi z~cytatami dowodowymi \\
+greenFlags[] & Zielone flagi z~cytatami \\
+turningPoints[] & Punkty zwrotne na timeline \\
+\bottomrule
+\end{longtable}
+
+\subsection{Pass 3 — Profile indywidualne}
+
+Osobny profil dla każdego uczestnika:
+
+\begin{longtable}{p{4.5cm}p{9cm}}
+\toprule
+\textbf{Wymiar} & \textbf{Opis} \\
+\midrule
+\endhead
+Big Five & 5 wymiarów: openness, conscientiousness, extraversion, agreeableness, neuroticism (każdy 0--100) \\
+MBTI & 4-literowy typ + confidence (0--100) \\
+Attachment Style & secure / anxious / avoidant / disorganized + opis \\
+Love Languages & Ranking 5 języków miłości (scored) \\
+Communication Style Meters & directness, formality, emotionality, humor (0--100) \\
+Tone Radar & warm, cold, sarcastic, supportive, aggressive, passive (0--100) \\
+\bottomrule
+\end{longtable}
+
+\subsection{Pass 4 — Synteza końcowa}
+
+\begin{longtable}{p{4.5cm}p{9cm}}
+\toprule
+\textbf{Pole} & \textbf{Opis} \\
+\midrule
+\endhead
+healthScore & Health Score 0--100 z~5 sub-scores \\
+\quad communication & Sub-score: komunikacja & \\
+\quad emotional & Sub-score: emocje & \\
+\quad balance & Sub-score: balans & \\
+\quad growth & Sub-score: rozwój & \\
+\quad stability & Sub-score: stabilność & \\
+redFlags[] & Czerwone flagi z~evidence & \\
+greenFlags[] & Zielone flagi z~evidence & \\
+turningPoints[] & Kluczowe momenty na timeline & \\
+recommendations & Rekomendacje dla relacji & \\
+predictions[] & Prognozy AI (patrz niżej) & \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{AI Predictions}
+Każda predykcja zawiera:
+\begin{itemize}[nosep]
+  \item \texttt{prediction:} Treść prognozy (tekst)
+  \item \texttt{confidence:} Pewność 0--100\%
+  \item \texttt{timeframe:} Horyzont czasowy (np. ``Q1 2025'')
+  \item \texttt{basis:} Uzasadnienie na podstawie trendów
+\end{itemize}
+Disclaimer: \textit{Predykcje AI oparte na trendach — nie stanowią pewności.}
+
+% ============================================================
+% 4. MODUŁY INTERAKTYWNE
+% ============================================================
+\section{Moduły interaktywne (AI-powered)}
+
+\subsection{Enhanced Roast}
+Psychologiczny roast z~pełnym kontekstem Pass 1--4. Endpoint: \texttt{/api/analyze} (roast pass w~głównym SSE).
+
+\subsection{Stand-Up Comedy Roast}
+7-aktowa rozmowa w~stylu stand-up comedy. Generuje PDF do pobrania.
+\begin{itemize}[nosep]
+  \item Endpoint: \texttt{POST /api/analyze/standup}
+  \item Streaming: SSE z~7 aktami
+  \item Export: jsPDF client-side
+\end{itemize}
+
+\subsection{CPS Screener (Communication Pattern Screening)}
+63 pytania analizujące 10 wzorców komunikacyjnych:
+
+\begin{longtable}{p{0.5cm}p{5cm}p{2.5cm}p{2.5cm}}
+\toprule
+\textbf{\#} & \textbf{Wzorzec} & \textbf{Pytań} & \textbf{Próg} \\
+\midrule
+\endhead
+1 & Unikanie bliskości & 6 & $\geq 50\%$ \\
+2 & Nadmierna kontrola & 7 & $\geq 50\%$ \\
+3 & Kontrola i~perfekcjonizm & 6 & $\geq 50\%$ \\
+4 & Podejrzliwość i~nieufność & 7 & $\geq 50\%$ \\
+5 & Egocentryzm komunikacyjny & 6 & $\geq 50\%$ \\
+6 & Intensywność emocjonalna & 7 & $\geq 50\%$ \\
+7 & Dramatyzacja i~histrionizm & 6 & $\geq 50\%$ \\
+8 & Manipulacja i~brak empatii & 6 & $\geq 50\%$ \\
+9 & Emocjonalny dystans & 6 & $\geq 50\%$ \\
+10 & Pasywna agresja & 6 & $\geq 50\%$ \\
+\bottomrule
+\end{longtable}
+
+\subsection{Subtext Decoder (Translator Podtekstów)}
+AI dekoduje ukryte znaczenia w~wiadomościach.
+\begin{itemize}[nosep]
+  \item Kontekst: 30+ wiadomości na wymianę
+  \item Kategorie: deflection, hidden\_anger, seeking\_validation, power\_move, genuine, testing, guilt\_trip, passive\_aggressive, love\_signal, insecurity, distancing, humor\_shield
+  \item Output: oryginał → dekodowana wiadomość + confidence + kategoria
+  \item Deception Score per osoba (0--100\%)
+\end{itemize}
+
+\subsection{Court Trial (Twój Chat w~Sądzie)}
+AI prowadzi rozprawę sądową z~pełnym procesem:
+\begin{itemize}[nosep]
+  \item Akt oskarżenia z~konkretnymi zarzutami
+  \item Mowa oskarżycielska z~cytatami z~rozmowy
+  \item Mowa obrończa z~okolicznościami łagodzącymi
+  \item Wyrok: \texttt{winny} / \texttt{niewinny} / \texttt{warunkowo}
+  \item Kara (kreatywna, dopasowana do ``przestępstwa'')
+  \item Share card: Mugshot Card z~sygnaturą sprawy
+\end{itemize}
+
+\subsection{Dating Profile Generator}
+Szczery profil randkowy na podstawie zachowań tekstowych:
+\begin{itemize}[nosep]
+  \item Bio na podstawie stylu komunikacji
+  \item Age Vibe (mentalny wiek)
+  \item Statystyki kluczowe (szybkość reakcji, inicjatywa, cierpliwość)
+  \item Prompts \& Answers (w~stylu Hinge)
+  \item Red Flags + Green Flags
+  \item Overall Rating
+  \item Share card: Gazeta Podtekstowa (styl ogłoszenia matrymonialnego)
+\end{itemize}
+
+\subsection{Reply Simulator}
+Symulacja odpowiedzi w~głosie partnera:
+\begin{itemize}[nosep]
+  \item Użytkownik wpisuje wiadomość
+  \item AI odpowiada w~stylu wybranego uczestnika
+  \item Bazuje na: stylu komunikacji, tonie, częstych frazach, response patterns
+\end{itemize}
+
+\subsection{Delusion Quiz}
+Test samoświadomości — porównanie percepcji z~rzeczywistością:
+\begin{itemize}[nosep]
+  \item Seria pytań o~własne zachowania w~rozmowie
+  \item Odpowiedzi porównywane z~rzeczywistymi danymi ilościowymi
+  \item \textbf{Delusion Index:} 0--100 (im wyżej, tym większa rozbieżność)
+  \item Kategorie: Low Delusion ($< 30$), Moderate ($30$--$60$), High ($> 60$)
+\end{itemize}
+
+\subsection{Couple's Quiz}
+Quiz wiedzy o~partnerze (osobna trasa \texttt{/couple}):
+\begin{itemize}[nosep]
+  \item Pytania generowane z~danych ilościowych
+  \item Odpowiedzi weryfikowane z~rzeczywistymi statystykami
+  \item Wynik kompatybilności
+\end{itemize}
+
+% ============================================================
+% 5. SHARE CARDS
+% ============================================================
+\section{Share Cards (24+ typów)}
+
+Karty do udostępniania w~mediach społecznościowych, eksportowane jako PNG.
+
+\begin{longtable}{p{4.5cm}p{6cm}p{3cm}}
+\toprule
+\textbf{Karta} & \textbf{Zawartość} & \textbf{Styl} \\
+\midrule
+\endhead
+StatsCard & Kluczowe statystyki rozmowy & Ciemny, numeryczny \\
+PersonalityCard & Profil osobowości & Gradient \\
+PersonalityPassportCard & Paszport osobowości & Paszportowy \\
+ReceiptCard & Paragon z~relacji & Paragonowy \\
+VersusCard / V2 & Porównanie 1v1 & Splitscreen \\
+CompatibilityCardV2 & Wynik kompatybilności & Gradientowy \\
+RedFlagCard & Czerwone flagi & Czerwono-czarny \\
+GhostForecastCard & Prognoza ghostingu & Mglisty \\
+HealthScoreCard & Health Score & Gauge \\
+MBTICard & Typ MBTI & Kolorowy \\
+BadgesCard & Odznaki & Grid \\
+FlagsCard & Red + Green Flags & Dwukolorowy \\
+LabelCard & Etykieta relacji & Minimalistyczny \\
+ScoresCard & Viral Scores & Neonowy \\
+SubtextCard & Dekodowane wiadomości & Matrix/wojskowy \\
+MugshotCard & Mugshot z~wyroku & Policyjny \\
+DatingProfileCard & Profil randkowy & Gazetowy \\
+DelusionCard & Wynik Delusion Quiz & Brutalny \\
+SimulatorCard & Symulacja odpowiedzi & Chatowy \\
+CoupleQuizCard & Wynik Couple's Quiz & Romantyczny \\
+CPSCard & Rentgen komunikacji & Medyczny/RTG \\
+\bottomrule
+\end{longtable}
+
+Każda karta: 360px szerokości, minimalna wysokość 640px, eksport do PNG via \texttt{html-to-image}.
+
+% ============================================================
+% 6. STORY MODE (WRAPPED)
+% ============================================================
+\section{Story Mode (Wrapped)}
+
+12-scenowa prezentacja w~stylu Spotify Wrapped:
+\begin{enumerate}[nosep]
+  \item Intro z~animacją
+  \item Kluczowe liczby (total messages, days, words)
+  \item Osobowości uczestników
+  \item MBTI porównanie
+  \item Versus stats
+  \item Red flags parade
+  \item Roast highlight
+  \item Court verdict
+  \item Interactive recap
+  \item Stand-Up fragment
+  \item Heatmap visual
+  \item Wrapped summary
+\end{enumerate}
+
+Animacje: Framer Motion, auto-play z~możliwością nawigacji.
+
+% ============================================================
+% 7. SERVER VIEW
+% ============================================================
+\section{Server View (5+ uczestników)}
+
+Aktywacja: \texttt{isGroup \&\& participants.length > 4}
+
+Dodatkowe komponenty w~trybie grupowym:
+\begin{itemize}[nosep]
+  \item \textbf{PersonNavigator:} Nawigacja między profilami (20-kolorowa paleta)
+  \item \textbf{PersonProfile:} Indywidualny profil per osoba
+  \item \textbf{ServerLeaderboard:} Ranking uczestników
+  \item \textbf{PairwiseComparison:} Porównanie 1v1 dowolnej pary
+  \item \textbf{ServerOverview:} Przegląd statystyk grupowych
+\end{itemize}
+
+\textit{W~trybie grupowym ukryte:} Viral Scores, Ghost Forecast, Delusion Quiz.
+
+% ============================================================
+% 8. DISCORD BOT
+% ============================================================
+\section{Discord Bot (11 komend)}
+
+Bot Discord z~11 komendami slash. Infra: HTTP interactions (Ed25519 verification), in-memory channel cache (1h TTL, 50 entries LRU).
+
+\begin{longtable}{p{3cm}p{7cm}p{3.5cm}}
+\toprule
+\textbf{Komenda} & \textbf{Opis} & \textbf{Parametry} \\
+\midrule
+\endhead
+/stats & Statystyki kanału & limit? \\
+/versus & Porównanie 2 osób & user1, user2 \\
+/whosimps & Kto simpi na kogo & limit? \\
+/ghostcheck & Kto ghostuje & limit? \\
+/besttime & Najlepszy czas na pisanie & -- \\
+/catchphrase & Catchphrases uczestników & -- \\
+/emoji & Top emoji per osoba & -- \\
+/nightowl & Nocne marki & -- \\
+/ranking & Ranking aktywności & -- \\
+/roast & AI roast kanału & target? \\
+/personality & AI profil osobowości & target \\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+% 9. EKSPORT
+% ============================================================
+\section{Eksport i~udostępnianie}
+
+\begin{itemize}[nosep]
+  \item \textbf{PDF (standard):} Pełny raport analizy z~wykresami via jsPDF
+  \item \textbf{PDF (Stand-Up):} 7-aktowa komedia w~PDF
+  \item \textbf{Share Cards:} 24+ typów kart PNG
+  \item \textbf{Web Share API:} Natywne udostępnianie na mobile
+  \item \textbf{Public Share Links:} Zakodowane linki z~podsumowaniem (bez surowych wiadomości)
+\end{itemize}
+
+% ============================================================
+% 10. API
+% ============================================================
+\section{API Endpoints}
+
+\begin{longtable}{p{5cm}p{2cm}p{4cm}p{2.5cm}}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Opis} & \textbf{Rate Limit} \\
+\midrule
+\endhead
+/api/analyze & POST & 4-pass AI analysis (SSE) & 5/10min \\
+/api/analyze/enhanced-roast & POST & Enhanced roast (SSE) & 5/10min \\
+/api/analyze/standup & POST & Stand-Up 7 acts (SSE) & 5/10min \\
+/api/analyze/cps & POST & CPS 63 questions (SSE) & 5/10min \\
+/api/analyze/subtext & POST & Subtext Decoder (SSE) & 5/10min \\
+/api/analyze/court & POST & Court Trial (SSE) & 5/10min \\
+/api/analyze/dating-profile & POST & Dating Profile (SSE) & 5/10min \\
+/api/analyze/simulate & POST & Reply Simulator (SSE) & 5/10min \\
+/api/analyze/image & POST & Image generation & 10/10min \\
+/api/discord/fetch-messages & POST & Discord message fetch (SSE) & 3/10min \\
+/api/health & GET & Health check & brak \\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+% 11. PRYWATNOŚĆ
+% ============================================================
+\section{Prywatność i~bezpieczeństwo}
+
+\begin{enumerate}[nosep]
+  \item Surowe wiadomości przetwarzane client-side — nigdy nie przesyłane na serwer
+  \item Tylko 200--500 próbkowanych wiadomości wysyłanych do Gemini API per pass
+  \item Brak treści rozmów w~logach serwera
+  \item Wszystkie dane w~przeglądarce (IndexedDB / localStorage)
+  \item GDPR-friendly — użytkownik może usunąć dane lokalnie
+  \item Rate limiting na wszystkich endpointach API
+  \item CSP headers (Content Security Policy)
+\end{enumerate}
+
+% ============================================================
+% FOOTER
+% ============================================================
+\vfill
+\begin{center}
+\rule{0.5\textwidth}{0.4pt}
+
+\vspace{0.5cm}
+{\small\textcolor{gray}{PodTeksT — odkryj to, co kryje się między wierszami}}
+
+{\footnotesize\textcolor{gray}{Wygenerowano: \today{} | Claude Opus 4.6 | Faza 24}}
+\end{center}
+
+\end{document}

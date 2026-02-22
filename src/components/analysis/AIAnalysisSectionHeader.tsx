@@ -30,8 +30,8 @@ export default function AIAnalysisSectionHeader({ confidence }: AIAnalysisSectio
     <motion.div
       ref={ref}
       className="flex justify-between items-center mb-3.5 px-1"
-      initial={{ opacity: 0, y: 8 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+      initial={{ opacity: 0 }}
+      animate={isInView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >
       <div className="inline-flex items-center gap-1.5 font-display text-[13px] font-semibold text-chart-b bg-chart-b-subtle px-3.5 py-1.5 rounded-full">

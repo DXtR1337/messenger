@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useCardDownload } from './useCardDownload';
+import ShareCardShell from './ShareCardShell';
 import type { QuantitativeAnalysis } from '@/lib/parsers/types';
 
 interface VersusCardV2Props {
@@ -30,11 +31,11 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
   const dtB = q.engagement?.doubleTexts?.[b] ?? 0;
   if (dtA + dtB > 5) {
     cats.push({
-      question: 'KTO JEST BARDZIEJ NATRĘTNY?',
+      question: 'KTO JEST BARDZIEJ NATR\u0118TNY?',
       valuesA: dtA + pa.totalMessages,
       valuesB: dtB + pb.totalMessages,
-      evidence: `${dtA > dtB ? a.split(' ')[0] : b.split(' ')[0]} wysłał(a) ${Math.max(dtA, dtB)} double textów`,
-      emoji: '🫠',
+      evidence: `${dtA > dtB ? a.split(' ')[0] : b.split(' ')[0]} wys\u0142a\u0142(a) ${Math.max(dtA, dtB)} double tekst\u00F3w`,
+      emoji: '\u{1FAE0}',
     });
   }
 
@@ -43,11 +44,11 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
   const nightB = q.timing?.lateNightMessages?.[b] ?? 0;
   if (nightA + nightB > 10) {
     cats.push({
-      question: 'KTO JEST NOCNĄ SOWĄ?',
+      question: 'KTO JEST NOCN\u0104 SOW\u0104?',
       valuesA: nightA,
       valuesB: nightB,
       evidence: `${nightA > nightB ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(nightA, nightB)} wiad. po 22:00`,
-      emoji: '🦉',
+      emoji: '\u{1F989}',
     });
   }
 
@@ -60,18 +61,18 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
       valuesA: ghostA,
       valuesB: ghostB,
       evidence: `Ghost risk: ${a.split(' ')[0]} ${ghostA}% vs ${b.split(' ')[0]} ${ghostB}%`,
-      emoji: '👻',
+      emoji: '\u{1F47B}',
     });
   }
 
   // Emoji addict
   if (pa.emojiCount + pb.emojiCount > 50) {
     cats.push({
-      question: 'KTO JEST UZALEŻNIONY OD EMOJI?',
+      question: 'KTO JEST UZALE\u017BNIONY OD EMOJI?',
       valuesA: pa.emojiCount,
       valuesB: pb.emojiCount,
       evidence: `${pa.emojiCount > pb.emojiCount ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.emojiCount, pb.emojiCount)} emoji`,
-      emoji: '🤪',
+      emoji: '\u{1F92A}',
     });
   }
 
@@ -81,8 +82,8 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
       question: 'KTO BARDZIEJ OVERTHINKUJE?',
       valuesA: pa.questionsAsked,
       valuesB: pb.questionsAsked,
-      evidence: `${pa.questionsAsked > pb.questionsAsked ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.questionsAsked, pb.questionsAsked)} pytań`,
-      emoji: '🤔',
+      evidence: `${pa.questionsAsked > pb.questionsAsked ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.questionsAsked, pb.questionsAsked)} pyta\u0144`,
+      emoji: '\u{1F914}',
     });
   }
 
@@ -95,17 +96,17 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
       valuesA: rtB > 0 ? Math.round(1000000 / rtA) : 0, // Inverse so higher = faster
       valuesB: rtA > 0 ? Math.round(1000000 / rtB) : 0,
       evidence: `${rtA < rtB ? a.split(' ')[0] : b.split(' ')[0]}: ${formatMs(Math.min(rtA, rtB))} mediana`,
-      emoji: '⚡',
+      emoji: '\u{26A1}',
     });
   }
 
   // Message volume
   cats.push({
-    question: 'KTO WIĘCEJ GADA?',
+    question: 'KTO WI\u0118CEJ GADA?',
     valuesA: pa.totalMessages,
     valuesB: pb.totalMessages,
     evidence: `${pa.totalMessages > pb.totalMessages ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.totalMessages, pb.totalMessages).toLocaleString('pl-PL')} wiad.`,
-    emoji: '💬',
+    emoji: '\u{1F4AC}',
   });
 
   return cats;
@@ -140,9 +141,12 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
   const colorA = '#6d9fff';
   const colorB = '#b38cff';
 
+  const winnerIsA = pctA > pctB;
+  const winnerIsB = pctB > pctA;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-      {/* Category selector */}
+      {/* Category selector — outside ShareCardShell */}
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 360 }}>
         {categories.map((c, i) => (
           <button
@@ -160,21 +164,7 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
         ))}
       </div>
 
-      <div
-        ref={cardRef}
-        style={{
-          width: 360,
-          height: 360,
-          background: '#0a0a0a',
-          borderRadius: 8,
-          padding: '28px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          position: 'relative',
-          border: '2px solid #1a1a1a',
-        }}
-      >
+      <ShareCardShell cardRef={cardRef}>
         {/* Emoji watermark */}
         <div
           style={{
@@ -182,121 +172,192 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            fontSize: '8rem',
+            fontSize: '12rem',
             opacity: 0.04,
             pointerEvents: 'none',
+            zIndex: 0,
           }}
         >
           {cat.emoji}
         </div>
 
-        {/* Question */}
+        {/* Title section */}
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: 22,
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: syne,
+              fontSize: '1.7rem',
+              fontWeight: 900,
+              letterSpacing: '0.15em',
+              background: 'linear-gradient(135deg, #6d9fff, #b38cff)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              lineHeight: 1,
+              textShadow: '0 0 40px rgba(109,159,255,0.3), 0 0 80px rgba(179,140,255,0.2)',
+              filter: 'drop-shadow(0 0 20px rgba(109,159,255,0.25))',
+            }}
+          >
+            POJEDYNEK
+          </div>
+          <div
+            style={{
+              fontFamily: mono,
+              fontSize: '0.63rem',
+              color: '#555',
+              letterSpacing: '0.08em',
+              marginTop: 6,
+            }}
+          >
+            kto wygrywa ten chat?
+          </div>
+        </div>
+
+        {/* Question with glow/shadow */}
         <div
           style={{
             fontFamily: syne,
-            fontSize: '1.1rem',
+            fontSize: '1.3rem',
             fontWeight: 900,
             color: '#fff',
             textAlign: 'center',
             letterSpacing: '0.02em',
             lineHeight: 1.2,
-            marginBottom: 20,
+            marginBottom: 28,
             position: 'relative',
             zIndex: 1,
+            textShadow: '0 0 30px rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.5)',
           }}
         >
           {cat.question}
         </div>
 
-        {/* Names + percentages */}
+        {/* Names row with VS circle */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            marginBottom: 10,
+            alignItems: 'center',
+            marginBottom: 16,
             position: 'relative',
             zIndex: 1,
           }}
         >
-          <div style={{ textAlign: 'left' }}>
-            <div
-              style={{
-                fontFamily: syne,
-                fontSize: '2.2rem',
-                fontWeight: 900,
-                color: colorA,
-                lineHeight: 1,
-              }}
-            >
-              {pctA}%
-            </div>
-            <div
-              style={{
-                fontFamily: grotesk,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                color: colorA,
-                opacity: 0.8,
-                marginTop: 4,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              {nameA}
-            </div>
-          </div>
-
+          {/* Person A name */}
           <div
             style={{
-              fontFamily: mono,
-              fontSize: '0.6rem',
-              color: '#444',
-              letterSpacing: '0.1em',
+              fontFamily: grotesk,
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              color: colorA,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              flex: 1,
+              textAlign: 'left',
             }}
           >
-            VS
+            {nameA}
           </div>
 
-          <div style={{ textAlign: 'right' }}>
-            <div
+          {/* VS circle — larger with double border and outer glow */}
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(109,159,255,0.2), rgba(179,140,255,0.2))',
+              border: '2px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 0 0 3px rgba(109,159,255,0.12), 0 0 0 6px rgba(179,140,255,0.08), 0 0 24px rgba(109,159,255,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <span
               style={{
                 fontFamily: syne,
-                fontSize: '2.2rem',
+                fontSize: '1rem',
                 fontWeight: 900,
-                color: colorB,
-                lineHeight: 1,
+                background: 'linear-gradient(135deg, #6d9fff, #b38cff)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
               }}
             >
-              {pctB}%
-            </div>
-            <div
-              style={{
-                fontFamily: grotesk,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                color: colorB,
-                opacity: 0.8,
-                marginTop: 4,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              {nameB}
-            </div>
+              VS
+            </span>
+          </div>
+
+          {/* Person B name */}
+          <div
+            style={{
+              fontFamily: grotesk,
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              color: colorB,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              flex: 1,
+              textAlign: 'right',
+            }}
+          >
+            {nameB}
           </div>
         </div>
 
-        {/* Progress bar */}
+        {/* Percentages with crown for winner and text-shadow glow */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: syne,
+              fontSize: '3.5rem',
+              fontWeight: 900,
+              color: colorA,
+              lineHeight: 1,
+              textShadow: winnerIsA ? `0 0 20px ${colorA}60, 0 0 40px ${colorA}30` : 'none',
+            }}
+          >
+            {winnerIsA ? '\u{1F451}' : ''}{pctA}%
+          </div>
+          <div
+            style={{
+              fontFamily: syne,
+              fontSize: '3.5rem',
+              fontWeight: 900,
+              color: colorB,
+              lineHeight: 1,
+              textShadow: winnerIsB ? `0 0 20px ${colorB}60, 0 0 40px ${colorB}30` : 'none',
+            }}
+          >
+            {pctB}%{winnerIsB ? '\u{1F451}' : ''}
+          </div>
+        </div>
+
+        {/* Progress bar — taller with inner shine */}
         <div
           style={{
             width: '100%',
-            height: 8,
-            borderRadius: 4,
+            height: 14,
+            borderRadius: 7,
             background: '#1a1a1a',
             overflow: 'hidden',
             display: 'flex',
-            marginBottom: 16,
+            marginBottom: 28,
             position: 'relative',
             zIndex: 1,
           }}
@@ -306,58 +367,78 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
               width: `${pctA}%`,
               height: '100%',
               background: colorA,
-              borderRadius: '4px 0 0 4px',
+              borderRadius: '7px 0 0 7px',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: `0 0 12px ${colorA}40`,
             }}
-          />
+          >
+            {/* Inner shine overlay */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '50%',
+                background: 'linear-gradient(to bottom, rgba(255,255,255,0.2), transparent)',
+                borderRadius: '7px 0 0 0',
+              }}
+            />
+          </div>
           <div
             style={{
               width: `${pctB}%`,
               height: '100%',
               background: colorB,
-              borderRadius: '0 4px 4px 0',
+              borderRadius: '0 7px 7px 0',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: `0 0 12px ${colorB}40`,
             }}
-          />
+          >
+            {/* Inner shine overlay */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '50%',
+                background: 'linear-gradient(to bottom, rgba(255,255,255,0.2), transparent)',
+                borderRadius: '0 7px 0 0',
+              }}
+            />
+          </div>
         </div>
 
-        {/* Evidence */}
+        {/* Evidence with more visible border */}
         <div
           style={{
             fontFamily: mono,
-            fontSize: '0.55rem',
-            color: '#666',
+            fontSize: '0.7rem',
+            color: '#888',
             textAlign: 'center',
-            lineHeight: 1.4,
+            lineHeight: 1.5,
             marginTop: 'auto',
             position: 'relative',
             zIndex: 1,
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: 8,
+            padding: '10px 14px',
+            border: '1px solid rgba(255,255,255,0.1)',
           }}
         >
           {cat.evidence}
         </div>
-
-        {/* Footer */}
-        <div
-          style={{
-            fontFamily: mono,
-            fontSize: '0.42rem',
-            color: 'rgba(255,255,255,0.15)',
-            textAlign: 'center',
-            letterSpacing: '0.12em',
-            marginTop: 8,
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          podtekst.app
-        </div>
-      </div>
+      </ShareCardShell>
 
       <button
         onClick={download}
         disabled={isDownloading}
         className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-card-hover hover:text-foreground disabled:opacity-50"
       >
-        {isDownloading ? 'Pobieranie...' : '📥 Pobierz kartę'}
+        {isDownloading ? 'Pobieranie...' : '\u{1F4E5} Pobierz kart\u0119'}
       </button>
     </div>
   );

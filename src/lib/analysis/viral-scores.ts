@@ -101,7 +101,7 @@ function responseSymmetryScore(
   const medA = timing.perPerson[names[0]]?.medianResponseTimeMs ?? 0;
   const medB = timing.perPerson[names[1]]?.medianResponseTimeMs ?? 0;
   const maxMed = Math.max(medA, medB);
-  if (maxMed === 0) return 100;
+  if (maxMed === 0) return 50; // no data ≠ perfect symmetry
   const diff = Math.abs(medA - medB);
   return clamp(100 - safeDivide(diff, maxMed) * 100, 0, 100);
 }
@@ -119,16 +119,36 @@ function messageBalanceScore(
 }
 
 /**
- * Engagement Balance: how similar reaction rates are.
+ * Engagement Balance: how similar reaction/engagement rates are.
+ * Uses min/max ratio instead of absolute difference — more robust across scales.
+ * For Discord (where reactionRate is 0), uses mentionRate+replyRate instead.
  */
 function engagementBalanceScore(
   engagement: EngagementMetrics,
   names: string[],
 ): number {
   if (names.length < 2) return 0;
-  const rateA = engagement.reactionRate[names[0]] ?? 0;
-  const rateB = engagement.reactionRate[names[1]] ?? 0;
-  return clamp(100 - Math.abs(rateA - rateB) * 500, 0, 100);
+  // Use giveRate for balance comparison (how actively each person engages)
+  const rateA = engagement.reactionGiveRate?.[names[0]] ?? engagement.reactionRate[names[0]] ?? 0;
+  const rateB = engagement.reactionGiveRate?.[names[1]] ?? engagement.reactionRate[names[1]] ?? 0;
+
+  // Discord fallback: use mentionRate+replyRate when reactionRate is 0 for both
+  if (rateA === 0 && rateB === 0 && engagement.mentionRate && engagement.replyRate) {
+    const mRateA = engagement.mentionRate[names[0]] ?? 0;
+    const mRateB = engagement.mentionRate[names[1]] ?? 0;
+    const rRateA = engagement.replyRate[names[0]] ?? 0;
+    const rRateB = engagement.replyRate[names[1]] ?? 0;
+    const mMax = Math.max(mRateA, mRateB);
+    const rMax = Math.max(rRateA, rRateB);
+    const mentionBalance = mMax > 0 ? Math.round((Math.min(mRateA, mRateB) / mMax) * 100) : 50;
+    const replyBalance = rMax > 0 ? Math.round((Math.min(rRateA, rRateB) / rMax) * 100) : 50;
+    return Math.round((mentionBalance + replyBalance) / 2);
+  }
+
+  // min/max ratio: 0 when one is 0, 100 when equal
+  const maxRate = Math.max(rateA, rateB);
+  if (maxRate === 0) return 50; // no data — neutral
+  return clamp(Math.round((Math.min(rateA, rateB) / maxRate) * 100), 0, 100);
 }
 
 /**
@@ -142,7 +162,7 @@ function lengthMatchScore(
   const avgA = perPerson[names[0]]?.averageMessageLength ?? 0;
   const avgB = perPerson[names[1]]?.averageMessageLength ?? 0;
   const maxLen = Math.max(avgA, avgB);
-  if (maxLen === 0) return 100;
+  if (maxLen === 0) return 50; // no data ≠ perfect match
   return clamp(100 - safeDivide(Math.abs(avgA - avgB), maxLen) * 100, 0, 100);
 }
 
@@ -179,8 +199,9 @@ function computeInterestScore(
     .map((entry) => entry.perPerson[name] ?? 0)
     .filter((v) => v > 0);
   const rtSlope = linearRegressionSlope(rtValues);
-  // Normalize: negative slope is good. A slope of -60000ms/month is very good.
-  // Map range: slope <= -60000 -> 100, slope >= 60000 -> 0
+  // Normalize: negative slope is good (getting faster at responding).
+  // Map range: slope <= -60000ms/month -> 100, slope >= 60000 -> 0
+  // Constant 1200 = 60000/50: maps ±60s/month change to ±50 points around midpoint 50
   const rtScore = clamp(50 - safeDivide(rtSlope, 1200), 0, 100);
 
   // 3. Message length trend — 15% weight
@@ -190,11 +211,22 @@ function computeInterestScore(
   const mlSlope = linearRegressionSlope(mlValues);
   // Positive slope = longer messages = more engaged
   // Map: slope of +2 words/month -> 100, slope of -2 -> 0
+  // Constant 25 = 50/2: maps ±2 words/month change to ±50 points around midpoint 50
   const mlScore = clamp(50 + mlSlope * 25, 0, 100);
 
-  // 4. Reaction frequency — 20% weight
-  const reactionRate = engagement.reactionRate[name] ?? 0;
-  const reactionScore = clamp(reactionRate * 500, 0, 100);
+  // 4. Engagement frequency — 20% weight
+  // Use receiveRate: measures how much engagement this person's messages attract from others
+  let engagementScore: number;
+  const receiveRate = engagement.reactionReceiveRate?.[name] ?? engagement.reactionRate[name] ?? 0;
+  if (receiveRate > 0) {
+    engagementScore = clamp(receiveRate * 500, 0, 100);
+  } else if (engagement.mentionRate && engagement.replyRate) {
+    const mentionR = engagement.mentionRate[name] ?? 0;
+    const replyR = engagement.replyRate[name] ?? 0;
+    engagementScore = clamp((mentionR * 200 + replyR * 300), 0, 100);
+  } else {
+    engagementScore = 50; // neutral fallback
+  }
 
   // 5. Double texting frequency — 10% weight
   const doubleTexts = engagement.doubleTexts[name] ?? 0;
@@ -211,7 +243,7 @@ function computeInterestScore(
     initiationScore * 0.25 +
     rtScore * 0.2 +
     mlScore * 0.15 +
-    reactionScore * 0.2 +
+    engagementScore * 0.2 +
     dtScore * 0.1 +
     lnScore * 0.1;
 
@@ -399,8 +431,9 @@ export function computeViralScores(
   if (interestValues.length >= 2) {
     const sorted = [...interestValues].sort((a, b) => b[1] - a[1]);
     delusionScore = Math.abs(sorted[0][1] - sorted[1][1]);
-    delusionHolder = sorted[0][0];
-    // Only set a holder if there's a meaningful difference
+    // Delusion holder = person with LOWER interest score — they don't see the asymmetry
+    // (the more invested person is aware of their investment; the less invested one is oblivious)
+    delusionHolder = sorted[1][0];
     if (delusionScore < 5) {
       delusionHolder = undefined;
     }

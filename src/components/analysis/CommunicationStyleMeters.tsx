@@ -27,30 +27,44 @@ function getEmotionalnessPosition(profile: PersonProfile): number {
 }
 
 function getConflictPosition(profile: PersonProfile): number {
-  // Check if the profile has conflict resolution tendency data via communication_profile
-  // We infer from communication style and assertiveness as proxies
-  const style = profile.communication_profile.style;
-  const assertiveness = profile.communication_profile.assertiveness ?? 5;
+  const cr = profile.conflict_resolution;
+  if (!cr?.primary_style) return 50;
 
-  // Use a heuristic: indirect + low assertiveness = avoidant, direct + high assertiveness = confrontational
-  if (style === 'indirect' && assertiveness <= 3) return 15;
-  if (style === 'indirect' && assertiveness <= 5) return 30;
-  if (style === 'mixed' && assertiveness <= 5) return 40;
-  if (style === 'mixed' && assertiveness <= 7) return 50;
-  if (style === 'direct' && assertiveness <= 7) return 65;
-  if (style === 'direct') return 80;
-  return 50;
+  // Base range per conflict style (center of each range)
+  const baseMap: Record<string, number> = {
+    avoidant: 20,
+    passive_aggressive: 35,
+    humor_deflection: 40,
+    collaborative: 50,
+    direct_confrontation: 70,
+    explosive: 85,
+  };
+
+  const base = baseMap[cr.primary_style] ?? 50;
+
+  // Modulate by de_escalation_skills (0-10): higher skills shift left (calmer),
+  // lower skills shift right (more confrontational). Adjustment = (5 - skills) * 2
+  const deEscalation = cr.de_escalation_skills ?? 5;
+  const adjustment = (5 - deEscalation) * 2;
+
+  return clamp(0, base + adjustment, 100);
 }
 
 function getFormalityPosition(
+  profile: PersonProfile | undefined,
   participantName: string,
   pass1?: Pass1Result,
 ): number {
-  if (pass1?.tone_per_person?.[participantName]) {
-    const formality = pass1.tone_per_person[participantName].formality_level ?? 3;
-    return clamp(0, formality * 10, 100);
-  }
-  return 30;
+  const formalityLevel = pass1?.tone_per_person?.[participantName]?.formality_level;
+  const selfDisclosure = profile?.communication_profile?.self_disclosure_depth;
+
+  // Primary signal: formality_level (0-10 scale) mapped to 0-100
+  const primary = formalityLevel != null ? formalityLevel * 10 : 50;
+
+  // Secondary signal: higher self-disclosure = less formal (negative adjustment)
+  const disclosureAdjustment = selfDisclosure != null ? -selfDisclosure * 2 : 0;
+
+  return clamp(5, primary + disclosureAdjustment, 95);
 }
 
 interface MeterAxis {
@@ -87,7 +101,7 @@ const METER_AXES: MeterAxis[] = [
     label: 'Formalność',
     leftLabel: 'Nieformalna',
     rightLabel: 'Formalna',
-    getPosition: (_profile, name, pass1) => getFormalityPosition(name, pass1),
+    getPosition: (profile, name, pass1) => getFormalityPosition(profile, name, pass1),
   },
 ];
 
@@ -183,6 +197,18 @@ export default function CommunicationStyleMeters({
             />
           );
         })}
+      </div>
+      <div className="flex gap-4 px-5 pb-3 mt-1">
+        <span className="flex items-center gap-1.5 text-[10px] text-text-muted">
+          <span className="inline-block h-2 w-2 rounded-full bg-chart-a" />
+          {personA}
+        </span>
+        {personB && (
+          <span className="flex items-center gap-1.5 text-[10px] text-text-muted">
+            <span className="inline-block h-2 w-2 rounded-full bg-chart-b" />
+            {personB}
+          </span>
+        )}
       </div>
     </div>
   );

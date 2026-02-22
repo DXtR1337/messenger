@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useCardDownload } from './useCardDownload';
 import type { Pass4Result } from '@/lib/analysis/types';
 
@@ -9,61 +9,91 @@ interface HealthScoreCardProps {
   participants: string[];
 }
 
-const COMPONENT_DATA: Record<string, { label: string; unit: string; icon: string }> = {
-  balance: { label: 'BAL', unit: 'mmHg', icon: '⚖️' },
-  reciprocity: { label: 'REC', unit: 'bpm', icon: '🔥' },
-  response_pattern: { label: 'RSP', unit: 'mL/s', icon: '💬' },
-  emotional_safety: { label: 'SAF', unit: 'SpO₂', icon: '🛡️' },
-  growth_trajectory: { label: 'GRW', unit: '°C', icon: '📈' },
+const COMPONENT_LABELS: Record<string, string> = {
+  balance: 'Homeostaza',
+  reciprocity: 'Reciprocitas',
+  response_pattern: 'Reaktywność',
+  emotional_safety: 'Securitas Em.',
+  growth_trajectory: 'Trajectoria',
 };
 
-function getVitalStatus(val: number): { color: string; status: string } {
-  if (val >= 75) return { color: '#00ff88', status: 'NORMA' };
-  if (val >= 50) return { color: '#fbbf24', status: 'PODWYŻSZONY' };
-  if (val >= 30) return { color: '#ff8c00', status: 'OSTRZEŻENIE' };
-  return { color: '#ff3333', status: 'KRYTYCZNY' };
+function getScoreColor(val: number): string {
+  if (val >= 80) return '#16a34a';
+  if (val >= 60) return '#ca8a04';
+  if (val >= 40) return '#ea580c';
+  return '#dc2626';
+}
+
+function getStatusText(val: number): string {
+  if (val >= 80) return 'NORMA';
+  if (val >= 60) return 'PODWYŻSZONY';
+  if (val >= 40) return 'OSTRZEŻENIE';
+  return 'KRYTYCZNY';
+}
+
+function getStatusDot(val: number): string {
+  if (val >= 80) return '#16a34a';
+  if (val >= 60) return '#ca8a04';
+  if (val >= 40) return '#ea580c';
+  return '#dc2626';
+}
+
+function getRecommendation(score: number): string {
+  if (score >= 80) return 'Relacja w doskonałym stanie. Kontynuować dotychczasowe wzorce komunikacji.';
+  if (score >= 60) return 'Parametry w normie z lekkim odchyleniem. Zalecana większa uwaga na wzajemność.';
+  if (score >= 40) return 'Wykryto niepokojące wzorce. Zalecana konsultacja i rewizja dynamiki rozmów.';
+  return 'Stan krytyczny. Pilna interwencja komunikacyjna wymagana. Rozważyć szczerą rozmowę.';
 }
 
 export default function HealthScoreCard({ pass4, participants }: HealthScoreCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-health-score');
+  const { download, isDownloading } = useCardDownload(cardRef, 'podtekst-health-score', {
+    backgroundColor: '#f8fafc',
+  });
 
   const { health_score } = pass4;
   const score = health_score.overall;
+  const scoreColor = getScoreColor(score);
 
-  const mainStatus = getVitalStatus(score);
+  const patientNames = participants.join(' & ');
+  const today = new Date();
+  const dateStr = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;
 
-  const verdict =
-    score >= 80
-      ? 'PACJENT STABILNY'
-      : score >= 60
-        ? 'POD OBSERWACJĄ'
-        : score >= 40
-          ? 'STAN POWAŻNY'
-          : 'STAN KRYTYCZNY';
-
-  const nameA = participants[0] ?? 'Osoba A';
-  const nameB = participants[1] ?? 'Osoba B';
+  const cardId = useMemo(() => {
+    return `PT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  }, []);
 
   const components = Object.entries(health_score.components) as [string, number][];
 
-  // Generate ECG-like path
-  const ecgWidth = 328;
-  const ecgHeight = 50;
-  const ecgPoints: string[] = [];
-  const segments = 40;
-  for (let i = 0; i <= segments; i++) {
-    const x = (i / segments) * ecgWidth;
-    let y = ecgHeight / 2;
-    const pos = i % 10;
-    if (pos === 3) y = ecgHeight * 0.8;
-    else if (pos === 4) y = ecgHeight * 0.1;
-    else if (pos === 5) y = ecgHeight * 0.9;
-    else if (pos === 6) y = ecgHeight * 0.4;
-    else y = ecgHeight / 2 + (Math.random() - 0.5) * 4;
-    ecgPoints.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`);
-  }
-  const ecgPath = ecgPoints.join(' ');
+  // SVG gauge arc parameters
+  const gaugeR = 82;
+  const gaugeCx = 130;
+  const gaugeCy = 100;
+  // Arc from 225deg to -45deg (270 degree sweep) going clockwise
+  const startAngle = 135; // degrees from positive x-axis (bottom-left)
+  const sweepAngle = 270; // total sweep
+  const scoreAngle = startAngle + (score / 100) * sweepAngle;
+  // Build the arc path
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const arcStartX = gaugeCx + gaugeR * Math.cos(toRad(startAngle));
+  const arcStartY = gaugeCy + gaugeR * Math.sin(toRad(startAngle));
+  const arcEndX = gaugeCx + gaugeR * Math.cos(toRad(startAngle + sweepAngle));
+  const arcEndY = gaugeCy + gaugeR * Math.sin(toRad(startAngle + sweepAngle));
+
+  // Score arc endpoint
+  const scoreEndX = gaugeCx + gaugeR * Math.cos(toRad(scoreAngle));
+  const scoreEndY = gaugeCy + gaugeR * Math.sin(toRad(scoreAngle));
+
+  const largeArcFull = sweepAngle > 180 ? 1 : 0;
+  const scoreSweep = (score / 100) * sweepAngle;
+  const largeArcScore = scoreSweep > 180 ? 1 : 0;
+
+  const bgArcPath = `M ${arcStartX} ${arcStartY} A ${gaugeR} ${gaugeR} 0 ${largeArcFull} 1 ${arcEndX} ${arcEndY}`;
+  const scoreArcPath = `M ${arcStartX} ${arcStartY} A ${gaugeR} ${gaugeR} 0 ${largeArcScore} 1 ${scoreEndX} ${scoreEndY}`;
+
+  const syne = 'var(--font-syne)';
+  const mono = 'var(--font-geist-mono)';
+  const grotesk = 'var(--font-space-grotesk)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -72,341 +102,454 @@ export default function HealthScoreCard({ pass4, participants }: HealthScoreCard
         style={{
           width: 360,
           height: 640,
-          background: '#050510',
+          background: '#f8fafc',
           position: 'relative',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
+          fontFamily: mono,
         }}
       >
-        {/* Subtle grid overlay */}
+        {/* Blue header bar */}
         <div
           style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: 'linear-gradient(rgba(0,255,136,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,0.02) 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-            pointerEvents: 'none',
-            zIndex: 1,
-          }}
-        />
-
-        {/* Header — hospital monitor style */}
-        <div
-          style={{
-            padding: '14px 16px 10px',
-            borderBottom: '2px solid #1a1a2e',
+            background: '#0066cc',
+            padding: '10px 16px',
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
-            position: 'relative',
-            zIndex: 2,
+            justifyContent: 'space-between',
           }}
         >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: mainStatus.color,
-                  boxShadow: `0 0 8px ${mainStatus.color}`,
-                }}
-              />
-              <span
-                style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  color: '#ededed',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                PODTEKST
-              </span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Red cross icon */}
+            <svg width={18} height={18} viewBox="0 0 18 18">
+              <rect x={7} y={2} width={4} height={14} rx={0.5} fill="#dc2626" />
+              <rect x={2} y={7} width={14} height={4} rx={0.5} fill="#dc2626" />
+            </svg>
             <span
               style={{
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '0.42rem',
-                color: '#555577',
-                letterSpacing: '0.08em',
-              }}
-            >
-              MONITOR PARAMETRÓW RELACJI
-            </span>
-          </div>
-          <div
-            style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.42rem',
-              color: mainStatus.color,
-              textAlign: 'right',
-              letterSpacing: '0.06em',
-            }}
-          >
-            <div>♥ {60 + Math.round(score * 0.4)} BPM</div>
-            <div style={{ color: '#555577' }}>SALA 42</div>
-          </div>
-        </div>
-
-        {/* Patient info strip */}
-        <div
-          style={{
-            padding: '8px 16px',
-            background: '#0a0a1a',
-            borderBottom: '1px solid #1a1a2e',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            position: 'relative',
-            zIndex: 2,
-          }}
-        >
-          <div style={{ display: 'flex', gap: 12 }}>
-            <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.46rem', color: '#6d9fff' }}>
-              PT.A: {nameA.substring(0, 12).toUpperCase()}
-            </span>
-            <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '0.46rem', color: '#b38cff' }}>
-              PT.B: {nameB.substring(0, 12).toUpperCase()}
-            </span>
-          </div>
-          <span
-            style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.42rem',
-              color: '#555577',
-            }}
-          >
-            ID: {Math.random().toString(36).substring(2, 8).toUpperCase()}
-          </span>
-        </div>
-
-        {/* ECG trace */}
-        <div
-          style={{
-            padding: '8px 16px',
-            position: 'relative',
-            zIndex: 2,
-          }}
-        >
-          <svg width={ecgWidth} height={ecgHeight} viewBox={`0 0 ${ecgWidth} ${ecgHeight}`}>
-            <path
-              d={ecgPath}
-              fill="none"
-              stroke={mainStatus.color}
-              strokeWidth={1.5}
-              opacity={0.6}
-            />
-          </svg>
-        </div>
-
-        {/* Main score — large */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '8px 16px 16px',
-            position: 'relative',
-            zIndex: 2,
-          }}
-        >
-          {/* Score glow */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 120,
-              height: 120,
-              borderRadius: '50%',
-              background: `radial-gradient(circle, ${mainStatus.color}22, transparent 70%)`,
-              pointerEvents: 'none',
-            }}
-          />
-          <span
-            style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontWeight: 900,
-              fontSize: '4rem',
-              lineHeight: 1,
-              color: mainStatus.color,
-              textShadow: `0 0 40px ${mainStatus.color}44`,
-              position: 'relative',
-            }}
-          >
-            {score}
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.52rem',
-              color: '#555577',
-              marginTop: 4,
-            }}
-          >
-            / 100 INDEKS ZDROWIA
-          </span>
-          <div
-            style={{
-              marginTop: 8,
-              padding: '4px 16px',
-              border: `1px solid ${mainStatus.color}44`,
-              borderRadius: 2,
-              background: `${mainStatus.color}11`,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '0.58rem',
-                fontWeight: 700,
-                color: mainStatus.color,
+                fontFamily: syne,
+                fontWeight: 800,
+                fontSize: '1.0rem',
+                color: '#ffffff',
                 letterSpacing: '0.12em',
               }}
             >
-              ■ {verdict}
+              KARTA PACJENTA
             </span>
+          </div>
+          <span
+            style={{
+              fontFamily: mono,
+              fontSize: '0.63rem',
+              color: 'rgba(255,255,255,0.7)',
+              letterSpacing: '0.06em',
+            }}
+          >
+            PODTEKST LAB
+          </span>
+        </div>
+
+        {/* Patient info section */}
+        <div
+          style={{
+            padding: '10px 16px 8px',
+            borderBottom: '1px solid #e2e8f0',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: mono, fontSize: '0.68rem', color: '#64748b' }}>
+                Pacjent: <span style={{ color: '#1e293b', fontWeight: 600 }}>{patientNames}</span>
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: mono, fontSize: '0.63rem', color: '#94a3b8' }}>
+                Data badania: {dateStr}
+              </span>
+              <span style={{ fontFamily: mono, fontSize: '0.63rem', color: '#94a3b8' }}>
+                Nr karty: {cardId}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Vitals grid */}
+        {/* Main score gauge */}
         <div
           style={{
-            flex: 1,
-            padding: '0 16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 6,
-            position: 'relative',
-            zIndex: 2,
+            alignItems: 'center',
+            padding: '12px 16px 6px',
           }}
         >
+          <div style={{ position: 'relative', width: 260, height: 160 }}>
+            <svg width={260} height={160} viewBox="0 0 260 160">
+              {/* Background arc */}
+              <path
+                d={bgArcPath}
+                fill="none"
+                stroke="#e2e8f0"
+                strokeWidth={10}
+                strokeLinecap="round"
+              />
+              {/* Score arc */}
+              {score > 0 && (
+                <path
+                  d={scoreArcPath}
+                  fill="none"
+                  stroke={scoreColor}
+                  strokeWidth={10}
+                  strokeLinecap="round"
+                />
+              )}
+              {/* Tick marks at 0, 25, 50, 75, 100 */}
+              {[0, 25, 50, 75, 100].map((tick) => {
+                const tickAngle = startAngle + (tick / 100) * sweepAngle;
+                const innerR = gaugeR - 14;
+                const outerR = gaugeR - 8;
+                const x1 = gaugeCx + innerR * Math.cos(toRad(tickAngle));
+                const y1 = gaugeCy + innerR * Math.sin(toRad(tickAngle));
+                const x2 = gaugeCx + outerR * Math.cos(toRad(tickAngle));
+                const y2 = gaugeCy + outerR * Math.sin(toRad(tickAngle));
+                const labelR = gaugeR - 22;
+                const lx = gaugeCx + labelR * Math.cos(toRad(tickAngle));
+                const ly = gaugeCy + labelR * Math.sin(toRad(tickAngle));
+                return (
+                  <g key={tick}>
+                    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#94a3b8" strokeWidth={1} />
+                    <text
+                      x={lx}
+                      y={ly}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill="#94a3b8"
+                      fontSize="7.5"
+                      fontFamily={mono}
+                    >
+                      {tick}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+            {/* Score number in center */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '52%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: syne,
+                  fontWeight: 900,
+                  fontSize: '3rem',
+                  lineHeight: 1,
+                  color: scoreColor,
+                }}
+              >
+                {score}
+              </div>
+              <div
+                style={{
+                  fontFamily: mono,
+                  fontSize: '0.63rem',
+                  color: '#94a3b8',
+                  marginTop: 2,
+                  letterSpacing: '0.06em',
+                }}
+              >
+                / 100
+              </div>
+            </div>
+          </div>
           <div
             style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.42rem',
-              color: '#555577',
-              letterSpacing: '0.12em',
-              marginBottom: 2,
+              fontFamily: mono,
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              color: '#64748b',
+              letterSpacing: '0.14em',
+              marginTop: 0,
             }}
           >
-            ROZKŁAD PARAMETRÓW
+            OGÓLNY STAN RELACJI
           </div>
-          {components.map(([key, value]) => {
-            const data = COMPONENT_DATA[key];
-            const vital = getVitalStatus(value);
-            if (!data) return null;
+        </div>
+
+        {/* Lab results table */}
+        <div style={{ padding: '6px 16px 0', flex: 1 }}>
+          {/* Table header */}
+          <div
+            style={{
+              display: 'flex',
+              padding: '5px 8px',
+              borderBottom: '2px solid #0066cc',
+              marginBottom: 0,
+            }}
+          >
+            <span
+              style={{
+                flex: 2.2,
+                fontFamily: mono,
+                fontSize: '0.63rem',
+                fontWeight: 700,
+                color: '#0066cc',
+                letterSpacing: '0.1em',
+              }}
+            >
+              PARAMETR
+            </span>
+            <span
+              style={{
+                flex: 1,
+                fontFamily: mono,
+                fontSize: '0.63rem',
+                fontWeight: 700,
+                color: '#0066cc',
+                letterSpacing: '0.1em',
+                textAlign: 'center',
+              }}
+            >
+              WYNIK
+            </span>
+            <span
+              style={{
+                flex: 1,
+                fontFamily: mono,
+                fontSize: '0.63rem',
+                fontWeight: 700,
+                color: '#0066cc',
+                letterSpacing: '0.1em',
+                textAlign: 'center',
+              }}
+            >
+              NORMA
+            </span>
+            <span
+              style={{
+                flex: 1,
+                fontFamily: mono,
+                fontSize: '0.63rem',
+                fontWeight: 700,
+                color: '#0066cc',
+                letterSpacing: '0.1em',
+                textAlign: 'center',
+              }}
+            >
+              STATUS
+            </span>
+          </div>
+
+          {/* Table rows */}
+          {components.map(([key, value], i) => {
+            const label = COMPONENT_LABELS[key] ?? key;
+            const dotColor = getStatusDot(value);
+            const status = getStatusText(value);
             return (
               <div
                 key={key}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 10px',
-                  background: '#0a0a1a',
-                  border: `1px solid ${vital.color}22`,
-                  borderLeft: `3px solid ${vital.color}`,
-                  borderRadius: 2,
+                  padding: '7px 8px',
+                  background: i % 2 === 0 ? '#f1f5f9' : '#f8fafc',
+                  borderBottom: '1px solid #e2e8f0',
                 }}
               >
-                <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{data.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-geist-mono)',
-                        fontSize: '0.52rem',
-                        color: '#888899',
-                        letterSpacing: '0.06em',
-                      }}
-                    >
-                      {data.label}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-geist-mono)',
-                        fontSize: '0.42rem',
-                        color: vital.color,
-                        letterSpacing: '0.08em',
-                      }}
-                    >
-                      {vital.status}
-                    </span>
-                  </div>
-                  {/* Value bar */}
-                  <div
-                    style={{
-                      height: 3,
-                      borderRadius: 2,
-                      background: '#1a1a2e',
-                      marginTop: 4,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${value}%`,
-                        height: '100%',
-                        background: vital.color,
-                        borderRadius: 2,
-                        boxShadow: `0 0 6px ${vital.color}44`,
-                      }}
-                    />
-                  </div>
-                </div>
                 <span
                   style={{
-                    fontFamily: 'var(--font-geist-mono)',
+                    flex: 2.2,
+                    fontFamily: mono,
+                    fontSize: '0.68rem',
+                    color: '#334155',
+                    fontWeight: 500,
+                  }}
+                >
+                  {label}
+                </span>
+                <span
+                  style={{
+                    flex: 1,
+                    fontFamily: mono,
+                    fontSize: '0.75rem',
                     fontWeight: 700,
-                    fontSize: '0.85rem',
-                    color: vital.color,
-                    flexShrink: 0,
-                    width: 28,
-                    textAlign: 'right',
+                    color: '#1e293b',
+                    textAlign: 'center',
                   }}
                 >
                   {value}
+                  <span style={{ fontSize: '0.63rem', color: '#94a3b8', fontWeight: 400 }}>/100</span>
                 </span>
+                <span
+                  style={{
+                    flex: 1,
+                    fontFamily: mono,
+                    fontSize: '0.63rem',
+                    color: '#94a3b8',
+                    textAlign: 'center',
+                  }}
+                >
+                  60-100
+                </span>
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: '50%',
+                      background: dotColor,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: mono,
+                      fontSize: '0.68rem',
+                      color: dotColor,
+                      fontWeight: 600,
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {status}
+                  </span>
+                </div>
               </div>
             );
           })}
         </div>
 
-        {/* Footer */}
+        {/* Doctor's note */}
         <div
           style={{
-            padding: '10px 16px 14px',
-            borderTop: '1px solid #1a1a2e',
+            padding: '10px 16px 6px',
+            borderTop: '1px dashed #cbd5e1',
+            margin: '4px 16px 0',
+          }}
+        >
+          <div
+            style={{
+              fontFamily: mono,
+              fontSize: '0.63rem',
+              color: '#64748b',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              marginBottom: 4,
+            }}
+          >
+            ZALECENIE LEKARSKIE:
+          </div>
+          <div
+            style={{
+              fontFamily: grotesk,
+              fontSize: '0.68rem',
+              color: '#475569',
+              fontStyle: 'italic',
+              lineHeight: 1.5,
+              marginBottom: 6,
+            }}
+          >
+            {getRecommendation(score)}
+          </div>
+          <div
+            style={{
+              fontFamily: mono,
+              fontSize: '0.63rem',
+              color: '#94a3b8',
+              textAlign: 'right',
+              fontStyle: 'italic',
+            }}
+          >
+            lek. AI Gemini, spec. konwersatologii
+          </div>
+        </div>
+
+        {/* Footer stamp */}
+        <div
+          style={{
+            padding: '8px 16px 12px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            position: 'relative',
-            zIndex: 2,
           }}
         >
-          <span
-            style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.42rem',
-              color: '#555577',
-            }}
-          >
-            podtekst.app
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '0.42rem',
-              color: mainStatus.color,
-            }}
-          >
-            ● MONITOROWANIE
-          </span>
+          {/* Blue circular stamp */}
+          <svg width={52} height={52} viewBox="0 0 52 52">
+            <circle cx={26} cy={26} r={23} fill="none" stroke="#0066cc" strokeWidth={1.5} opacity={0.5} />
+            <circle cx={26} cy={26} r={19} fill="none" stroke="#0066cc" strokeWidth={0.5} opacity={0.5} />
+            <text
+              x={26}
+              y={21}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#0066cc"
+              fontSize="5.5"
+              fontFamily={mono}
+              fontWeight={700}
+              letterSpacing="0.1em"
+              opacity={0.7}
+            >
+              PODTEKST
+            </text>
+            <text
+              x={26}
+              y={27}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#0066cc"
+              fontSize="4.2"
+              fontFamily={mono}
+              opacity={0.5}
+            >
+              LABORATORIUM
+            </text>
+            <text
+              x={26}
+              y={32}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#0066cc"
+              fontSize="4.2"
+              fontFamily={mono}
+              opacity={0.5}
+            >
+              ANALIZ
+            </text>
+          </svg>
+
+          <div style={{ textAlign: 'right' }}>
+            <div
+              style={{
+                fontFamily: mono,
+                fontSize: '0.63rem',
+                color: '#94a3b8',
+                letterSpacing: '0.06em',
+              }}
+            >
+              podtekst.app
+            </div>
+            <div
+              style={{
+                fontFamily: mono,
+                fontSize: '0.63rem',
+                color: '#cbd5e1',
+                marginTop: 2,
+              }}
+            >
+              Dokument wygenerowany automatycznie
+            </div>
+          </div>
         </div>
       </div>
 
@@ -414,7 +557,7 @@ export default function HealthScoreCard({ pass4, participants }: HealthScoreCard
         onClick={download}
         disabled={isDownloading}
         style={{
-          fontFamily: 'var(--font-space-grotesk)',
+          fontFamily: grotesk,
           fontSize: '0.78rem',
           fontWeight: 500,
           color: '#a1a1aa',
@@ -426,7 +569,7 @@ export default function HealthScoreCard({ pass4, participants }: HealthScoreCard
           opacity: isDownloading ? 0.5 : 1,
         }}
       >
-        {isDownloading ? 'Pobieranie...' : 'Pobierz kartę'}
+        {isDownloading ? 'Pobieranie...' : 'Pobierz karte'}
       </button>
     </div>
   );

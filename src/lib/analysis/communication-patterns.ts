@@ -580,7 +580,7 @@ export const CPS_QUESTIONS: CPSQuestion[] = [
 export const CPS_REQUIREMENTS: CPSScreeningRequirements = {
   minMessages: 2000,
   minTimespanMonths: 6,
-  requiresCompletedPasses: [1, 2, 3],
+  requiresCompletedPasses: [1],
 };
 
 export const CPS_DISCLAIMER =

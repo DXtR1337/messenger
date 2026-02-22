@@ -1,12 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import HangingLetters from './HangingLetters';
+import type { HangingLettersHandle } from './HangingLetters';
 
 const AUTO_OPEN_MS = 5000;
-
-// Neon glow values
-const NEON_FULL = '0 0 7px rgba(168,85,247,0.6), 0 0 20px rgba(168,85,247,0.6), 0 0 42px rgba(168,85,247,0.35), 0 0 82px rgba(168,85,247,0.15)';
-const NEON_DIM = '0 0 5px rgba(168,85,247,0.4), 0 0 15px rgba(168,85,247,0.4), 0 0 30px rgba(168,85,247,0.2), 0 0 60px rgba(168,85,247,0.08)';
 
 /**
  * Theatrical curtain reveal — 100% self-contained.
@@ -16,23 +14,22 @@ const NEON_DIM = '0 0 5px rgba(168,85,247,0.4), 0 0 15px rgba(168,85,247,0.4), 0
 export default function CurtainReveal() {
   const openedRef = useRef(false);
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const twitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const curtainRef = useRef<HTMLDivElement>(null);
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const seamRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLButtonElement>(null);
-  const logoRef = useRef<HTMLDivElement>(null);
-  const logoSignRef = useRef<HTMLDivElement>(null);
-  const eksRef = useRef<HTMLSpanElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
-  const reflectionRef = useRef<HTMLDivElement>(null);
+  const hangingRef = useRef<HangingLettersHandle>(null);
 
   const openCurtain = useCallback(() => {
     if (openedRef.current) return;
     openedRef.current = true;
     if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
+    if (twitchTimerRef.current) clearTimeout(twitchTimerRef.current);
 
     // Stop prompt pulsing
     promptRef.current?.getAnimations().forEach(a => a.cancel());
@@ -42,40 +39,30 @@ export default function CurtainReveal() {
     );
 
     // ── CURTAIN SLIDES OPEN ──
-    const easing = 'cubic-bezier(0.76, 0, 0.24, 1)';
-
     leftRef.current?.animate(
       [{ transform: 'translateX(0)' }, { transform: 'translateX(-100%)' }],
-      { duration: 1800, easing, fill: 'forwards' },
+      { duration: 1800, easing: 'cubic-bezier(0.76, 0, 0.24, 1)', fill: 'forwards' },
     );
     rightRef.current?.animate(
       [{ transform: 'translateX(0)' }, { transform: 'translateX(100%)' }],
-      { duration: 1800, easing, fill: 'forwards' },
+      { duration: 1800, easing: 'cubic-bezier(0.76, 0, 0.24, 1)', fill: 'forwards' },
     );
     seamRef.current?.animate(
       [{ opacity: '1' }, { opacity: '0' }],
       { duration: 500, fill: 'forwards' },
     );
 
-    // ── LOGO RISES ──
+    // ── HANGING LETTERS: DROP then RISE ──
+    // Starts immediately — letters drop violently, then rise in sync with curtain
+    hangingRef.current?.startRise();
+
+    // Show ceiling rail once rise begins (~650ms = drop + pause)
     setTimeout(() => {
-      const vh = window.innerHeight;
-      const targetY = 28 - vh / 2; // from center to 28px from top
-
-      logoRef.current?.animate(
-        [
-          { transform: 'translate(-50%, -50%) rotate(0deg)' },
-          { transform: `translate(-50%, ${targetY}px) rotate(-2deg)` },
-        ],
-        { duration: 1400, easing, fill: 'forwards' },
-      );
-
-      // Show ceiling rail
       railRef.current?.animate(
         [{ opacity: '0' }, { opacity: '1' }],
         { duration: 500, fill: 'forwards' },
       );
-    }, 400);
+    }, 650);
 
     // ── LANDING CONTENT FADE-IN ──
     setTimeout(() => {
@@ -95,118 +82,83 @@ export default function CurtainReveal() {
       );
     }, 1200);
 
-    // ── NEON "EKS" ──
+    // ── NEON "EKS" + IDLE WIND ──
     setTimeout(() => {
-      if (!eksRef.current) return;
-
-      // Flicker 2x
-      eksRef.current.animate(
-        [
-          { opacity: '1' }, { opacity: '0.4' }, { opacity: '1' },
-          { opacity: '0.7' }, { opacity: '1' }, { opacity: '0.85' }, { opacity: '1' },
-        ],
-        { duration: 300 },
-      );
-
-      // Light up
-      eksRef.current.animate(
-        [
-          { color: '#3b2060', textShadow: 'none' },
-          { color: '#a855f7', textShadow: NEON_FULL },
-        ],
-        { duration: 800, fill: 'forwards' },
-      );
-
-      // Neon breathe loop (starts after light-up)
-      setTimeout(() => {
-        eksRef.current?.animate(
-          [
-            { textShadow: NEON_FULL },
-            { textShadow: NEON_DIM },
-            { textShadow: NEON_FULL },
-          ],
-          { duration: 4000, iterations: Infinity, easing: 'ease-in-out' },
-        );
-      }, 800);
-
-      // Neon reflection on sign bottom
-      if (reflectionRef.current) {
-        reflectionRef.current.animate(
-          [
-            { background: 'transparent', boxShadow: 'none' },
-            { background: 'rgba(168,85,247,0.3)', boxShadow: '0 4px 20px rgba(168,85,247,0.15)' },
-          ],
-          { duration: 800, fill: 'forwards' },
-        );
-      }
-
-      // Gentle swing on logo sign
-      logoSignRef.current?.animate(
-        [
-          { transform: 'rotate(0deg)' },
-          { transform: 'rotate(0.5deg)' },
-          { transform: 'rotate(0deg)' },
-          { transform: 'rotate(-0.5deg)' },
-          { transform: 'rotate(0deg)' },
-        ],
-        { duration: 6000, iterations: Infinity, easing: 'ease-in-out' },
-      );
+      hangingRef.current?.activateNeon();
+      hangingRef.current?.startIdleWind();
     }, 2800);
 
-    // ── HIDE CURTAIN DOM + ENABLE LOGO INTERACTION ──
+    // ── HIDE CURTAIN DOM + ENABLE INTERACTION ──
     setTimeout(() => {
       if (curtainRef.current) curtainRef.current.style.display = 'none';
-
-      // Enable hover on logo (eks → red reveal)
-      if (logoRef.current) {
-        logoRef.current.style.pointerEvents = 'auto';
-        logoRef.current.style.cursor = 'default';
-      }
-
-      // Hover: eks turns red, cancels neon breathe; unhover: back to purple neon
-      const eksEl = eksRef.current;
-      if (eksEl) {
-        const RED_GLOW = '0 0 10px rgba(239,68,68,0.6), 0 0 30px rgba(239,68,68,0.3)';
-
-        logoRef.current?.addEventListener('mouseenter', () => {
-          eksEl.getAnimations().forEach(a => a.cancel());
-          eksEl.animate(
-            [{ color: '#ef4444', textShadow: RED_GLOW }],
-            { duration: 300, fill: 'forwards' },
-          );
-        });
-
-        logoRef.current?.addEventListener('mouseleave', () => {
-          eksEl.getAnimations().forEach(a => a.cancel());
-          eksEl.animate(
-            [{ color: '#a855f7', textShadow: NEON_FULL }],
-            { duration: 300, fill: 'forwards' },
-          );
-          // Restart breathe loop
-          eksEl.animate(
-            [
-              { textShadow: NEON_FULL },
-              { textShadow: NEON_DIM },
-              { textShadow: NEON_FULL },
-            ],
-            { duration: 4000, iterations: Infinity, easing: 'ease-in-out' },
-          );
-        });
-      }
+      hangingRef.current?.enableInteraction();
     }, 3600);
   }, []);
 
-  // Lock scroll on mount + start prompt pulse
+  // Lock scroll + prompt pulse + curtain fabric twitches
   useEffect(() => {
     document.body.style.overflow = 'hidden';
 
-    // Pulse the prompt text
+    // Pulse prompt
     promptRef.current?.animate(
       [{ opacity: '0.5' }, { opacity: '1' }, { opacity: '0.5' }],
       { duration: 2000, iterations: Infinity, easing: 'ease-in-out' },
     );
 
-    return () => { document.body.style.overflow = ''; };
+    // ── Ambient curtain fabric twitches ──
+    // Random subtle shifts on the curtain panels to make them feel alive
+    function scheduleTwitch() {
+      if (openedRef.current) return;
+
+      const delay = 1500 + Math.random() * 3000; // 1.5-4.5s between twitches
+      twitchTimerRef.current = setTimeout(() => {
+        if (openedRef.current) return;
+
+        // Pick left or right (or both)
+        const panels = Math.random() > 0.4
+          ? [leftRef.current, rightRef.current]
+          : [Math.random() > 0.5 ? leftRef.current : rightRef.current];
+
+        for (const panel of panels) {
+          if (!panel) continue;
+          const dx = (Math.random() - 0.5) * 6;  // -3 to +3 px
+          const dy = (Math.random() - 0.5) * 3;   // -1.5 to +1.5 px
+          const dur = 300 + Math.random() * 500;   // 300-800ms
+
+          panel.animate(
+            [
+              { transform: 'translateX(0) translateY(0)' },
+              { transform: `translateX(${dx}px) translateY(${dy}px)` },
+              { transform: 'translateX(0) translateY(0)' },
+            ],
+            { duration: dur, easing: 'cubic-bezier(0.4, 0, 0.6, 1)' },
+          );
+        }
+
+        // Seam flickers sometimes
+        if (Math.random() > 0.6 && seamRef.current) {
+          seamRef.current.animate(
+            [
+              { opacity: '1' },
+              { opacity: String(0.4 + Math.random() * 0.5) },
+              { opacity: '1' },
+            ],
+            { duration: 150 + Math.random() * 250 },
+          );
+        }
+
+        scheduleTwitch();
+      }, delay);
+    }
+
+    // Start twitches quickly
+    const startTimer = setTimeout(scheduleTwitch, 800);
+
+    return () => {
+      document.body.style.overflow = '';
+      clearTimeout(startTimer);
+      if (twitchTimerRef.current) clearTimeout(twitchTimerRef.current);
+    };
   }, []);
 
   // Auto-open
@@ -293,12 +245,12 @@ export default function CurtainReveal() {
         ref={promptRef}
         onClick={openCurtain}
         style={{
-          position: 'fixed', bottom: 60, left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', bottom: 'max(60px, calc(env(safe-area-inset-bottom, 0px) + 40px))', left: '50%', transform: 'translateX(-50%)',
           zIndex: 1002,
           fontFamily: 'var(--font-geist-mono), monospace',
-          fontSize: 11, letterSpacing: 5, textTransform: 'uppercase' as const,
+          fontSize: 'clamp(11px, 2.5vw, 13px)', letterSpacing: 5, textTransform: 'uppercase' as const,
           color: '#555555', background: 'none', border: 'none',
-          cursor: 'pointer', padding: '16px 32px',
+          cursor: 'pointer', padding: '20px 32px', minHeight: 48,
         }}
       >
         kliknij aby ods&#322;oni&#263;
@@ -313,66 +265,8 @@ export default function CurtainReveal() {
         }}
       />
 
-      {/* ═══════ HANGING LOGO ═══════ */}
-      <div
-        ref={logoRef}
-        style={{
-          position: 'fixed', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 1001, pointerEvents: 'none',
-        }}
-      >
-        {/* Wires */}
-        <div style={{
-          position: 'absolute', top: '-200vh', left: '50%',
-          transform: 'translateX(-50%)', width: 180, height: '200vh',
-          pointerEvents: 'none',
-        }}>
-          {[15, 50, 85].map((left) => (
-            <div key={left} style={{
-              position: 'absolute', bottom: 0, left: `${left}%`,
-              width: 1, height: '100%',
-              background: 'linear-gradient(180deg, transparent 0%, #3a3632 60%, #3a3632 95%, transparent 100%)',
-            }}>
-              <div style={{
-                position: 'absolute', bottom: -2, width: 5, height: 5,
-                background: '#3a3632', borderRadius: '50%', transform: 'translateX(-2px)',
-              }} />
-            </div>
-          ))}
-        </div>
-
-        {/* Logo sign */}
-        <div
-          ref={logoSignRef}
-          style={{
-            position: 'relative', padding: '14px 32px 18px',
-            background: '#111111', border: '1px solid #1a1a1a',
-            borderRadius: 4,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <span style={{
-            fontFamily: 'var(--font-jetbrains-mono), monospace',
-            fontWeight: 800, fontSize: 42, letterSpacing: -1, userSelect: 'none',
-          }}>
-            <span style={{ color: '#3b82f6' }}>Pod</span>
-            <span style={{ color: '#a855f7' }}>T</span>
-            <span ref={eksRef} style={{ color: '#3b2060' }}>eks</span>
-            <span style={{ color: '#a855f7' }}>T</span>
-          </span>
-
-          {/* Neon reflection */}
-          <div
-            ref={reflectionRef}
-            style={{
-              position: 'absolute', bottom: -1, left: '25%', right: '25%',
-              height: 1, background: 'transparent',
-            }}
-          />
-        </div>
-      </div>
+      {/* ═══════ HANGING LETTERS ═══════ */}
+      <HangingLetters ref={hangingRef} />
 
       {/* ═══════ AMBIENT GLOW ═══════ */}
       <div

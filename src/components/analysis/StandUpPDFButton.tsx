@@ -80,10 +80,15 @@ export default function StandUpPDFButton({ analysis }: StandUpPDFButtonProps) {
 
       trackEvent({ name: 'analysis_complete', params: { mode: 'standup', passCount: 1 } });
 
+      // Load photos for the PDF (parallel with nothing — fast from same origin)
+      setStatus('Ładowanie grafik...');
+      const { loadPdfImages } = await import('@/lib/export/pdf-images');
+      const images = await loadPdfImages();
+
       // Generate PDF
       setStatus('Generowanie PDF...');
       const { generateStandUpPdf } = await import('@/lib/export/standup-pdf');
-      const blob = generateStandUpPdf(result, conversation.title);
+      const blob = generateStandUpPdf(result, analysis, undefined, images);
 
       // Download
       const url = URL.createObjectURL(blob);

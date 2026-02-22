@@ -156,7 +156,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
         <div
           style={{
             fontFamily: grotesk,
-            fontSize: '0.6rem',
+            fontSize: '0.63rem',
             color: '#888',
             textAlign: 'center',
             lineHeight: 1.5,
@@ -227,7 +227,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
                   <span style={{ fontFamily: grotesk, fontSize: '0.65rem', fontWeight: 600, color: '#ccc' }}>
                     {name.split(' ')[0]}
                   </span>
-                  <span style={{ fontFamily: mono, fontSize: '0.55rem', color: pForecast.color, fontWeight: 700 }}>
+                  <span style={{ fontFamily: mono, fontSize: '0.63rem', color: pForecast.color, fontWeight: 700 }}>
                     {pForecast.icon} {data.score}%
                   </span>
                 </div>
@@ -250,7 +250,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
                         key={fi}
                         style={{
                           fontFamily: mono,
-                          fontSize: '0.45rem',
+                          fontSize: '0.63rem',
                           color: '#555',
                           lineHeight: 1.6,
                         }}
@@ -270,7 +270,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
           <div
             style={{
               fontFamily: mono,
-              fontSize: '0.48rem',
+              fontSize: '0.63rem',
               color: '#555',
               textAlign: 'center',
               marginTop: 10,
@@ -294,9 +294,9 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
           <span
             style={{
               fontFamily: mono,
-              fontSize: '0.42rem',
+              fontSize: '0.63rem',
               letterSpacing: '0.12em',
-              color: 'rgba(255,255,255,0.2)',
+              color: 'rgba(255,255,255,0.35)',
             }}
           >
             podtekst.app · wyłącznie dla rozrywki

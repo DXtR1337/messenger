@@ -66,16 +66,27 @@ export function computeReciprocityIndex(
     const ratio = Math.min(rtA, rtB) / Math.max(rtA, rtB); // 0-1, 1 = same
     responseTimeSymmetry = Math.round(ratio * 100);
   } else if (rtA === 0 && rtB === 0) {
-    responseTimeSymmetry = 50; // no data
+    responseTimeSymmetry = 50; // no data — neutral
+  } else {
+    responseTimeSymmetry = 10; // extreme asymmetry: one person responds, the other doesn't
   }
 
-  // 4. Reaction Balance: do they react to each other equally?
+  // 4. Reaction/Engagement Balance: do they react to each other equally?
   const reactA = perPerson[a]?.reactionsGiven ?? 0;
   const reactB = perPerson[b]?.reactionsGiven ?? 0;
   const totalReacts = reactA + reactB;
-  const reactionBalance = totalReacts > 0
-    ? Math.round(100 * (1 - 2 * Math.abs(reactA / totalReacts - 0.5)))
-    : 50;
+  let reactionBalance: number;
+  if (totalReacts > 0) {
+    reactionBalance = Math.round(100 * (1 - 2 * Math.abs(reactA / totalReacts - 0.5)));
+  } else {
+    // Discord fallback: use mentionsReceived + repliesReceived as engagement proxy
+    const engA = (perPerson[a]?.mentionsReceived ?? 0) + (perPerson[a]?.repliesReceived ?? 0);
+    const engB = (perPerson[b]?.mentionsReceived ?? 0) + (perPerson[b]?.repliesReceived ?? 0);
+    const totalEng = engA + engB;
+    reactionBalance = totalEng > 0
+      ? Math.round(100 * (1 - 2 * Math.abs(engA / totalEng - 0.5)))
+      : 50;
+  }
 
   // Overall: equal weight average of all 4 sub-scores
   const overall = Math.round(

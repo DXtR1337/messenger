@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { useCardDownload } from './useCardDownload';
+import ShareCardShell from './ShareCardShell';
 import type { ViralScores } from '@/lib/parsers/types';
 
 interface CompatibilityCardV2Props {
@@ -10,12 +11,12 @@ interface CompatibilityCardV2Props {
 }
 
 function getVerdict(score: number): { text: string; emoji: string } {
-  if (score >= 90) return { text: 'Bratnie dusze', emoji: '💫' };
-  if (score >= 75) return { text: 'Idealny duet', emoji: '💕' };
-  if (score >= 60) return { text: 'Dobre wibracje', emoji: '✨' };
-  if (score >= 45) return { text: 'Może się uda', emoji: '🤷' };
-  if (score >= 30) return { text: 'To skomplikowane', emoji: '😬' };
-  return { text: 'Tykająca bomba', emoji: '💣' };
+  if (score >= 90) return { text: 'Bratnie dusze', emoji: '\u{1F4AB}' };
+  if (score >= 75) return { text: 'Idealny duet', emoji: '\u{1F495}' };
+  if (score >= 60) return { text: 'Dobre wibracje', emoji: '\u{2728}' };
+  if (score >= 45) return { text: 'Mo\u017Ce si\u0119 uda', emoji: '\u{1F937}' };
+  if (score >= 30) return { text: 'To skomplikowane', emoji: '\u{1F62C}' };
+  return { text: 'Tykaj\u0105ca bomba', emoji: '\u{1F4A3}' };
 }
 
 function getScoreColor(score: number): string {
@@ -41,134 +42,218 @@ export default function CompatibilityCardV2({ viralScores, participants }: Compa
   const mono = 'var(--font-geist-mono)';
   const grotesk = 'var(--font-space-grotesk)';
 
-  // SVG ring
-  const r = 72;
+  // SVG ring dimensions
+  const r = 88;
   const circ = 2 * Math.PI * r;
   const offset = circ * (1 - score / 100);
 
+  // Outer decorative ring
+  const rOuter = 96;
+  const circOuter = 2 * Math.PI * rOuter;
+  const offsetOuter = circOuter * 0.25; // decorative partial arc
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-      <div
-        ref={cardRef}
-        style={{
-          width: 360,
-          height: 360,
-          background: '#0a0a0a',
-          borderRadius: 16,
-          padding: '24px 28px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          overflow: 'hidden',
-          position: 'relative',
-          border: '2px solid #1a1a1a',
-        }}
-      >
-        {/* Glow */}
+      <ShareCardShell cardRef={cardRef}>
+        {/* Glow — centered, larger and more visible */}
         <div
           style={{
             position: 'absolute',
-            top: -20,
+            top: 30,
             left: '50%',
             transform: 'translateX(-50%)',
-            width: 200,
-            height: 200,
+            width: 320,
+            height: 320,
             borderRadius: '50%',
-            background: `radial-gradient(circle, ${scoreColor}15 0%, transparent 70%)`,
-            filter: 'blur(40px)',
+            background: `radial-gradient(circle, ${scoreColor}25 0%, transparent 70%)`,
+            filter: 'blur(50px)',
             pointerEvents: 'none',
+            zIndex: 0,
           }}
         />
 
-        {/* Names row */}
+        {/* Title */}
+        <div
+          style={{
+            fontFamily: syne,
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            letterSpacing: '0.25em',
+            textTransform: 'uppercase' as const,
+            color: 'rgba(255,255,255,0.45)',
+            textAlign: 'center',
+            marginBottom: 4,
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          KOMPATYBILNO\u015A\u0106
+        </div>
+
+        {/* Dramatic tagline */}
+        <div
+          style={{
+            fontFamily: grotesk,
+            fontSize: '0.63rem',
+            fontWeight: 600,
+            fontStyle: 'italic',
+            color: 'rgba(255,255,255,0.35)',
+            textAlign: 'center',
+            marginBottom: 20,
+            letterSpacing: '0.06em',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          Czy to match?
+        </div>
+
+        {/* Names row with larger avatar circles and gradient border rings */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
-            marginBottom: 16,
+            justifyContent: 'center',
+            gap: 14,
+            marginBottom: 20,
             position: 'relative',
             zIndex: 1,
           }}
         >
           {/* Person A avatar */}
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6d9fff, #4a6fcc)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: syne,
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              color: '#fff',
-            }}
-          >
-            {nameA[0]}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #6d9fff, #4a6fcc)',
+                padding: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #6d9fff, #4a6fcc)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: syne,
+                  fontSize: '1rem',
+                  fontWeight: 800,
+                  color: '#fff',
+                  boxShadow: '0 0 20px rgba(109,159,255,0.3)',
+                }}
+              >
+                {nameA[0]}
+              </div>
+            </div>
+            <span style={{ fontFamily: mono, fontSize: '0.63rem', color: '#6d9fff', fontWeight: 600 }}>{nameA}</span>
           </div>
 
           <span
             style={{
               fontFamily: mono,
-              fontSize: '0.5rem',
+              fontSize: '0.7rem',
               color: '#444',
               letterSpacing: '0.1em',
+              marginBottom: 16,
             }}
           >
-            ×
+            &times;
           </span>
 
           {/* Person B avatar */}
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #b38cff, #8a5fd4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: syne,
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              color: '#fff',
-            }}
-          >
-            {nameB[0]}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #b38cff, #8a5fd4)',
+                padding: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #b38cff, #8a5fd4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: syne,
+                  fontSize: '1rem',
+                  fontWeight: 800,
+                  color: '#fff',
+                  boxShadow: '0 0 20px rgba(179,140,255,0.3)',
+                }}
+              >
+                {nameB[0]}
+              </div>
+            </div>
+            <span style={{ fontFamily: mono, fontSize: '0.63rem', color: '#b38cff', fontWeight: 600 }}>{nameB}</span>
           </div>
         </div>
 
-        {/* Score ring */}
-        <div style={{ position: 'relative', zIndex: 1, marginBottom: 12 }}>
-          <svg width={170} height={170} style={{ display: 'block' }}>
+        {/* Score ring with decorative outer gradient ring */}
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: 14, display: 'flex', justifyContent: 'center' }}>
+          <svg width={210} height={210} style={{ display: 'block' }}>
+            <defs>
+              <linearGradient id="outerRingGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" />
+                <stop offset="50%" stopColor="#a855f7" />
+                <stop offset="100%" stopColor="#3b82f6" />
+              </linearGradient>
+            </defs>
+            {/* Decorative outer gradient ring */}
+            <circle
+              cx={105}
+              cy={105}
+              r={rOuter}
+              fill="none"
+              stroke="url(#outerRingGrad)"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeDasharray={circOuter}
+              strokeDashoffset={offsetOuter}
+              transform={`rotate(-90 105 105)`}
+              opacity={0.35}
+            />
             {/* Background circle */}
             <circle
-              cx={85}
-              cy={85}
+              cx={105}
+              cy={105}
               r={r}
               fill="none"
               stroke="#1a1a1a"
-              strokeWidth={8}
+              strokeWidth={10}
             />
             {/* Score arc */}
             <circle
-              cx={85}
-              cy={85}
+              cx={105}
+              cy={105}
               r={r}
               fill="none"
               stroke={scoreColor}
-              strokeWidth={8}
+              strokeWidth={10}
               strokeLinecap="round"
               strokeDasharray={circ}
               strokeDashoffset={offset}
-              transform={`rotate(-90 85 85)`}
-              style={{ filter: `drop-shadow(0 0 6px ${scoreColor}40)` }}
+              transform={`rotate(-90 105 105)`}
+              style={{ filter: `drop-shadow(0 0 12px ${scoreColor}50)` }}
             />
           </svg>
-          {/* Score text */}
+          {/* Score text — bigger, white with colored shadow */}
           <div
             style={{
               position: 'absolute',
@@ -181,93 +266,111 @@ export default function CompatibilityCardV2({ viralScores, participants }: Compa
             <div
               style={{
                 fontFamily: syne,
-                fontSize: '2.8rem',
+                fontSize: '4rem',
                 fontWeight: 900,
-                color: scoreColor,
+                color: '#ffffff',
                 lineHeight: 1,
+                textShadow: `0 0 30px ${scoreColor}, 0 0 60px ${scoreColor}80`,
               }}
             >
               {score}
             </div>
-            <div style={{ fontFamily: mono, fontSize: '0.5rem', color: '#555' }}>/ 100</div>
+            <div style={{ fontFamily: mono, fontSize: '0.7rem', color: '#555', marginTop: 2 }}>/ 100</div>
           </div>
         </div>
 
-        {/* Verdict */}
+        {/* Verdict with gradient background pill */}
         <div
           style={{
-            fontFamily: grotesk,
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            color: '#ddd',
-            textAlign: 'center',
-            marginBottom: 14,
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: 24,
             position: 'relative',
             zIndex: 1,
           }}
         >
-          {verdict.emoji} {verdict.text}
+          <div
+            style={{
+              fontFamily: grotesk,
+              fontSize: '1.2rem',
+              fontWeight: 600,
+              color: '#fff',
+              textAlign: 'center',
+              padding: '8px 24px',
+              borderRadius: 9999,
+              background: `linear-gradient(135deg, ${scoreColor}18, ${scoreColor}08)`,
+              border: `1px solid ${scoreColor}25`,
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            {verdict.emoji} {verdict.text}
+          </div>
         </div>
 
-        {/* Interest bars */}
+        {/* Interest bars — taller, with glow and percentage overlay */}
         <div
           style={{
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            gap: 6,
+            gap: 10,
             position: 'relative',
             zIndex: 1,
+            flexShrink: 0,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontFamily: mono, fontSize: '0.5rem', color: '#6d9fff', width: 50, textAlign: 'right' }}>
+            <span style={{ fontFamily: mono, fontSize: '0.63rem', color: '#6d9fff', width: 50, textAlign: 'right', fontWeight: 600 }}>
               {nameA}
             </span>
-            <div style={{ flex: 1, height: 4, borderRadius: 2, background: '#1a1a1a', overflow: 'hidden' }}>
-              <div style={{ width: `${interestA}%`, height: '100%', background: '#6d9fff', borderRadius: 2 }} />
+            <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#1a1a1a', overflow: 'hidden', position: 'relative' }}>
+              <div
+                style={{
+                  width: `${interestA}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #4a6fcc, #6d9fff)',
+                  borderRadius: 4,
+                  boxShadow: '0 0 10px rgba(109,159,255,0.4)',
+                  position: 'relative',
+                }}
+              />
             </div>
-            <span style={{ fontFamily: mono, fontSize: '0.5rem', color: '#6d9fff', width: 28 }}>
+            <span style={{ fontFamily: mono, fontSize: '0.63rem', color: '#6d9fff', width: 28, fontWeight: 700 }}>
               {interestA}%
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontFamily: mono, fontSize: '0.5rem', color: '#b38cff', width: 50, textAlign: 'right' }}>
+            <span style={{ fontFamily: mono, fontSize: '0.63rem', color: '#b38cff', width: 50, textAlign: 'right', fontWeight: 600 }}>
               {nameB}
             </span>
-            <div style={{ flex: 1, height: 4, borderRadius: 2, background: '#1a1a1a', overflow: 'hidden' }}>
-              <div style={{ width: `${interestB}%`, height: '100%', background: '#b38cff', borderRadius: 2 }} />
+            <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#1a1a1a', overflow: 'hidden', position: 'relative' }}>
+              <div
+                style={{
+                  width: `${interestB}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #8a5fd4, #b38cff)',
+                  borderRadius: 4,
+                  boxShadow: '0 0 10px rgba(179,140,255,0.4)',
+                  position: 'relative',
+                }}
+              />
             </div>
-            <span style={{ fontFamily: mono, fontSize: '0.5rem', color: '#b38cff', width: 28 }}>
+            <span style={{ fontFamily: mono, fontSize: '0.63rem', color: '#b38cff', width: 28, fontWeight: 700 }}>
               {interestB}%
             </span>
           </div>
-          <div style={{ fontFamily: mono, fontSize: '0.42rem', color: '#444', textAlign: 'center', marginTop: 2 }}>
+          <div style={{ fontFamily: mono, fontSize: '0.63rem', color: '#444', textAlign: 'center', marginTop: 4 }}>
             poziom zainteresowania
           </div>
         </div>
-
-        {/* Footer */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 12,
-            fontFamily: mono,
-            fontSize: '0.42rem',
-            color: 'rgba(255,255,255,0.15)',
-            letterSpacing: '0.12em',
-          }}
-        >
-          podtekst.app
-        </div>
-      </div>
+      </ShareCardShell>
 
       <button
         onClick={download}
         disabled={isDownloading}
         className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-card-hover hover:text-foreground disabled:opacity-50"
       >
-        {isDownloading ? 'Pobieranie...' : '📥 Pobierz kartę'}
+        {isDownloading ? 'Pobieranie...' : '\u{1F4E5} Pobierz kart\u0119'}
       </button>
     </div>
   );

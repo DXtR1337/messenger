@@ -95,7 +95,7 @@ export default function LandingHowItWorks() {
       </motion.div>
 
       {/* ── Mobile: simple left-aligned timeline ── */}
-      <div ref={mobileContainerRef} className="relative md:hidden">
+      <div ref={mobileContainerRef} className="relative overflow-hidden md:hidden">
         {/* Connector line — measured between first and last icon centers */}
         {mobileLine.height > 0 && (
           <motion.div

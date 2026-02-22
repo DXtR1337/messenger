@@ -45,8 +45,8 @@ export default function BurstActivity({ quantitative }: BurstActivityProps) {
               return (
                 <motion.div
                   key={`${burst.startDate}-${burst.endDate}`}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.05, duration: 0.3 }}
                   className={`flex flex-col gap-2 py-3 ${
                     isLast ? '' : 'border-b border-border'
