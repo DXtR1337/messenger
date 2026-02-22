@@ -18,8 +18,10 @@ const MESSAGES_OPTION = {
     { name: '200 (szybki)', value: '200' },
     { name: '500 (domyślnie)', value: '500' },
     { name: '1000 (dokładny)', value: '1000' },
-    { name: '2000 (mega)', value: '2000' },
-    { name: '5000 (max)', value: '5000' },
+    { name: '2000', value: '2000' },
+    { name: '5000', value: '5000' },
+    { name: '10000', value: '10000' },
+    { name: '20000', value: '20000' },
   ],
 };
 
