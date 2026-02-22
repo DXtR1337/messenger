@@ -2471,7 +2471,7 @@ export default function LandingDemo() {
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({ title: 'PodTeksT Demo', text, url }).catch(() => {});
-    } else {
+    } else if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);

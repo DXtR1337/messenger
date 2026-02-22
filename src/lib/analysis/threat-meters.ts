@@ -44,7 +44,9 @@ export function computeThreatMeters(quant: QuantitativeAnalysis): ThreatMetersRe
   const rtRatio = responseTimes[1] > 0 ? responseTimes[0] / responseTimes[1] : 1;
   const rtAsymmetry = Math.abs(Math.log10(Math.max(rtRatio, 0.01))) * 30; // log scale
 
-  const codependencyScore = clamp(initiationImbalance * 1.2 + maxDoubleTextRate * 0.8 + rtAsymmetry * 0.6);
+  // Normalize double-text rate: cap at 80/1000 to prevent it from dominating the score
+  const dtNorm = Math.min(maxDoubleTextRate, 80);
+  const codependencyScore = clamp(initiationImbalance * 0.7 + dtNorm * 0.35 + rtAsymmetry * 0.5);
   const codependencyFactors: string[] = [];
   if (initiationImbalance > 15) codependencyFactors.push(`Nierówna inicjacja: ${Math.round(Math.max(...initRatios) * 100)}%`);
   if (maxDoubleTextRate > 5) codependencyFactors.push(`Double-texty: ${maxDoubleTextRate.toFixed(1)}/1000 msg`);

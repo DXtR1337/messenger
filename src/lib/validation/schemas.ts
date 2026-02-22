@@ -36,10 +36,10 @@ export const enhancedRoastRequestSchema = z.object({
   participants: participantsSchema,
   quantitativeContext: z.string(),
   qualitative: z.object({
-    pass1: z.object({}).passthrough(),
-    pass2: z.object({}).passthrough(),
-    pass3: z.object({}).passthrough(),
-    pass4: z.object({}).passthrough(),
+    pass1: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
+    pass2: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
+    pass3: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
+    pass4: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
   }),
 });
 export type EnhancedRoastRequestParsed = z.infer<typeof enhancedRoastRequestSchema>;

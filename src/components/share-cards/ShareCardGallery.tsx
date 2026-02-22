@@ -86,6 +86,7 @@ export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
       const shareUrl = buildShareUrl(analysis);
       // Try modern clipboard API first, fallback to execCommand
       try {
+        if (!navigator.clipboard) throw new Error('no clipboard');
         await navigator.clipboard.writeText(shareUrl);
       } catch {
         const textarea = document.createElement('textarea');

@@ -44,8 +44,14 @@ export async function POST(request: Request): Promise<Response> {
   const { participants, quantitativeContext } = parsed.data;
   // Zod validates samples is a non-null object; cast through unknown for the deeply-typed AnalysisSamples
   const samples = parsed.data.samples as unknown as AnalysisSamples;
-  // Zod validates qualitative has pass1-4 as objects; cast through unknown for the deeply-typed pass results
-  const qualitative = parsed.data.qualitative as unknown as {
+  // Zod validates qualitative has pass1-4; unwrap array-wrapped Gemini responses and cast
+  const unwrap = (v: unknown) => (Array.isArray(v) && v.length === 1 ? v[0] : v);
+  const qualitative = {
+    pass1: unwrap(parsed.data.qualitative.pass1),
+    pass2: unwrap(parsed.data.qualitative.pass2),
+    pass3: unwrap(parsed.data.qualitative.pass3),
+    pass4: unwrap(parsed.data.qualitative.pass4),
+  } as unknown as {
     pass1: Pass1Result;
     pass2: Pass2Result;
     pass3: Record<string, PersonProfile>;

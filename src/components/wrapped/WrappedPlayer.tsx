@@ -633,9 +633,11 @@ function SummarySlide({
 
     // Fallback: copy URL to clipboard
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      setShareStatus('copied');
-      setTimeout(() => setShareStatus('idle'), 2000);
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareStatus('copied');
+        setTimeout(() => setShareStatus('idle'), 2000);
+      }
     } catch {
       // Clipboard API not available
     }
