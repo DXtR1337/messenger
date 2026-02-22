@@ -15,6 +15,7 @@ import type {
     QualitativeAnalysis,
     RoastResult,
     StandUpRoastResult,
+    MegaRoastResult,
 } from './types';
 import {
     PASS_1_SYSTEM,
@@ -25,6 +26,7 @@ import {
     ROAST_SYSTEM,
     ENHANCED_ROAST_SYSTEM,
     STANDUP_ROAST_SYSTEM,
+    MEGA_ROAST_SYSTEM,
     formatMessagesForAnalysis,
     SUBTEXT_SYSTEM,
     formatWindowsForSubtext,
@@ -454,6 +456,34 @@ ${formatMessagesForAnalysis(samples.overview)}`;
 
     const raw = await callGeminiWithRetry(ENHANCED_ROAST_SYSTEM, input, 3, 8192);
     return parseGeminiJSON<RoastResult>(raw);
+}
+
+// ============================================================
+// Public: Mega Roast — single-target roast with full group context
+// ============================================================
+
+export async function runMegaRoast(
+    samples: AnalysisSamples,
+    targetPerson: string,
+    allParticipants: string[],
+    quantitativeContext: string,
+): Promise<MegaRoastResult> {
+    const targetMessages = samples.perPerson[targetPerson] ?? [];
+
+    const input = `TARGET: ${targetPerson}
+ALL PARTICIPANTS: ${allParticipants.join(', ')}
+
+QUANTITATIVE DATA:
+${quantitativeContext}
+
+=== MESSAGES FROM TARGET (${targetPerson}) ===
+${formatMessagesForAnalysis(targetMessages)}
+
+=== FULL GROUP MESSAGES (context — what others say about/to target) ===
+${formatMessagesForAnalysis(samples.overview)}`;
+
+    const raw = await callGeminiWithRetry(MEGA_ROAST_SYSTEM, input, 3, 8192);
+    return parseGeminiJSON<MegaRoastResult>(raw);
 }
 
 // ============================================================

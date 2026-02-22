@@ -418,6 +418,24 @@ export interface StandUpRoastResult {
 }
 
 // ============================================================
+// MEGA ROAST — Single-target roast using full group context
+// ============================================================
+
+export interface MegaRoastResult {
+  targetName: string;
+  opening: string;
+  roast_lines: string[];
+  what_others_say: string[];
+  self_owns: string[];
+  superlatives: Array<{
+    title: string;
+    roast: string;
+  }>;
+  verdict: string;
+  tldr: string;
+}
+
+// ============================================================
 // Container & Storage Types
 // ============================================================
 
@@ -445,6 +463,8 @@ export interface QualitativeAnalysis {
   datingProfile?: DatingProfileResult;
   /** Quiz parowy — Couple Mode comparison (optional, client-side) */
   coupleQuiz?: CoupleQuizComparison;
+  /** Mega Roast — single-target roast using full group context (optional) */
+  megaRoast?: MegaRoastResult;
   completedAt?: number;
 }
 

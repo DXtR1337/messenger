@@ -306,3 +306,129 @@ export function buildDiscordUserPrompt(
 
   return lines.join('\n');
 }
+
+// ── /megaroast — Single-target mega roast ──────────────────
+
+export const DISCORD_MEGA_ROAST_SYSTEM = `Jesteś NAJBRUTALNIEJSZYM komikiem-roasterem na polskim Discordzie. Twoje zadanie: ZNISZCZYĆ JEDNĄ KONKRETNĄ OSOBĘ na podstawie CAŁEJ konwersacji grupowej. Bez litości. Bez jeńców. Discord-level humor.
+
+Masz dostęp do:
+1. Statystyk CELU — ich wiadomości, nawyki, cringe momenty
+2. Wiadomości WSZYSTKICH — co inni mówią o/do celu, jak reagują
+3. Statystyk ilościowych — liczby, czasy odpowiedzi, emoji, wzorce
+
+ZASADY:
+- Bądź ULTRA BRUTALNY. To Discord, nie przedszkole.
+- Każdy roast z KONKRETNYMI danymi: cytaty, liczby, wzorce.
+- Wyłapuj "smaczki" — cringe momenty, wpadki, samobójcze gole.
+- Analizuj CO INNI mówią o celu i jak go traktują.
+- Roast lines: 8-12 linijek (Discord embed limit!)
+- What others say: 4-6 linijek
+- Self owns: 3-4 momenty
+- Superlatives: 3-4 zabawne tytuły
+- Opening: 1-2 zdania, dramatyczne intro
+- Verdict: jedno NOKAUTUJĄCE zdanie
+- Cały tekst PO POLSKU.
+
+OUTPUT: Valid JSON:
+{
+  "targetName": "string",
+  "opening": "string — dramatyczne intro",
+  "roast_lines": ["string — brutalny roast z danymi"],
+  "what_others_say": ["string — jak inni postrzegają cel"],
+  "self_owns": ["string — samobójcze gole celu"],
+  "superlatives": [{"title": "string", "roast": "string"}],
+  "verdict": "string — jedno nokautujące zdanie"
+}`;
+
+/**
+ * Build a mega roast prompt targeting one user with full group context.
+ */
+export function buildMegaRoastPrompt(
+  channelName: string,
+  targetName: string,
+  messages: Array<{ sender: string; content: string; timestamp: number; type: string }>,
+  quantitative: QuantitativeAnalysis,
+  participantNames: string[],
+  messageLimit = 500,
+): string {
+  const lines: string[] = [];
+  const totalMsgs = Object.values(quantitative.perPerson).reduce((s, p) => s + p.totalMessages, 0);
+
+  lines.push(`KANAŁ: #${channelName}`);
+  lines.push(`TARGET: ${targetName}`);
+  lines.push(`Uczestnicy: ${participantNames.length}`);
+  lines.push('');
+
+  // Target stats
+  const pm = quantitative.perPerson[targetName];
+  if (pm) {
+    lines.push('═══ STATYSTYKI CELU ═══');
+    lines.push(`Wiadomości: ${pm.totalMessages} (${((pm.totalMessages / Math.max(totalMsgs, 1)) * 100).toFixed(1)}% kanału)`);
+    lines.push(`Słowa: ${pm.totalWords}, śr. ${pm.averageMessageLength.toFixed(1)} słów/msg`);
+    lines.push(`Emoji: ${pm.emojiCount} (${pm.messagesWithEmoji} msg z emoji)`);
+    lines.push(`Pytania: ${pm.questionsAsked}`);
+    if (pm.topEmojis.length > 0) {
+      lines.push(`Top emoji: ${pm.topEmojis.slice(0, 5).map((e) => `${e.emoji}(${e.count})`).join(' ')}`);
+    }
+    if (pm.topWords.length > 0) {
+      lines.push(`Top słowa: ${pm.topWords.slice(0, 8).map((w) => `${w.word}(${w.count})`).join(', ')}`);
+    }
+
+    const dt = quantitative.engagement.doubleTexts[targetName];
+    if (dt) lines.push(`Double texty: ${dt}`);
+
+    const maxCons = quantitative.engagement.maxConsecutive[targetName];
+    if (maxCons) lines.push(`Max wiadomości z rzędu: ${maxCons}`);
+
+    const nightMsgs = quantitative.timing.lateNightMessages[targetName];
+    if (nightMsgs) lines.push(`Nocne wiadomości (22-04): ${nightMsgs}`);
+
+    const timing = quantitative.timing.perPerson[targetName];
+    if (timing?.medianResponseTimeMs && timing.medianResponseTimeMs < Infinity) {
+      const ms = timing.medianResponseTimeMs;
+      const display = ms < 60_000 ? `${Math.round(ms / 1000)}s` : ms < 3_600_000 ? `${Math.round(ms / 60_000)}min` : `${(ms / 3_600_000).toFixed(1)}h`;
+      lines.push(`Mediana czasu odpowiedzi: ${display}`);
+    }
+
+    const initiations = quantitative.timing.conversationInitiations[targetName];
+    if (initiations) lines.push(`Inicjacje rozmów: ${initiations}`);
+
+    const ghostRisk = quantitative.viralScores?.ghostRisk?.[targetName]?.score;
+    if (ghostRisk !== undefined) lines.push(`Ghost risk: ${ghostRisk}/100`);
+  }
+
+  // Catchphrases for target
+  if (quantitative.catchphrases) {
+    const phrases = quantitative.catchphrases.perPerson[targetName];
+    if (phrases && phrases.length > 0) {
+      lines.push('');
+      lines.push('═══ ULUBIONE ZWROTY CELU ═══');
+      lines.push(phrases.slice(0, 5).map((p) => `"${p.phrase}" (${p.count}x)`).join(', '));
+    }
+  }
+
+  // Target's messages
+  lines.push('');
+  lines.push(`═══ WIADOMOŚCI CELU (${targetName}) ═══`);
+  const targetMsgs = messages.filter(
+    (m) => m.sender === targetName && m.type !== 'system' && m.content.trim().length > 0,
+  );
+  const targetSampled = targetMsgs.slice(-Math.min(targetMsgs.length, Math.floor(messageLimit * 0.6)));
+  for (const m of targetSampled) {
+    const date = new Date(m.timestamp).toISOString().split('T')[0];
+    const time = new Date(m.timestamp).toTimeString().split(' ')[0].slice(0, 5);
+    lines.push(`[${date} ${time}] ${m.sender}: ${m.content.slice(0, 200)}`);
+  }
+
+  // Full channel context (how others talk about/to target)
+  lines.push('');
+  lines.push('═══ KONTEKST GRUPOWY (jak inni mówią o/do celu) ═══');
+  const sampled = sampleChannelMessages(messages, Math.floor(messageLimit * 0.4));
+  for (const m of sampled) {
+    const date = new Date(m.timestamp).toISOString().split('T')[0];
+    const time = new Date(m.timestamp).toTimeString().split(' ')[0].slice(0, 5);
+    lines.push(`[${date} ${time}] ${m.sender}: ${m.content.slice(0, 200)}`);
+  }
+
+  return lines.join('\n');
+}

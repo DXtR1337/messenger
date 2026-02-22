@@ -20,6 +20,7 @@ import { handleEmoji } from '../commands/emoji';
 import { handleNightOwl } from '../commands/nightowl';
 import { handleRanking } from '../commands/ranking';
 import { handleRoast } from '../commands/roast';
+import { handleMegaroast } from '../commands/megaroast';
 import { handlePersonality } from '../commands/personality';
 
 export const dynamic = 'force-dynamic';
@@ -82,7 +83,7 @@ export async function POST(request: Request): Promise<Response> {
     ]);
 
     // AI commands — always defer
-    const aiCommands = new Set(['roast', 'personality']);
+    const aiCommands = new Set(['roast', 'megaroast', 'personality']);
 
     // Website link button — appended to every command response
     const linkComponents = websiteLinkRow(channelId);
@@ -200,6 +201,9 @@ export async function POST(request: Request): Promise<Response> {
           switch (commandName) {
             case 'roast':
               await handleRoast(interaction, data);
+              break;
+            case 'megaroast':
+              await handleMegaroast(interaction, data);
               break;
             case 'personality':
               await handlePersonality(interaction, data);

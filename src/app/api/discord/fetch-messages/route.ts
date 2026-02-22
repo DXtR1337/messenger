@@ -8,7 +8,7 @@ export const maxDuration = 300; // 5 minutes max
 
 const DISCORD_API = 'https://discord.com/api/v10';
 const MESSAGES_PER_PAGE = 100;
-const MAX_MESSAGES = 100_000;
+const MAX_MESSAGES = 200_000;
 const DELAY_BETWEEN_REQUESTS_MS = 200;
 
 function sleep(ms: number): Promise<void> {
@@ -48,7 +48,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const { channelId } = body;
-  const messageLimit = Math.min(Math.max(body.messageLimit ?? 5000, 100), 100_000);
+  const messageLimit = Math.min(Math.max(body.messageLimit ?? 5000, 100), 200_000);
 
   // Use client-provided token or fall back to server-side PodTeksT bot token
   const botToken = (body.botToken && body.botToken.length >= 50)

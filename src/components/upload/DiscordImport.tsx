@@ -61,12 +61,17 @@ export default function DiscordImport({ relationshipType, autoChannelId }: Disco
   }, []);
 
   const MESSAGE_LIMITS = [
+    { value: 200, label: '200', time: '~10s' },
+    { value: 500, label: '500', time: '~20s' },
     { value: 1000, label: '1 000', time: '~1 min' },
     { value: 2000, label: '2 000', time: '~2 min' },
     { value: 5000, label: '5 000', time: '~5 min', recommended: true },
     { value: 10000, label: '10 000', time: '~10 min' },
+    { value: 20000, label: '20 000', time: '~15 min', warning: true },
+    { value: 30000, label: '30 000', time: '~20 min', warning: true },
     { value: 50000, label: '50 000', time: '~30 min', warning: true },
     { value: 100000, label: '100 000', time: '~60 min', warning: true },
+    { value: 200000, label: '200 000', time: '~2h', warning: true },
   ];
 
   const verifyPin = useCallback(async (pinToCheck: string) => {

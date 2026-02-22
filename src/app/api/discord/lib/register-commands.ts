@@ -119,6 +119,14 @@ const COMMANDS: CommandDefinition[] = [
     ],
   },
   {
+    name: 'megaroast',
+    description: 'Mega roast jednej osoby — pełny kontekst grupowy, bez litości',
+    options: [
+      { name: 'user', description: 'Użytkownik do zroastowania', type: CommandOptionType.USER, required: true },
+      MESSAGES_OPTION,
+    ],
+  },
+  {
     name: 'analyze',
     description: 'Otwórz pełną analizę tego kanału na stronie PodTeksT',
   },

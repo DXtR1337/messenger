@@ -44,6 +44,14 @@ export const enhancedRoastRequestSchema = z.object({
 });
 export type EnhancedRoastRequestParsed = z.infer<typeof enhancedRoastRequestSchema>;
 
+export const megaRoastRequestSchema = z.object({
+  samples: samplesSchema,
+  targetPerson: z.string().min(1, 'targetPerson must not be empty'),
+  participants: participantsSchema,
+  quantitativeContext: z.string(),
+});
+export type MegaRoastRequestParsed = z.infer<typeof megaRoastRequestSchema>;
+
 const conversationExcerptItemSchema = z.object({
   sender: z.string(),
   content: z.string(),
