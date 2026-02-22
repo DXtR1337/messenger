@@ -395,3 +395,14 @@ body::after {
     text-shadow: 0 0 14px color(display-p3 1.0 0.2 0.2 / 0.5);
   }
 }
+
+/* ═══════════════════════════════════════
+   RECHARTS — dark theme hover overrides
+═══════════════════════════════════════ */
+.recharts-tooltip-cursor {
+  fill: rgba(255, 255, 255, 0.04) !important;
+  stroke: rgba(255, 255, 255, 0.08) !important;
+}
+.recharts-active-dot circle {
+  stroke: none !important;
+}

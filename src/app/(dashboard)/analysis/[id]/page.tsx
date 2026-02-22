@@ -9,6 +9,9 @@ const ShareCardGallery = dynamic(() => import('@/components/share-cards/ShareCar
   ssr: false,
   loading: () => <div className="h-64 animate-pulse rounded-xl bg-card" />,
 });
+const ParticipantPicker = dynamic(() => import('@/components/analysis/ParticipantPicker'), {
+  ssr: false,
+});
 
 const RoastSection = dynamic(() => import('@/components/analysis/RoastSection'), {
   ssr: false,
@@ -293,6 +296,7 @@ export default function AnalysisResultsPage() {
   const [showCaptionModal, setShowCaptionModal] = useState(false);
   const [showQuizGate, setShowQuizGate] = useState(true);
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
+  const [selectedPair, setSelectedPair] = useState<[string, string] | null>(null);
   const [deltaMetrics, setDeltaMetrics] = useState<DeltaMetrics | null>(null);
   const [participantPhotos, setParticipantPhotos] = useState<Record<string, string>>({});
 
@@ -1030,8 +1034,17 @@ export default function AnalysisResultsPage() {
         delusionScore={quantitative.viralScores?.delusionScore}
         analysis={analysis}
       />
+      {isServerView && (
+        <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
+          <ParticipantPicker
+            participants={sortedParticipants}
+            quantitative={quantitative}
+            onPairSelected={setSelectedPair}
+          />
+        </motion.div>
+      )}
       <motion.div variants={sv} initial="hidden" whileInView="visible" viewport={vp} transition={{ duration: dur }}>
-        <ShareCardGallery analysis={analysis} />
+        <ShareCardGallery analysis={analysis} selectedPair={selectedPair} />
       </motion.div>
 
       {/* ═══════ SECTION: ANALIZA AI ═══════ */}

@@ -31,6 +31,7 @@ import { buildShareUrl } from '@/lib/share/encode';
 
 interface ShareCardGalleryProps {
   analysis: StoredAnalysis;
+  selectedPair?: [string, string] | null;
 }
 
 interface CardConfig {
@@ -69,12 +70,14 @@ const CARD_CONFIGS: CardConfig[] = [
   { id: 'couple-quiz', title: 'Quiz parowy', emoji: '\u{1F491}', requiresQualitative: false },
 ];
 
-export default function ShareCardGallery({ analysis }: ShareCardGalleryProps) {
+export default function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
   const { conversation, quantitative, qualitative } = analysis;
-  const participants = conversation.participants.map((p) => p.name);
+  const allParticipants = conversation.participants.map((p) => p.name);
+  // For duo cards: use selectedPair when available (server view), otherwise original participants
+  const participants = selectedPair && allParticipants.length > 2 ? [...selectedPair] : allParticipants;
   const hasQualitative = qualitative?.status === 'complete';
 
   const availableCards = CARD_CONFIGS.filter(
