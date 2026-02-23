@@ -54,6 +54,18 @@ nul
 setup.sh
 .playwright-mcp/
 
+# firebase cache
+.firebase/
+
+# claude config
+.claude/
+
+# misc binaries
+vrf_decompiler.zip
+
+# scripts (processing tools, not source)
+scripts/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

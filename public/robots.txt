@@ -4,4 +4,4 @@ Disallow: /api/
 Disallow: /dashboard
 Disallow: /analysis/
 
-Sitemap: https://chatscope.app/sitemap.xml
+Sitemap: https://podtekst.app/sitemap.xml

@@ -170,6 +170,7 @@ export function computeBadges(
         id: 'night-owl',
         name: 'Nocny Marek',
         emoji: '\u{1F989}',
+        icon: 'night-owl.png',
         description: 'Najwyższy % wiadomości wysłanych między 22:00 a 4:00',
         holder: winner.name,
         evidence: `${winner.value.toFixed(1)}% wiadomości po 22:00`,
@@ -199,6 +200,7 @@ export function computeBadges(
         id: 'early-bird',
         name: 'Ranny Ptaszek',
         emoji: '\u{1F426}',
+        icon: 'early-bird.png',
         description: 'Najwyższy % wiadomości wysłanych przed 8:00',
         holder: winner.name,
         evidence: `${winner.value.toFixed(1)}% wiadomości przed 8:00`,
@@ -214,6 +216,7 @@ export function computeBadges(
         id: 'ghost-champion',
         name: 'Ghosting Champion',
         emoji: '\u{1F47B}',
+        icon: 'ghost-champion.png',
         description: 'Wysłał(a) ostatnią wiadomość przed najdłuższą ciszą',
         holder: silence.lastSender,
         evidence: `Cisza trwała ${formatSilenceDays(silence.durationMs)}`,
@@ -229,6 +232,7 @@ export function computeBadges(
         id: 'double-texter',
         name: 'Double Texter',
         emoji: '\u{1F4AC}',
+        icon: 'double-texter.png',
         description: 'Najczęściej pisał(a) wielokrotnie bez odpowiedzi',
         holder: winner.name,
         evidence: `${winner.value} razy pisał(a) bez odpowiedzi`,
@@ -248,6 +252,7 @@ export function computeBadges(
         id: 'novelist',
         name: 'Powieściopisarz',
         emoji: '\u{1F4D6}',
+        icon: 'novelist.png',
         description: 'Najwyższa średnia długość wiadomości',
         holder: winner.name,
         evidence: `Średnio ${winner.value.toFixed(1)} słów/wiadomość`,
@@ -267,6 +272,7 @@ export function computeBadges(
         id: 'speed-demon',
         name: 'Speed Demon',
         emoji: '\u{26A1}',
+        icon: 'speed-demon.png',
         description: 'Najszybsza mediana czasu odpowiedzi',
         holder: winner.name,
         evidence: `Mediana odpowiedzi: ${formatDurationMs(winner.value)}`,
@@ -288,6 +294,7 @@ export function computeBadges(
         id: 'emoji-monarch',
         name: 'Emoji King/Queen',
         emoji: '\u{1F602}',
+        icon: 'emoji-monarch.png',
         description: 'Najwyższy stosunek emoji na wiadomość',
         holder: winner.name,
         evidence: `${winner.value.toFixed(2)} emoji na wiadomość`,
@@ -308,6 +315,7 @@ export function computeBadges(
         id: 'initiator',
         name: 'Inicjator',
         emoji: '\u{1F501}',
+        icon: 'initiator.png',
         description: 'Najczęściej rozpoczynał(a) rozmowy',
         holder: winner.name,
         evidence: `Rozpoczął(ęła) ${pct.toFixed(0)}% rozmów`,
@@ -315,32 +323,42 @@ export function computeBadges(
     }
   }
 
-  // ── 9. Heart Bomber (skip for Discord — reactionsGiven is always 0) ──
+  // ── 9. Heart Bomber — reactions + heart emoji in messages ──
   {
-    const hasReactionData = names.some((n) => (perPerson[n]?.topReactionsGiven ?? []).length > 0);
-    if (hasReactionData) {
-      const heartCounts: Record<string, number> = {};
-      for (const name of names) {
-        const reactions = perPerson[name]?.topReactionsGiven ?? [];
-        let hearts = 0;
-        for (const reaction of reactions) {
-          if (/\u2764|\u{1F493}|\u{1F496}|\u{1F497}|\u{1F498}|\u{1F499}|\u{1F49A}|\u{1F49B}|\u{1F49C}|\u{1F5A4}|\u{1F90D}|\u{1F90E}|\u{1FA77}|\u{2763}|\u{1F9E1}/u.test(reaction.emoji)) {
-            hearts += reaction.count;
-          }
-        }
-        heartCounts[name] = hearts;
+    const HEART_RE = /\u2764|\u{1F493}|\u{1F496}|\u{1F497}|\u{1F498}|\u{1F499}|\u{1F49A}|\u{1F49B}|\u{1F49C}|\u{1F5A4}|\u{1F90D}|\u{1F90E}|\u{1FA77}|\u{2763}|\u{1F9E1}/gu;
+    const heartCounts: Record<string, number> = {};
+
+    // Count heart reactions given
+    for (const name of names) {
+      const reactions = perPerson[name]?.topReactionsGiven ?? [];
+      let hearts = 0;
+      for (const reaction of reactions) {
+        if (HEART_RE.test(reaction.emoji)) hearts += reaction.count;
+        HEART_RE.lastIndex = 0;
       }
-      const winner = findWinner(heartCounts);
-      if (winner && winner.value > 0) {
-        badges.push({
-          id: 'heart-bomber',
-          name: 'Heart Bomber',
-          emoji: '\u{2764}\u{FE0F}',
-          description: 'Najwięcej reakcji serduszkowych',
-          holder: winner.name,
-          evidence: `${winner.value} reakcji \u{2764}\u{FE0F}`,
-        });
+      heartCounts[name] = hearts;
+    }
+
+    // Also count heart emoji in message text
+    for (const msg of conversation.messages) {
+      if (msg.type !== 'text' || !msg.content) continue;
+      const matches = msg.content.match(HEART_RE);
+      if (matches) {
+        heartCounts[msg.sender] = (heartCounts[msg.sender] ?? 0) + matches.length;
       }
+    }
+
+    const winner = findWinner(heartCounts);
+    if (winner && winner.value > 0) {
+      badges.push({
+        id: 'heart-bomber',
+        name: 'Heart Bomber',
+        emoji: '\u{2764}\u{FE0F}',
+        icon: 'heart-bomber.png',
+        description: 'Najwięcej serduszek (reakcje + emoji)',
+        holder: winner.name,
+        evidence: `${winner.value} serduszek \u{2764}\u{FE0F}`,
+      });
     }
   }
 
@@ -356,6 +374,7 @@ export function computeBadges(
         id: 'link-lord',
         name: 'Link Lord',
         emoji: '\u{1F4CE}',
+        icon: 'link-lord.png',
         description: 'Najwięcej udostępnionych linków',
         holder: winner.name,
         evidence: `${winner.value} udostępnionych linków`,
@@ -372,6 +391,7 @@ export function computeBadges(
         id: 'streak-master',
         name: 'Streak Master',
         emoji: '\u{1F525}',
+        icon: 'streak-master.png',
         description: 'Najdłuższa seria dni z rzędu z wiadomościami',
         holder: winner.name,
         evidence: `${winner.value} dni z rzędu`,
@@ -391,6 +411,7 @@ export function computeBadges(
         id: 'question-master',
         name: 'Detektyw',
         emoji: '\u{1F50D}',
+        icon: 'question-master.png',
         description: 'Najwięcej zadanych pytań',
         holder: winner.name,
         evidence: `Zadał(a) ${winner.value} pytań`,
@@ -410,6 +431,7 @@ export function computeBadges(
         id: 'mention-magnet',
         name: 'Magnes na @',
         emoji: '\u{1F4E2}',
+        icon: 'mention-magnet.png',
         description: 'Najczęściej wspominany (@) przez innych',
         holder: winner.name,
         evidence: `${winner.value} wzmianek`,
@@ -429,6 +451,7 @@ export function computeBadges(
         id: 'reply-king',
         name: 'Król odpowiedzi',
         emoji: '\u{21A9}\u{FE0F}',
+        icon: 'reply-king.png',
         description: 'Najczęściej odpowiadał(a) na wiadomości (reply)',
         holder: winner.name,
         evidence: `${winner.value} odpowiedzi`,
@@ -448,6 +471,7 @@ export function computeBadges(
         id: 'edit-lord',
         name: 'Perfekcjonista',
         emoji: '\u{270F}\u{FE0F}',
+        icon: 'edit-lord.png',
         description: 'Najczęściej edytował(a) swoje wiadomości',
         holder: winner.name,
         evidence: `${winner.value} edytowanych wiadomości`,

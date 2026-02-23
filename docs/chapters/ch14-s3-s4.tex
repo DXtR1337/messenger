@@ -1,0 +1,591 @@
+
+% ============================================================
+\section{Audyt Mobile UX}
+\label{sec:mobile-ux}
+% ============================================================
+
+Mobilne doswiadczenie uzytkownika stanowi krytyczny wektor wzrostu --- ponad 60\% ruchu na aplikacjach SaaS B2C pochodzi z~urzadzen mobilnych. Niniejsza sekcja analizuje responsywnosc, ergonomie dotykowa i~wydajnosc \podtekst na urzadzeniach z~ekranami 375--430\,px.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Analiza breakpointow}
+\label{sec:mobile-breakpoints}
+
+\podtekst wykorzystuje standardowe breakpointy Tailwind CSS~v4 bez customowych rozszerzen:
+
+\begin{table}[H]
+\centering
+\caption{Breakpointy Tailwind v4 --- wykorzystanie w~projekcie}
+\label{tab:mobile-breakpoints}
+\begin{tabularx}{\textwidth}{C{2cm}C{2cm}C{2.5cm}X}
+\toprule
+\textbf{Prefix} & \textbf{Szerokosc} & \textbf{Urzadzenia} & \textbf{Zastosowanie w~\podtekst} \\
+\midrule
+--- & $<640$\,px & Telefony & Layout bazowy, hero diagonal, bottom bar nav \\
+\texttt{sm:} & $\geq640$\,px & Duze telefony & Scroll indicator visibility, minor spacing \\
+\texttt{md:} & $\geq768$\,px & Tablety & Przelaczenie: sidebar nav, desktop hero, particle bg \\
+\texttt{lg:} & $\geq1024$\,px & Laptopy & Dashboard sidebar, wieksze karty share \\
+\texttt{xl:} & $\geq1280$\,px & Desktopy & Max-width containery, pelny layout \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Brak breakpointa pomiedzy 640--768\,px}}]
+Przelaczenie z~mobilnego bottom bar na desktopowy sidebar nastepuje na \texttt{md:768px}. Na tabletach w~orientacji portrait (768\,px) uzytkownik widzi desktop layout, ktory moze byc ciasny. Brak posredniego breakpointa dla tabletow (np.~\texttt{tab:900px}) oznacza, ze interfejs ,,skacze'' z~mobile na desktop bez plynnego przejscia.
+\end{warningbox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Analiza paska nawigacji mobilnej}
+\label{sec:mobile-tab-bar}
+
+Komponent \tstype{SectionNavigator} (\filepath{src/components/analysis/SectionNavigator.tsx}, linie~118--145) renderuje na mobile dolny pasek nawigacyjny z~horizontalnym scrollem.
+
+\subsubsection{Obliczenie dopasowania na 375\,px}
+
+\begin{table}[H]
+\centering
+\caption{Dopasowanie tabow na ekranie 375\,px}
+\label{tab:mobile-tab-fit}
+\begin{tabularx}{\textwidth}{L{3.5cm}C{2.5cm}C{2cm}C{2cm}X}
+\toprule
+\textbf{Widok} & \textbf{Liczba tabow} & \textbf{Szer. taba} & \textbf{Suma} & \textbf{Miesci sie?} \\
+\midrule
+Rozmowa 2-os. & 6 & $\sim$70\,px & 420\,px & \warn{Wymaga scrollu} \\
+Rozmowa grupowa & 6 & $\sim$70\,px & 420\,px & \warn{Wymaga scrollu} \\
+Server view (5+) & 9 & $\sim$70\,px & 630\,px & \danger{68\% ukryte} \\
+Idealny (5 tabow) & 5 & $\sim$70\,px & 350\,px & \score{Tak (25\,px zapas)} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{metricbox}
+\textbf{Kalkulacja:} Dostepna szerokosc = 375\,px $-$ 2$\times$12\,px (padding \texttt{px-3}) = 351\,px. Pojedynczy tab: ikona~16\,px + gap~4\,px + tekst~$\sim$40\,px + padding~$2\times12$\,px = $\sim$84\,px. W~praktyce krotkie polskie etykiety (,,Przeg.'', ,,AI'', ,,Share'') pozwalaja zmiescic 4--5 tabow bez scrollu.
+\end{metricbox}
+
+Aktualna implementacja poprawnie obsluguje overflow:
+\begin{itemize}
+  \item \texttt{overflow-x-auto} z~\texttt{scrollbar-none} --- scroll bez widocznego scrollbara
+  \item Gradienty na krawedziach (\texttt{bg-gradient-to-r/l}) sygnalizuja mozliwosc scrollowania
+  \item Bezpieczny margines dolny: \texttt{pb-[max(0.375rem,env(safe-area-inset-bottom))]} --- poprawne zachowanie na iPhone'ach z~notchem
+  \item Dotykowe sprzezenie zwrotne: \texttt{active:scale-95 active:opacity-80}
+\end{itemize}
+
+\begin{infobox}[title={\textbf{Rekomendacja}}]
+Dla server view (9~tabow) rozwazyc \textbf{ikony bez etykiet} na mobile --- redukuje szerokosc taba do $\sim$40\,px, co pozwala zmiescic 8~tabow na 375\,px bez scrollu.
+\end{infobox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Audyt celow dotykowych}
+\label{sec:mobile-touch-targets}
+
+Wytyczne WCAG~2.1 (Success Criterion 2.5.8) wymagaja minimalnego rozmiaru celu dotykowego \textbf{44$\times$44\,px}. Google Material Design zaleca \textbf{48$\times$48\,px}.
+
+\begin{table}[H]
+\centering
+\caption{Audyt celow dotykowych --- zgodnosc z~WCAG~2.5.8}
+\label{tab:mobile-touch-targets}
+\begin{tabularx}{\textwidth}{L{4.5cm}C{2cm}C{2cm}C{1.5cm}X}
+\toprule
+\textbf{Element} & \textbf{Rozmiar} & \textbf{Minimum} & \textbf{Wynik} & \textbf{Uwagi} \\
+\midrule
+Nawigacja mobilna (tab) & $\sim$84$\times$36\,px & 44$\times$44\,px & \warn{Szer. OK} & Wysokosc 36\,px $<$ 44\,px \\
+Desktop sidebar buttons & 32$\times$32\,px & 44$\times$44\,px & \score{N/D} & Desktop only (\texttt{md:flex}) \\
+Przycisk ,,wróć na gore'' & 40$\times$40\,px & 44$\times$44\,px & \warn{Bliski} & 4\,px ponizej minimum \\
+Hamburger (Topbar) & 18$\times$18\,px & 44$\times$44\,px & \danger{FAIL} & Brak padding area \\
+Standardowe buttony & $\sim$48$\times$48\,px & 44$\times$44\,px & \score{PASS} & \texttt{p-3} lub \texttt{p-4} \\
+Share card download & $\sim$44$\times$44\,px & 44$\times$44\,px & \score{PASS} & Minimalne \\
+CTA ,,Inicjuj analize'' & $\sim$200$\times$52\,px & 44$\times$44\,px & \score{PASS} & Pelna szerokosc mobile \\
+Checkbox AI consent & $\sim$20$\times$20\,px & 44$\times$44\,px & \danger{FAIL} & Bez touch padding \\
+Tab switcher (Upload) & $\sim$120$\times$40\,px & 44$\times$44\,px & \warn{Bliski} & Wys. 40\,px \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Krytyczne naruszenia:}
+\begin{enumerate}[label=\textcolor{PodDanger}{\arabic*.}]
+  \item \textbf{Hamburger 18$\times$18\,px} (\filepath{src/components/shared/Topbar.tsx}) --- ikona renderowana jako \texttt{<Menu size=\{18\} />} bez dodatkowego paddingu. Uzytkownik musi trafic w~kwadrat 18\,px, co jest 6$\times$ mniejsze niz minimum WCAG. Naprawa: dodac \texttt{p-3} do otaczajacego \texttt{<button>}.
+  \item \textbf{Checkbox AI consent} --- natywny \texttt{<input type="checkbox">} bez customowego hit area. Naprawa: opakowac w~\texttt{<label>} z~odpowiednim paddingiem.
+\end{enumerate}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Wplyw Framer Motion na mobile}
+\label{sec:mobile-framer-impact}
+
+Animacje \tsfunc{whileInView} z~biblioteki Framer Motion tworza osobne instancje \tstype{IntersectionObserver} per animowany element.
+
+\begin{table}[H]
+\centering
+\caption{IntersectionObserver --- rozklad na stronie analizy (wszystkie zrodla)}
+\label{tab:mobile-io-breakdown}
+\begin{tabularx}{\textwidth}{L{5cm}C{2.5cm}C{2.5cm}X}
+\toprule
+\textbf{Zrodlo} & \textbf{Instancje} & \textbf{RAM (est.)} & \textbf{Plik} \\
+\midrule
+\tsfunc{whileInView} w~page.tsx & 37 & 7.4--18.5\,MB & page.tsx \\
+EmojiReactions & 1 & 0.2--0.5\,MB & EmojiReactions.tsx:54 \\
+IntimacyChart & 2 & 0.4--1.0\,MB & IntimacyChart.tsx:86,181 \\
+LongitudinalDelta & 1 & 0.2--0.5\,MB & LongitudinalDelta.tsx:178 \\
+SentimentChart & 1 & 0.2--0.5\,MB & SentimentChart.tsx:76 \\
+TimelineChart & 1 & 0.2--0.5\,MB & TimelineChart.tsx:116 \\
+TopWordsCard & 1 & 0.2--0.5\,MB & TopWordsCard.tsx:85 \\
+WeekdayWeekendCard & 1 & 0.2--0.5\,MB & WeekdayWeekendCard.tsx:72 \\
+SectionNavigator & 6--9 & 1.2--4.5\,MB & SectionNavigator.tsx \\
+\midrule
+\textbf{Razem} & \textbf{51--54} & \textbf{10.2--27\,MB} & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Wplyw na urzadzenia mobilne}}]
+Typowy smartfon z~4\,GB RAM dysponuje $\sim$1.5--2\,GB dla przegladarki. Przy 27\,MB samych IntersectionObserver + DOM strony analizy ($\sim$50\,MB) + Recharts SVG ($\sim$15\,MB), laczne zuzycie pamieci moze osiagnac \textbf{90--120\,MB} --- blisko progu, przy ktorym iOS Safari rozpoczyna agresywne odzyskiwanie pamieci (\emph{tab reloading}).
+
+Na Androidzie z~Chrome problem jest mniej ostry (wiekszy limit per tab), ale uzytkownicy moga odczuwac \textbf{jank} (stuttering) podczas scrollowania przez animowane sekcje.
+\end{warningbox}
+
+\paragraph{Strategia naprawy:}
+\begin{enumerate}
+  \item \textbf{Architektura tabowa} (\secref{sec:architektura-tabowa}) --- redukcja do $\sim$8--10 obserwatorow per aktywny tab
+  \item \textbf{Shared IntersectionObserver} --- jeden observer z~\texttt{threshold: [0, 0.5, 1]} zamiast osobnych per element
+  \item \textbf{CSS-only animations na mobile} --- \texttt{@media (prefers-reduced-motion: no-preference)} z~CSS \texttt{animation-timeline: view()} zamiast JS-based Framer Motion
+  \item \textbf{Wylaczenie animacji na low-end} --- detekcja via \tsfunc{navigator.deviceMemory} (Chrome) lub \texttt{navigator.hardwareConcurrency $\leq$ 4}
+\end{enumerate}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Problemy html2canvas na Safari/iOS}
+\label{sec:mobile-html2canvas}
+
+Projekt uzywa \texttt{html2canvas-pro} v1.6.7 w~komponentach \tstype{StoryShareCard} i~\tsfunc{useCardDownload} do generowania PNG z~kart share. Analiza kodu zrodlowego wykazala \textbf{brak jakichkolwiek workaroundow} dla znanych problemow Safari:
+
+\begin{table}[H]
+\centering
+\caption{Znane problemy html2canvas na Safari/iOS}
+\label{tab:mobile-html2canvas-issues}
+\begin{tabularx}{\textwidth}{L{3.5cm}C{2cm}X}
+\toprule
+\textbf{Problem} & \textbf{Dotkliwosc} & \textbf{Opis i~naprawa} \\
+\midrule
+CORS proxy images & \danger{Wysoka} & Safari blokuje rasteryzacje obrazow z~innych domen. Brak opcji \texttt{useCORS: true} ani \texttt{allowTaint: true} w~konfiguracji. \\
+SVG rendering & \warn{Srednia} & Ikony Lucide renderowane jako \texttt{<svg>} moga nie byc przechwycone poprawnie. Naprawa: \texttt{foreignObjectRendering: true}. \\
+Retina scaling & \warn{Srednia} & Brak \texttt{scale: window.devicePixelRatio} --- karty moga byc rozmyte na Retina (@2x/@3x). \\
+Canvas memory limit & \danger{Wysoka} & iOS Safari limituje canvas do $\sim$16\,MP. Duze karty (np.~ReceiptCard z~50+ liniami) moga przekroczyc limit. \\
+Font rendering & \warn{Niska} & Custom fonty (Syne, Geist) moga nie byc zaladowane w~momencie rasteryzacji --- \texttt{onclone} callback z~\tsfunc{document.fonts.ready}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title={\textbf{Rekomendacja: migracja na Satori + \texttt{@vercel/og}}}]
+Alternatywa server-side: generowanie kart jako SVG (Satori) z~konwersja do PNG (Sharp). Eliminuje wszystkie problemy Safari, daje deterministyczne wyniki i~odciaża przegldarke. Wymaga nowych API routes per typ karty, ale jest znacznie bardziej niezawodna.
+\end{infobox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Flow uploadu na mobile}
+\label{sec:mobile-upload}
+
+Komponent \tstype{DropZone} (\filepath{src/components/upload/DropZone.tsx}) obsluguje upload plikow konwersacji.
+
+\begin{table}[H]
+\centering
+\caption{Kompatybilnosc uploadu na platformach mobilnych}
+\label{tab:mobile-upload-compat}
+\begin{tabularx}{\textwidth}{L{3.5cm}C{2.5cm}C{2.5cm}X}
+\toprule
+\textbf{Mechanizm} & \textbf{iOS Safari} & \textbf{Android Chrome} & \textbf{Uwagi} \\
+\midrule
+\texttt{<input type="file">} & \score{Tak} & \score{Tak} & \texttt{accept=".json,.txt"} \\
+Drag-and-drop & \warn{Czesciowo} & \score{Tak} & iOS 13+ via \texttt{webkitGetAsEntry} \\
+Folder picker & \danger{Nie} & \warn{Czesciowo} & \texttt{webkitdirectory} nieobslugiwany na iOS \\
+Multiple files & \score{Tak} & \score{Tak} & Atrybut \texttt{multiple} \\
+Rozmiar area (min-h) & \score{200\,px} & \score{200\,px} & Wystarczajacy cel dotykowy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Krytyczny problem: folder upload na iOS}}]
+Eksport Messenger to folder z~wieloma plikami JSON. Na desktopie uzytkownik moze przeciagnac caly folder. Na iOS \textbf{nie ma takiej mozliwosci} --- \texttt{webkitdirectory} nie jest obslugiwany. Uzytkownik musi recznie wybrac wszystkie pliki JSON z~folderu --- UX jest znaczaco gorszy.
+
+\textbf{Naprawa:} Dodac instrukcje krok-po-kroku dla iOS z~GIF-em pokazujacym jak wybrac wiele plikow w~aplikacji Pliki. Alternatywnie: wspierac upload ZIP z~automatyczna ekstrakcja (via \texttt{JSZip}).
+\end{warningbox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Nawigacja mobilna}
+\label{sec:mobile-navigation}
+
+\begin{table}[H]
+\centering
+\caption{Ocena nawigacji mobilnej}
+\label{tab:mobile-nav-assessment}
+\begin{tabularx}{\textwidth}{L{4cm}C{2cm}X}
+\toprule
+\textbf{Element} & \textbf{Ocena} & \textbf{Szczegoly} \\
+\midrule
+Drawer (szuflada) & \score{Dobra} & 280\,px szerokosc, \texttt{z-50}, backdrop blur, safe-area-bottom \\
+Topbar & \score{Dobra} & Sticky \texttt{top-0 z-50}, responsywne logo \\
+SectionNavigator (mobile) & \warn{Srednia} & Bottom bar z~scrollem, ale 6--9 tabow to duzo \\
+Back-to-top & \warn{Srednia} & \texttt{size-10} (40\,px) --- 4\,px ponizej WCAG \\
+Pozycja CTA (landing) & \score{Dobra} & \texttt{absolute bottom-[6vh]} --- zawsze widoczne \\
+Particle background & \score{OK} & Ukryte na mobile (\texttt{hidden md:block}) \\
+Scroll indicator & \score{OK} & Ukryty na malych ekranach (\texttt{hidden sm:block}) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Landing hero mobile}
+
+Mobilny hero (\filepath{src/components/landing/LandingHero.tsx}, linia~133) uzywa osobnego layoutu \texttt{md:hidden}:
+
+\begin{itemize}
+  \item \textbf{Typografia diagonalna} --- \texttt{transform: rotate(-2deg)} z~responsywnym \texttt{clamp(2.2rem, 8vw, 3.5rem)}
+  \item \textbf{Animacja per-word} --- \texttt{heroFadeSlideLeft} z~kaskadowym opoznieniem (\texttt{0.05 + i * 0.04}s)
+  \item \textbf{CTA przypiete do dolu} --- \texttt{absolute bottom-[6vh] left-6 right-6}
+  \item \textbf{Brak ciezkich efektow} --- particle background i~Spline 3D ukryte na mobile
+\end{itemize}
+
+\begin{featurebox}
+\textbf{Pozytywne aspekty mobile UX:} Diagnostycznie, mobilny hero jest dobrze zrobiony --- osobny layout unika problemow z~responsywnoscia desktopowego hero, a CTA jest zawsze widoczne. Glowne problemy koncentruja sie na stronie analizy (IntersectionObserver, touch targets) i~upload flow (brak folder picker na iOS).
+\end{featurebox}
+
+\subsubsection{Podsumowanie Mobile UX}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  catbox/.style={draw=PodBorder, fill=white, rounded corners=4pt,
+    minimum width=3.5cm, minimum height=0.8cm, align=center, font=\small},
+  score/.style={font=\small\bfseries},
+  >=Stealth
+]
+
+% Categories
+\node[catbox, fill=PodSuccess!10, draw=PodSuccess!50] (c1) at (0,0) {Landing mobile};
+\node[catbox, fill=PodSuccess!10, draw=PodSuccess!50] (c2) at (4.5,0) {Nawigacja};
+\node[catbox, fill=PodWarning!10, draw=PodWarning!50] (c3) at (9,0) {Touch targets};
+\node[catbox, fill=PodDanger!10, draw=PodDanger!50] (c4) at (0,-1.5) {IntersectionObserver};
+\node[catbox, fill=PodDanger!10, draw=PodDanger!50] (c5) at (4.5,-1.5) {Upload iOS};
+\node[catbox, fill=PodWarning!10, draw=PodWarning!50] (c6) at (9,-1.5) {html2canvas};
+
+% Scores
+\node[score, text=PodSuccess] at (0,-0.7) {8/10};
+\node[score, text=PodSuccess] at (4.5,-0.7) {7/10};
+\node[score, text=PodWarning] at (9,-0.7) {5/10};
+\node[score, text=PodDanger] at (0,-2.2) {3/10};
+\node[score, text=PodDanger] at (4.5,-2.2) {3/10};
+\node[score, text=PodWarning] at (9,-2.2) {4/10};
+
+\end{tikzpicture}
+\caption{Podsumowanie ocen Mobile UX per kategoria}
+\label{fig:mobile-ux-summary}
+\end{figure}
+
+
+% ============================================================
+\section{Onboarding i~retencja}
+\label{sec:onboard-audyt}
+% ============================================================
+
+Najlepsza aplikacja analityczna nie ma wartosci, jesli uzytkownik nie przejdzie od wejscia na strone do pierwszego ,,wow moment''. Niniejsza sekcja analizuje sciezke onboardingu, mechanizmy retencji i~punkty tarcia (friction points) w~\podtekst.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Flow uzytkownika: od landing do wynikow}
+\label{sec:onboard-flow}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  step/.style={draw=PodBlue!60, fill=PodBlue!8, rounded corners=6pt,
+    minimum height=1.2cm, minimum width=2.8cm, align=center, font=\small\bfseries,
+    text=PodBlueDark},
+  optional/.style={step, draw=PodPurple!50, fill=PodPurple!6, text=PodPurpleDark},
+  dropoff/.style={font=\tiny\color{PodDanger}, align=center},
+  time/.style={font=\tiny\color{PodSuccess}, align=center},
+  >=Stealth
+]
+
+% Steps
+\node[step] (s1) at (0,0) {Landing\\page.tsx};
+\node[step] (s2) at (3.5,0) {CTA click\\,,Inicjuj''};
+\node[step] (s3) at (7,0) {Upload\\DropZone};
+\node[step] (s4) at (10.5,0) {Parsing\\(client)};
+\node[step] (s5) at (3.5,-3) {Wyniki\\ilosciowe};
+\node[optional] (s6) at (7,-3) {AI Analysis\\(opcjonalne)};
+\node[optional] (s7) at (10.5,-3) {Pelne\\wyniki};
+
+% Arrows
+\draw[dataarrow] (s1) -- (s2);
+\draw[dataarrow] (s2) -- (s3);
+\draw[dataarrow] (s3) -- (s4);
+\draw[dataarrow] (s4) -- ++(0,-1.2) -| (s5);
+\draw[dataarrow] (s5) -- (s6);
+\draw[dataarrow] (s6) -- (s7);
+
+% Drop-off estimates (heuristic, no data)
+\node[dropoff] at (1.75,0.8) {$\sim$40\%*};
+\node[dropoff] at (5.25,0.8) {$\sim$25\%*};
+\node[dropoff] at (8.75,0.8) {$\sim$15\%*};
+\node[dropoff] at (5.25,-2.2) {$\sim$30\%*};
+
+% Time annotations
+\node[time] at (0,-0.9) {$t=0$s};
+\node[time] at (3.5,-0.9) {$t \approx 5$s};
+\node[time] at (7,-0.9) {$t \approx 15$s};
+\node[time] at (10.5,-0.9) {$t \approx 16$s};
+\node[time] at (3.5,-3.9) {$t \approx 17$s};
+\node[time] at (7,-3.9) {$t \approx 60$s};
+\node[time] at (10.5,-3.9) {$t \approx 120$s};
+
+% Curtain annotation
+\node[font=\tiny\itshape\color{PodTextMuted}, anchor=north] at (0,-1.2) {CurtainReveal\\$\sim$3$s$ animacja};
+
+% Interaction count
+\node[font=\scriptsize\color{PodBlue}, anchor=south, fill=PodBlue!5, rounded corners=2pt, inner sep=3pt]
+  at (5.25,-4.5) {Calkowite interakcje do pierwszych wynikow: \textbf{4} (CTA $\rightarrow$ upload $\rightarrow$ parse $\rightarrow$ view)};
+
+\end{tikzpicture}
+\caption{Flow uzytkownika z~heurystycznymi szacunkami drop-off (*bez danych --- patrz zastrzezenie ponizej)}
+\label{fig:onboard-flow-diagram}
+\end{figure}
+
+\begin{warningbox}[title={\danger{*Zastrzezenie: szacunki bez danych}}]
+Wszystkie wartosci drop-off na powyzszym diagramie to \textbf{heurystyki benchmarkowe} oparte na typowych lejkach SaaS B2C, \textbf{nie na danych z~\podtekst}. GA4 jest zaimplementowane, ale nie sledzi lejka konwersji --- brak event trackingu na: upload rozpoczety, upload zakonczony, AI trigger, AI complete. Ponizsze wartosci nalezy traktowac jako \textbf{hipotezy do walidacji}, nie fakty.
+\end{warningbox}
+
+\begin{metricbox}
+\textbf{Hipotetyczny lejek konwersji (do walidacji):} Z~1000 uzytkownikow wchodzacych na landing, $\sim$600 klika CTA, $\sim$450 uploaduje plik, $\sim$383 widzi wyniki ilosciowe, $\sim$268 uruchamia AI. Hipotetyczna konwersja landing $\rightarrow$ AI: \textbf{$\sim$27\%}. Glowne punkty tarcia (hipotezy): brak pliku eksportu i~oczekiwanie na AI ($\sim$60$s$). \textbf{Wymagana walidacja:} wdrozenie GA4 funnel events przed podjęciem decyzji optymalizacyjnych.
+\end{metricbox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Analiza danych demo}
+\label{sec:onboard-demo}
+
+Plik \filepath{src/components/landing/demo-card-data.tsx} (682~LOC) zawiera kompletny zestaw danych demo:
+
+\begin{table}[H]
+\centering
+\caption{Dane demo --- zawartosc i~wykorzystanie}
+\label{tab:onboard-demo-data}
+\begin{tabularx}{\textwidth}{L{4cm}C{3cm}X}
+\toprule
+\textbf{Element} & \textbf{Wartosc} & \textbf{Wykorzystanie} \\
+\midrule
+Fikcyjna para & ,,Ania'' \& ,,Kuba'' & Realistyczne polskie imiona \\
+Liczba wiadomosci & 12\,847 & 11~mies. (III.2024 -- II.2025) \\
+QuantitativeAnalysis & Kompletna & Wszystkie 60+ metryk \\
+QualitativeAnalysis & Kompletna & Wszystkie 4~passy + roast \\
+CPS, Subtext, Court & Kompletne & Pelne dane entertainment \\
+Dating Profile & Kompletny & Profile obu osob \\
+Delusion Quiz & Kompletny & Wyniki z~Delusion Index \\
+Share cards & 20+ typow & Interaktywne w~LandingDemo \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Co dziala dobrze}
+
+\begin{itemize}
+  \item \textbf{Natychmiastowa gratyfikacja} --- uzytkownik widzi pelne, realistyczne wyniki bez uploadu
+  \item \textbf{Interaktywnosc} --- 20+ kart share mozna klikac, pobierac, udostepniac
+  \item \textbf{Wiarygodnosc danych} --- 12\,847 wiadomosci z~realistycznymi wzorcami czasowymi
+  \item \textbf{Pelnosc} --- pokrywa wszystkie funkcje aplikacji, wlacznie z~AI i~entertainment
+\end{itemize}
+
+\subsubsection{Czego brakuje}
+
+\begin{warningbox}[title={\textbf{Brak konwersji demo $\rightarrow$ wlasna analiza}}]
+Po interakcji z~demo kartami uzytkownik nie widzi \textbf{zadnego CTA} kierujacego do uploadu wlasnej rozmowy. Demo pokazuje koncowy rezultat, ale nie prowadzi uzytkownika dalej. Brakuje:
+\begin{itemize}
+  \item Przycisku ,,Analizuj swoja rozmowe'' pod/obok demo kart
+  \item Porownania ,,Ania \& Kuba vs Twoja rozmowa'' zachecajacego do uploadu
+  \item Notki ,,To dane demo. Twoje wyniki beda unikalne!''
+  \item Animacji przejscia z~demo do uploadu (np.~morph kart demo w~puste karty z~,,?'')
+\end{itemize}
+\end{warningbox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Audyt stanow ladowania}
+\label{sec:onboard-loading-states}
+
+Stany ladowania podczas analizy AI (\filepath{src/components/analysis/AIAnalysisButton.tsx}, linie 26--531):
+
+\begin{table}[H]
+\centering
+\caption{Stany ladowania analizy AI}
+\label{tab:onboard-loading-states}
+\begin{tabularx}{\textwidth}{C{1cm}L{3.5cm}L{4.5cm}C{2cm}C{1.5cm}}
+\toprule
+\textbf{Krok} & \textbf{Etykieta PL} & \textbf{Opis dzialania} & \textbf{Stan wizualny} & \textbf{Ocena} \\
+\midrule
+1 & ,,Czytam miedzy wierszami...'' & Pass 1: ton i~styl & Spinner + tekst & \score{Dobry} \\
+2 & ,,Mapuje dynamike konwersacji...'' & Pass 2: dynamika relacji & Progress step & \score{Dobry} \\
+3 & ,,Profiluje osobowosci...'' & Pass 3: profile indywidualne & Progress step & \score{Dobry} \\
+4 & ,,Wyciagam wnioski. Przygotuj sie.'' & Pass 4: synteza i~health score & Progress step & \score{Dobry} \\
+\midrule
+Blad & Czerwony alert & Komunikat bledu + retry & Alert box & \score{Dobry} \\
+Heartbeat & (niewidoczny) & SSE heartbeat co 15$s$ & --- & \score{OK} \\
+Consent & Checkbox + opis & Zgoda AI (persisted) & Inline & \warn{Sredni} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{featurebox}
+\textbf{Pozytywne:} Etykiety ladowania sa kreatywne i~zgodne z~brandem (,,Czytam miedzy wierszami'' nawiazuje do tagline). Kazdy krok ma wizualny progres (pending $\rightarrow$ running $\rightarrow$ complete). Hook \tsfunc{useCPSAnalysis} implementuje plynna interpolacje co 150\,ms.
+
+\textbf{Do poprawy:} Brak \textbf{szacowanego czasu} (,,ok. 45$s$'') i~\textbf{paska postepu z~procentami}. Uzytkownik nie wie, ile musi czekac. CPS consent checkbox jest maly i~latwo przeoczyc.
+\end{featurebox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Brakujace elementy onboardingu}
+\label{sec:onboard-missing}
+
+Analiza kodu zrodlowego wykazala \textbf{calkowity brak} standardowych elementow onboardingu:
+
+\begin{table}[H]
+\centering
+\caption{Brakujace elementy onboardingu --- checklist}
+\label{tab:onboard-missing-checklist}
+\begin{tabularx}{\textwidth}{L{4.5cm}C{2cm}C{2cm}X}
+\toprule
+\textbf{Element} & \textbf{Stan} & \textbf{Priorytet} & \textbf{Wplyw} \\
+\midrule
+Welcome modal (1-sze wejscie) & \danger{Brak} & P1 & Orientacja nowego uzytkownika \\
+Guided tour / step-by-step & \danger{Brak} & P1 & Redukcja drop-off na upload \\
+Tooltips (dismissible) & \danger{Brak} & P2 & Zrozumienie metryk \\
+Video tutorial / GIF & \danger{Brak} & P2 & Jak wyeksportowac rozmowe \\
+Progress indicator (onboarding) & \danger{Brak} & P2 & Motywacja do ukonczenia \\
+Empty state (dashboard) & \warn{Minimalny} & P1 & Dashboard bez analiz jest pusty \\
+,,Analizuj kolejna'' CTA & \danger{Brak} & P1 & Retencja po 1-szej analizie \\
+Sukces celebration & \warn{Czesciowy} & P3 & \texttt{sessionStorage} per analiza \\
+Platform-specific export guide & \danger{Brak} & P0 & \textbf{Najwazniejszy} --- bez pliku nie ma analizy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\danger{Najwazniejszy brak: przewodnik eksportu rozmowy}}]
+Uzytkownik musi \textbf{samodzielnie} wiedziec, jak wyeksportowac rozmowe z~Messengera, WhatsAppa, Instagrama lub Telegrama. Nie ma zadnego przewodnika, screenshotow ani instrukcji. To \textbf{najwiekszy punkt tarcia} calego flow --- uzytkownik, ktory nie ma pliku, nie moze uzyc aplikacji.
+
+\textbf{Rekomendacja:} Komponent \tstype{ExportGuide} z~tabami per platforme, krokami i~screencastami. Wyswietlany na stronie upload (\filepath{/analysis/new}) oraz jako link w~sekcji FAQ landing page.
+\end{warningbox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Analiza petli retencji}
+\label{sec:onboard-retention}
+
+\subsubsection{Obecne mechanizmy retencji}
+
+\begin{table}[H]
+\centering
+\caption{Mechanizmy retencji --- stan obecny vs idealny}
+\label{tab:onboard-retention-current-ideal}
+\begin{tabularx}{\textwidth}{L{4cm}C{2.5cm}C{2.5cm}X}
+\toprule
+\textbf{Mechanizm} & \textbf{Obecny} & \textbf{Idealny} & \textbf{Wplyw na retencje} \\
+\midrule
+Dashboard z~historia & \score{Tak} & \score{Tak} & Sredni --- powrot do wynikow \\
+Share cards (viral loop) & \score{20+ typow} & 20+ z~watermarkiem & \textbf{Wysoki} --- nowi uzytkownicy \\
+PDF export & \score{2 typy} & 2+ typy & Niski --- offline, brak powrotu \\
+Story/Wrapped mode & \score{Tak} & Tak & Sredni --- efekt ,,wow'' \\
+GA4 analytics & \score{Tak} & Tak & --- (tracking, nie retencja) \\
+Email notifications & \danger{Brak} & Reminders & \textbf{Wysoki} --- reaktywacja \\
+Push notifications & \danger{Brak} & Web push & \textbf{Wysoki} --- reaktywacja \\
+Newsletter & \danger{Brak} & Cotygodniowy digest & Sredni --- zaangazowanie \\
+,,Analizuj kolejna'' CTA & \danger{Brak} & Post-analiza CTA & \textbf{Wysoki} --- natychmiastowy powrot \\
+Porownanie z~czasem & \warn{Czesciowy} & Auto-reminder co miesiac & Wysoki --- longitudinalny \\
+Gamifikacja & \warn{Odznaki} & Odznaki + streak + level & Sredni --- zaangazowanie \\
+Sharing incentives & \danger{Brak} & Odblokuj feature za share & \textbf{Wysoki} --- viral + retencja \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Diagram petli retencji}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  loop/.style={draw=PodBlue!60, fill=PodBlue!8, rounded corners=6pt,
+    minimum height=1cm, minimum width=2.5cm, align=center, font=\small\bfseries,
+    text=PodBlueDark},
+  missing/.style={loop, draw=PodDanger!50, fill=PodDanger!5, text=PodDanger!80!black,
+    dashed},
+  viral/.style={loop, draw=PodPurple!60, fill=PodPurple!8, text=PodPurpleDark},
+  >=Stealth
+]
+
+% Current loop (inner)
+\node[loop] (upload) at (0,0) {Upload};
+\node[loop] (analyze) at (3.5,0) {Analiza};
+\node[loop] (results) at (7,0) {Wyniki};
+\node[viral] (share) at (7,-2.5) {Share Cards};
+\node[loop] (dashboard) at (0,-2.5) {Dashboard};
+
+\draw[dataarrow] (upload) -- (analyze);
+\draw[dataarrow] (analyze) -- (results);
+\draw[dataarrow] (results) -- (share);
+\draw[dataarrow] (share) -- (dashboard);
+\draw[dataarrow] (dashboard) -- (upload) node[midpoint, font=\tiny\color{PodTextMuted}, above, yshift=2pt] {kolejna rozmowa};
+
+% Viral loop (outward)
+\draw[podarrow purple, thick] (share.east) -- ++(1.5,0) node[right, font=\scriptsize\color{PodPurple}] {Social media} -- ++(0,1.5) -- (results.east |- 0,1) node[above, font=\tiny\color{PodPurple}] {nowy uzytkownik};
+
+% Missing elements
+\node[missing] (remind) at (3.5,-2.5) {\scriptsize Reminder};
+\node[missing] (cta) at (10,-1.25) {\scriptsize ,,Analizuj\\kolejna''};
+
+\draw[podarrow dashed] (results) -- (cta);
+\draw[podarrow dashed] (remind) -- (upload);
+\draw[podarrow dashed] (dashboard) -- (remind);
+
+% Legend
+\node[font=\tiny\color{PodTextMuted}] at (3.5,-4) {--- linia ciagla = zaimplementowane\quad --- linia przerywana = brak};
+
+\end{tikzpicture}
+\caption{Petla retencji --- obecna (ciagla) vs brakujace elementy (przerywana)}
+\label{fig:onboard-retention-loop}
+\end{figure}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Punkty tarcia --- ranking wplywu}
+\label{sec:onboard-friction}
+
+\begin{table}[H]
+\centering
+\caption{Punkty tarcia uszeregowane wg wplywu na konwersje}
+\label{tab:onboard-friction-ranking}
+\begin{tabularx}{\textwidth}{C{1cm}L{4cm}C{2cm}C{2cm}X}
+\toprule
+\textbf{\#} & \textbf{Punkt tarcia} & \textbf{Etap} & \textbf{Wplyw} & \textbf{Naprawa} \\
+\midrule
+1 & Brak instrukcji eksportu rozmowy & Pre-upload & \danger{Krytyczny} & \tstype{ExportGuide} z~tab per platforme \\
+2 & Brak CTA ,,Analizuj kolejna'' po wynikach & Post-analiza & \danger{Wysoki} & Sticky CTA na dole wynikow \\
+3 & Demo nie prowadzi do uploadu & Landing & \danger{Wysoki} & CTA pod demo kartami \\
+4 & AI analiza trwa $\sim$60$s$ bez progress \% & Analiza & \warn{Sredni} & Progress bar z~ETA \\
+5 & Brak welcome modal na 1-szym wejsciu & Landing & \warn{Sredni} & Krotki 3-step wizard \\
+6 & Folder upload nie dziala na iOS & Upload & \warn{Sredni} & Instrukcja + ZIP support \\
+7 & Consent checkbox latwy do przeoczenia & AI trigger & \warn{Niski} & Wiekszy, bardziej widoczny \\
+8 & Brak tooltipow przy metrykach & Wyniki & \warn{Niski} & Inline \texttt{<Tooltip>} na KPI cards \\
+9 & Pusty dashboard (0~analiz) & Dashboard & \warn{Niski} & Empty state z~CTA \\
+10 & Brak celebracji 1-szej analizy & Post-analiza & \warn{Niski} & Confetti + ,,Udostepnij wynik!'' \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{featurebox}
+\textbf{Podsumowanie:} Onboarding \podtekst jest \textbf{minimalny, ale funkcjonalny}. Flow od landing do wynikow wymaga zaledwie 4~interakcji ($\sim$17$s$) --- co jest doskonale. Glowne luki to:
+\begin{enumerate}
+  \item \textbf{Pre-upload friction} --- uzytkownik musi samodzielnie wiedziec, jak wyeksportowac rozmowe (brak instrukcji)
+  \item \textbf{Post-analiza dead end} --- brak CTA do kolejnej analizy, brak zachet do udostepniania
+  \item \textbf{Demo $\rightarrow$ upload gap} --- demo pokazuje koncowy rezultat, ale nie konwertuje widzow w~uzytkownikow
+  \item \textbf{Zero retencji zewnetrznej} --- brak emaili, push, reminders --- jedyny powrot to share cards (viral) i~pamiec uzytkownika
+\end{enumerate}
+Implementacja punktow 1--3 z~tabeli tarcia powinna poprawic konwersje landing $\rightarrow$ AI --- skala poprawy nieznana bez baseline'u z~GA4 funnel events.
+\end{featurebox}
+

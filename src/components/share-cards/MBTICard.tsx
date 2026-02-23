@@ -101,6 +101,7 @@ export default function MBTICard({ profiles, participants }: MBTICardProps) {
             padding: '16px 6px',
             background: 'linear-gradient(180deg, #dfe6f2 0%, #eaeff7 100%)',
             position: 'relative',
+            overflow: 'hidden',
           }}
         >
           {/* Perforated holes */}
@@ -172,7 +173,7 @@ export default function MBTICard({ profiles, participants }: MBTICardProps) {
               fontWeight: 600,
               marginTop: 2,
               textTransform: 'capitalize',
-              maxWidth: 90,
+              maxWidth: 58,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',

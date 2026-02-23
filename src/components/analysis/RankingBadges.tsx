@@ -1,8 +1,16 @@
 'use client';
 
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { RankingPercentiles } from '@/lib/parsers/types';
+
+const METRIC_ICON: Record<string, string> = {
+  message_volume: '/icons/ranking/ranking-message-volume.png',
+  response_time: '/icons/ranking/ranking-response-time.png',
+  ghost_frequency: '/icons/ranking/ranking-ghost.png',
+  asymmetry: '/icons/ranking/ranking-asymmetry.png',
+};
 
 interface RankingBadgesProps {
   rankings: RankingPercentiles;
@@ -52,7 +60,7 @@ export default function RankingBadges({ rankings }: RankingBadgesProps) {
       className="rounded-xl border border-border bg-card p-4 sm:p-6"
     >
       <div className="mb-1 flex items-center gap-2">
-        <span className="text-lg">🏆</span>
+        <Image src="/icons/ranking/ranking-trophy.png" alt="" width={96} height={96} className="size-7" unoptimized />
         <h3 className="font-syne text-base font-bold text-foreground sm:text-lg">
           Ranking
         </h3>
@@ -77,7 +85,18 @@ export default function RankingBadges({ rankings }: RankingBadgesProps) {
                 tier.ring,
               )}
             >
-              <span className="text-2xl sm:text-3xl">{ranking.emoji}</span>
+              {METRIC_ICON[ranking.metric] ? (
+                <Image
+                  src={METRIC_ICON[ranking.metric]}
+                  alt={ranking.label}
+                  width={192}
+                  height={192}
+                  className="size-14 sm:size-16"
+                  unoptimized
+                />
+              ) : (
+                <span className="text-2xl sm:text-3xl">{ranking.emoji}</span>
+              )}
               <span
                 className={cn(
                   'font-mono text-lg font-black sm:text-xl',

@@ -4,6 +4,7 @@
  */
 
 import type { QuantitativeAnalysis } from '@/lib/parsers/types';
+import type { DramaMessage } from '../lib/search-sampler';
 
 // ── /roast — Full channel roast ─────────────────────────────
 
@@ -140,12 +141,39 @@ function pickRandom<T>(arr: T[], count: number): T[] {
 /**
  * Build a full-channel roast prompt with per-person stats + sampled conversation.
  */
+// ── Drama section builder ───────────────────────────────────
+
+/**
+ * Format drama messages found by keyword search into a prompt section.
+ * These are messages from the FULL channel history, not just the last N.
+ */
+export function buildDramaSection(
+  dramaMessages: DramaMessage[],
+): string {
+  if (!dramaMessages || dramaMessages.length === 0) return '';
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push('═══ NAJCIEKAWSZE WIADOMOŚCI Z HISTORII KANAŁU (wyszukane po słowach kluczowych) ═══');
+  lines.push('(Mogą być z dowolnego okresu — nie tylko z ostatnich wiadomości. Użyj ich jako dodatkowy kontekst.)');
+  lines.push('');
+
+  for (const m of dramaMessages.slice(0, 60)) {
+    const date = new Date(m.timestamp).toISOString().split('T')[0];
+    const time = new Date(m.timestamp).toTimeString().split(' ')[0].slice(0, 5);
+    lines.push(`[${date} ${time}] ${m.sender}: ${m.content.slice(0, 200)} [keyword: ${m.keyword}]`);
+  }
+
+  return lines.join('\n');
+}
+
 export function buildChannelRoastPrompt(
   channelName: string,
   messages: Array<{ sender: string; content: string; timestamp: number; type: string }>,
   quantitative: QuantitativeAnalysis,
   participantNames: string[],
   messageLimit = 500,
+  dramaMessages?: DramaMessage[],
 ): string {
   const lines: string[] = [];
 
@@ -237,6 +265,11 @@ export function buildChannelRoastPrompt(
     const date = new Date(m.timestamp).toISOString().split('T')[0];
     const time = new Date(m.timestamp).toTimeString().split(' ')[0].slice(0, 5);
     lines.push(`[${date} ${time}] ${m.sender}: ${m.content.slice(0, 200)}`);
+  }
+
+  // Append drama section from keyword search
+  if (dramaMessages && dramaMessages.length > 0) {
+    lines.push(buildDramaSection(dramaMessages));
   }
 
   return lines.join('\n');
@@ -350,6 +383,7 @@ export function buildMegaRoastPrompt(
   quantitative: QuantitativeAnalysis,
   participantNames: string[],
   messageLimit = 500,
+  dramaMessages?: DramaMessage[],
 ): string {
   const lines: string[] = [];
   const totalMsgs = Object.values(quantitative.perPerson).reduce((s, p) => s + p.totalMessages, 0);
@@ -428,6 +462,98 @@ export function buildMegaRoastPrompt(
     const date = new Date(m.timestamp).toISOString().split('T')[0];
     const time = new Date(m.timestamp).toTimeString().split(' ')[0].slice(0, 5);
     lines.push(`[${date} ${time}] ${m.sender}: ${m.content.slice(0, 200)}`);
+  }
+
+  // Append drama section (filtered to target + mentions of target)
+  if (dramaMessages && dramaMessages.length > 0) {
+    const targetLower = targetName.toLowerCase();
+    const targetDrama = dramaMessages.filter(
+      (m) => m.sender.toLowerCase() === targetLower || m.content.toLowerCase().includes(targetLower),
+    );
+    if (targetDrama.length > 0) {
+      lines.push(buildDramaSection(targetDrama));
+    } else {
+      // Fall back to all drama if no target-specific found
+      lines.push(buildDramaSection(dramaMessages));
+    }
+  }
+
+  return lines.join('\n');
+}
+
+export const DISCORD_CWEL_SYSTEM = `Jestes ceremoniarzem "CWEL TYGODNIA" na Discordzie. Twoje zadanie: przeczytac wiadomosci z kanalu i oglosic kto jest CWELEM TYGODNIA.
+
+OCENIASZ NA PODSTAWIE TRESCI WIADOMOSCI:
+1. Kto przegrywal klotnie — wycofywal sie, przepraszal, zaprzeczal sobie
+2. Kto byl wyzywany/roastowany — inni go hejtowali, szydzili
+3. Kto dostawal "ok"/"mhm"/"spoko" — byl olywany
+4. Kto sie kompromitowl — cringe, zle take'i, samobojcze gole
+5. Kto byl ignorowany — pisal i nikt nie odpowiadal
+6. Kto zmienial temat po konfrontacji — uciekal
+7. Kto mial najgorsze opinie — take'i ktore inni demolowali
+8. Kto simpowal najgorzej — przesadna adoracja, desperacja
+
+ZASADY:
+- ULTRA BRUTALNY. Discord-level humor. Polskie przeklenstwa OK.
+- 8 nominations — smieszne, trafne nazwy kategorii
+- hallOfShame: 3-5 najgorszych momentow z CYTATAMI
+- ranking: KAZDY uczestnik
+- KONKRETNE przyklady z wiadomosci
+- Caly tekst PO POLSKU
+- Krotkie roasty (Discord embeds maja limit)
+
+OUTPUT: Valid JSON:
+{
+  "winner": "imie",
+  "winnerScore": 87,
+  "winnerCategories": 4,
+  "nominations": [{"categoryId": "string", "categoryTitle": "string", "emoji": "string", "winner": "string", "reason": "string (1-2 zdania)", "evidence": ["cytat 1", "cytat 2"], "runnerUp": "string lub null"}],
+  "ranking": [{"name": "string", "score": 0-100, "oneLiner": "string"}],
+  "intro": "2-3 zdania otwarcia",
+  "crowningSpeech": "3-4 zdania koronowania",
+  "verdict": "jedno zdanie",
+  "hallOfShame": [{"person": "string", "quote": "cytat", "commentary": "1 zdanie komentarza"}]
+}`;
+
+export function buildCwelPrompt(
+  channelName: string,
+  messages: Array<{ sender: string; content: string; timestamp: number; type: string }>,
+  quantitative: QuantitativeAnalysis,
+  participantNames: string[],
+  messageLimit = 500,
+  dramaMessages?: DramaMessage[],
+): string {
+  const lines: string[] = [];
+  const totalMsgs = Object.values(quantitative.perPerson).reduce((s, p) => s + p.totalMessages, 0);
+
+  lines.push(`KANAL: #${channelName}`);
+  lines.push(`Uczestnicy (${participantNames.length}): ${participantNames.join(', ')}`);
+  lines.push(`Laczne wiadomosci: ${totalMsgs}`);
+  lines.push('');
+
+  // Basic per-person stats as context
+  lines.push('=== STATYSTYKI UCZESTNIKOW ===');
+  for (const name of participantNames) {
+    const pm = quantitative.perPerson[name];
+    if (!pm) continue;
+    const ratio = ((pm.totalMessages / Math.max(totalMsgs, 1)) * 100).toFixed(1);
+    const dt = quantitative.engagement.doubleTexts[name] ?? 0;
+    lines.push(`${name}: ${pm.totalMessages} msg (${ratio}%), sr. ${pm.averageMessageLength.toFixed(1)} slow/msg, double-text: ${dt}, pytania: ${pm.questionsAsked}`);
+  }
+  lines.push('');
+
+  // Full conversation messages — the AI needs to READ these
+  lines.push('=== WIADOMOSCI (czytaj uwaznie — z tego oceniasz) ===');
+  const cwelSampled = sampleChannelMessages(messages, messageLimit);
+  for (const m of cwelSampled) {
+    const date = new Date(m.timestamp).toISOString().split('T')[0];
+    const time = new Date(m.timestamp).toTimeString().split(' ')[0].slice(0, 5);
+    lines.push(`[${date} ${time}] ${m.sender}: ${m.content.slice(0, 200)}`);
+  }
+
+  // Append drama section from keyword search
+  if (dramaMessages && dramaMessages.length > 0) {
+    lines.push(buildDramaSection(dramaMessages));
   }
 
   return lines.join('\n');

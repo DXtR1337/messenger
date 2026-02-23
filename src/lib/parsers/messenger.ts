@@ -8,6 +8,8 @@
 
 import type { ParsedConversation, UnifiedMessage, Participant, Reaction } from './types';
 
+const URL_RE = /https?:\/\/\S+/i;
+
 // ============================================================
 // Facebook Unicode Decoding
 // ============================================================
@@ -145,7 +147,7 @@ function parseAltConversation(data: AltConversation): ParsedConversation {
         actor: decodeFBString(r.actor),
       })),
       hasMedia: Boolean(msg.media?.length),
-      hasLink: false,
+      hasLink: URL_RE.test(content),
       isUnsent: Boolean(msg.isUnsent),
     };
   });
@@ -232,7 +234,7 @@ export function parseMessengerJSON(data: unknown): ParsedConversation {
       type,
       reactions: parseReactions(msg.reactions),
       hasMedia: Boolean(msg.photos?.length || msg.videos?.length || msg.audio_files?.length || msg.gifs?.length),
-      hasLink: Boolean(msg.share?.link),
+      hasLink: Boolean(msg.share?.link) || URL_RE.test(content),
       isUnsent: Boolean(msg.is_unsent),
     };
   });

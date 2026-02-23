@@ -1,0 +1,97 @@
+\indexentry{ocena ogólna|hyperpage}{1}
+\indexentry{priorytety|hyperpage}{2}
+\indexentry{silnik ilościowy|hyperpage}{5}
+\indexentry{architektura!silnik ilościowy|hyperpage}{5}
+\indexentry{błędy krytyczne!silnik ilościowy|hyperpage}{6}
+\indexentry{problemy istotne!silnik ilościowy|hyperpage}{10}
+\indexentry{problemy drobne!silnik ilościowy|hyperpage}{13}
+\indexentry{metryki wiralne|hyperpage}{14}
+\indexentry{Compatibility Score|hyperpage}{14}
+\indexentry{Szymkiewicz-Simpson|hyperpage}{14}
+\indexentry{Interest Score|hyperpage}{15}
+\indexentry{Ghost Risk|hyperpage}{16}
+\indexentry{Delusion Score|hyperpage}{16}
+\indexentry{ReciprocityIndex|hyperpage}{17}
+\indexentry{odznaki|hyperpage}{18}
+\indexentry{burst detection|hyperpage}{18}
+\indexentry{trendy|hyperpage}{18}
+\indexentry{NetworkMetrics|hyperpage}{19}
+\indexentry{centralność|hyperpage}{19}
+\indexentry{graf interakcji|hyperpage}{19}
+\indexentry{CPS|hyperpage}{20}
+\indexentry{Communication Pattern Screening|hyperpage}{20}
+\indexentry{brakujące metryki|hyperpage}{21}
+\indexentry{sentiment analysis|hyperpage}{21}
+\indexentry{topic modeling|hyperpage}{21}
+\indexentry{wzorce konfliktowe|hyperpage}{22}
+\indexentry{progresja intymności|hyperpage}{22}
+\indexentry{centralność ważona|hyperpage}{22}
+\indexentry{normalizacja trendów|hyperpage}{22}
+\indexentry{pipeline AI|hyperpage}{23}
+\indexentry{Gemini API|hyperpage}{23}
+\indexentry{analiza jakościowa|hyperpage}{23}
+\indexentry{Gemini!integracja|hyperpage}{24}
+\indexentry{próbkowanie wiadomości|hyperpage}{26}
+\indexentry{kontekst relacji|hyperpage}{27}
+\indexentry{pasy analizy|hyperpage}{28}
+\indexentry{bezpieczeństwo!prompt injection|hyperpage}{30}
+\indexentry{bezpieczeństwo!filtry Gemini|hyperpage}{30}
+\indexentry{Big Five|hyperpage}{30}
+\indexentry{teoria przywiązania|hyperpage}{30}
+\indexentry{MBTI|hyperpage}{30}
+\indexentry{języki miłości|hyperpage}{30}
+\indexentry{roast|hyperpage}{32}
+\indexentry{Court Trial|hyperpage}{32}
+\indexentry{Dating Profile|hyperpage}{32}
+\indexentry{Reply Simulator|hyperpage}{32}
+\indexentry{Subtext Decoder|hyperpage}{32}
+\indexentry{Delusion Quiz|hyperpage}{32}
+\indexentry{CPS|hyperpage}{35}
+\indexentry{Communication Pattern Screening|hyperpage}{35}
+\indexentry{SSE|hyperpage}{36}
+\indexentry{streaming|hyperpage}{36}
+\indexentry{rozrywka vs nauka|hyperpage}{37}
+\indexentry{parsery|hyperpage}{39}
+\indexentry{UnifiedMessage|hyperpage}{39}
+\indexentry{UnifiedMessage|hyperpage}{39}
+\indexentry{ParsedConversation|hyperpage}{39}
+\indexentry{Messenger!parser|hyperpage}{40}
+\indexentry{Unicode!dekodowanie|hyperpage}{40}
+\indexentry{WhatsApp!parser|hyperpage}{41}
+\indexentry{DD/MM!heurystyka|hyperpage}{41}
+\indexentry{Instagram!parser|hyperpage}{43}
+\indexentry{auto-detekcja!ograniczenia|hyperpage}{43}
+\indexentry{Telegram!parser|hyperpage}{43}
+\indexentry{Discord!parser|hyperpage}{44}
+\indexentry{Discord!API|hyperpage}{44}
+\indexentry{Discord!reakcje|hyperpage}{45}
+\indexentry{auto-detekcja|hyperpage}{46}
+\indexentry{interfejs użytkownika|hyperpage}{47}
+\indexentry{upload|hyperpage}{47}
+\indexentry{strona wyników|hyperpage}{47}
+\indexentry{SectionNavigator|hyperpage}{47}
+\indexentry{StatsGrid|hyperpage}{48}
+\indexentry{rate limiting|hyperpage}{48}
+\indexentry{bezpieczeństwo!rate limiting|hyperpage}{48}
+\indexentry{udostępnianie!kodowanie URL|hyperpage}{49}
+\indexentry{prywatność!anonimizacja|hyperpage}{49}
+\indexentry{PDF!eksport|hyperpage}{49}
+\indexentry{Zod|hyperpage}{50}
+\indexentry{walidacja|hyperpage}{50}
+\indexentry{Google Analytics|hyperpage}{50}
+\indexentry{dostępność|hyperpage}{51}
+\indexentry{ARIA|hyperpage}{51}
+\indexentry{wzorce przekrojowe|hyperpage}{53}
+\indexentry{rozrywka vs nauka|hyperpage}{54}
+\indexentry{prywatność!separacja klient-serwer|hyperpage}{54}
+\indexentry{sprzeczności|hyperpage}{55}
+\indexentry{gotowość produkcyjna|hyperpage}{55}
+\indexentry{dług techniczny|hyperpage}{55}
+\indexentry{przyszłe funkcje|hyperpage}{56}
+\indexentry{rekomendacje!Tier 0|hyperpage}{59}
+\indexentry{rekomendacje!Tier 1|hyperpage}{59}
+\indexentry{rekomendacje!Tier 2|hyperpage}{60}
+\indexentry{rekomendacje!Tier 3|hyperpage}{61}
+\indexentry{rekomendacje!Tier 4|hyperpage}{62}
+\indexentry{harmonogram|hyperpage}{62}
+\indexentry{metryki sukcesu|hyperpage}{63}

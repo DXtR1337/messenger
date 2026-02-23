@@ -13,6 +13,7 @@ interface TurningPointsTimelineProps {
   pass2?: Pass2Result;
   pass4?: Pass4Result;
   participants: string[];
+  dateRange?: { start: number; end: number };
 }
 
 type Significance = 'positive' | 'negative' | 'neutral';
@@ -61,21 +62,44 @@ function classifySignificance(description: string): Significance {
 
 const MONTHS_PL = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 
-function sanitizeDate(raw: string): string {
+function sanitizeDate(raw: string, dateRange?: { start: number; end: number }): string {
   if (!raw) return '';
   const m = raw.match(/^(\d{4})-(\d{2})$/);
   if (!m) return raw;
   let year = parseInt(m[1], 10);
-  const month = parseInt(m[2], 10);
+  let month = parseInt(m[2], 10);
+
   // Fix obvious Gemini hallucinations: year > 2026 or < 1990
   if (year > 2026) {
-    // Try swapping common digit errors: 2824→2024, 2924→2024
     const fixed = parseInt(m[1][0] + '0' + m[1].slice(2), 10);
     if (fixed >= 1990 && fixed <= 2026) year = fixed;
     else year = 2024;
   }
   if (year < 1990) year = 2024;
   if (month < 1 || month > 12) return `${year}`;
+
+  // Clamp to actual conversation date range
+  if (dateRange) {
+    const startDate = new Date(dateRange.start);
+    const endDate = new Date(dateRange.end);
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth() + 1;
+    const endYear = endDate.getFullYear();
+    const endMonth = endDate.getMonth() + 1;
+
+    const dateVal = year * 12 + month;
+    const startVal = startYear * 12 + startMonth;
+    const endVal = endYear * 12 + endMonth;
+
+    if (dateVal < startVal) {
+      year = startYear;
+      month = startMonth;
+    } else if (dateVal > endVal) {
+      year = endYear;
+      month = endMonth;
+    }
+  }
+
   return `${MONTHS_PL[month - 1]} ${year}`;
 }
 
@@ -86,6 +110,7 @@ function sanitizeDate(raw: string): string {
 function buildTimelineEntries(
   pass2?: Pass2Result,
   pass4?: Pass4Result,
+  dateRange?: { start: number; end: number },
 ): TimelineEntry[] {
   const entries: TimelineEntry[] = [];
 
@@ -93,7 +118,7 @@ function buildTimelineEntries(
   if (pass4?.relationship_trajectory?.inflection_points) {
     for (const ip of pass4.relationship_trajectory.inflection_points) {
       entries.push({
-        date: sanitizeDate(ip.approximate_date || ''),
+        date: sanitizeDate(ip.approximate_date || '', dateRange),
         title: ip.description,
         detail: ip.evidence,
         significance: classifySignificance(`${ip.description} ${ip.evidence}`),
@@ -289,8 +314,9 @@ export default function TurningPointsTimeline({
   pass2,
   pass4,
   participants,
+  dateRange,
 }: TurningPointsTimelineProps) {
-  const entries = buildTimelineEntries(pass2, pass4);
+  const entries = buildTimelineEntries(pass2, pass4, dateRange);
 
   // If no data available, don't render
   if (entries.length === 0) return null;

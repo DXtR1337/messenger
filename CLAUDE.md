@@ -27,7 +27,9 @@ PodTeksT (formerly ChatScope) is a local-first web app that analyzes conversatio
 - **Deployment:** Google Cloud Run (Docker) — `output: 'standalone'` in next.config.ts
 - **Package Manager:** pnpm
 
-**Not yet implemented (future phases):** Supabase Auth, PostgreSQL, Stripe payments.
+- **Auth (prepared):** Supabase Auth (`@supabase/supabase-js` + `@supabase/ssr`) — UI + middleware ready, requires Supabase project setup
+
+**Not yet implemented (future phases):** Supabase PostgreSQL (profiles table), Stripe payments.
 
 ## Architecture
 
@@ -35,6 +37,7 @@ PodTeksT (formerly ChatScope) is a local-first web app that analyzes conversatio
 - **Qualitative AI analysis:** Server-side API routes — only 200-500 sampled messages sent per pass
 - **Data persistence:** IndexedDB locally, localStorage prefix: `podtekst-*`
 - **AI streaming:** SSE (Server-Sent Events) with heartbeat every 15s
+- **Auth:** Supabase Auth (conditional — skips when env vars not set). Cookie-based sessions via `@supabase/ssr`
 
 ## Supported Platforms (Parsers)
 
@@ -61,9 +64,17 @@ Discord uses direct API import via bot token (no file upload).
 | `/api/analyze/court` | POST | Chat Court Trial — AI courtroom verdict (SSE) | 5/10min |
 | `/api/analyze/dating-profile` | POST | Honest Dating Profile generator (SSE) | 5/10min |
 | `/api/analyze/simulate` | POST | Reply Simulator — predicts responses (SSE) | 5/10min |
+| `/api/analyze/cwel` | POST | Cwel Tygodnia — AI ceremony roast (SSE) | 5/10min |
 | `/api/analyze/image` | POST | Gemini image generation | 10/10min |
 | `/api/discord/fetch-messages` | POST | Discord Bot message fetcher (SSE) | 3/10min |
+| `/api/discord/send-roast` | POST | Send mega roast/cwel to Discord channel | 10/10min |
 | `/api/health` | GET | Health check | none |
+| `/auth/login` | page | Login (email/password, Google OAuth) | — |
+| `/auth/signup` | page | Sign up | — |
+| `/auth/reset` | page | Password reset | — |
+| `/auth/callback` | GET | OAuth callback handler | — |
+| `/settings` | page | User settings (preferences, data, about) | — |
+| `/profile` | page | User profile + stats | — |
 
 All SSE endpoints: heartbeat 15s, abort signal support, proper HTTP error codes (400, 413, 429).
 
@@ -80,10 +91,17 @@ src/
 │   ├── (dashboard)/
 │   │   ├── layout.tsx                # Dashboard layout with sidebar
 │   │   ├── dashboard/page.tsx        # List of analyzed conversations
+│   │   ├── profile/page.tsx          # User profile + local stats
+│   │   ├── settings/page.tsx         # Settings (preferences, data, about)
 │   │   └── analysis/
 │   │       ├── new/page.tsx          # Upload + parse + quantitative
 │   │       ├── [id]/page.tsx         # Full analysis results view
 │   │       └── compare/page.tsx      # Multi-conversation comparison
+│   ├── auth/
+│   │   ├── login/page.tsx            # Login (email/password + Google OAuth)
+│   │   ├── signup/page.tsx           # Sign up
+│   │   ├── reset/page.tsx            # Password reset
+│   │   └── callback/route.ts        # OAuth callback handler
 │   ├── (story)/
 │   │   └── analysis/[id]/
 │   │       └── wrapped/page.tsx      # Spotify Wrapped-style story mode
@@ -180,6 +198,9 @@ src/
 │   ├── story/
 │   │   ├── StoryIntro.tsx
 │   │   └── StoryShareCard.tsx
+│   ├── auth/
+│   │   ├── AuthForm.tsx              # Shared login/signup/reset form
+│   │   └── UserMenu.tsx              # Avatar + dropdown (Profile, Settings, Logout)
 │   ├── upload/
 │   │   ├── DropZone.tsx              # Drag-and-drop upload for all 4 platforms
 │   │   └── DiscordImport.tsx         # Discord Bot import (token + channel ID)
@@ -241,12 +262,19 @@ src/
 │   │   └── pdf-images.ts             # Embedded image data for PDFs
 │   ├── analytics/
 │   │   └── events.ts                 # Typed GA4 event tracking
+│   ├── supabase/
+│   │   ├── client.ts                 # Browser Supabase client
+│   │   ├── server.ts                 # Server Supabase client (cookies)
+│   │   └── middleware.ts             # Session refresh + route protection
+│   ├── settings/
+│   │   └── storage-utils.ts          # IndexedDB export/import/clear helpers
 │   └── utils.ts
 ├── hooks/
 │   ├── useShareCard.ts               # Web Share API + PNG download
 │   ├── useCPSAnalysis.ts
 │   └── useSubtextAnalysis.ts         # Subtext Decoder SSE hook
 └── types/
+middleware.ts                          # Root middleware — Supabase session refresh (conditional)
 ```
 
 ## Messenger JSON Format
@@ -425,16 +453,25 @@ Danger:      #ef4444
 - **URL:** https://chatscope-9278095424.europe-west1.run.app
 - **Deploy command:** `gcloud run deploy chatscope --source . --region europe-west1 --allow-unauthenticated --port 8080 --memory 1Gi`
 
-### Faza 22 — Discord Integration (Current)
+### Faza 22 — Discord Integration ✅
 - Discord Bot API integration — fetch channel messages via bot token
 - New parser: `src/lib/parsers/discord.ts` (API → ParsedConversation)
 - New API route: `/api/discord/fetch-messages` (SSE with pagination + rate limit handling)
 - New UI: `DiscordImport.tsx` (token + channel ID form, progress, setup guide)
 - Tab switcher on `/analysis/new` — "Plik eksportu" vs "Discord Bot"
 
+### Faza 25 — Auth, Settings, Optimizations ✅
+- **Page optimizations:** Image compression (36MB → ~1MB), AVIF/WebP format support, cache headers for static assets
+- **Settings page:** `/settings` — preferences (cookie/AI consent), data management (export/import/clear IndexedDB), about section
+- **Supabase Auth (UI ready):** Login, signup, password reset pages + OAuth callback + conditional middleware
+- **User profile:** `/profile` — avatar, tier badge, local stats (analyses, messages, platforms)
+- **Navigation:** UserMenu component replaces hardcoded user card, Settings link in sidebar
+- **Requires setup:** Supabase project + env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) to activate auth
+
 ### Future (not started)
-- Supabase Auth + PostgreSQL
+- Supabase PostgreSQL (`profiles` table + RLS policies + trigger)
 - Stripe payments (Free / Pro $9.99 / Unlimited $24.99)
+- Cloud sync (analyses to Supabase Storage)
 - i18n (EN, DE, ES)
 - Teams parser
 - Public API, SDK

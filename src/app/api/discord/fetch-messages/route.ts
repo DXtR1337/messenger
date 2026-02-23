@@ -1,5 +1,6 @@
 import { rateLimit } from '@/lib/rate-limit';
 import type { DiscordMessage, DiscordChannel } from '@/lib/parsers/discord';
+import { discordFetchRequestSchema, formatZodError } from '@/lib/validation/schemas';
 
 const checkLimit = rateLimit(3, 10 * 60 * 1000); // 3 requests per 10 min
 
@@ -13,10 +14,6 @@ const DELAY_BETWEEN_REQUESTS_MS = 200;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function isValidSnowflake(id: string): boolean {
-  return /^\d{17,20}$/.test(id);
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -40,31 +37,30 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { botToken?: string; channelId?: string; messageLimit?: number };
+  let rawBody: unknown;
   try {
-    body = await request.json();
+    rawBody = await request.json();
   } catch {
     return Response.json({ error: 'Invalid JSON.' }, { status: 400 });
   }
 
-  const { channelId } = body;
-  const messageLimit = Math.min(Math.max(body.messageLimit ?? 5000, 100), 200_000);
-
-  // Use client-provided token or fall back to server-side PodTeksT bot token
-  const botToken = (body.botToken && body.botToken.length >= 50)
-    ? body.botToken
-    : process.env.DISCORD_BOT_TOKEN;
-
-  if (!botToken) {
+  const parsed = discordFetchRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
     return Response.json(
-      { error: 'Brak tokenu bota. Dodaj PodTeksT BoT na swój serwer Discord.' },
+      { error: formatZodError(parsed.error) },
       { status: 400 },
     );
   }
 
-  if (!channelId || !isValidSnowflake(channelId)) {
+  const { channelId } = parsed.data;
+  const messageLimit = Math.min(parsed.data.messageLimit ?? 5000, MAX_MESSAGES);
+
+  // Use client-provided token or fall back to server-side PodTeksT bot token
+  const botToken = parsed.data.botToken ?? process.env.DISCORD_BOT_TOKEN;
+
+  if (!botToken) {
     return Response.json(
-      { error: 'Nieprawidłowe ID kanału. ID kanału to 17-20 cyfrowy numer.' },
+      { error: 'Brak tokenu bota. Dodaj PodTeksT BoT na swój serwer Discord.' },
       { status: 400 },
     );
   }

@@ -129,8 +129,20 @@ const COMMANDS: CommandDefinition[] = [
     ],
   },
   {
+    name: 'cwel',
+    description: 'Cwel Tygodnia — AI wybiera kto zasłużył na tytuł',
+    options: [MESSAGES_OPTION],
+  },
+  {
     name: 'analyze',
     description: 'Otwórz pełną analizę tego kanału na stronie PodTeksT',
+  },
+  {
+    name: 'search',
+    description: 'Szukaj wiadomości w kanale po frazie',
+    options: [
+      { name: 'query', description: 'Fraza do wyszukania', type: CommandOptionType.STRING, required: true },
+    ],
   },
 ];
 

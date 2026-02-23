@@ -12,6 +12,25 @@ interface BadgesGridProps {
 const PERSON_COLORS = ['#3b82f6', '#a855f7'];
 const PERSON_BG_COLORS = ['rgba(59,130,246,0.08)', 'rgba(168,85,247,0.08)'];
 
+/** Static icon lookup by badge ID — works even for old analyses without icon field */
+const BADGE_ICONS: Record<string, string> = {
+  'night-owl': 'night-owl.png',
+  'early-bird': 'early-bird.png',
+  'ghost-champion': 'ghost-champion.png',
+  'double-texter': 'double-texter.png',
+  'novelist': 'novelist.png',
+  'speed-demon': 'speed-demon.png',
+  'emoji-monarch': 'emoji-monarch.png',
+  'initiator': 'initiator.png',
+  'heart-bomber': 'heart-bomber.png',
+  'link-lord': 'link-lord.png',
+  'streak-master': 'streak-master.png',
+  'question-master': 'question-master.png',
+  'mention-magnet': 'mention-magnet.png',
+  'reply-king': 'reply-king.png',
+  'edit-lord': 'edit-lord.png',
+};
+
 function BadgeCard({
   badge,
   participantIndex,
@@ -32,7 +51,16 @@ function BadgeCard({
       className="flex flex-col gap-2 rounded-lg bg-muted p-3.5"
       style={{ backgroundColor: bgTint }}
     >
-      <span className="text-[2rem] leading-none">{badge.emoji}</span>
+      {(badge.icon || BADGE_ICONS[badge.id]) ? (
+        <img
+          src={`/icons/badges/${badge.icon || BADGE_ICONS[badge.id]}`}
+          alt={badge.name}
+          className="size-20 object-contain drop-shadow-lg"
+          loading="lazy"
+        />
+      ) : (
+        <span className="text-[2.5rem] leading-none">{badge.emoji}</span>
+      )}
       <span className="text-sm font-bold text-foreground">{badge.name}</span>
       <span
         className="inline-flex w-fit items-center rounded-md px-2 py-0.5 text-[11px] font-medium"

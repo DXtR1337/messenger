@@ -1,0 +1,84 @@
+% ============================================================
+% PodTeksT Audit — Preface
+% ============================================================
+
+\chapter*{Wstęp}
+\addcontentsline{toc}{chapter}{Wstęp}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Najpierw dane, potem opinia --- nigdy odwrotnie.''
+\end{center}
+
+\vspace{12pt}
+
+\section*{Cel audytu}
+
+Niniejszy dokument stanowi kompleksowy, wieloagentowy audyt ekspercki aplikacji \podtekst --- analizatora konwersacji z~komunikatorów. Audyt obejmuje \textbf{wszystkie warstwy systemu}: od algorytmów ilościowych, przez pipeline analizy AI i~walidację psychologiczną, po parsery platform, interfejs użytkownika i~infrastrukturę.
+
+Główne pytania badawcze:
+\begin{enumerate}
+  \item Czy algorytmy ilościowe (60+ metryk) są \textbf{poprawne matematycznie} i~wolne od bugów?
+  \item Czy pipeline AI (4~pasy + moduły rozrywkowe) jest \textbf{psychologicznie uzasadniony}?
+  \item Czy parsery (Messenger, WhatsApp, Instagram, Telegram, Discord) \textbf{poprawnie normalizują} dane wejściowe?
+  \item Czy interfejs użytkownika jest \textbf{funkcjonalny, dostępny i~responsywny}?
+  \item Gdzie są \textbf{krytyczne luki} w~bezpieczeństwie, walidacji i~jakości kodu?
+  \item Co \textbf{warto dodać} w~przyszłych fazach rozwoju?
+\end{enumerate}
+
+\section*{Metodologia}
+
+Audyt został przeprowadzony z~użyciem \textbf{3~niezależnych agentów analitycznych}, z~których każdy otrzymał specjalizowane zadanie eksploracji kodu źródłowego:
+
+\begin{description}
+  \item[\agentone] Dogłębna analiza silnika analizy ilościowej: 60+ metryk, wyniki wiralne (Compatibility, Interest, Ghost Risk, Delusion), indeks wzajemności, system odznak, wykrywanie burstów, metryki sieci, frazy charakterystyczne.
+  \item[\agenttwo] Pełny audyt pipeline AI: 4~pasy analizy \gemini, próbkowanie wiadomości, kalibracja kontekstu relacji, frameworki psychologiczne (Big Five, attachment, MBTI), moduły rozrywkowe (Roast, Court Trial, Dating Profile, Simulator, Subtext Decoder, Delusion Quiz), bezpieczeństwo promptów.
+  \item[\agentthree] Analiza parserów 5~platform, architektura UI, eksport PDF, rate limiting, walidacja danych wejściowych, kodowanie URL do udostępniania, dostępność.
+\end{description}
+
+Każdy agent przeczytał \textbf{kompletne pliki źródłowe} (nie streszczenia) i~wygenerował szczegółowy raport z~konkretnymi odniesieniami do linii kodu, formuł matematycznych i~schematów JSON.
+
+\begin{warningbox}[title=Ważne zastrzeżenie]
+Niniejszy audyt jest analizą \emph{statyczną} kodu źródłowego --- nie obejmuje testów dynamicznych (pentest, load testing, fuzzing). Oceny psychologiczne odnoszą się do \emph{założeń algorytmów}, nie do wyników na rzeczywistych danych. Audyt \textbf{nie} jest przeglądem klinicznym ani certyfikacją naukową.
+\end{warningbox}
+
+\section*{Konwencje dokumentu}
+
+W~niniejszym raporcie stosowane są następujące konwencje wizualne:
+
+\begin{criticalbox}[title=Błąd krytyczny]
+Czerwone ramki oznaczają \textbf{błędy krytyczne} --- bugi wpływające na poprawność wyników, luki bezpieczeństwa lub problemy mogące prowadzić do awarii.
+\end{criticalbox}
+
+\begin{moderatebox}[title=Problem istotny]
+Pomarańczowe ramki oznaczają \textbf{problemy istotne} --- kwestie kalibracji, arbitralne parametry lub brakujące walidacje, które nie powodują awarii, ale obniżają jakość wyników.
+\end{moderatebox}
+
+\begin{strengthbox}[title=Mocna strona]
+Zielone ramki oznaczają \textbf{mocne strony} --- rozwiązania architektoniczne, algorytmy lub wzorce, które są szczególnie dobrze zaprojektowane.
+\end{strengthbox}
+
+\begin{infobox}[title=Informacja kontekstowa]
+Niebieskie ramki zawierają \textbf{kontekst techniczny} --- odniesienia do plików, wyjaśnienia terminów lub dodatkowe informacje.
+\end{infobox}
+
+Identyfikatory błędów mają format \bugid{QUANT-01}, \bugid{AI-01}, \bugid{INFRA-01}. Identyfikatory problemów: \issueid{ENG-01}, \issueid{UI-01}. Pliki źródłowe: \filepath{src/lib/analysis/quantitative.ts}. Typy: \tstype{QuantitativeAnalysis}. Funkcje: \tsfunc{computeQuantitativeAnalysis()}.
+
+\section*{Zakres}
+
+\begin{table}[H]
+\centering
+\caption{Zakres audytu --- pliki i~moduły}
+\begin{tabularx}{\textwidth}{l C{2cm} X}
+\toprule
+\textbf{Obszar} & \textbf{Plików} & \textbf{Kluczowe moduły} \\
+\midrule
+Silnik ilościowy & 11 & quantitative.ts, viral-scores.ts, badges.ts, network.ts, reciprocity.ts \\
+Pipeline AI & 17 & gemini.ts, prompts.ts, qualitative.ts, subtext.ts, court-prompts.ts, delusion-quiz.ts \\
+API Routes & 10 & analyze/, standup/, cps/, subtext/, court/, dating-profile/, simulate/ \\
+Parsery & 7 & messenger.ts, whatsapp.ts, instagram.ts, telegram.ts, discord.ts, detect.ts \\
+Interfejs & 15+ & analysis/[id]/page.tsx, SectionNavigator, StatsGrid, ShareCardGallery \\
+Infrastruktura & 5 & rate-limit.ts, schemas.ts, encode.ts, pdf-export.ts, events.ts \\
+\bottomrule
+\end{tabularx}
+\end{table}

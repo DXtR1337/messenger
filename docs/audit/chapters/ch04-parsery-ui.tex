@@ -1,0 +1,726 @@
+% ============================================================
+% Rozdział 4 — Parsery i Interfejs Użytkownika
+% Agent 3: Analiza parserów 5 platform, UI, eksport, walidacja
+% ============================================================
+
+\chapter{Parsery i~interfejs użytkownika}
+\label{ch:audit-parsery}
+
+\begin{center}
+\Large\itshape\color{PodPurple}
+,,Dane są tak dobre, jak normalizacja, która je ujednoliciła.''
+\end{center}
+
+\vspace{12pt}
+
+Niniejszy rozdział prezentuje pełne wyniki \agentthree --- audyt warstwy wejściowej systemu \podtekst. Aplikacja obsługuje \textbf{5~platform komunikatorowych} (Messenger, WhatsApp, Instagram, Telegram, Discord), z~których każda dostarcza dane w~radykalnie odmiennym formacie\index{parsery}: od plików JSON z~błędnym kodowaniem Unicode, przez pliki tekstowe zależne od lokalizacji, po obiekty API bez pełnych danych o~reakcjach.
+
+Wszystkie parsery normalizują dane do jednego, zunifikowanego typu \tstype{UnifiedMessage}\index{UnifiedMessage}, co umożliwia silnikowi ilościowemu i~pipeline AI operowanie na spójnej abstrakcji, niezależnie od platformy źródłowej.
+
+Oprócz parserów, agent przeanalizował: interfejs użytkownika (upload, strona wyników, nawigacja, karty statystyk), mechanizm rate limitingu, kodowanie URL do udostępniania, eksport PDF, walidację danych wejściowych (Zod), analitykę GA4 oraz dostępność.
+
+
+% ============================================================
+\section{Zunifikowany format wiadomości}
+\label{sec:parse-unified}
+\index{UnifiedMessage}\index{ParsedConversation}
+% ============================================================
+
+Fundamentem architektury parserów jest zunifikowany model danych zdefiniowany w~\filepath{src/lib/parsers/types.ts}. Każda wiadomość, niezależnie od platformy źródłowej, jest normalizowana do interfejsu \tstype{UnifiedMessage}:
+
+\begin{lstlisting}[style=podcode, caption={Interfejs UnifiedMessage --- zunifikowany format wiadomości}]
+export interface UnifiedMessage {
+  index: number;          // indeks sekwencyjny
+  sender: string;         // nadawca
+  content: string;        // treść tekstowa
+  timestamp: number;      // Unix ms
+  type: 'text' | 'media' | 'sticker'
+      | 'link' | 'call' | 'system' | 'unsent';
+  reactions: Reaction[];  // emoji + actor
+  hasMedia: boolean;
+  hasLink: boolean;
+  isUnsent: boolean;
+  mentions?: string[];    // @wzmianki (Discord)
+  replyToIndex?: number;  // odpowiedź na (Discord)
+  isEdited?: boolean;     // edytowana (Discord)
+}
+\end{lstlisting}
+
+Model obejmuje \textbf{7~typów wiadomości} (\tstype{text}, \tstype{media}, \tstype{sticker}, \tstype{link}, \tstype{call}, \tstype{system}, \tstype{unsent}), co pozwala na precyzyjną klasyfikację i~filtrowanie w~dalszych etapach analizy.
+
+Konwersacja jako całość jest reprezentowana przez \tstype{ParsedConversation}:
+
+\begin{lstlisting}[style=podcode, caption={Interfejs ParsedConversation --- kontener konwersacji}]
+export interface ParsedConversation {
+  platform: 'messenger' | 'whatsapp' | 'instagram'
+          | 'telegram' | 'discord';
+  title: string;
+  participants: Participant[];
+  messages: UnifiedMessage[];  // chronologicznie
+  metadata: {
+    totalMessages: number;
+    dateRange: { start: number; end: number };
+    isGroup: boolean;
+    durationDays: number;
+  };
+}
+\end{lstlisting}
+
+\begin{strengthbox}[title={Mocna strona: czysty, kompleksowy system typów}]
+System typów jest dobrze zaprojektowany: \tstype{UnifiedMessage} pokrywa wszystkie istotne aspekty wiadomości z~każdej platformy, a~pola opcjonalne (\tstype{mentions?}, \tstype{replyToIndex?}, \tstype{isEdited?}) elegancko obsługują cechy specyficzne dla Discorda bez narzucania ich pozostałym parserom. Metadane konwersacji (\tstype{isGroup}, \tstype{durationDays}) umożliwiają warunkowe ścieżki analizy (np.\ widok serwera dla 5+ uczestników).
+\end{strengthbox}
+
+
+% ============================================================
+\section{Tabela ocen parserów}
+\label{sec:parse-ratings}
+% ============================================================
+
+Poniższa tabela podsumowuje ocenę każdego parsera z~perspektywy poprawności, kompletności i~odporności na edge case'y:
+
+\begin{table}[H]
+\centering
+\caption{Oceny parserów --- podsumowanie \agentthree}
+\label{tab:parser-ratings}
+\begin{tabularx}{\textwidth}{l C{1.5cm} C{1.5cm} X}
+\toprule
+\textbf{Parser} & \textbf{Ocena} & \textbf{Format} & \textbf{Główne wyzwania} \\
+\midrule
+Messenger  & \scorehi{8.5/10}  & JSON  & Kodowanie Unicode, łączenie wielu plików \\
+WhatsApp   & \scoremed{7.5/10} & TXT   & Format zależny od lokalizacji, DD/MM vs MM/DD \\
+Instagram  & \scoremed{7.0/10} & JSON  & Dziedziczy problemy Messengera, nierozróżnialny \\
+Telegram   & \scoremed{7.5/10} & JSON  & Zagnieżdżone tablice tekstu, struktura reakcji \\
+Discord    & \scoremed{7.0/10} & API   & Reakcje bez danych o~aktorach, rate limiting \\
+Auto-detect & \scorelo{6.0/10} & ---   & Nie rozróżnia Instagrama od Messengera \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Parser Facebook Messenger}
+\label{sec:parse-messenger}
+\index{Messenger!parser}\index{Unicode!dekodowanie}
+% ============================================================
+
+\subsection{Format danych}
+
+Facebook eksportuje konwersacje jako pliki JSON w~katalogu \filepath{messages/inbox/<nazwa>/}. Każdy plik zawiera tablicę \tstype{messages[]} z~polami \tstype{sender\_name}, \tstype{content}, \tstype{timestamp\_ms}, \tstype{reactions[]}, \tstype{photos[]}, \tstype{videos[]} oraz informacje o~uczestnikach.
+
+\subsection{Krytyczne wyzwanie: kodowanie Unicode}
+
+Facebook eksportuje pliki JSON z~\textbf{błędnym kodowaniem} --- tekst UTF-8 jest zapisywany jako latin-1 escaped Unicode. Oznacza to, że polskie znaki diakrytyczne i~emoji wyglądają w~surowych danych jako ciągi typu \texttt{\textbackslash u00c5\textbackslash u00bc} zamiast poprawnego \texttt{ż}.
+
+Rozwiązanie zastosowane w~\filepath{src/lib/parsers/messenger.ts} to funkcja \tsfunc{decodeFBString()}:
+
+\begin{lstlisting}[style=podcode, caption={Dekodowanie Unicode z~eksportu Facebooka}]
+function decodeFBString(str: string): string {
+  try {
+    const bytes = new Uint8Array(
+      str.split('').map(c => c.charCodeAt(0))
+    );
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    return str;
+  }
+}
+\end{lstlisting}
+
+Algorytm jest prosty, ale kluczowy: każdy znak traktowany jest jako bajt, a~następnie sekwencja bajtów dekodowana jest jako UTF-8. Funkcja musi być stosowana do \textbf{każdego pola tekstowego}: \tstype{sender\_name}, \tstype{content}, \tstype{participants[].name}, \tstype{reactions[].reaction}, \tstype{reactions[].actor}, \tstype{title}.
+
+\subsection{Klasyfikacja typów wiadomości}
+
+Parser stosuje hierarchię priorytetów do klasyfikacji:
+
+\begin{enumerate}
+  \item \tstype{unsent} --- wiadomość zawiera frazę ,,usunięto wiadomość'' / ,,removed a~message''
+  \item \tstype{call} --- obecność pola \tstype{call\_duration}
+  \item \tstype{system} --- wiadomość bez pola \tstype{sender\_name}
+  \item \tstype{sticker} --- obecność pola \tstype{sticker}
+  \item \tstype{link} --- treść zawiera URL (regex \texttt{https?://})
+  \item \tstype{media} --- obecność \tstype{photos[]}, \tstype{videos[]}, \tstype{audio\_files[]}
+  \item \tstype{text} --- domyślny typ
+\end{enumerate}
+
+\subsection{Obsługa wielu plików}
+
+Facebook dzieli długie konwersacje na wiele plików JSON (np.\ \filepath{message\_1.json}, \filepath{message\_2.json}). Parser łączy je z~\textbf{deduplikacją} po kluczu \texttt{\$\{timestamp\}-\$\{sender\}}, co zabezpiecza przed duplikatami na granicy plików.
+
+Wiadomości w~eksporcie Facebooka są posortowane od najnowszych --- parser odwraca kolejność do chronologicznej.
+
+\begin{strengthbox}[title=Mocna strona: solidna obsługa kodowania]
+Parser Messengera radzi sobie z~jednym z~najbardziej irytujących formatów eksportu w~branży. Funkcja \tsfunc{decodeFBString()} z~graceful fallback, deduplikacja wieloplikowa oraz kompletna klasyfikacja typów tworzą \textbf{najbardziej dojrzały parser} w~systemie.
+\end{strengthbox}
+
+
+% ============================================================
+\section{Parser WhatsApp}
+\label{sec:parse-whatsapp}
+\index{WhatsApp!parser}\index{DD/MM!heurystyka}
+% ============================================================
+
+\subsection{Format danych}
+
+\whatsapp eksportuje konwersacje jako pliki \textbf{plain text} (\filepath{.txt}), w~których każda wiadomość zajmuje jedną lub więcej linii. Format jest \textbf{niestandaryzowany} i~zmienia się w~zależności od lokalizacji urządzenia, systemu operacyjnego oraz wersji aplikacji.
+
+Trzy przykłady formatu z~różnych konfiguracji:
+
+\begin{lstlisting}[style=podcode, caption={Formaty eksportu WhatsApp --- 3~warianty}]
+// Android PL (DD.MM.YYYY, HH:MM)
+01.02.2024, 14:30 - Jan: Cześć!
+
+// Android EN (MM/DD/YY, h:mm AM/PM)
+2/1/24, 2:30 PM - John: Hello!
+
+// iOS (DD/MM/YYYY, HH:MM:SS)
+[01/02/2024, 14:30:05] Jan: Cześć!
+\end{lstlisting}
+
+\subsection{Parsowanie dat}
+
+Parser wykorzystuje rozbudowany regex do wyodrębnienia daty, czasu i~treści z~każdej linii tekstu. Wzorzec musi obsłużyć zarówno format z~nawiasami kwadratowymi (iOS), jak i~bez (Android), oba warianty zegara (12h AM/PM i~24h), oraz różne separatory dat (kropka, ukośnik, myślnik).
+
+Kluczowym wyzwaniem jest \textbf{ambiguiczność DD/MM vs MM/DD} --- ten sam plik może zawierać daty, które pasują do obu interpretacji.
+
+Zastosowana heurystyka:
+
+\begin{itemize}
+  \item Jeśli którakolwiek z~dwóch pierwszych części przekracza 12 --- musi być dniem
+  \item Jeśli żadna część nie jest jednoznaczna --- domyślnie przyjmowany jest format \textbf{DD/MM} (europejski)
+  \item Lata dwucyfrowe: 00--69 $\rightarrow$ 2000+, 70--99 $\rightarrow$ 1900+
+\end{itemize}
+
+\begin{infobox}[title=Przykład ambiguicznej daty]
+Data \texttt{01/02/2024} jest parsowana jako \textbf{1~lutego 2024} (DD/MM --- domyślnie). Użytkownik amerykański oczekiwałby \textbf{2~stycznia 2024} (MM/DD). Jedynie daty z~częścią $>12$ dają jednoznaczne rozwiązanie: \texttt{15/02/2024} musi oznaczać 15~lutego, bo 15.\ miesiąc nie istnieje.
+\end{infobox}
+
+\subsection{Obsługa wiadomości wieloliniowych}
+
+Linie, które \textbf{nie zaczynają się} od wzorca daty, są traktowane jako kontynuacja poprzedniej wiadomości. Jest to kluczowe dla poprawnego parsowania długich wiadomości z~podziałem na akapity.
+
+\subsection{Detekcja wiadomości systemowych}
+
+Parser rozpoznaje \textbf{20+ wzorców} wiadomości systemowych w~językach polskim i~angielskim, m.in.:
+\begin{itemize}
+  \item ,,Messages and calls are end-to-end encrypted''
+  \item ,,Wiadomości i~połączenia są szyfrowane''
+  \item ,,<nazwa> added <nazwa>''
+  \item ,,<nazwa> left''
+  \item ,,You were added''
+  \item ,,This message was deleted''
+\end{itemize}
+
+\subsection{Detekcja mediów}
+
+Parser rozpoznaje wielojęzyczne warianty oznaczeń mediów:
+\begin{itemize}
+  \item \texttt{<media omitted>} (angielski)
+  \item \texttt{(file attached)} (angielski)
+  \item \texttt{<plik pominięty>} (polski --- jeśli używany)
+  \item oraz inne warianty lokalizacyjne
+\end{itemize}
+
+\begin{moderatebox}[title=\bugid{MIN-10}: Heurystyka DD/MM może zawieść dla dat ambiguicznych]
+Dla dat takich jak 01/02/2024 (1~lutego czy 2~stycznia?) heurystyka domyślnie zakłada DD/MM. W~praktyce jest to poprawne dla zdecydowanej większości użytkowników \podtekst (Europa), ale \textbf{amerykańscy użytkownicy} z~datami w~zakresie 1--12 dla obu części mogą otrzymać błędne datowanie. Brakuje mechanizmu manualnego override'u formatu daty.
+\end{moderatebox}
+
+
+% ============================================================
+\section{Parser Instagram DM}
+\label{sec:parse-instagram}
+\index{Instagram!parser}
+% ============================================================
+
+Parser Instagrama (\filepath{src/lib/parsers/instagram.ts}) jest \textbf{niemal identyczny} z~parserem Messengera --- oba formaty pochodzą z~Meta i~mają tę samą strukturę JSON.
+
+Kluczowe cechy:
+\begin{itemize}
+  \item Ponowne wykorzystanie \tsfunc{decodeFBString()} do dekodowania Unicode
+  \item Walidacja \tstype{participants[]}, \tstype{messages[]} z~polami \tstype{sender\_name} i~\tstype{timestamp\_ms}
+  \item Obsługa łączenia wielu plików
+  \item Identyczna klasyfikacja typów wiadomości
+\end{itemize}
+
+\begin{moderatebox}[title=\bugid{PARSE-01}: Auto-detekcja nie rozróżnia Instagrama od Messengera]
+\index{auto-detekcja!ograniczenia}
+Strukturalnie pliki JSON z~Instagrama i~Messengera są \textbf{identyczne} --- oba zawierają \tstype{participants[]}, \tstype{messages[]} z~tymi samymi polami. Auto-detekcja (\filepath{src/lib/parsers/detect.ts}) nie jest w~stanie ich rozróżnić na podstawie samej struktury danych.
+
+Obecnie rozwiązaniem jest \textbf{ręczny wybór platformy} przez użytkownika na ekranie uploadu. Potencjalne ulepszenie: analiza metadanych (np.\ pole \tstype{thread\_type} obecne w~eksportach Instagrama, ale nie Messengera) mogłaby umożliwić automatyczne rozróżnienie.
+\end{moderatebox}
+
+
+% ============================================================
+\section{Parser Telegram}
+\label{sec:parse-telegram}
+\index{Telegram!parser}
+% ============================================================
+
+\subsection{Format danych}
+
+Telegram Desktop eksportuje konwersacje jako plik \filepath{result.json} w~natywnym UTF-8 --- \textbf{bez problemów z~kodowaniem}, co stanowi znaczące uproszczenie w~porównaniu z~Messengerem.
+
+\subsection{Zagnieżdżony format tekstu}
+
+Pole \tstype{text} w~wiadomościach Telegramu może być:
+\begin{itemize}
+  \item \textbf{Zwykłym stringiem:} \texttt{"text": "Hello"}
+  \item \textbf{Tablicą obiektów:} \texttt{"text": [\{"type": "bold", "text": "Hello"\}, " world"]}
+\end{itemize}
+
+Parser implementuje funkcję \tsfunc{flattenText()}, która normalizuje oba warianty do pojedynczego stringa:
+
+\begin{lstlisting}[style=podcode, caption={Spłaszczanie zagnieżdżonego tekstu Telegramu}]
+function flattenText(
+  text: string | Array<string | { text: string }>
+): string {
+  if (typeof text === 'string') return text;
+  return text
+    .map(part => typeof part === 'string' ? part : part.text)
+    .join('');
+}
+\end{lstlisting}
+
+\subsection{Reakcje}
+
+Telegram przechowuje reakcje w~formacie:
+\begin{lstlisting}[style=podcodeJSON, caption={Format reakcji Telegramu}]
+{
+  "emoji": "thumbsup",
+  "count": 3,
+  "recent": [
+    { "from": "Jan", "date": "2024-01-15T10:30:00" },
+    { "from": "Anna", "date": "2024-01-15T10:31:00" }
+  ]
+}
+\end{lstlisting}
+
+Pole \tstype{recent} zawiera listę ostatnich autorów reakcji --- parser wykorzystuje je do wypełnienia pola \tstype{actor} w~\tstype{Reaction[]}.
+
+\subsection{Pozostałe aspekty}
+
+\begin{itemize}
+  \item \textbf{Timestamp:} preferowany \tstype{date\_unixtime} $\times$ 1000; fallback na parsowanie stringa ISO
+  \item \textbf{Mentions:} wyodrębniane z~tablicy \tstype{mentions[]}, filtrowane do nie-botów
+  \item \textbf{Stickery:} emoji stickera zapisywane jako \tstype{content}
+\end{itemize}
+
+\begin{strengthbox}[title={Mocna strona: czysty format, brak hacków kodowania}]
+Telegram oferuje najczystszy format eksportu spośród wszystkich obsługiwanych platform. Natywne UTF-8, precyzyjne timestampy unixowe i~strukturalna klarowność JSON sprawiają, że parser jest prosty, niezawodny i~łatwy w~utrzymaniu.
+\end{strengthbox}
+
+
+% ============================================================
+\section{Parser Discord}
+\label{sec:parse-discord}
+\index{Discord!parser}\index{Discord!API}
+% ============================================================
+
+\subsection{Źródło danych}
+
+W~odróżnieniu od pozostałych parserów, Discord \textbf{nie korzysta z~pliku eksportu} --- dane są pobierane bezpośrednio z~\textbf{Discord API} za pomocą tokenu bota. Obiekty wiadomości z~API są następnie normalizowane do \tstype{UnifiedMessage}.
+
+\subsection{Identyfikacja użytkowników}
+
+Parser preferuje \tstype{global\_name} (wyświetlaną nazwę) z~fallbackiem na \tstype{username}. Jest to istotne, ponieważ Discord od 2023 roku migruje z~systemu \texttt{nazwa\#1234} na unikalne nazwy użytkowników.
+
+\subsection{Filtrowanie typów wiadomości}
+
+Z~API przychodzą wiadomości wielu typów. Parser akceptuje:
+\begin{itemize}
+  \item Typ \textbf{0} (\tstype{DEFAULT}) --- standardowa wiadomość użytkownika
+  \item Typ \textbf{19} (\tstype{REPLY}) --- odpowiedź na wiadomość
+\end{itemize}
+Pozostałe typy (dołączenie do serwera, pin, boost, itp.) są filtrowane.
+
+\subsection{Ograniczenie danych o~reakcjach}
+
+\begin{moderatebox}[title=\issueid{UI-02}: Reakcje Discord bez danych o~autorach]
+\index{Discord!reakcje}
+Discord API zwraca reakcje w~formacie:
+\begin{lstlisting}[style=podcodeJSON]
+{ "emoji": { "name": "thumbsup" }, "count": 5 }
+\end{lstlisting}
+
+Brakuje informacji \textbf{kto} konkretnie dodał reakcję. Parser wypełnia pole \tstype{actor} wartością \texttt{'unknown'}, co \textbf{uniemożliwia analizę per-person} --- np.\ kto najczęściej reaguje na czyje wiadomości. Pełne dane wymagałyby dodatkowego API call per reakcja, co jest niepraktyczne ze względu na rate limity.
+\end{moderatebox}
+
+\subsection{Załączniki i~linki}
+
+\begin{itemize}
+  \item \textbf{Załączniki:} pole \tstype{content\_type} parsowane do rozpoznania typu mediów
+  \item \textbf{Embedy:} obecność embeddów $\rightarrow$ wiadomość klasyfikowana jako \tstype{link}
+\end{itemize}
+
+\subsection{Mentions i~reply chains}
+
+\begin{itemize}
+  \item \textbf{Mentions:} wyodrębniane z~\tstype{mentions[]}, filtrowane do nie-botów pasujących do listy uczestników
+  \item \textbf{Reply chains:} parser buduje mapę \texttt{id $\rightarrow$ index}, aby powiązać \tstype{replyToIndex} z~indeksem wiadomości w~tablicy
+\end{itemize}
+
+\subsection{Metryki specyficzne dla Discorda}
+
+Parser dostarcza dodatkowe metryki niedostępne na innych platformach, zdefiniowane jako opcjonalne pola w~\tstype{PersonMetrics}:
+
+\begin{itemize}
+  \item \tstype{mentionsMade} / \tstype{mentionsReceived} --- bilans @wzmianek (kto kogo taguje)
+  \item \tstype{repliesSent} / \tstype{repliesReceived} --- bilans odpowiedzi w~wątkach
+  \item \tstype{editedMessages} --- liczba wiadomości edytowanych po wysłaniu
+\end{itemize}
+
+Te metryki umożliwiają silnikowi ilościowemu obliczenie dodatkowych wskaźników: \tstype{mentionRate} (wzmianki / wiadomości) i~\tstype{replyRate} (odpowiedzi / wiadomości) w~\tstype{EngagementMetrics}.
+
+\subsection{Pobieranie wiadomości z~API}
+
+Endpoint \filepath{src/app/api/discord/fetch-messages/route.ts} implementuje SSE streaming z~paginacją --- Discord API zwraca maksymalnie 100 wiadomości na żądanie. Parser iteruje wstecz po historii kanału, wysyłając postęp przez SSE. Obsługuje rate limit headers (\texttt{X-RateLimit-Remaining}, \texttt{Retry-After}) z~automatycznym wstrzymywaniem.
+
+
+% ============================================================
+\section{Auto-detekcja formatu}
+\label{sec:parse-autodetect}
+\index{auto-detekcja}
+% ============================================================
+
+Moduł auto-detekcji (\filepath{src/lib/parsers/detect.ts}) analizuje strukturę przesłanego pliku i~wybiera odpowiedni parser:
+
+\begin{enumerate}
+  \item \textbf{Plik .txt} $\rightarrow$ \whatsapp (jedyny format tekstowy)
+  \item \textbf{Plik JSON} z~polami \tstype{name}, \tstype{type}, \tstype{id}, \tstype{messages[]} z~\tstype{from}/\tstype{date\_unixtime} $\rightarrow$ \textbf{Telegram}
+  \item \textbf{Plik JSON} z~\tstype{participants[]} i~\tstype{messages[]} $\rightarrow$ \textbf{Messenger}
+\end{enumerate}
+
+\begin{moderatebox}[title=\bugid{PARSE-01} (powtórzenie): Instagram i~Messenger nierozróżnialne]
+Jak opisano w~sekcji \ref{sec:parse-instagram}, eksporty Instagrama i~Messengera mają identyczną strukturę JSON. Auto-detekcja zawsze zwraca \messenger dla plików z~\tstype{participants[]}. Sugerowane usprawnienie: sprawdzanie pola \tstype{thread\_type} (obecne w~eksportach Instagrama) lub \tstype{thread\_path} (zawierające ,,instagram'' w~ścieżce).
+\end{moderatebox}
+
+
+% ============================================================
+\section{Tabela porównawcza parserów}
+\label{sec:parse-comparison}
+% ============================================================
+
+\begin{table}[H]
+\centering
+\caption{Macierz funkcjonalności parserów}
+\label{tab:parser-features}
+\begin{tabularx}{\textwidth}{l C{1.6cm} C{1.6cm} C{1.6cm} C{1.6cm} C{1.6cm}}
+\toprule
+\textbf{Cecha} & \textbf{Messenger} & \textbf{WhatsApp} & \textbf{Instagram} & \textbf{Telegram} & \textbf{Discord} \\
+\midrule
+Problemy z~kodowaniem & Naprawione & Brak & Odziedziczone & Brak & Brak \\
+Wiele plików           & Tak & Tak & Tak & Nie & N/A \\
+Reakcje               & Z~aktorem & Brak & Z~aktorem & Z~recent & Tylko count \\
+Detekcja mediów       & Tak & Tak & Tak & Tak & Tak \\
+Mentions              & Nie & Nie & Nie & Tak & Tak \\
+Reply chains          & Nie & Nie & Nie & Nie & Tak \\
+Edytowane wiadomości  & Nie & Nie & Nie & Nie & Tak \\
+Wiad.\ systemowe      & Tak & Tak & Tak & Tak & Tak \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Z~tabeli wynika, że \textbf{Discord} oferuje najbogatszy zestaw metadanych (mentions, reply chains, edited messages), podczas gdy \textbf{WhatsApp} jest najbardziej ograniczony (brak reakcji, brak mentionów, brak reply chains). Messenger i~Instagram dzielą te same mocne i~słabe strony, co wynika z~ich wspólnego pochodzenia z~ekosystemu Meta.
+
+
+% ============================================================
+\section{Interfejs użytkownika}
+\label{sec:parse-ui}
+\index{interfejs użytkownika}
+% ============================================================
+
+\subsection{Ekran uploadu}
+\label{subsec:ui-upload}
+\index{upload}
+
+Ekran uploadu (\filepath{src/app/(dashboard)/analysis/new/page.tsx}) implementuje maszynę stanów:
+
+\begin{center}
+\texttt{idle} $\rightarrow$ \texttt{parsing} $\rightarrow$ \texttt{analyzing} $\rightarrow$ \texttt{saving} $\rightarrow$ \texttt{complete}
+\end{center}
+
+Kluczowe cechy:
+\begin{itemize}
+  \item \textbf{Multi-file support:} użytkownik może przesłać wiele plików jednocześnie (Facebook dzieli długie eksporty na pliki \filepath{message\_1.json}, \filepath{message\_2.json}, itd.)
+  \item \textbf{Tab switcher:} przełącznik ,,Plik eksportu'' vs ,,Discord Bot'' na tym samym ekranie --- Discord Import renderuje formularz z~polem na token bota i~ID kanału
+  \item \textbf{Relationship type selector:} wybór typu relacji (\texttt{romantic}, \texttt{friendship}, \texttt{family}, \texttt{colleague}, \texttt{professional}, \texttt{other}) wpływający na kontekst analizy AI --- ten sam czat może być analizowany z~różnymi perspektywami
+  \item \textbf{Minimum 100 wiadomości:} walidacja po stronie klienta --- konwersacje poniżej progu są odrzucane z~jasnym komunikatem o~wymaganym minimum
+  \item \textbf{Informacja o~prywatności:} użytkownik jest informowany, że surowe wiadomości nie opuszczają przeglądarki --- tylko próbka 200--500 wiadomości trafia do API Gemini
+  \item \textbf{Auto-detect:} po wyborze pliku system automatycznie wykrywa platformę i~wyświetla liczbę znalezionych wiadomości oraz uczestników
+\end{itemize}
+
+\subsection{Strona wyników}
+\label{subsec:ui-results}
+\index{strona wyników}
+
+Strona wyników (\filepath{src/app/(dashboard)/analysis/[id]/page.tsx}) to \textbf{największy komponent w~systemie} --- ok.\ 985 linii kodu.
+
+Obsługuje:
+\begin{itemize}
+  \item Konfetti po pierwszym załadowaniu wyników
+  \item \textbf{Quiz gate:} dla konwersacji 2-osobowych użytkownik musi najpierw przejść Delusion Quiz, zanim zobaczy wyniki AI
+  \item \textbf{Server view:} alternatywny układ dla konwersacji z~5+ uczestnikami (Ranking, PairwiseComparison, ServerOverview)
+  \item 10+ dynamicznych sekcji: statystyki, wykresy, analiza AI, karty udostępniania, moduły rozrywkowe
+\end{itemize}
+
+\begin{moderatebox}[title=Rozmiar komponentu wymaga dekompozycji]
+985 linii w~jednym komponencie React to \textbf{zbyt dużo} dla utrzymywalności. Komponent łączy logikę ładowania danych z~IndexedDB, warunkowe renderowanie 10+ sekcji, obsługę confetti, quiz gate i~przełączanie widoków. Sugerowana dekompozycja: wydzielenie \tstype{ResultsDataLoader}, \tstype{QuizGate}, \tstype{ServerViewLayout} i~\tstype{StandardViewLayout} jako osobnych komponentów.
+\end{moderatebox}
+
+\subsection{SectionNavigator}
+\label{subsec:ui-navigator}
+\index{SectionNavigator}
+
+Komponent \tstype{SectionNavigator} (\filepath{src/components/analysis/SectionNavigator.tsx}) zapewnia nawigację po sekcjach wyników:
+
+\begin{itemize}
+  \item \textbf{Desktop:} stała boczna nawigacja (fixed left sidebar) z~nazwami sekcji
+  \item \textbf{Mobile:} stały dolny pasek (fixed bottom bar) z~ikonami
+  \item \textbf{Intersection Observer:} automatyczne podświetlanie aktywnej sekcji podczas przewijania
+  \item \textbf{Scroll progress:} gradientowy pasek postępu (niebieski $\rightarrow$ fioletowy $\rightarrow$ zielony)
+  \item \textbf{8~sekcji:} Statystyki, Wykresy, AI, Roast, Subtext, Court, Dating, Simulator
+\end{itemize}
+
+\subsection{StatsGrid}
+\label{subsec:ui-statsgrid}
+\index{StatsGrid}
+
+Komponent \tstype{StatsGrid} (\filepath{src/components/analysis/StatsGrid.tsx}) wyświetla siatkę \textbf{9~kart statystyk}:
+
+\begin{enumerate}
+  \item Pytania zadane (?)
+  \item Reakcje / wzmianki
+  \item Sesje rozmów
+  \item Najdłuższa cisza
+  \item Suma słów
+  \item Wiadomości usunięte / edytowane
+  \item Bogactwo słownictwa (vocabulary richness)
+  \item Średnia długość rozmowy
+  \item Dodatkowa karta (kontekstowa)
+\end{enumerate}
+
+Każda karta ma \textbf{kolorowy dot} (niebieski/fioletowy) wskazujący osobę i~animację wejścia (Framer Motion stagger). Wariant Discord podmienia karty na te zawierające metryki specyficzne dla platformy (mentions, replies, edited).
+
+
+% ============================================================
+\section{Rate limiting}
+\label{sec:parse-ratelimit}
+\index{rate limiting}
+% ============================================================
+
+\begin{criticalbox}[title=Rate limiting jest WYŁĄCZONY]
+\index{bezpieczeństwo!rate limiting}
+Plik \filepath{src/lib/rate-limit.ts} zawiera implementację rate limitingu, ale jest on \textbf{całkowicie wyłączony}:
+
+\begin{lstlisting}[style=podcode, caption={Wyłączony rate limiting --- komentarz TODO}]
+export function rateLimit(_limit: number, _windowMs: number) {
+  // TODO: re-enable rate limiting before production
+  return function checkRateLimit(_ip: string) {
+    return { allowed: true };
+  };
+}
+\end{lstlisting}
+
+Implementacja bazowa jest poprawna:
+\begin{itemize}
+  \item In-memory \tstype{Map<string, \{count, resetTime\}>}
+  \item Automatyczne czyszczenie wygasłych wpisów co 5~minut
+  \item Zamierzony limit: 5~żądań / 10~minut na endpoint
+\end{itemize}
+
+\textbf{KRYTYCZNE:} Rate limiting \textbf{musi} zostać ponownie włączony przed wdrożeniem produkcyjnym. Bez niego każdy użytkownik może bezlimitowo wywoływać kosztowne endpointy Gemini API, co prowadzi do:
+\begin{itemize}
+  \item Niekontrolowanych kosztów API
+  \item Potencjalnego DDoS na infrastrukturę
+  \item Wyczerpania limitów API Google
+\end{itemize}
+\end{criticalbox}
+
+
+% ============================================================
+\section{Kodowanie URL do udostępniania}
+\label{sec:parse-share-encoding}
+\index{udostępnianie!kodowanie URL}\index{prywatność!anonimizacja}
+% ============================================================
+
+Moduł \filepath{src/lib/share/encode.ts} implementuje mechanizm generowania linków do udostępniania wyników analizy.
+
+\begin{strengthbox}[title=Mocna strona: podejście privacy-first]
+Mechanizm udostępniania stosuje \textbf{rygorystyczną anonimizację} przed kodowaniem danych do URL:
+
+\begin{enumerate}
+  \item \textbf{Anonimizacja imion:} prawdziwe imiona $\rightarrow$ ,,Osoba A'', ,,Osoba B'', itp.
+  \item \textbf{Usunięcie surowych wiadomości:} \textbf{żadna} treść wiadomości nie trafia do URL
+  \item \textbf{Tylko zagregowane dane:} \tstype{SharePayload} zawiera wyłącznie:
+    \begin{itemize}
+      \item Health Score i~jego komponenty
+      \item Viral Scores (compatibility, delusion, interest, ghost risk)
+      \item Odznaki (badges) z~zanonimizowanymi holderami
+      \item Executive summary (zanonimizowane)
+      \item Typ relacji, liczba uczestników, zakres dat
+    \end{itemize}
+  \item \textbf{Kompresja:} LZ-string + \tsfunc{encodeURIComponent()}
+\end{enumerate}
+
+W~URL nie ma \textbf{ani jednego prawdziwego imienia, ani fragmentu wiadomości}. Jest to wzorcowe podejście do udostępniania wyników analitycznych z~poszanowaniem prywatności.
+\end{strengthbox}
+
+
+% ============================================================
+\section{Eksport PDF}
+\label{sec:parse-pdf}
+\index{PDF!eksport}
+% ============================================================
+
+System generuje dwa rodzaje dokumentów PDF --- oba po stronie klienta z~użyciem biblioteki jsPDF:
+
+\subsection{Standardowy PDF analizy}
+
+Implementacja: \filepath{src/lib/export/pdf-export.ts}.
+
+\begin{itemize}
+  \item \textbf{9~stron} A4, ciemny motyw (tło \texttt{\#050505})
+  \item Czcionka Inter osadzona w~dokumencie (\filepath{src/lib/export/pdf-fonts.ts}) --- base64-encoded font data
+  \item Obrazy tła i~ikony osadzone w~\filepath{src/lib/export/pdf-images.ts}
+  \item Sekcje: podsumowanie, metryki ilościowe, Health Score z~komponentami, profil osobowości Big Five, flagi (czerwone/zielone), rekomendacje
+  \item Progress callback (\tstype{onProgress?: (step: number, total: number) => void}) do wyświetlania postępu w~UI
+\end{itemize}
+
+\subsection{Stand-Up PDF}
+
+Implementacja: \filepath{src/lib/export/standup-pdf.ts}.
+
+\begin{itemize}
+  \item \textbf{14~stron} w~teatralnym stylu: czarne tło sceniczne (\texttt{\#0a0a0a}), czerwona kurtyna (\texttt{\#ef4444}), złoty spotlight (\texttt{\#f59e0b})
+  \item 7~aktów stand-up comedy z~dedykowaną typografią
+  \item Emoji fallback --- jsPDF nie obsługuje natywnie emoji Unicode, więc parser konwertuje je na tekstowe odpowiedniki (np.\ \texttt{:fire:} zamiast symbolu ognia)
+  \item Walidacja wyników AI przed generowaniem --- PDF nie jest tworzony, jeśli odpowiedź z~Gemini nie zawiera wymaganych 7~aktów
+\end{itemize}
+
+
+% ============================================================
+\section{Walidacja danych wejściowych (Zod)}
+\label{sec:parse-validation}
+\index{Zod}\index{walidacja}
+% ============================================================
+
+Plik \filepath{src/lib/validation/schemas.ts} definiuje \textbf{7~schematów Zod} walidujących żądania do API:
+
+\begin{table}[H]
+\centering
+\caption{Schematy walidacji Zod}
+\label{tab:zod-schemas}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Schema} & \textbf{Endpoint / zastosowanie} \\
+\midrule
+\tstype{analyzeRequestSchema}       & \texttt{/api/analyze} --- 4~pasy + roast \\
+\tstype{cpsRequestSchema}           & \texttt{/api/analyze/cps} --- CPS screener \\
+\tstype{standUpRequestSchema}       & \texttt{/api/analyze/standup} --- Stand-Up \\
+\tstype{enhancedRoastRequestSchema} & \texttt{/api/analyze/enhanced-roast} \\
+\tstype{subtextRequestSchema}       & \texttt{/api/analyze/subtext} --- min.\ 100 wiadomości \\
+\tstype{courtRequestSchema}         & \texttt{/api/analyze/court} --- Court Trial \\
+\tstype{imageRequestSchema}         & \texttt{/api/analyze/image} --- generowanie obrazu \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Funkcja \tsfunc{formatZodError()} konwertuje błędy walidacji na czytelne komunikaty w~formacie \texttt{"path": message}, co ułatwia debugowanie po stronie klienta.
+
+\begin{strengthbox}[title=Mocna strona: pełne pokrycie schematami]
+Każdy endpoint API ma dedykowany schemat Zod z~precyzyjnymi ograniczeniami (np.\ \tstype{subtextRequestSchema} wymaga minimum 100 wiadomości). Schemat \tstype{enhancedRoastRequestSchema} waliduje nawet obecność wyników z~4~pasów analizy, zapobiegając wywołaniu Enhanced Roast bez uprzedniej analizy.
+\end{strengthbox}
+
+
+% ============================================================
+\section{Analityka (GA4)}
+\label{sec:parse-analytics}
+\index{Google Analytics}
+% ============================================================
+
+Moduł analityki (\filepath{src/lib/analytics/events.ts}) definiuje \textbf{23~typowane zdarzenia} GA4, pogrupowane funkcjonalnie:
+
+\begin{table}[H]
+\centering
+\caption{Kategorie zdarzeń GA4}
+\label{tab:ga4-events}
+\begin{tabularx}{\textwidth}{l C{1.2cm} X}
+\toprule
+\textbf{Kategoria} & \textbf{Zdarzeń} & \textbf{Przykłady} \\
+\midrule
+Parsowanie      & 4 & \texttt{file\_uploaded}, \texttt{parsing\_completed}, \texttt{platform\_detected} \\
+Analiza AI      & 5 & \texttt{analysis\_started}, \texttt{pass\_completed}, \texttt{roast\_generated} \\
+Rozrywka        & 6 & \texttt{subtext\_decoded}, \texttt{court\_verdict}, \texttt{dating\_profile} \\
+Udostępnianie   & 4 & \texttt{share\_card\_downloaded}, \texttt{share\_link\_copied}, \texttt{pdf\_exported} \\
+Referral        & 2 & \texttt{referral\_captured}, \texttt{referral\_converted} \\
+Nawigacja       & 2 & \texttt{page\_viewed}, \texttt{section\_navigated} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+System referralowy wykorzystuje \tsfunc{captureReferralParam()} do przechwycenia parametru \texttt{?ref=} z~URL i~\tsfunc{trackReferralConversion()} do śledzenia konwersji (upload pliku po wejściu z~linka referralowego).
+
+Mechanizm failsafe: jeśli GA4 nie jest załadowany (brak zgody na cookies, adblock, środowisko dev), wszystkie funkcje \textbf{cicho zwracają bez błędu} (no-op pattern). Komponent \tstype{ConditionalAnalytics} (\filepath{src/components/shared/ConditionalAnalytics.tsx}) wstrzykuje skrypt GA4 wyłącznie po akceptacji cookies przez \tstype{CookieConsent}.
+
+
+% ============================================================
+\section{Dostępność}
+\label{sec:parse-a11y}
+\index{dostępność}\index{ARIA}
+% ============================================================
+
+\begin{strengthbox}[title=Mocna strona: solidne podstawy dostępności]
+Interfejs \podtekst stosuje:
+\begin{itemize}
+  \item \textbf{Etykiety ARIA:} przyciski, formularze i~nawigacja mają opisowe \tstype{aria-label}
+  \item \textbf{Semantyczny HTML:} \tstype{<main>}, \tstype{<nav>}, \tstype{<section>}, \tstype{<article>} zamiast generycznych \tstype{<div>}
+  \item \textbf{Wysoki kontrast:} ciemny motyw z~jasnymi akcentami (WCAG AA dla tekstu)
+  \item \textbf{Nawigacja klawiaturowa:} Tab, Enter, Escape działają w~kluczowych interakcjach
+\end{itemize}
+\end{strengthbox}
+
+\begin{moderatebox}[title=Obszary do poprawy w~dostępności]
+\begin{itemize}
+  \item \textbf{Konfetti oparte na canvas:} animacja konfetti nie jest dostępna dla czytników ekranu --- brakuje \tstype{aria-hidden="true"} na elemencie canvas i~alternatywnego komunikatu tekstowego
+  \item \textbf{Wykresy bez alt text:} komponenty Recharts nie mają opisowych \tstype{aria-label} ani \tstype{<title>} w~SVG --- użytkownicy czytników ekranu nie widzą danych z~wykresów
+  \item \textbf{Symbole Unicode w~nawigatorze:} SectionNavigator używa symboli Unicode jako ikon na mobile --- mogą być źle odczytywane przez czytniki ekranu
+\end{itemize}
+\end{moderatebox}
+
+
+% ============================================================
+\section{Podsumowanie rozdziału}
+\label{sec:parse-summary}
+% ============================================================
+
+\begin{scorebox}[title=Ocena ogólna: Parsery + Interfejs użytkownika]
+\begin{center}
+\Huge\textbf{\textcolor{PodBlue}{7.5} / 10}
+\end{center}
+\end{scorebox}
+
+\vspace{8pt}
+
+\begin{strengthbox}[title=Kluczowe mocne strony]
+\begin{itemize}
+  \item \textbf{Produkcyjne parsery:} 5~parserów pokrywających główne platformy komunikatorowe z~solidną obsługą edge case'ów (kodowanie Unicode, wieloplikowe eksporty, wieloliniowe wiadomości)
+  \item \textbf{Czysty system typów:} \tstype{UnifiedMessage} i~\tstype{ParsedConversation} stanowią elegancką abstrakcję, umożliwiającą platformo-agnostyczną analizę
+  \item \textbf{Privacy-safe sharing:} mechanizm udostępniania z~pełną anonimizacją i~kompresją --- wzorcowe podejście do ochrony danych
+  \item \textbf{Pełna walidacja Zod:} każdy endpoint API chroniony dedykowanym schematem
+  \item \textbf{Typowana analityka:} 23~zdarzenia GA4 z~failsafe pattern
+\end{itemize}
+\end{strengthbox}
+
+\begin{moderatebox}[title=Kluczowe problemy do rozwiązania]
+\begin{itemize}
+  \item \textbf{Rate limiting wyłączony (\bugid{INFRA-01}):} krytyczny problem bezpieczeństwa i~kosztów --- musi zostać włączony przed produkcją
+  \item \textbf{Strona wyników zbyt duża:} 985 LOC w~jednym komponencie React --- wymaga dekompozycji
+  \item \textbf{Auto-detekcja Instagram/Messenger (\bugid{PARSE-01}):} brak rozróżnienia strukturalnie identycznych formatów
+  \item \textbf{Heurystyka dat WhatsApp (\bugid{MIN-10}):} DD/MM vs MM/DD może zawieść dla ambiguicznych dat bez manualnego override'u
+  \item \textbf{Reakcje Discord (\issueid{UI-02}):} brak danych o~autorach reakcji ogranicza analizę per-person
+  \item \textbf{Dostępność wykresów:} brak alt text dla SVG w~Recharts
+\end{itemize}
+\end{moderatebox}
+
+\vspace{8pt}
+
+\noindent Parsery \podtekst stanowią solidną warstwę normalizacji danych, radzącą sobie z~realną złożonością eksportów z~komunikatorów. Największe ryzyko nie leży w~samych parserach, lecz w~\textbf{wyłączonym rate limitingu} --- jedynym krytycznym problemie wykrytym przez \agentthree, który wymaga natychmiastowej naprawy.

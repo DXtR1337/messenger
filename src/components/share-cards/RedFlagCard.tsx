@@ -220,7 +220,19 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
         >
           <div>
             <span style={{ color: '#555' }}>OSOBY: </span>
-            <span style={{ color: '#ccc' }}>{participants.join(' & ')}</span>
+            <span
+              style={{
+                color: '#ccc',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                display: 'inline-block',
+                maxWidth: '70%',
+                verticalAlign: 'bottom',
+              }}
+            >
+              {participants.join(' & ')}
+            </span>
           </div>
           <div>
             <span style={{ color: '#555' }}>DATA: </span>
@@ -288,7 +300,18 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
                 }}
               />
               <div>
-                <div style={{ fontSize: '0.68rem', color: '#ddd', lineHeight: 1.4 }}>
+                <div
+                  style={{
+                    fontSize: '0.68rem',
+                    color: '#ddd',
+                    lineHeight: 1.4,
+                    overflow: 'hidden',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical' as const,
+                    wordBreak: 'break-word' as const,
+                  }}
+                >
                   {flag.text}
                 </div>
                 <div

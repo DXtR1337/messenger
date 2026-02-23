@@ -325,7 +325,7 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
           <div
             style={{
               fontFamily: syne,
-              fontSize: '3.5rem',
+              fontSize: '2.8rem',
               fontWeight: 900,
               color: colorA,
               lineHeight: 1,
@@ -337,7 +337,7 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
           <div
             style={{
               fontFamily: syne,
-              fontSize: '3.5rem',
+              fontSize: '2.8rem',
               fontWeight: 900,
               color: colorB,
               lineHeight: 1,

@@ -183,10 +183,14 @@ export default function BadgesCard({ badges, participants }: BadgesCardProps) {
                   <circle cx="22" cy="20" r="18" fill={`url(#medal-shine-${i})`} />
                   {/* Inner circle for emoji */}
                   <circle cx="22" cy="20" r="13" fill="rgba(10,14,31,0.6)" stroke={medal.start} strokeWidth="0.5" />
-                  {/* Emoji text */}
-                  <text x="22" y="25" textAnchor="middle" fontSize="14" dominantBaseline="middle" dy="-1">
-                    {badge.emoji}
-                  </text>
+                  {/* Badge icon or emoji fallback */}
+                  {badge.icon ? (
+                    <image href={`/icons/badges/${badge.icon}`} x="6" y="4" width="32" height="32" />
+                  ) : (
+                    <text x="22" y="25" textAnchor="middle" fontSize="14" dominantBaseline="middle" dy="-1">
+                      {badge.emoji}
+                    </text>
+                  )}
                 </svg>
 
                 {/* Badge title */}

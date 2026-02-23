@@ -34,7 +34,7 @@ export default function SubtextCard({ subtextResult, participants }: SubtextCard
   // Pick top 3-4 items: highlights first, then highest confidence
   const highlights = items.filter(i => i.isHighlight);
   const nonHighlights = items.filter(i => !i.isHighlight).sort((a, b) => b.confidence - a.confidence);
-  const displayItems = [...highlights.slice(0, 3), ...nonHighlights.slice(0, Math.max(0, 3 - highlights.length))].slice(0, 3);
+  const displayItems = [...highlights.slice(0, 2), ...nonHighlights.slice(0, Math.max(0, 2 - highlights.length))].slice(0, 2);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -191,6 +191,7 @@ export default function SubtextCard({ subtextResult, participants }: SubtextCard
                         fontWeight: 600,
                         color: 'rgba(212,160,23,0.6)',
                         letterSpacing: '0.08em',
+                        wordBreak: 'break-word' as const,
                       }}
                     >
                       NADAWCA: {item.sender.split(' ')[0].toUpperCase()}
@@ -245,6 +246,7 @@ export default function SubtextCard({ subtextResult, participants }: SubtextCard
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical' as const,
+                        wordBreak: 'break-word' as const,
                       }}
                     >
                       &ldquo;{item.originalMessage}&rdquo;
@@ -295,6 +297,7 @@ export default function SubtextCard({ subtextResult, participants }: SubtextCard
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical' as const,
+                          wordBreak: 'break-word' as const,
                         }}
                       >
                         &ldquo;{item.subtext}&rdquo;

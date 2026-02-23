@@ -6,8 +6,8 @@
 type PodTeksTEvent =
   | { name: 'upload_start'; params: { platform: string; fileCount: number } }
   | { name: 'upload_complete'; params: { platform: string; messageCount: number; durationDays: number } }
-  | { name: 'analysis_start'; params: { mode: 'standard' | 'roast' | 'standup' | 'mega_roast' } }
-  | { name: 'analysis_complete'; params: { mode: 'standard' | 'roast' | 'standup' | 'mega_roast'; passCount: number } }
+  | { name: 'analysis_start'; params: { mode: 'standard' | 'roast' | 'standup' | 'mega_roast' | 'cwel_tygodnia' } }
+  | { name: 'analysis_complete'; params: { mode: 'standard' | 'roast' | 'standup' | 'mega_roast' | 'cwel_tygodnia'; passCount?: number } }
   | { name: 'share_card_download'; params: { cardType: string } }
   | { name: 'share_card_share'; params: { cardType: string; method: 'native' | 'clipboard' } }
   | { name: 'wrapped_start'; params: { slideCount: number } }

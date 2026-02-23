@@ -10,6 +10,8 @@ import { editDeferredResponse, sendFollowUp, warningEmbed } from '../lib/discord
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 import { DISCORD_CHANNEL_ROAST_SYSTEM, buildChannelRoastPrompt } from '../prompts/discord-prompts';
 import { callGeminiForDiscord, parseGeminiJSONSafe } from '../lib/discord-ai';
+import { findDramaMessages } from '../lib/search-sampler';
+import type { DramaSearchResult } from '../lib/search-sampler';
 
 interface PersonRoast {
   name: string;
@@ -67,12 +69,26 @@ export async function handleRoast(
   }
 
   const channelName = data.conversation.title ?? 'Discord';
+
+  // Search for drama messages from full channel history
+  let dramaMessages: DramaSearchResult['dramaMessages'] = [];
+  try {
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    if (botToken && interaction.channel_id) {
+      const drama = await findDramaMessages(interaction.channel_id, botToken);
+      dramaMessages = drama.dramaMessages;
+    }
+  } catch {
+    // Graceful fallback — proceed without drama search
+  }
+
   const prompt = buildChannelRoastPrompt(
     channelName,
     data.conversation.messages,
     data.quantitative,
     participants,
     messageLimit,
+    dramaMessages,
   );
 
   try {

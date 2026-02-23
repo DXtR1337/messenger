@@ -1,0 +1,930 @@
+% ============================================================
+% Rozdział 14: Audyt wieloagentowy
+% ============================================================
+
+\chapter{Audyt wieloagentowy}
+\label{ch:audyt}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Mierz dwa razy, tnij raz. Albo lepiej --- mierz dziewięć razy, bo każdy agent widzi co innego.''
+\end{center}
+
+\vspace{8pt}
+
+Niniejszy rozdział dokumentuje wyniki kompleksowego audytu przeprowadzonego w~	extbf{dziewięciu równoległych osiach}: 	extbf{audyt UX/designu} strony analizy, 	extbf{audyt monetyzacji} z~planem cenowym, 	extbf{audyt optymalizacji} wydajności, 	extbf{unit economics} kosztów AI, 	extbf{audyt bezpieczeństwa}, 	extbf{audyt mobile UX}, 	extbf{audyt onboardingu}, 	extbf{audyt jakości kodu} oraz 	extbf{audyt SEO}. Każda oś została zrealizowana przez niezależnego agenta AI (Claude Opus~4.6), który przeanalizował kod źródłowy, architekturę komponentów i~wzorce użytkowania.
+
+\begin{warningbox}[title={\textbf{Kontekst audytu}}]
+Audyt przeprowadzono na stanie kodu z~lutego 2026 (po Fazie~22). Analiza opiera się na faktycznej zawartości plików źródłowych, nie na założeniach. Kluczowe statystyki wejściowe:
+\begin{itemize}
+  \item \filepath{src/app/(dashboard)/analysis/[id]/page.tsx} --- \textbf{1322 linii} kodu, \textbf{50+ komponentów} importowanych
+  \item \textbf{37} instancji \tstype{IntersectionObserver} (via Framer Motion \tsfunc{whileInView})
+  \item \textbf{9} handlerów \tsfunc{useCallback} w~jednym pliku
+  \item \filepath{src/lib/rate-limit.ts} --- rate limiting \danger{wyłączony} (zwraca \tstype{\{allowed: true\}} zawsze)
+  \item Zero infrastruktury monetyzacji --- brak auth, brak płatności, brak tierów
+\end{itemize}
+\end{warningbox}
+
+
+% ============================================================
+\section{Audyt UX/designu strony analizy}
+\label{sec:audyt-design}
+% ============================================================
+
+\subsection{Diagnoza: monolit na jednej stronie}
+
+Strona wyników analizy (\filepath{src/app/(dashboard)/analysis/[id]/page.tsx}) renderuje \textbf{wszystkie} dane na jednej stronie --- od metryk ilościowych, przez wykresy, viral scores, odznaki, share cards, aż po pełną analizę AI i~funkcje rozrywkowe. Skutkuje to:
+
+\begin{table}[H]
+\centering
+\caption{Metryki strony analizy --- stan obecny}
+\label{tab:audyt-strona-metryki}
+\begin{tabularx}{\textwidth}{L{5cm}C{3cm}X}
+\toprule
+\textbf{Metryka} & \textbf{Wartość} & \textbf{Problem} \\
+\midrule
+Wysokość strony (2-osobowa) & 4000--6000\,px & 15--20 ekranów mobilnych \\
+Wysokość strony (5+ osób) & 5000--7000\,px & Dodatkowe sekcje serwera \\
+Importowane komponenty & 50+ & Pojedynczy \tstype{page.tsx} \\
+Instancje IntersectionObserver & 37 & Każde \tsfunc{whileInView} tworzy osobną instancję \\
+Sekcje nawigacji (SectionNavigator) & 6--9 & Niewystarczające pokrycie treści \\
+Odległość AI Analysis od foldu & $\sim$3000\,px & Najcenniejsza treść pogrzebana pod metrykami \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Mapa sekcji strony}
+
+Aktualna kolejność renderowania w~\tstype{page.tsx}:
+
+\begin{enumerate}[label=\textcolor{PodBlue}{\arabic*.}]
+  \item \textbf{Hero Zone} --- \tstype{AnalysisHeader}, \tstype{ParticipantStrip}, linki Story/Wrapped
+  \item \textbf{Kluczowe metryki} --- \tstype{KPICards}, \tstype{StatsGrid}
+  \item \textbf{Longitudinal Delta} --- porównanie z~poprzednią analizą (opcjonalne)
+  \item \textbf{Aktywność i~czas} --- \tstype{TimelineChart}, \tstype{EmojiReactions}, \tstype{HeatmapChart}, \tstype{ResponseTimeChart}
+  \item \textbf{Wzorce komunikacji} --- \tstype{MessageLengthSection}, \tstype{WeekdayWeekendCard}, \tstype{BurstActivity}, \tstype{TopWordsCard}, \tstype{SentimentChart}, \tstype{IntimacyChart}, \tstype{ConflictTimeline}
+  \item \textbf{Viral Scores} --- \tstype{ViralScoresSection}, \tstype{BestTimeToTextCard}, \tstype{CatchphraseCard}
+  \item \textbf{Ghost Forecast} --- \tstype{GhostForecast}
+  \item \textbf{Osiągnięcia} --- \tstype{BadgesGrid}
+  \item \textbf{Delusion Quiz} --- wynik quizu (quiz jest gate screen)
+  \item \textbf{Group Chat Awards} --- \tstype{GroupChatAwards} (grupowe)
+  \item \textbf{Sieć interakcji} --- \tstype{NetworkGraph} (grupowe)
+  \item \textbf{Udostępnij wyniki} --- \tstype{ShareCardGallery}, PDF export, captiony
+  \item \textbf{Analiza AI} --- \tstype{AIAnalysisButton}, Roast, Attachment, Tone, Love Language, Turning Points, Personality, CPS, Subtext, Court, Dating Profile, Reply Simulator
+\end{enumerate}
+
+\begin{warningbox}[title={\textbf{Kluczowy problem}}]
+Sekcja \textbf{Analiza AI} (pozycja 13) --- czyli najbardziej wartościowa treść z~perspektywy monetyzacji i~zaangażowania --- znajduje się na samym \emph{dole} strony, za 12 sekcjami danych ilościowych. Użytkownik musi przewinąć $\sim$3000\,px, zanim zobaczy wyniki AI.
+\end{warningbox}
+
+\subsection{Nawigacja: SectionNavigator}
+
+Komponent \tstype{SectionNavigator} (\filepath{src/components/analysis/SectionNavigator.tsx}) zapewnia nawigację po sekcjach:
+
+\begin{itemize}
+  \item \textbf{Desktop:} sticky sidebar z~6--9 przyciskami sekcji
+  \item \textbf{Mobile:} bottom pill bar z~horizontalnym scrollem
+  \item Tworzy osobny \tstype{IntersectionObserver} per sekcję (6--9 instancji)
+  \item Oddzielny scroll listener dla progress baru i~przycisku ,,wróć na górę''
+\end{itemize}
+
+Problem: przy 15+ sekcjach treści, 6--9 przycisków nawigacji jest niewystarczające. Użytkownik nie wie, gdzie jest na stronie, bo wiele sekcji nie ma swojego przycisku w~nawigatorze.
+
+\subsection{Proponowane rozwiązanie: architektura tabowa}
+\label{sec:architektura-tabowa}
+
+Zamiast jednej długiej strony z~nawigacją sekcji, proponujemy \textbf{5 zakładek (tabów)} z~lazy-loadingiem:
+
+\begin{table}[H]
+\centering
+\caption{Proponowana architektura tabowa strony analizy}
+\label{tab:audyt-taby}
+\begin{tabularx}{\textwidth}{C{0.8cm}L{2.2cm}X}
+\toprule
+\textbf{Nr} & \textbf{Tab} & \textbf{Zawartość} \\
+\midrule
+1 & \textbf{Przegląd} & AnalysisHeader, ParticipantStrip, KPICards, StatsGrid, HealthScore, LongitudinalDelta \\
+2 & \textbf{Metryki} & Timeline, Heatmap, ResponseTime, Emoji, MessageLength, Weekday/Weekend, Burst, TopWords, Sentiment, Intimacy, Conflicts, Network \\
+3 & \textbf{AI Insights} & AIAnalysisButton, Roast, AttachmentStyle, CommunicationStyle, ToneRadar, LoveLanguage, TurningPoints, PersonalityDeepDive, CPS \\
+4 & \textbf{Rozrywka} & CourtTrial, DatingProfile, ReplySimulator, DelusionQuiz, GhostForecast, EnhancedRoast, StandUp \\
+5 & \textbf{Udostępnij} & ShareCardGallery, ExportPDF, StandUpPDF, CaptionModal, PhotoUpload, ViralScores, Badges \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Korzyści architekturalne}
+
+\begin{itemize}
+  \item \textbf{Redukcja DOM:} z~50+ komponentów jednocześnie do $\sim$10 per tab (lazy-loading)
+  \item \textbf{IntersectionObserver:} z~37 instancji do $\sim$8 (tylko aktywny tab)
+  \item \textbf{AI Insights na pozycji~3} zamiast 13 --- użytkownik trafia do AI w~2 kliknięciach
+  \item \textbf{URL hash sync:} \texttt{\#overview}, \texttt{\#metrics}, \texttt{\#ai}, \texttt{\#entertainment}, \texttt{\#share} --- deep-linkowanie
+  \item \textbf{Code splitting:} \tsfunc{React.lazy()} per tab --- Entertainment tab (najcięższy) ładowany tylko gdy kliknięty
+\end{itemize}
+
+\subsubsection{Proponowana struktura plików}
+
+\begin{infobox}[title={\textbf{Nowe pliki komponentów}}]
+\begin{itemize}
+  \item \filepath{src/components/analysis/AnalysisTabs.tsx} --- kontener tabów z~URL hash sync
+  \item \filepath{src/components/analysis/tabs/OverviewTab.tsx} --- tab Przegląd
+  \item \filepath{src/components/analysis/tabs/MetricsTab.tsx} --- tab Metryki
+  \item \filepath{src/components/analysis/tabs/AIInsightsTab.tsx} --- tab AI Insights
+  \item \filepath{src/components/analysis/tabs/EntertainmentTab.tsx} --- tab Rozrywka
+  \item \filepath{src/components/analysis/tabs/ShareTab.tsx} --- tab Udostępnij
+\end{itemize}
+Efekt: \filepath{page.tsx} redukuje się z~1322~LOC do $\sim$200~LOC (state, data loading, tab routing).
+\end{infobox}
+
+\subsubsection{Server View (5+ uczestników)}
+
+Dla grup z~5+ uczestnikami dodatkowy tab \textbf{,,Serwer''} zastępuje inline sekcje (ServerOverview, TeamRoles, CommunityMap, PersonNavigator, PersonProfile, ServerLeaderboard, PairwiseComparison). Układ tabów zmienia się z~5 na 6.
+
+\subsubsection{Diagram architektury tabowej}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  tabbox/.style={draw=PodBlue!60, fill=PodBlue!8, rounded corners=4pt,
+    minimum width=2.4cm, minimum height=1.0cm, align=center,
+    font=\small\bfseries},
+  activeTab/.style={tabbox, draw=PodBlue, fill=PodBlue!20, line width=1.2pt},
+  contentBox/.style={draw=PodBorder, fill=PodCard!30, rounded corners=4pt,
+    minimum width=13cm, minimum height=3cm, align=center},
+  compBox/.style={draw=PodPurple!40, fill=PodPurple!5, rounded corners=2pt,
+    minimum width=2.2cm, minimum height=0.6cm, align=center, font=\tiny},
+  >=Stealth
+]
+
+% Tab bar
+\node[tabbox] (t1) at (0,0) {Przegląd};
+\node[tabbox] (t2) at (2.8,0) {Metryki};
+\node[activeTab] (t3) at (5.6,0) {AI Insights};
+\node[tabbox] (t4) at (8.4,0) {Rozrywka};
+\node[tabbox] (t5) at (11.2,0) {Udostępnij};
+
+% Active indicator
+\draw[PodBlue, line width=2pt] ([yshift=-1pt]t3.south west) -- ([yshift=-1pt]t3.south east);
+
+% Content area
+\node[contentBox] (content) at (5.6,-2.5) {};
+
+% Components inside active tab
+\node[compBox] at (2.2,-1.6) {AttachmentStyle};
+\node[compBox] at (4.6,-1.6) {ToneRadar};
+\node[compBox] at (7.0,-1.6) {LoveLanguage};
+\node[compBox] at (9.4,-1.6) {CPS};
+\node[compBox] at (2.2,-2.6) {PersonalityDeepDive};
+\node[compBox] at (4.6,-2.6) {TurningPoints};
+\node[compBox] at (7.0,-2.6) {RelationshipBalance};
+\node[compBox] at (9.4,-2.6) {Subtext};
+\node[compBox] at (3.4,-3.4) {AIAnalysisButton};
+\node[compBox] at (5.8,-3.4) {RoastSection};
+\node[compBox] at (8.2,-3.4) {EnhancedRoast};
+
+\end{tikzpicture}
+\caption{Architektura tabowa --- przykładowy widok zakładki ,,AI Insights''}
+\label{fig:audyt-tab-arch}
+\end{figure}
+
+
+% ============================================================
+\section{Audyt monetyzacji}
+\label{sec:audyt-monetyzacja}
+% ============================================================
+
+\subsection{Stan obecny: 100\% za darmo}
+
+Na dzień audytu \podtekst nie posiada żadnej infrastruktury monetyzacji:
+
+\begin{itemize}
+  \item Brak systemu autentykacji (Supabase Auth --- planowany, niezaimplementowany)
+  \item Brak integracji płatności (Stripe --- planowany, niezaimplementowany)
+  \item Brak rozróżnienia tierów (Free/Pro/Unlimited)
+  \item Brak limitów użycia (analizy/miesiąc, karty share, PDF export)
+  \item Rate limiting \danger{wyłączony w~produkcji} --- każdy może wysyłać nieograniczoną liczbę requestów AI
+\end{itemize}
+
+\subsection{Proponowany model: Freemium 3-Tier}
+\label{sec:model-freemium}
+
+\begin{table}[H]
+\centering
+\caption{Model cenowy --- porównanie tierów}
+\label{tab:audyt-tiers}
+\begin{tabularx}{\textwidth}{L{4.5cm}C{2.8cm}C{2.8cm}C{2.8cm}}
+\toprule
+\textbf{Funkcja} & \textbf{Free (0~PLN)} & \textbf{Pro (29,99~PLN/mies)} & \textbf{Unlimited (49,99~PLN/mies)} \\
+\midrule
+Metryki ilościowe & Wszystkie & Wszystkie & Wszystkie \\
+AI Pass 1 (Ton) & \score{Tak} & \score{Tak} & \score{Tak} \\
+AI Pass 2--4 & \danger{Nie} & \score{Tak} & \score{Tak} \\
+Roast (podstawowy) & \score{Tak} & \score{Tak} & \score{Tak} \\
+Enhanced Roast & \danger{Nie} & \score{Tak} & \score{Tak} \\
+Rozrywka (Court, Dating, Simulator) & \danger{Nie} & \score{Tak} & \score{Tak} \\
+Share Cards & 5 podstawowych & Wszystkie & Wszystkie \\
+Export PDF & \danger{Nie} & \score{Tak} & \score{Tak} \\
+StandUp PDF & \danger{Nie} & \score{Tak} & \score{Tak} \\
+CPS + Subtext & \danger{Nie} & \score{Tak} & \score{Tak} \\
+Analizy / miesiąc & 3 & 15 & Bez limitu \\
+Platformy & Wszystkie & Wszystkie & Wszystkie \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Logika Free Tier}
+
+Free Tier zapewnia \textbf{pełne metryki ilościowe} (client-side, zero kosztów serwera) plus ograniczoną analizę AI:
+
+\begin{itemize}
+  \item \textbf{Pass 1 (Ton i~styl)} --- darmowy, daje smak AI analizy
+  \item \textbf{Roast (podstawowy)} --- darmowy, wiralowy element zachęcający do udostępniania
+  \item \textbf{5 kart share} --- wystarczające do wiralowego rozprzestrzeniania (z~watermarkiem ,,PodTeksT.app'')
+  \item \textbf{3 analizy/miesiąc} --- wystarczające do testowania, niewystarczające do regularnego użycia
+\end{itemize}
+
+\subsubsection{Logika paywall}
+
+Paywall aktywuje się w~\textbf{momencie największego zaangażowania}:
+
+\begin{enumerate}
+  \item Użytkownik uploaduje rozmowę --- \score{bezpłatne}
+  \item Widzi pełne metryki ilościowe + KPI --- \score{bezpłatne}
+  \item Uruchamia analizę AI --- Pass~1 + Roast \score{bezpłatne}
+  \item Klika tab ,,AI Insights'' --- widzi wyniki Pass~1, ale Pass~2--4 za \textbf{blurred overlay z~CTA ,,Odblokuj pełną analizę''}
+  \item Klika tab ,,Rozrywka'' --- każdy przycisk opakowany w~\textbf{PaywallGate}
+  \item Klika tab ,,Udostępnij'' --- 5 kart dostępnych, reszta z~CTA ,,Odblokuj 20+ kart''
+\end{enumerate}
+
+\subsection{Implementacja techniczna}
+\label{sec:monetyzacja-implementacja}
+
+\subsubsection{Faza 1 --- lokalna (bez Stripe)}
+
+Minimalna infrastruktura do testowania konwersji i~UX paywallu:
+
+\begin{infobox}[title={\textbf{Nowe pliki}}]
+\begin{itemize}
+  \item \filepath{src/contexts/TierContext.tsx} --- \tstype{TierProvider} z~hookiem \tsfunc{useTier()}
+  \item \filepath{src/components/shared/PaywallGate.tsx} --- komponent paywall z~blurred preview
+\end{itemize}
+\end{infobox}
+
+\paragraph{TierContext}
+\begin{itemize}
+  \item Przechowuje tier w~\tstype{localStorage}: klucz \texttt{podtekst-tier}, wartości: \texttt{free} | \texttt{pro} | \texttt{unlimited}
+  \item Hook \tsfunc{useTier()} zwraca: \texttt{\{ tier, canAccess(feature), upgrade() \}}
+  \item Funkcja \tsfunc{canAccess(feature: string)} sprawdza mapę uprawnień:
+\end{itemize}
+
+\begin{lstlisting}[style=podcode, caption={Mapa uprawnień funkcji}, label={lst:feature-map}]
+const FEATURE_MAP: Record<string, Tier> = {
+  'ai-pass-2': 'pro',
+  'ai-pass-3': 'pro',
+  'ai-pass-4': 'pro',
+  'enhanced-roast': 'pro',
+  'court-trial': 'pro',
+  'dating-profile': 'pro',
+  'reply-simulator': 'pro',
+  'cps-screener': 'pro',
+  'subtext-decoder': 'pro',
+  'pdf-export': 'pro',
+  'standup-pdf': 'pro',
+  'all-share-cards': 'pro',
+  'unlimited-analyses': 'unlimited',
+};
+\end{lstlisting}
+
+\paragraph{PaywallGate}
+
+Komponent opakowujący treść pro/unlimited:
+
+\begin{itemize}
+  \item Props: \tstype{requiredTier: 'pro' | 'unlimited'}, \tstype{children}, opcjonalnie \tstype{preview} (blurred preview)
+  \item Renderuje: jeśli tier wystarczający --- \tstype{children}; jeśli nie --- blurred overlay z~gradientem, ikoną zamka i~CTA
+  \item Dev override: \texttt{?tier=pro} w~URL pozwala na testowanie bez płatności
+\end{itemize}
+
+\subsubsection{Faza 2 --- produkcyjna (Stripe + Supabase)}
+
+Pełna infrastruktura płatności (planowana, niezaimplementowana):
+
+\begin{itemize}
+  \item \textbf{Supabase Auth} --- rejestracja email + Google OAuth
+  \item \textbf{Stripe Checkout} --- sesje płatności, subskrypcje miesięczne
+  \item \textbf{Stripe Webhooks} --- \filepath{/api/webhooks/stripe} do obsługi zdarzeń płatności
+  \item \textbf{Server-side validation} --- tier sprawdzany w~API routes przed procesowaniem AI
+  \item \textbf{Usage tracking} --- licznik analiz/miesiąc per user w~Supabase
+\end{itemize}
+
+\subsection{Share Cards jako viral loop}
+
+Share Cards stanowią kluczowy mechanizm wiralowego wzrostu:
+
+\begin{table}[H]
+\centering
+\caption{Strategia wiralowa --- karty share}
+\label{tab:audyt-viral-cards}
+\begin{tabularx}{\textwidth}{L{3.5cm}L{4cm}X}
+\toprule
+\textbf{Tier} & \textbf{Dostępne karty} & \textbf{Watermark} \\
+\midrule
+Free & PersonalityCard, VersusCard, StatsCard, ReceiptCard, BadgesCard & ,,PodTeksT.app'' (dolny róg) \\
+Pro & Wszystkie 20+ kart & Bez watermarku \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Watermark na Free-tier kartach służy jako \textbf{darmowa reklama} --- każda karta udostępniona na social media kieruje nowych użytkowników do aplikacji.
+
+\subsection{Projekcja przychodów}
+
+\begin{warningbox}[title={\danger{Założenia modelowe --- niewalidowane}}]
+Poniższe liczby MAU (500 / 2\,000 / 5\,000) to \textbf{założenia modelowe}, nie walidowane prognozy. Na dzień audytu brak:
+\begin{itemize}
+  \item strategii akwizycji użytkowników (paid ads, influencerzy, SEO content),
+  \item budżetu marketingowego,
+  \item danych historycznych o~ruchu,
+  \item walidowanego kanału wzrostu organicznego.
+\end{itemize}
+Rzeczywiste MAU może być \textbf{10$\times$ niższe} bez inwestycji w~kanały wzrostu. Projekcja służy wyłącznie do modelowania unit economics --- nie jest prognozą biznesową.
+\end{warningbox}
+
+\begin{table}[H]
+\centering
+\caption{Projekcja przychodów (12 miesięcy)}
+\label{tab:audyt-projekcja}
+\begin{tabularx}{\textwidth}{L{3.5cm}R{2.5cm}R{2.5cm}R{2.5cm}}
+\toprule
+\textbf{Metryka} & \textbf{Miesiąc 3} & \textbf{Miesiąc 6} & \textbf{Miesiąc 12} \\
+\midrule
+MAU (Monthly Active Users) & 500 & 2\,000 & 5\,000 \\
+Konwersja Free$\rightarrow$Pro & 3\% & 5\% & 5\% \\
+Konwersja Pro$\rightarrow$Unlimited & 10\% & 15\% & 20\% \\
+Płacący Pro & 15 & 100 & 250 \\
+Płacący Unlimited & 2 & 15 & 50 \\
+MRR (Monthly Recurring Revenue) & 550~PLN & 3\,749~PLN & 9\,997~PLN \\
+ARR (Annual Recurring Revenue) & 6\,600~PLN & 44\,988~PLN & 119\,964~PLN \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Założenia modelowe (niewalidowane)}}]
+Konwersja 3--5\% (benchmark freemium SaaS B2C), churn 5\%/mies, ARPU: Pro 29,99~PLN, Unlimited 49,99~PLN. Wzrost zakładany jako organiczny (viral share cards + SEO + word-of-mouth). \textbf{Żadne z~tych założeń nie zostało zwalidowane danymi z~\podtekst.} Projekcja służy wyłącznie do modelowania struktury kosztów AI --- nie jest prognozą biznesową. Poniżej (sekcja~\ref{sec:strategia-akwizycji}) przedstawiamy prognozę opartą na konkretnej strategii akwizycji.
+\end{warningbox}
+
+
+\subsection{Strategia akwizycji i~prognoza biznesowa}
+\label{sec:strategia-akwizycji}
+
+Poprzednie projekcje (tabela~\ref{tab:audyt-projekcja}) operowały na arbitralnych liczbach MAU bez planu ich osiągnięcia. Niniejsza sekcja przedstawia \textbf{konkretną strategię akwizycji} z~kanałami wzrostu, budżetami i~realistycznymi prognozami opartymi na benchmarkach polskiego rynku consumer SaaS.
+
+\subsubsection{Kanały akwizycji}
+
+\begin{table}[H]
+\centering
+\caption{Kanały akwizycji --- charakterystyka i~szacunkowy CAC}
+\label{tab:audyt-strategia-kanaly}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{3cm}C{1.5cm}X R{2.5cm}}
+\toprule
+\textbf{Kanał} & \textbf{Typ} & \textbf{Mechanizm} & \textbf{CAC (PLN)} \\
+\midrule
+\rowcolor{PodSuccess!5}
+Viral share cards & Organic & Karty Free z~watermarkiem ,,PodTeksT.app'' udostępniane na IG/TikTok --- każda karta to darmowa reklama & $\sim$0 \\
+\rowcolor{PodSuccess!5}
+SEO / blog content & Organic & Artykuły: ,,jak wyeksportować rozmowę z~Messengera'', ,,co znaczy ghosting'', ,,analiza rozmowy z~eksem'' & $\sim$0 (czas) \\
+\rowcolor{PodBlue!5}
+TikTok/Reels content & Content & Format: ,,Przeanalizowałem rozmowę z~moim eksem'' --- viralowy format dramatyczny, 9:16 & 5--15 \\
+\rowcolor{PodPurple!5}
+Mikro-influencerzy & Influencer & Polscy twórcy relationship/drama (10--50k followers), 500--2\,000~PLN/kolaboracja & 10--30 \\
+\rowcolor{PodPurple!5}
+Makro-influencerzy & Influencer & 100k+ followers, 3\,000--10\,000~PLN/kolaboracja, większy zasięg ale mniejsze zaangażowanie & 15--40 \\
+\rowcolor{PodWarning!5}
+Meta Ads (IG/FB) & Paid & Targeting 18--35, zainteresowania: związki, randki, psychologia, dramaty & 15--40 \\
+\rowcolor{PodWarning!5}
+Google Ads & Paid & Keywords: ,,analiza rozmowy'', ,,kto pisze pierwszy'', ,,ghosting sprawdzić'' & 20--50 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title={\textbf{Viral share cards --- kluczowy kanał organiczny}}]
+\podtekst posiada 20+ typów kart share (PersonalityCard, VersusCard, ReceiptCard, MugshotCard, etc.). Karty Free tier zawierają watermark ,,PodTeksT.app'' w~dolnym rogu. Każda karta udostępniona na social media to \textbf{darmowa reklama} z~wbudowanym CTA. Benchmarki virality-driven SaaS (Wrapped, Spotify Blend):
+\begin{itemize}
+  \item 1 karta udostępniona $\rightarrow$ średnio 20--50 wyświetleń (stories), 100--500 (post/reel)
+  \item Konwersja wyświetlenie$\rightarrow$wizyta: 2--5\% (stories), 0,5--2\% (feed)
+  \item \textbf{Przy 100 kartach udostępnionych dziennie:} 200--1\,000 nowych wizyt/dzień organicznie
+\end{itemize}
+\end{infobox}
+
+
+\subsubsection{Scenariusze budżetowe}
+
+\begin{table}[H]
+\centering
+\caption{Trzy scenariusze wzrostu --- budżet, kanały, prognoza MAU}
+\label{tab:audyt-scenariusze}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{2.5cm}R{2cm}X R{1.5cm}R{1.5cm}R{1.5cm}}
+\toprule
+\textbf{Scenariusz} & \textbf{Budżet/mies} & \textbf{Kanały} & \textbf{M3} & \textbf{M6} & \textbf{M12} \\
+\midrule
+\rowcolor{PodSuccess!5}
+A --- Bootstrap & 0--500~PLN & Viral cards, SEO, własny TikTok & 100 & 400 & 1\,200 \\
+\rowcolor{PodBlue!5}
+B --- Lean & 2\,000--5\,000~PLN & Organic + mikro-influencerzy + mały Meta Ads & 300 & 1\,000 & 3\,000 \\
+\rowcolor{PodPurple!5}
+C --- Growth & 10\,000--20\,000~PLN & Pełny mix: organic + influencerzy + paid & 800 & 3\,000 & 10\,000 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{metricbox}
+\textbf{Rekomendacja: Scenariusz B (Lean Startup).} Pozwala na walidację kanałów akwizycji przy umiarkowanym ryzyku finansowym. Jeśli CAC z~influencerów i~Meta Ads wyniesie $<$30~PLN przy konwersji $>$2\%, przejście na scenariusz C jest uzasadnione. Scenariusz A jest bezpieczny, ale wzrost może być zbyt wolny, aby zwalidować model biznesowy przed wyczerpaniem motywacji.
+\end{metricbox}
+
+
+\subsubsection{Prognoza finansowa --- scenariusz B (Lean Startup)}
+
+\begin{table}[H]
+\centering
+\caption{Prognoza biznesowa --- scenariusz B (Lean Startup, 2\,000--5\,000~PLN/mies)}
+\label{tab:audyt-prognoza-lean}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{4.5cm}R{2.5cm}R{2.5cm}R{2.5cm}}
+\toprule
+\textbf{Metryka} & \textbf{Miesiąc 3} & \textbf{Miesiąc 6} & \textbf{Miesiąc 12} \\
+\midrule
+\multicolumn{4}{l}{\textit{Akwizycja}} \\
+MAU & 300 & 1\,000 & 3\,000 \\
+Nowi użytkownicy (organic) & $\sim$100/mies & $\sim$300/mies & $\sim$500/mies \\
+Nowi użytkownicy (paid) & $\sim$100/mies & $\sim$200/mies & $\sim$250/mies \\
+Budżet marketing/mies & 2\,000~PLN & 3\,500~PLN & 5\,000~PLN \\
+CAC blended & $\sim$20~PLN & $\sim$18~PLN & $\sim$15~PLN \\
+\midrule
+\multicolumn{4}{l}{\textit{Konwersja}} \\
+Konwersja Free$\rightarrow$Pro & 2\% & 3\% & 4\% \\
+Płacący Pro & 6 & 30 & 120 \\
+Płacący Unlimited & 1 & 5 & 20 \\
+Churn miesięczny & 8\% & 6\% & 5\% \\
+\midrule
+\multicolumn{4}{l}{\textit{Przychody i~koszty}} \\
+MRR (przychód) & 230~PLN & 1\,150~PLN & 4\,600~PLN \\
+Koszt AI/mies & $\sim$20~PLN & $\sim$110~PLN & $\sim$460~PLN \\
+Koszt marketing/mies & 2\,000~PLN & 3\,500~PLN & 5\,000~PLN \\
+Infrastruktura (Cloud Run) & $\sim$50~PLN & $\sim$100~PLN & $\sim$200~PLN \\
+\midrule
+\rowcolor{PodDanger!5}
+\textbf{Wynik netto/mies} & \danger{$-$1\,840~PLN} & \danger{$-$2\,560~PLN} & \danger{$-$1\,060~PLN} \\
+\rowcolor{PodWarning!5}
+\textbf{Skumulowana strata} & $-$5\,520~PLN & $-$18\,720~PLN & $-$30\,000~PLN \\
+\midrule
+\textbf{Break-even (szacunek)} & \multicolumn{3}{r}{$\sim$Miesiąc 15--18 (przy utrzymaniu wzrostu)} \\
+\textbf{ARR w~miesiącu 12} & \multicolumn{3}{r}{\textbf{$\sim$55\,000~PLN}} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title={\textbf{Kluczowe wskaźniki rentowności}}]
+\begin{itemize}
+  \item \textbf{CAC payback period:} Przy CAC = 20~PLN i~ARPU = 29,99~PLN/mies $\rightarrow$ payback $<$1 miesiąc. Przy uwzględnieniu churnu (LTV $\approx$ 5--8 mies $\times$ 29,99~PLN = 150--240~PLN) $\rightarrow$ \textbf{LTV/CAC = 7,5--12$\times$} (zdrowy stosunek $>$3$\times$).
+  \item \textbf{Dlaczego mimo dobrego LTV/CAC firma jest na stracie?} Inwestycja w~akwizycję wyprzedza przychody --- płacący użytkownicy z~miesiąca~1 generują przychód przez 5--8 miesięcy, ale koszt ich pozyskania jest natychmiastowy.
+  \item \textbf{Break-even:} $\sim$miesiąc 15--18, gdy skumulowany MRR pokryje skumulowane koszty marketingowe. Po break-even: margines netto $>$50\% (AI kosztuje $<$10\% MRR).
+  \item \textbf{Wymagana inwestycja:} $\sim$30\,000~PLN do break-even (skumulowana strata).
+\end{itemize}
+\end{infobox}
+
+
+\subsubsection{Porównanie z~poprzednią projekcją (modelową)}
+
+\begin{table}[H]
+\centering
+\caption{Porównanie: projekcja modelowa vs prognoza ze strategią}
+\label{tab:audyt-porownanie-prognoz}
+\begin{tabularx}{\textwidth}{L{4cm}R{3cm}R{3cm}C{2cm}}
+\toprule
+\textbf{Metryka (M12)} & \textbf{Projekcja modelowa} & \textbf{Prognoza Lean} & \textbf{Różnica} \\
+\midrule
+MAU & 5\,000 & 3\,000 & $-$40\% \\
+Płacący łącznie & 300 & 140 & $-$53\% \\
+MRR & 9\,997~PLN & 4\,600~PLN & $-$54\% \\
+ARR & 120\,000~PLN & 55\,000~PLN & $-$54\% \\
+Koszt marketingu & 0~PLN & 5\,000~PLN/mies & $+$60\,000~PLN/rok \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Wniosek: projekcja modelowa była $\sim$2$\times$ zawyżona}}]
+Projekcja modelowa zakładała 5\,000~MAU i~5\% konwersji \textbf{bez} żadnego budżetu marketingowego. Realistyczna prognoza ze strategią (scenariusz B) daje $\sim$3\,000~MAU i~4\% konwersji \textbf{przy} inwestycji $\sim$60\,000~PLN/rok w~marketing. ARR w~miesiącu~12: 55\,000~PLN vs modelowe 120\,000~PLN --- \textbf{różnica 2,2$\times$}. Projekcja modelowa jest użyteczna wyłącznie jako ilustracja unit economics, nie jako plan biznesowy.
+\end{warningbox}
+
+
+\subsubsection{Ryzyka strategii akwizycji}
+
+\begin{table}[H]
+\centering
+\caption{Macierz ryzyk strategii akwizycji}
+\label{tab:audyt-ryzyka-strategia}
+\begin{tabularx}{\textwidth}{L{3.5cm}C{2cm}C{2cm}X}
+\toprule
+\textbf{Ryzyko} & \textbf{Prawdop.} & \textbf{Wpływ} & \textbf{Mitigacja} \\
+\midrule
+\rowcolor{PodDanger!5}
+Viral cards nie chwycą & \warn{Średnie} & \danger{Wysoki} & A/B testy formatów kart, 9:16 pionowe dla Stories/Reels \\
+\rowcolor{PodWarning!5}
+CAC $>$40~PLN na paid & \warn{Średnie} & \warn{Średni} & Limit budżetu paid, pivot na influencerów \\
+\rowcolor{PodWarning!5}
+Churn $>$10\%/mies & \warn{Średnie} & \warn{Średni} & Roczne plany z~rabatem, retention emails, nowe funkcje \\
+\rowcolor{PodWarning!5}
+Sezonowość (lato) & \score{Niskie} & \warn{Średni} & Content ,,wakacyjny'' (analiza rozmów z~vacation fling) \\
+\rowcolor{PodDanger!5}
+Konwersja $<$1,5\% & \warn{Średnie} & \danger{Wysoki} & Pay-per-analysis (4,99~PLN) jako alternatywa, obniżka Pro do 14,99~PLN \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsubsection{Rekomendacje --- fazy wdrożenia}
+
+\begin{featurebox}
+\textbf{4 fazy strategii akwizycji:}
+\begin{description}
+  \item[Faza 0 --- przygotowanie (teraz, 0~PLN):] Zoptymalizować 3--5 kart share pod TikTok/IG (format 9:16, duży tekst, watermark). Dodać export guide per platforma (Messenger, WhatsApp) --- to jednocześnie SEO content i~redukcja drop-off.
+  \item[Faza 1 --- walidacja (miesiąc 1--3, $\sim$2\,000~PLN/mies):] Własny content TikTok (3--5 filmów/tydzień, format ,,analizuję rozmowę z~eksem''). Kolaboracja z~2--3 mikro-influencerami. Cel: \textbf{walidacja CAC} --- czy $<$30~PLN? Jeśli tak --- przejście do Fazy~2.
+  \item[Faza 2 --- skalowanie (miesiąc 4--6, $\sim$3\,500~PLN/mies):] Jeśli CAC z~Fazy~1 $<$30~PLN: uruchomić Meta Ads (1\,000--2\,000~PLN/mies) + więcej influencerów. Jeśli CAC $>$40~PLN: pivot na pure organic + content, obniżyć cenę Pro do 14,99~PLN.
+  \item[Faza 3 --- optymalizacja LTV (miesiąc 7--12, $\sim$5\,000~PLN/mies):] Roczne plany z~rabatem ($\sim$199~PLN/rok = 16,60~PLN/mies), referral program (polecaj $\rightarrow$ 1 miesiąc gratis), retention emails (,,masz nową rozmowę do przeanalizowania?''). Cel: obniżyć churn z~8\% do 4\%, wydłużyć LTV z~5 do 10+ miesięcy.
+\end{description}
+\end{featurebox}
+
+
+% ============================================================
+\section{Audyt optymalizacji wydajności}
+\label{sec:audyt-optymalizacja}
+% ============================================================
+
+\subsection{Problemy krytyczne (P0)}
+
+\subsubsection{Rate Limiting wyłączony}
+\label{sec:audyt-rate-limit}
+
+\begin{warningbox}[title={\danger{KRYTYCZNE --- ryzyko kosztowe i~bezpieczeństwa}}]
+Plik \filepath{src/lib/rate-limit.ts} zawiera \textbf{celowo wyłączony} rate limiting:
+
+\begin{lstlisting}[style=podcode, caption={Rate limiting --- stan aktualny}, label={lst:rate-limit-broken}]
+export function rateLimit(_limit: number, _windowMs: number) {
+  // TODO: re-enable rate limiting before production
+  return function checkRateLimit(_ip: string) {
+    return { allowed: true };  // <-- ZAWSZE true
+  };
+}
+\end{lstlisting}
+
+\textbf{Konsekwencje:}
+\begin{itemize}
+  \item Każdy użytkownik może wysyłać \textbf{nieograniczoną} liczbę requestów do API Gemini
+  \item Brak ochrony przed atakami typu abuse/DoS na endpointy AI
+  \item Koszty API Gemini mogą rosnąć niekontrolowanie
+  \item Plik zawiera poprawną implementację \tstype{rateLimitMap} (linie 1--13), ale funkcja zwracająca nigdy z~niej nie korzysta
+\end{itemize}
+\end{warningbox}
+
+\paragraph{Naprawa:} Przywrócić logikę rate limitingu --- plik już zawiera \tstype{Map<string, \{count, resetTime\}>} z~automatycznym czyszczeniem co 5 minut. Wystarczy odkomentować sprawdzanie w~\tsfunc{checkRateLimit()}.
+
+\subsubsection{Nadmiar IntersectionObserver (37 instancji)}
+\label{sec:audyt-intersection-observers}
+
+Framer Motion \tsfunc{whileInView} tworzy osobny \tstype{IntersectionObserver} dla każdego elementu. Na stronie analizy:
+
+\begin{table}[H]
+\centering
+\caption{IntersectionObserver --- rozkład instancji}
+\label{tab:audyt-observers}
+\begin{tabularx}{\textwidth}{L{5cm}C{3cm}X}
+\toprule
+\textbf{Źródło} & \textbf{Instancje} & \textbf{Uwagi} \\
+\midrule
+\tsfunc{whileInView} w~page.tsx & 37 & Każdy \tstype{motion.div} z~animacją fade-in \\
+SectionNavigator & 6--9 & Osobny observer per sekcję nawigacji \\
+Scroll listener (progress) & 1 & \tstype{window.addEventListener('scroll')} \\
+\midrule
+\textbf{Razem} & \textbf{44--47} & Na jednej stronie \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Wpływ na wydajność:}
+\begin{itemize}
+  \item Każdy \tstype{IntersectionObserver} utrzymuje referencje do obserwowanych elementów i~callbacków
+  \item 44+ instancji = szacunkowo 10--20\,MB dodatkowego zużycia pamięci
+  \item Browser musi przeliczać intersection ratio przy każdym scroll event dla wszystkich obserwatorów
+  \item Na urządzeniach mobilnych z~4\,GB RAM to odczuwalne spowolnienie
+\end{itemize}
+
+\paragraph{Naprawa:} Architektura tabowa naturalnie redukuje liczbę do $\sim$8--10 per tab. Dodatkowo, pojedynczy shared \tstype{IntersectionObserver} z~\texttt{threshold: [0, 0.5, 1]} zamiast wielu osobnych.
+
+\subsection{Problemy ważne (P1)}
+
+\subsubsection{Brak lazy-loadingu treści tabów}
+
+Choć 18 komponentów używa \tsfunc{dynamic()} (Next.js lazy import), wszystkie ładują się natychmiast po wejściu na stronę, ponieważ leżą w~jednym drzewie renderowania. Z~architekturą tabową:
+
+\begin{itemize}
+  \item \tsfunc{React.lazy()} per tab --- JS Entertainment i~Share tabów ładowany dopiero po kliknięciu
+  \item Szacowana redukcja initial JS bundle: \textbf{40--60\%} (Entertainment tab jest najcięższy: Gemini API calls, chat simulator, quiz engine)
+\end{itemize}
+
+\subsubsection{Brakujące React.memo na ciężkich komponentach}
+
+Następujące komponenty re-renderują się przy \textbf{każdej} zmianie state'u w~page.tsx (9 handlerów useCallback = częste re-rendery):
+
+\begin{table}[H]
+\centering
+\caption{Komponenty wymagające React.memo}
+\label{tab:audyt-memo}
+\begin{tabularx}{\textwidth}{L{4.5cm}C{2cm}X}
+\toprule
+\textbf{Komponent} & \textbf{Ciężkość} & \textbf{Powód re-renderów} \\
+\midrule
+\tstype{TimelineChart} & Wysoka & Recharts render per re-render \\
+\tstype{HeatmapChart} & Wysoka & Duża siatka SVG \\
+\tstype{ResponseTimeChart} & Wysoka & Recharts render per re-render \\
+\tstype{ShareCardGallery} & Bardzo wysoka & 20+ kart, canvas rendering \\
+\tstype{PersonalityDeepDive} & Wysoka & Wiele sub-komponentów \\
+\tstype{NetworkGraph} & Wysoka & Obliczenia grafu + SVG \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Naprawa:} Dodać \tsfunc{React.memo()} z~custom comparator na powyższe komponenty. Przenieść handlery \tsfunc{useCallback} do odpowiednich tab komponentów, aby zmiana state w~jednym tabie nie powodowała re-renderów w~innym.
+
+\subsubsection{Stabilizacja callbacków}
+
+Plik \filepath{page.tsx} zawiera 9 handlerów \tsfunc{useCallback}:
+
+\begin{enumerate}
+  \item \tsfunc{handleAIComplete}
+  \item \tsfunc{handleRoastComplete}
+  \item \tsfunc{handleCPSComplete}
+  \item \tsfunc{handleSubtextComplete}
+  \item \tsfunc{handleDelusionComplete}
+  \item \tsfunc{handleCourtComplete}
+  \item \tsfunc{handleDatingProfileComplete}
+  \item \tsfunc{handlePhotoUpload} / \tsfunc{handlePhotoRemove}
+  \item \tsfunc{handleImageSaved}
+\end{enumerate}
+
+Wszystkie mają \tstype{[analysis]} w~tablicy zależności --- więc każda zmiana \tstype{analysis} (np. zakończenie dowolnej analizy AI) powoduje re-tworzenie \textbf{wszystkich} callbacków i~re-render \textbf{wszystkich} komponentów, które je przyjmują.
+
+\paragraph{Naprawa:} Przenieść handlery do odpowiednich tab komponentów. Tab AI Insights posiada tylko handlery AI, tab Entertainment --- handlery rozrywkowe. Zmiana w~jednym tabie nie wpływa na callbacki w~drugim.
+
+\subsection{Problemy dodatkowe (P2)}
+
+\subsubsection{Web Worker dla parsowania}
+
+Parsery (\filepath{src/lib/parsers/}) wykonują się na main thread:
+
+\begin{itemize}
+  \item Duże eksporty Messenger (50\,000+ wiadomości): 200--400\,ms blokowania UI
+  \item Rozwiązanie: \tsfunc{new Worker(new URL('./parser.worker.ts', import.meta.url))}
+  \item Użytkownik widzi responsywny UI z~progress barem zamiast zamrożonej strony
+\end{itemize}
+
+\subsubsection{IndexedDB quota management}
+
+Brak zarządzania limitami przechowywania:
+
+\begin{itemize}
+  \item Każda analiza to $\sim$50--200\,KB w~IndexedDB (dane ilościowe + jakościowe + obrazy)
+  \item 50 analiz = $\sim$5--10\,MB --- bez ostrzeżeń ani auto-cleanup
+  \item Rozwiązanie: \tsfunc{navigator.storage.estimate()} przed zapisem, ostrzeżenie przy >80\% quota
+\end{itemize}
+
+\subsubsection{Wirtualizacja ShareCardGallery}
+
+20+ kart share renderowanych jednocześnie:
+
+\begin{itemize}
+  \item Każda karta to komponent z~canvas rendering (html2canvas)
+  \item Rozwiązanie: intersection-based lazy rendering lub \tstype{react-window}
+\end{itemize}
+
+
+
+% ============================================================
+% NOWE SEKCJE via \input
+% ============================================================
+
+\input{chapters/ch14-s1-s2}   % Unit economics kosztów AI + Audyt bezpieczeństwa
+\input{chapters/ch14-s3-s4}   % Audyt mobile UX + Audyt onboardingu
+\input{chapters/ch14-s5-s6}   % Audyt jakości kodu + Audyt SEO
+
+
+% ============================================================
+\section{Metryki docelowe --- wszystkie osie audytu}
+\label{sec:audyt-metryki-docelowe}
+% ============================================================
+
+Poniższa tabela konsoliduje metryki ze wszystkich dziewięciu osi audytu w~jednym miejscu, z~priorytetami od P0 (krytyczne) do P2 (do optymalizacji w~kolejnych sprintach).
+
+\begin{table}[H]
+\centering
+\caption{Skonsolidowane metryki docelowe --- wszystkie 9 osi audytu}
+\label{tab:audyt-metryki-docelowe}
+\begin{tabularx}{\textwidth}{L{4.5cm}C{2.8cm}C{2.8cm}C{1.5cm}}
+\toprule
+\textbf{Metryka} & \textbf{Stan obecny} & \textbf{Cel} & \textbf{Priorytet} \
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Wydajność (Performance)}}} \
+LCP (Largest Contentful Paint) & 2--4\,s & $<2{,}5$\,s & P1 \
+INP (Interaction to Next Paint) & 200--800\,ms & $<200$\,ms & P1 \
+IntersectionObserver instances & 51--54 & $<$10 per tab & P0 \
+Initial JS bundle (analysis) & 100\% & 40--60\% & P1 \
+DOM nodes (jednocześnie) & 50+ & $\sim$10 per tab & P0 \
+Memory (strona analizy) & 90--120\,MB & $<$50\,MB & P2 \
+Parser blocking time & 200--400\,ms & $<$50\,ms (Worker) & P2 \
+Font payload & 245\,KB & $\sim$100\,KB & P1 \
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Bezpieczeństwo (Security)}}} \
+Rate limit compliance & \danger{0\% (wyłączony)} & \score{100\%} & P0 \
+Security vulns (HIGH) & 5 & 0 & P0 \
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Jakość kodu (Code Quality)}}} \
+Test coverage (\filepath{lib/}) & $<$5\% & $>$60\% & P1 \
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Mobile UX}}} \
+Touch target compliance & $\sim$70\% & 100\% & P1 \
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{SEO}}} \
+\filepath{robots.txt} domain & chatscope.app & podtekst.app & P0 \
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Unit Economics}}} \
+AI cost per basic analysis & 0,11~PLN & 0,07~PLN (z~cache) & P2 \
+Margin brutto (avg) & $\sim$91\% & $>$85\% & monitor \
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Onboarding}}} \
+Onboarding drop-off (landing$\rightarrow$AI) & $\sim$73\%$^{\dagger}$ & $<$50\% & P1 \
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{metricbox}
+Metryki P0 wymagają natychmiastowej naprawy --- każda z~nich stanowi albo ryzyko bezpieczeństwa (rate limit, CVE), albo blokuje skalowalność (DOM overload, IntersectionObserver), albo jest błędem konfiguracji (\filepath{robots.txt}). Metryki P1 wpływają bezpośrednio na konwersję i~retencję użytkowników. Metryki P2 to optymalizacje, które stają się istotne przy skali $>$1000 MAU.
+
+$^{\dagger}$~Wartość 73\% to \textbf{heurystyka benchmarkowa} (typowy SaaS B2C), nie pomiar z~\podtekst. GA4 jest zaimplementowane, ale nie śledzi lejka konwersji. Wymagana walidacja przez GA4 funnel events.
+\end{metricbox}
+
+
+% ============================================================
+\section{Skonsolidowana roadmapa}
+\label{sec:audyt-roadmapa}
+% ============================================================
+
+Poniższa roadmapa integruje rekomendacje ze wszystkich dziewięciu osi audytu w~cztery sprinty, uporządkowane według priorytetu i~zależności implementacyjnych.
+
+\subsection{Sprint 0 --- naprawy bezpieczeństwa (1--2 dni)}
+
+\begin{table}[H]
+\centering
+\caption{Sprint 0 --- naprawy bezpieczeństwa (P0, bez zmian architektonicznych)}
+\label{tab:audyt-sprint0}
+\begin{tabularx}{\textwidth}{L{5.5cm}C{2cm}X}
+\toprule
+\textbf{Zadanie} & \textbf{Oś audytu} & \textbf{Pliki / uwagi} \
+\midrule
+Naprawić \filepath{rate-limit.ts} + migracja do Upstash Redis & Bezpieczeństwo & \filepath{src/lib/rate-limit.ts} \
+Aktualizacja jsPDF do 4.2.0+ & Bezpieczeństwo & \filepath{package.json} (4 HIGH CVE) \
+Naprawić domenę w~\filepath{robots.txt} & SEO & chatscope.app $\rightarrow$ podtekst.app \
+Dodać monitoring thinking tokens & Unit Economics & logi API routes \
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{metricbox}
+Sprint~0 to wyłącznie naprawy bezpieczeństwa i~konfiguracji --- żadne zmiany architektoniczne, żadne nowe pliki komponentów. Cel: zamknąć w~1--2 dni robocze, zdeployować niezależnie od dalszych prac.
+\end{metricbox}
+
+\subsection{Sprint 1 --- architektura tabowa (3--5 dni)}
+
+\begin{table}[H]
+\centering
+\caption{Sprint 1 --- przebudowa architektury strony analizy}
+\label{tab:audyt-sprint1}
+\begin{tabularx}{\textwidth}{L{5.5cm}C{2cm}X}
+\toprule
+\textbf{Zadanie} & \textbf{Oś audytu} & \textbf{Pliki / uwagi} \
+\midrule
+Stworzyć \tstype{AnalysisTabs} + 5~tab komponentów & Design & 6 nowych plików \
+Rozbić \filepath{page.tsx} na taby & Design & page.tsx 1322$\rightarrow\sim$200~LOC \
+URL hash sync (\texttt{\#overview}, \texttt{\#ai}, ...) & Design & deep-linking \
+Przenieść handlery \tsfunc{useCallback} do tabów & Optymalizacja & redukcja re-renderów \
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Sprint 2 --- P1: monetyzacja i~bezpieczeństwo}
+
+\begin{table}[H]
+\centering
+\caption{Sprint 2 --- zadania P1 (ważne)}
+\label{tab:audyt-sprint2}
+\begin{tabularx}{\textwidth}{L{5.5cm}C{2cm}X}
+\toprule
+\textbf{Zadanie} & \textbf{Oś audytu} & \textbf{Pliki / uwagi} \
+\midrule
+\tstype{TierContext} + \tstype{PaywallGate} & Monetyzacja & 2 nowe pliki \
+Strona polityki prywatności & Bezpieczeństwo & \filepath{/privacy}, GDPR compliance \
+\tstype{Content-Security-Policy} + HSTS headers & Bezpieczeństwo & \filepath{next.config.ts} \
+Deep validation \tstype{samplesSchema} & Bezpieczeństwo & \filepath{src/lib/validation/schemas.ts} \
+Export guide per platform (onboarding) & Onboarding & ikony + instrukcje w~\tstype{DropZone} \
+Welcome modal + guided tour & Onboarding & nowy komponent \
+Conditional font loading (oszczędność 145\,KB) & SEO, Performance & \filepath{layout.tsx}, font subsetting \
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Sprint 3 --- P1/P2: wydajność i~jakość}
+
+\begin{table}[H]
+\centering
+\caption{Sprint 3 --- zadania P1/P2 (wydajność i~jakość kodu)}
+\label{tab:audyt-sprint3}
+\begin{tabularx}{\textwidth}{L{5.5cm}C{2cm}X}
+\toprule
+\textbf{Zadanie} & \textbf{Oś audytu} & \textbf{Pliki / uwagi} \
+\midrule
+\tsfunc{React.lazy()} per tab & Optymalizacja & \tstype{AnalysisTabs.tsx} \
+\tsfunc{React.memo()} na chartach & Optymalizacja & 6 komponentów wykresów \
+Callback refactor per tab & Optymalizacja & przeniesienie handlerów do tabów \
+Server Components dla statycznych sekcji landing & Optymalizacja & \filepath{LandingFAQ}, \filepath{LandingFooter} \
+Bundle analyzer & Optymalizacja & \filepath{next.config.ts} \
+Test coverage $>$60\% dla \filepath{lib/} & Jakość kodu & Vitest, nowe pliki testów \
+Touch target fixes (hamburger, checkbox) & Mobile UX & min 44$\times$44\,px \
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Sprint 4 --- P2: optymalizacja zaawansowana}
+
+\begin{table}[H]
+\centering
+\caption{Sprint 4 --- zadania P2 (optymalizacja zaawansowana)}
+\label{tab:audyt-sprint4}
+\begin{tabularx}{\textwidth}{L{5.5cm}C{2cm}X}
+\toprule
+\textbf{Zadanie} & \textbf{Oś audytu} & \textbf{Pliki / uwagi} \
+\midrule
+Web Worker parser & Optymalizacja & \filepath{parser.worker.ts} (nowy) \
+IndexedDB quota management & Optymalizacja & \filepath{src/lib/utils.ts} \
+Virtualized \tstype{ShareCardGallery} & Optymalizacja & \tstype{react-window} \
+Response caching (hash-based) & Unit Economics & cache Gemini responses \
+Batch API dla StandUp/CPS & Unit Economics & redukcja round-trips \
+,,Przeanalizuj kolejną'' CTA po analizie & Onboarding & post-analysis retention \
+Email/push notification system & Onboarding & powiadomienia o~nowych funkcjach \
+Migracja Satori dla share cards & Performance & SSR zamiast html2canvas \
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Podsumowanie}
+\label{sec:audyt-podsumowanie}
+% ============================================================
+
+Audyt wieloagentowy w~dziewięciu osiach zidentyfikował \textbf{6 krytycznych (P0)}, \textbf{11 ważnych (P1)} i~\textbf{8 dodatkowych (P2)} problemów w~architekturze \podtekst. Poniżej synteza kluczowych wniosków z~każdej osi:
+
+\begin{description}
+  \item[1. Design (UX strony analizy)] Monolityczna strona analizy (1322~LOC, 50+ komponentów) wymaga rozbicia na architekturę tabową z~5~zakładkami. AI Analysis --- najcenniejsza treść --- jest pogrzebana pod 3000\,px danych ilościowych. Proponowane 5 tabów z~lazy-loadingiem redukują DOM o~80\% i~przesuwają AI na pozycję~3.
+
+  \item[2. Monetyzacja] Brak jakiejkolwiek infrastruktury płatności. Proponowany model 3-tier (Free / Pro 29,99~PLN / Unlimited 49,99~PLN) z~paywallem w~momencie największego zaangażowania i~share cards jako viral loop. Strategia akwizycji (sekcja~\ref{sec:strategia-akwizycji}) oparta na 7 kanałach wzrostu: viral share cards, SEO, TikTok content, mikro/makro-influencerzy, Meta Ads, Google Ads. Realistyczna prognoza (scenariusz Lean Startup, $\sim$3\,500~PLN/mies budżetu): $\sim$3\,000~MAU i~$\sim$55\,000~PLN ARR w~miesiącu~12, break-even $\sim$miesiąc 15--18. Wymagana inwestycja do break-even: $\sim$30\,000~PLN.
+
+  \item[3. Optymalizacja wydajności] Rate limiting wyłączony w~produkcji (ryzyko kosztowe), 51+ IntersectionObserver instances (pamięć), brak lazy-loadingu treści (initial bundle), brak \tsfunc{React.memo()} na ciężkich komponentach (re-rendery). Architektura tabowa rozwiązuje większość problemów naturalnie.
+
+  \item[4. Unit economics] Koszty Gemini API są bardzo niskie w~przeliczeniu na PLN --- podstawowa analiza kosztuje $\sim$0,11~PLN, pełna $\sim$0,36~PLN. Przy cenach 29,99/49,99~PLN marża brutto wynosi $\sim$91\%. Główne ryzyko: thinking tokens w~nowych modelach Gemini mogą zwiększyć koszty 3--5$\times$ bez monitoringu.
+
+  \item[5. Bezpieczeństwo] Rate limit \danger{wyłączony} w~produkcji, brak nagłówków \tstype{Content-Security-Policy} i~HSTS, 5 podatności HIGH w~zależnościach (jsPDF CVE), brak walidacji głębokiej w~\tstype{samplesSchema}, brak strony polityki prywatności (GDPR). Wszystkie 5 HIGH CVE wymagają natychmiastowej naprawy.
+
+  \item[6. Mobile UX] Landing page jest dobrze zoptymalizowany (diagonal hero, pinned CTA). Strona analizy ma problemy z~nadmiarem IntersectionObserver (51+ na mobile = jank), touch targets $<$44\,px (hamburger menu, checkboxy), brak optymalizacji uploadu dla iOS (brak instrukcji ,,Pliki'' app).
+
+  \item[7. Onboarding] Minimalny, ale funkcjonalny flow w~4 krokach (landing $\rightarrow$ upload $\rightarrow$ parse $\rightarrow$ AI). Krytyczny brak: instrukcja eksportu per platforma --- użytkownicy nie wiedzą \emph{jak} wyeksportować chat z~Messengera/WhatsAppa. Heurystyczny szacunek drop-off landing$\rightarrow$AI: $\sim$73\% (benchmark SaaS B2C, \textbf{bez danych własnych} --- GA4 nie śledzi lejka konwersji). Hipoteza: brak export guide odpowiada za znaczną część utraty.
+
+  \item[8. Jakość kodu] Doskonała konfiguracja TypeScript (strict mode, 0 użyć \tstype{any}), ale zaledwie 3 pliki testów (pokrycie $<$5\% dla \filepath{lib/}). 5 podatności HIGH w~\tstype{npm audit}. Kod jest dobrze zorganizowany modularnie (\filepath{quant/} submoduły), ale brakuje testów regresji dla parserów i~analizy ilościowej.
+
+  \item[9. SEO] Doskonałe metadane (Open Graph, Twitter Cards, structured data). Krytyczny błąd: \filepath{robots.txt} wskazuje na \texttt{chatscope.app} zamiast \texttt{podtekst.app} (rebranding niedokończony). Ciężkie fonty: 245\,KB (Geist Sans 140\,KB + Geist Mono 65\,KB + Syne 40\,KB) --- conditional loading może zaoszczędzić $\sim$145\,KB.
+\end{description}
+
+\begin{featurebox}
+\textbf{Szacowany wpływ implementacji wszystkich 4 sprintów:}
+\begin{itemize}
+  \item \textbf{UX:} AI Analysis dostępne w~2 kliknięciach zamiast 3000\,px scrollowania; DOM $-$80\%
+  \item \textbf{Performance:} $-$60\% initial JS, $-$80\% IntersectionObserver, INP $<$200\,ms, fonty $-$145\,KB
+  \item \textbf{Revenue:} od 0~PLN do $\sim$55\,000~PLN ARR (scenariusz Lean Startup, budżet $\sim$3\,500~PLN/mies, break-even $\sim$miesiąc 15--18)
+  \item \textbf{Security:} rate limiting przywrócony, CSP + HSTS, 0 podatności HIGH, GDPR compliance
+  \item \textbf{Costs:} marża brutto $>$85\% nawet przy agresywnym użyciu AI; cache redukuje koszty o~35\%
+  \item \textbf{Mobile:} 100\% touch target compliance, optymalizacja upload flow dla iOS
+  \item \textbf{Onboarding:} drop-off landing$\rightarrow$AI: redukcja dzięki export guide + welcome modal (skala nieznana bez baseline'u z~GA4)
+  \item \textbf{Quality:} test coverage \filepath{lib/} z~$<$5\% do $>$60\%, 0 podatności w~\tstype{npm audit}
+  \item \textbf{SEO:} poprawny \filepath{robots.txt}, fonty $-$60\%, ranking stabilny
+  \item \textbf{DX:} \filepath{page.tsx} z~1322 do $\sim$200~LOC, modularny kod, CI/CD z~testami
+\end{itemize}
+\end{featurebox}

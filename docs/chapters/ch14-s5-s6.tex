@@ -1,0 +1,683 @@
+% ============================================================
+% Sekcja S5: Jakość kodu i Developer Experience
+% ============================================================
+
+\section{Jakość kodu i Developer Experience}
+\label{sec:jakosc-kodu}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Kod bez testów to jak rozmowa bez kontekstu --- niby działa, ale nie wiesz dlaczego.''
+\end{center}
+
+\vspace{8pt}
+
+Niniejsza sekcja ocenia jakość techniczną kodu źródłowego \podtekst pod kątem: konfiguracji TypeScript, pokrycia testami, bezpieczeństwa zależności, wzorców obsługi błędów, architektury parserów oraz higieny bazy kodu (TODO/FIXME/HACK).
+
+\subsection{Metryki jakości kodu --- podsumowanie}
+\label{sec:code-metryki}
+
+\begin{table}[H]
+\centering
+\caption{Scorecard jakości kodu \podtekst}
+\label{tab:code-scorecard}
+\begin{tabularx}{\textwidth}{L{4cm}C{3cm}C{2.5cm}X}
+\toprule
+\textbf{Metryka} & \textbf{Wartość} & \textbf{Ocena} & \textbf{Komentarz} \\
+\midrule
+Typy \tstype{any} w~\filepath{src/} & 0 & \score{Doskonale} & Zero unsafe-any w~całym projekcie \\
+\tstype{strict: true} w~tsconfig & Tak & \score{Doskonale} & Pełna rygorystyczność kompilatora \\
+Pliki testowe & 3 & \danger{Krytycznie} & Tylko parsery przetestowane \\
+Pokrycie testami (szac.) & $<$5\% & \danger{Krytycznie} & Brak testów API, komponentów, hooków \\
+Zależności produkcyjne & 17 & \score{Dobrze} & Niski footprint \\
+Zależności deweloperskie & 10 & \score{Dobrze} & Minimalistyczne \\
+Luki bezpieczeństwa (HIGH) & 4 & \danger{Poważne} & jsPDF + minimatch \\
+Luki bezpieczeństwa (MODERATE) & 1 & \warn{Umiarkowane} & ajv (ESLint transitive) \\
+Luki bezpieczeństwa (LOW) & 1 & \score{Niskie} & hono (shadcn transitive) \\
+Bloki \tstype{catch} & 63 & --- & W~35 plikach \\
+\tstype{console.error} & 28 & \warn{Do poprawy} & Brak strukturalnego logowania \\
+TODO/FIXME/HACK & 1 & \score{Dobrze} & Ale krytyczny: wyłączony rate limiter \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Konfiguracja TypeScript}
+
+Plik \filepath{tsconfig.json} jest skonfigurowany wzorcowo:
+
+\begin{lstlisting}[style=podcode, caption={tsconfig.json --- kluczowe opcje}, label={lst:code-tsconfig}]
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "incremental": true,
+    "paths": { "@/*": ["./src/*"] }
+  }
+}
+\end{lstlisting}
+
+\begin{itemize}
+  \item \tstype{strict: true} --- włącza \tstype{strictNullChecks}, \tstype{noImplicitAny}, \tstype{strictFunctionTypes} i~pozostałe flagi rygorystyczności
+  \item \tstype{isolatedModules: true} --- kompatybilność z~bundlerami (SWC/Turbopack)
+  \item \tstype{incremental: true} --- przyrostowa kompilacja, szybsze rebuildy
+  \item Alias \tstype{@/*} $\rightarrow$ \filepath{./src/*} --- czyste importy bez relatywnych ścieżek
+\end{itemize}
+
+\begin{metricbox}
+\textbf{Wynik:} Konfiguracja TypeScript zasługuje na ocenę \score{10/10}. Zero kompromisów typowania, zero \tstype{any}, pełna rygorystyczność.
+\end{metricbox}
+
+
+\subsection{Analiza pokrycia testami}
+\label{sec:code-testy}
+
+\subsubsection{Stan obecny}
+
+Framework testowy: \textbf{Vitest v4.0.18} z~konfiguracją w~\filepath{vitest.config.ts}:
+
+\begin{lstlisting}[style=podcode, caption={vitest.config.ts}, label={lst:code-vitest}]
+import { defineConfig } from 'vitest/config';
+import path from 'path';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+  },
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+});
+\end{lstlisting}
+
+Istniejące pliki testowe --- \textbf{tylko 3}:
+
+\begin{table}[H]
+\centering
+\caption{Istniejące pliki testowe}
+\label{tab:code-testy-istniejace}
+\begin{tabularx}{\textwidth}{L{7.5cm}C{2cm}X}
+\toprule
+\textbf{Plik} & \textbf{Moduł} & \textbf{Zakres} \\
+\midrule
+\filepath{src/lib/parsers/\_\_tests\_\_/detect.test.ts} & Parsery & Auto-detekcja platformy \\
+\filepath{src/lib/parsers/\_\_tests\_\_/messenger.test.ts} & Parsery & Parser Messenger JSON \\
+\filepath{src/lib/parsers/\_\_tests\_\_/quantitative.test.ts} & Analiza & Metryki ilościowe \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Mapa luk w~pokryciu testami}
+
+\begin{warningbox}[title={\danger{Krytyczne braki testowe}}]
+Poniższa tabela przedstawia moduły \textbf{całkowicie pozbawione testów} --- uporządkowane według ryzyka biznesowego:
+
+\begin{table}[H]
+\centering
+\caption{Moduły bez testów --- analiza luk}
+\label{tab:code-brak-testow}
+\begin{tabularx}{\textwidth}{L{4cm}C{1.5cm}C{2cm}X}
+\toprule
+\textbf{Moduł} & \textbf{Pliki} & \textbf{Ryzyko} & \textbf{Opis braku} \\
+\midrule
+API routes (\filepath{api/}) & 10 & \danger{Krytyczne} & Zero testów SSE, walidacji, rate limitingu \\
+Gemini integration & 1 & \danger{Krytyczne} & Brak mock/stub Gemini API \\
+Parsery: WA, IG, TG, Discord & 4 & \danger{Wysokie} & Tylko Messenger ma testy \\
+Analiza jakościowa & 3 & \warn{Wysokie} & Sampling, context building \\
+Moduły \filepath{quant/} & 6 & \warn{Wysokie} & bursts, trends, reciprocity, sentiment \\
+Komponenty React & 145+ & \warn{Średnie} & Zero testów komponentów \\
+Share cards & 20+ & \warn{Średnie} & Zero testów renderingu kart \\
+Hooki (\filepath{hooks/}) & 3 & \warn{Średnie} & useShareCard, useCPSAnalysis, useSubtext \\
+PDF export & 2 & \warn{Średnie} & Krytyczna funkcja bez testów \\
+Utils i~walidacja & 3 & \score{Niskie} & schemas.ts, utils.ts, encode.ts \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\end{warningbox}
+
+\subsubsection{Rekomendacje testowe --- priorytetyzacja}
+
+\begin{enumerate}[label=\textcolor{PodBlue}{\textbf{P\arabic*.}}]
+  \item \textbf{Parsery WhatsApp, Instagram, Telegram, Discord} --- parsowanie to fundament aplikacji. Każdy parser powinien mieć minimum 10 test case'ów: poprawne dane, edge case'y (puste wiadomości, emoji, wielojęzyczne), błędne formaty.
+  \item \textbf{API routes} --- testy integracyjne z~mockami Gemini. Sprawdzenie: walidacji wejścia (Zod), kodów HTTP (400, 413, 429), SSE event format, abort signal.
+  \item \textbf{Moduły \filepath{quant/}} --- czyste funkcje (zero side-effects), idealne do testów jednostkowych. \tsfunc{detectBursts()}, \tsfunc{computeTrends()}, \tsfunc{computeReciprocityIndex()}, \tsfunc{computeSentimentScore()}.
+  \item \textbf{Utils i~walidacja} --- \filepath{schemas.ts} (Zod), \filepath{encode.ts} (share link encoding), \filepath{utils.ts}.
+  \item \textbf{Komponenty} --- snapshot testy dla share cards (krytyczne dla viralności), smoke testy dla głównych widoków.
+\end{enumerate}
+
+\begin{metricbox}
+\textbf{Cel:} Pokrycie testami $>$60\% modułów \filepath{lib/} w~ciągu 2 sprintów. Dodanie pre-commit hooka z~\texttt{vitest run} przed każdym commitem. Szacowany nakład: 3--5 dni pracy deweloperskiej.
+\end{metricbox}
+
+
+\subsection{Raport podatności bezpieczeństwa}
+\label{sec:code-vulnerabilities}
+
+Wyniki \texttt{pnpm audit} (stan: luty 2026):
+
+\begin{table}[H]
+\centering
+\caption{Podatności bezpieczeństwa --- \texttt{pnpm audit}}
+\label{tab:code-vulns}
+\begin{tabularx}{\textwidth}{L{3.8cm}L{2.3cm}C{1.8cm}X}
+\toprule
+\textbf{CVE / GHSA} & \textbf{Pakiet} & \textbf{Severity} & \textbf{Problem} \\
+\midrule
+GHSA-p5xg-68wr-hm3m & jspdf $<$4.2.0 & \danger{HIGH} & PDF Injection --- AcroForm RadioButton \\
+GHSA-9vjf-qc39-jprp & jspdf $<$4.2.0 & \danger{HIGH} & PDF Object Injection via \tsfunc{addJS()} \\
+GHSA-67pg-wm7f-q7fj & jspdf $<$4.2.0 & \danger{HIGH} & DoS via Malicious GIF Dimensions \\
+(dodatkowe CVE) & jspdf $<$4.2.0 & \danger{HIGH} & Dodatkowa luka jsPDF (4. CVE) \\
+GHSA-3ppc-4f35-3m26 & minimatch $<$10.2.1 & \danger{HIGH} & ReDoS --- powtórzone wildcardy \\
+\midrule
+GHSA-2g4f-4pwh-qvx6 & ajv $<$6.14.0 & \warn{MODERATE} & ReDoS z~opcją \tstype{\$data} \\
+\midrule
+GHSA-gq3j-xvxp-8hrf & hono $<$4.11.10 & \score{LOW} & Timing comparison \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Analiza i~plan naprawczy}
+
+\begin{description}
+  \item[jsPDF (4 luki HIGH)] Aktualna wersja: 4.1.0. Wszystkie 4 CVE naprawione w~wersji \textbf{4.2.0+}. \textbf{Naprawa:} \texttt{pnpm update jspdf} --- zero breaking changes między 4.1.0 a~4.2.x. Ryzyko braku aktualizacji: \danger{wysokie} --- PDF export to core feature, a~aplikacja generuje PDF-y po stronie klienta (jsPDF). Atakujący mógłby przygotować złośliwe dane wejściowe powodujące injection do generowanego PDF-a.
+
+  \item[minimatch (HIGH)] Zależność tranzytywna ESLinta. Nie wpływa na runtime produkcyjny (ESLint = devDependency). \textbf{Naprawa:} \texttt{pnpm update eslint} lub override w~\filepath{package.json}. Ryzyko: \score{niskie} w~produkcji, \warn{średnie} w~CI/CD (ReDoS przy lintingu).
+
+  \item[ajv (MODERATE)] Zależność tranzytywna ESLinta (JSON Schema validation). \textbf{Naprawa:} analogicznie jak minimatch --- update ESLint. Ryzyko produkcyjne: \score{zerowe}.
+
+  \item[hono (LOW)] Zależność tranzytywna shadcn CLI. Nie jest bundlowana do produkcji. \textbf{Naprawa:} \texttt{pnpm update shadcn}. Ryzyko: \score{zerowe}.
+\end{description}
+
+\begin{featurebox}
+\textbf{Priorytet naprawy:}
+\begin{enumerate}
+  \item \danger{Natychmiast:} \texttt{pnpm update jspdf} $\rightarrow$ 4.2.x (eliminuje 4 HIGH CVE)
+  \item \warn{W~następnym sprincie:} override lub update ESLint (eliminuje minimatch + ajv)
+  \item \score{Przy okazji:} \texttt{pnpm update shadcn} (eliminuje hono)
+\end{enumerate}
+\end{featurebox}
+
+
+\subsection{Wzorce obsługi błędów}
+\label{sec:code-error-handling}
+
+Analiza 63 bloków \tstype{try-catch} w~35 plikach ujawnia 4 wzorce:
+
+\begin{table}[H]
+\centering
+\caption{Wzorce obsługi błędów w~\podtekst}
+\label{tab:code-error-patterns}
+\begin{tabularx}{\textwidth}{C{0.6cm}L{3.5cm}C{1.5cm}C{1.5cm}X}
+\toprule
+\textbf{Nr} & \textbf{Wzorzec} & \textbf{Ilość} & \textbf{Ocena} & \textbf{Przykład} \\
+\midrule
+1 & Try-catch + HTTP response & 22 & \score{Dobrze} & API routes: \tstype{Response.json(\{error\}, \{status: 500\})} \\
+2 & Try-catch + silent fallback & 18 & \warn{OK*} & \tsfunc{decodeFBString()}: zwraca oryginalny string przy błędzie dekodowania \\
+3 & Try-catch + \tstype{console.error} & 16 & \warn{Do poprawy} & \filepath{gemini.ts}, \filepath{ExportPDFButton.tsx}: logowanie bez struktury \\
+4 & Pusty catch (cleanup) & 7 & \score{OK} & Heartbeat SSE: \tstype{catch \{\}} przy zamknięciu strumienia \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textit{*Wzorzec 2 jest akceptowalny dla funkcji dekoderów, gdzie fallback na oryginalną wartość jest pożądanym zachowaniem.}
+
+\subsubsection{Pliki z~\tstype{console.error} (28 wystąpień)}
+
+\begin{table}[H]
+\centering
+\caption{Rozkład \tstype{console.error} po plikach}
+\label{tab:code-console-errors}
+\begin{tabularx}{\textwidth}{L{6cm}C{2cm}X}
+\toprule
+\textbf{Plik} & \textbf{Wystąpienia} & \textbf{Kontekst} \\
+\midrule
+\filepath{src/lib/analysis/gemini.ts} & 6 & Błędy Gemini API, retry logic \\
+\filepath{src/components/analysis/ExportPDFButton.tsx} & 3 & Generowanie PDF \\
+\filepath{src/components/analysis/StandUpPDFButton.tsx} & 3 & Generowanie PDF comedy \\
+\filepath{src/components/share-cards/ShareCardGallery.tsx} & 3 & Canvas rendering, Web Share \\
+\filepath{src/app/error.tsx} & 2 & Error boundary globalny \\
+Discord lib files (4 pliki) & 8 & Bot interactions, webhook \\
+Pozostałe & 3 & Różne \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Problem: brak strukturalnego logowania}}]
+Wszystkie błędy logowane przez \tstype{console.error} bez:
+\begin{itemize}
+  \item Ustrukturyzowanego formatu (np. JSON z~timestamp, severity, context)
+  \item Integracji z~usługą monitoringu (Sentry, LogRocket, Datadog)
+  \item Korelacji błędów (request ID, session ID)
+  \item Alertów przy anomaliach (np. spike błędów Gemini API)
+\end{itemize}
+\textbf{Rekomendacja:} Wprowadzić \filepath{src/lib/logger.ts} z~ustrukturyzowanym formatem, level severity i~opcjonalną integracją z~Google Cloud Logging (skoro deployment jest na Cloud Run).
+\end{warningbox}
+
+
+\subsection{Architektura parserów --- porównanie}
+\label{sec:code-parsery}
+
+\begin{table}[H]
+\centering
+\caption{Porównanie parserów --- architektura i~metryki}
+\label{tab:code-parsery-porownanie}
+\begin{tabularx}{\textwidth}{L{2.5cm}C{1.2cm}L{2.5cm}L{2.5cm}X}
+\toprule
+\textbf{Parser} & \textbf{LOC} & \textbf{Format wejścia} & \textbf{Specyfika} & \textbf{Współdzielony kod} \\
+\midrule
+\filepath{messenger.ts} & 163 & JSON & FB unicode (\tsfunc{decodeFBString}) & Eksportuje \tsfunc{decodeFBString} \\
+\filepath{whatsapp.ts} & 232 & TXT & Regex, detekcja 12h/24h & Niezależny \\
+\filepath{instagram.ts} & 116 & JSON & Format zbliżony do Messengera & Importuje \tsfunc{decodeFBString} z~messenger.ts \\
+\filepath{telegram.ts} & 155 & JSON & Mieszane tablice tekstowe & Niezależny \\
+\filepath{discord.ts} & --- & API & HTTP Bot, nie plik & Niezależny \\
+\filepath{detect.ts} & 41 & Dowolny & Auto-detekcja po strukturze & Importuje typy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Ocena architektury}
+
+\begin{itemize}
+  \item \score{Niski poziom duplikacji} --- każdy parser ma unikatową logikę specyficzną dla formatu platformy. Jedyny współdzielony kod (\tsfunc{decodeFBString}) jest poprawnie wyeksportowany i~zaimportowany.
+  \item \score{Zunifikowany typ wyjściowy} --- wszystkie parsery produkują \tstype{ParsedConversation} zdefiniowany w~\filepath{types.ts}, co zapewnia jednolity interfejs dla dalszego pipeline'u analizy.
+  \item \warn{Brak walidacji wejścia} --- parsery zakładają poprawność struktury pliku. Błędny format powoduje \tstype{TypeError} zamiast czytelnego komunikatu.
+  \item \warn{Brak limitów rozmiaru} --- parser przetworzy plik 500\,MB tak samo jak 500\,KB, bez ostrzeżeń ani chunked processing.
+\end{itemize}
+
+\begin{metricbox}
+\textbf{Rekomendacja:} Dodać walidację wejścia (Zod schema per parser) i~limit rozmiaru pliku (np.\ 50\,MB) z~czytelnym komunikatem błędu po polsku.
+\end{metricbox}
+
+
+\subsection{Konwencje nazewnicze --- audyt}
+\label{sec:code-naming}
+
+\begin{table}[H]
+\centering
+\caption{Konwencje nazewnicze --- audyt spójności}
+\label{tab:code-naming}
+\begin{tabularx}{\textwidth}{L{3.5cm}L{3cm}C{2cm}X}
+\toprule
+\textbf{Kategoria} & \textbf{Konwencja} & \textbf{Spójność} & \textbf{Przykłady} \\
+\midrule
+Komponenty React & PascalCase & \score{100\%} & AnalysisHeader.tsx, ShareCardGallery.tsx \\
+Moduły / utils & kebab-case & \score{100\%} & viral-scores.ts, rate-limit.ts \\
+Pliki testowe & \_\_tests\_\_/kebab.test.ts & \score{100\%} & detect.test.ts, messenger.test.ts \\
+Pliki typów & types.ts, schemas.ts & \score{100\%} & parsers/types.ts, analysis/types.ts \\
+Katalogi & kebab-case & \score{100\%} & share-cards/, analysis/ \\
+Hooki React & camelCase (use*) & \score{100\%} & useShareCard.ts, useCPSAnalysis.ts \\
+Zmienne CSS & kebab-case (--font-*) & \score{100\%} & --font-geist-sans, --font-syne \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{metricbox}
+\textbf{Wynik:} \score{100\% spójności} we wszystkich kategoriach nazewniczych. Brak inkonsystencji, brak mieszanych konwencji. Wzorcowa higiena nazewnicza.
+\end{metricbox}
+
+
+\subsection{Skan TODO / FIXME / HACK}
+\label{sec:code-todo-scan}
+
+Przeszukanie całego katalogu \filepath{src/} ujawniło \textbf{dokładnie 1} komentarz typu TODO:
+
+\begin{lstlisting}[style=podcode, caption={Jedyny TODO w~codebase}, label={lst:code-todo}]
+// src/lib/rate-limit.ts, linia 16:
+// TODO: re-enable rate limiting before production deployment
+\end{lstlisting}
+
+\begin{warningbox}[title={\danger{Krytyczny TODO w~produkcji}}]
+Ten jedyny TODO jest jednocześnie \textbf{najpoważniejszym} problemem bezpieczeństwa w~całej aplikacji. Rate limiting jest \danger{wyłączony} w~kodzie produkcyjnym działającym na Google Cloud Run. Plik zawiera poprawną implementację \tstype{rateLimitMap} (linie 1--13), ale funkcja \tsfunc{rateLimit()} na linii~15 nigdy z~niej nie korzysta --- zawsze zwraca \tstype{\{allowed: true\}}.
+
+\textbf{Konsekwencje braku rate limitingu:}
+\begin{itemize}
+  \item Nieograniczone requesty do Google Gemini API $\rightarrow$ \danger{niekontrolowane koszty}
+  \item Brak ochrony przed DDoS/abuse na endpointach AI
+  \item Naruszenie SLA Gemini API (rate limits Google'a zamiast własnych)
+\end{itemize}
+
+\textbf{Naprawa:} Przywrócić logikę rate limitingu w~\tsfunc{checkRateLimit()} --- implementacja \tstype{Map<string, \{count, resetTime\}>} już istnieje w~tym samym pliku.
+\end{warningbox}
+
+\begin{itemize}
+  \item \textbf{FIXME:} 0 wystąpień --- \score{czysto}
+  \item \textbf{HACK:} 0 wystąpień --- \score{czysto}
+  \item \textbf{XXX:} 0 wystąpień --- \score{czysto}
+  \item \textbf{@deprecated:} 0 wystąpień --- \score{czysto}
+\end{itemize}
+
+\begin{metricbox}
+\textbf{Wynik skanu:} Baza kodu jest wyjątkowo czysta pod względem zadłużenia technicznego (technical debt markers). Jedyny TODO ma jednak \danger{krytyczne} konsekwencje bezpieczeństwa i~kosztowe.
+\end{metricbox}
+
+
+% ============================================================
+% Sekcja S6: SEO i web performance
+% ============================================================
+
+\section{SEO i web performance}
+\label{sec:seo-performance}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Najlepsze SEO to takie, którego użytkownik nie zauważa --- a~robot Google'a tak.''
+\end{center}
+
+\vspace{8pt}
+
+Sekcja analizuje gotowość \podtekst do indeksowania przez wyszukiwarki, optymalizację zasobów webowych oraz wydajność ładowania strony.
+
+\subsection{Kompletność metadanych}
+\label{sec:seo-metadata}
+
+\begin{table}[H]
+\centering
+\caption{Audyt metadanych SEO --- \filepath{layout.tsx}}
+\label{tab:seo-metadata}
+\begin{tabularx}{\textwidth}{L{4cm}C{2cm}X}
+\toprule
+\textbf{Element} & \textbf{Status} & \textbf{Szczegóły} \\
+\midrule
+\tstype{title} & \score{PASS} & ,,PodTeksT --- odkryj to, co kryje się między wierszami'' \\
+\tstype{description} & \score{PASS} & 164 znaki, język polski, z~CTA \\
+\tstype{metadataBase} & \score{PASS} & \texttt{https://podtekst.app} \\
+\tstype{openGraph.title} & \score{PASS} & Zgodny z~\tstype{title} \\
+\tstype{openGraph.description} & \score{PASS} & Skrócona wersja opisu \\
+\tstype{openGraph.locale} & \score{PASS} & \texttt{pl\_PL} \\
+\tstype{openGraph.type} & \score{PASS} & \texttt{website} \\
+\tstype{openGraph.images} & \score{PASS} & \texttt{/og/podtekst-og.png} 1200$\times$630 \\
+\tstype{twitter.card} & \score{PASS} & \texttt{summary\_large\_image} \\
+\tstype{twitter.title} & \score{PASS} & Zgodny z~OG title \\
+\tstype{twitter.images} & \score{PASS} & Zgodny z~OG images \\
+\tstype{viewport} & \score{PASS} & \texttt{device-width}, \texttt{initialScale: 1}, \texttt{viewportFit: cover} \\
+\midrule
+\tstype{robots} (meta tag) & \warn{BRAK} & Brak jawnej deklaracji w~metadanych \\
+\tstype{alternates} (hreflang) & \warn{N/A} & Brak i18n --- jedynie polski \\
+\tstype{canonical} & \warn{BRAK} & Brak jawnego canonical URL \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{metricbox}
+\textbf{Wynik:} 12/12 kluczowych pól metadanych wypełnionych poprawnie. Brakuje \tstype{canonical} i~jawnego \tstype{robots} meta tagu, ale nie są krytyczne przy aktualnej skali.
+\end{metricbox}
+
+
+\subsection{Problemy w~robots.txt}
+\label{sec:seo-robots}
+
+\begin{warningbox}[title={\danger{Błędna domena w~robots.txt}}]
+Plik \filepath{public/robots.txt}:
+
+\begin{lstlisting}[style=podcodeBash, caption={robots.txt --- stan aktualny}, label={lst:seo-robots}]
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /analysis/
+
+Sitemap: https://chatscope.app/sitemap.xml
+\end{lstlisting}
+
+\textbf{Błąd:} Linia \texttt{Sitemap} wskazuje na \texttt{chatscope.app} --- starą domenę sprzed rebrandingu. Poprawna wartość: \texttt{https://podtekst.app/sitemap.xml}.
+
+\textbf{Dodatkowe uwagi:}
+\begin{itemize}
+  \item \tstype{Disallow: /analysis/} blokuje indeksowanie stron analiz --- \score{poprawne} (prywatność użytkowników)
+  \item \tstype{Disallow: /dashboard} blokuje panel --- \score{poprawne}
+  \item \tstype{Disallow: /api/} blokuje endpointy API --- \score{poprawne}
+  \item Brak \tstype{Disallow: /share/} --- strony share są indeksowalne (potencjalnie pożądane dla wiralności, ale ryzyko prywatności)
+\end{itemize}
+\end{warningbox}
+
+\paragraph{Naprawa:} Zmiana jednej linii w~\filepath{public/robots.txt}:
+\begin{lstlisting}[style=podcodeBash, caption={robots.txt --- poprawka}, label={lst:seo-robots-fix}]
+Sitemap: https://podtekst.app/sitemap.xml
+\end{lstlisting}
+
+\subsubsection{Sitemap}
+
+Plik \filepath{src/app/sitemap.ts} generuje dynamiczną sitemap z~2 stronami:
+
+\begin{table}[H]
+\centering
+\caption{Strony w~sitemap.xml}
+\label{tab:seo-sitemap}
+\begin{tabularx}{\textwidth}{L{5.5cm}C{2.5cm}C{2cm}X}
+\toprule
+\textbf{URL} & \textbf{changeFrequency} & \textbf{priority} & \textbf{Uwagi} \\
+\midrule
+\texttt{https://podtekst.app} & weekly & 1.0 & Strona główna \\
+\texttt{https://podtekst.app/analysis/new} & monthly & 0.8 & Strona uploadu \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Dynamiczne strony \texttt{/analysis/[id]} celowo pominięte --- prywatność danych użytkowników (dane w~IndexedDB, nie na serwerze).
+
+
+\subsection{Analiza stosu fontów}
+\label{sec:seo-fonts}
+
+\begin{table}[H]
+\centering
+\caption{Fonty ładowane w~\filepath{layout.tsx} --- analiza rozmiaru}
+\label{tab:seo-fonts}
+\begin{tabularx}{\textwidth}{L{3cm}C{1.5cm}L{3.5cm}C{2cm}X}
+\toprule
+\textbf{Rodzina} & \textbf{Warianty} & \textbf{Wagi} & \textbf{Szac.\ rozmiar} & \textbf{Użycie} \\
+\midrule
+Geist Sans & 1 & auto (variable) & $\sim$25\,KB & Body text \\
+Geist Mono & 1 & auto (variable) & $\sim$20\,KB & Code, dane \\
+JetBrains Mono & 5 & 400, 500, 600, 700, 800 & $\sim$80\,KB & Monospace (duplikacja?) \\
+Syne & 4 & 400, 600, 700, 800 & $\sim$55\,KB & Brand, nagłówki \\
+Space Grotesk & 5 & 300, 400, 500, 600, 700 & $\sim$65\,KB & Story mode body \\
+\midrule
+\multicolumn{3}{r}{\textbf{Szacowany łączny rozmiar:}} & $\sim$\textbf{245\,KB} & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Konfiguracja fontów}
+
+\begin{itemize}
+  \item \score{\tstype{display: 'swap'}} --- wszystkie 5 rodzin używa \tstype{swap}, co eliminuje FOIT (Flash of Invisible Text)
+  \item \score{\tstype{subsets: ['latin']}} --- tylko łacińskie glify, bez CJK czy cyrylicy
+  \item \score{Next.js font optimization} --- \tstype{next/font/google} automatycznie self-hostuje fonty i~eliminuje external requests do Google Fonts
+\end{itemize}
+
+\subsubsection{Problemy i~rekomendacje}
+
+\begin{warningbox}[title={\warn{Duplikacja fontów monospace}}]
+Projekt ładuje \textbf{dwa} fonty monospace: \textbf{Geist Mono} (body code) i~\textbf{JetBrains Mono} (5 wag). JetBrains Mono jest używany głównie w~trybie Story --- ale ładowany na \textbf{każdej stronie}.
+
+\textbf{Rekomendacje:}
+\begin{enumerate}
+  \item Zredukować JetBrains Mono do 2 wag (400, 700) --- oszczędność $\sim$48\,KB
+  \item Rozważyć usunięcie JetBrains Mono i~użycie Geist Mono wszędzie
+  \item Załadować Space Grotesk i~JetBrains Mono dynamicznie (\tsfunc{next/dynamic}) tylko na stronach Story/Wrapped --- oszczędność $\sim$145\,KB na stronie głównej
+\end{enumerate}
+\end{warningbox}
+
+\begin{metricbox}
+\textbf{Potencjalna oszczędność:} ładowanie warunkowe Space Grotesk + JetBrains Mono (tylko Story) zmniejszyłoby initial font payload o~\textbf{$\sim$145\,KB} ($\sim$60\% redukcji).
+\end{metricbox}
+
+
+\subsection{Audyt optymalizacji obrazów}
+\label{sec:seo-images}
+
+\begin{table}[H]
+\centering
+\caption{Audyt użycia obrazów --- \tstype{next/image} vs \tstype{<img>}}
+\label{tab:seo-images}
+\begin{tabularx}{\textwidth}{L{4.5cm}C{2cm}L{3cm}X}
+\toprule
+\textbf{Plik} & \textbf{Element} & \textbf{Źródło} & \textbf{Problem} \\
+\midrule
+\filepath{DiscordImport.tsx:400} & \tstype{<img>} & External (guild icon) & Brak lazy loading, brak WebP fallback \\
+\filepath{AnalysisImageCard.tsx:193} & \tstype{<img>} & Generated (screenshot) & Brak optymalizacji rozmiaru \\
+\filepath{ParticipantPhotoUpload.tsx:77} & \tstype{<img>} & User upload (photo) & Brak resize, brak compression \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\warn{Zero użyć \tstype{next/image}}}]
+Projekt \textbf{nie korzysta} z~komponentu \tstype{next/image} --- kluczowego narzędzia Next.js do:
+\begin{itemize}
+  \item Automatycznej konwersji do WebP/AVIF
+  \item Responsive \tstype{srcSet} z~wieloma rozdzielczościami
+  \item Native lazy loading z~blur placeholder
+  \item Zapobiegania CLS (Cumulative Layout Shift) przez wymuszenie wymiarów
+\end{itemize}
+Choć aplikacja ma niewiele obrazów (3 instancje \tstype{<img>}), brakuje konfiguracji w~\filepath{next.config.ts}:
+\begin{lstlisting}[style=podcode, caption={Brakująca konfiguracja obrazów}, label={lst:seo-image-config}]
+// next.config.ts - BRAK:
+images: {
+  formats: ['image/avif', 'image/webp'],
+  remotePatterns: [
+    { protocol: 'https', hostname: 'cdn.discordapp.com' },
+  ],
+},
+\end{lstlisting}
+\end{warningbox}
+
+\begin{metricbox}
+\textbf{Priorytet:} \score{Niski} --- tylko 3 obrazy w~aplikacji. Warto dodać konfigurację \tstype{images} do \filepath{next.config.ts} przygotowawczo, ale nie jest to blocker.
+\end{metricbox}
+
+
+\subsection{Analiza proporcji Client vs Server Components}
+\label{sec:seo-client-server}
+
+\begin{table}[H]
+\centering
+\caption{Proporcja Client vs Server Components}
+\label{tab:seo-client-server}
+\begin{tabularx}{\textwidth}{L{4cm}C{2.5cm}C{2.5cm}X}
+\toprule
+\textbf{Typ} & \textbf{Ilość} & \textbf{Udział} & \textbf{Uwagi} \\
+\midrule
+Client Components (\tstype{'use client'}) & $\sim$150 & $\sim$95\% & Interaktywność, animacje, localStorage \\
+Server Components & $\sim$8 & $\sim$5\% & Page routes, layouts, API routes \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Uzasadnienie proporcji}
+
+Wysoki udział Client Components ($\sim$95\%) jest \textbf{uzasadniony} specyfiką aplikacji:
+
+\begin{enumerate}[label=\textcolor{PodBlue}{\arabic*.}]
+  \item \textbf{Interaktywne wykresy} --- Recharts wymaga DOM i~event handlerów (Client)
+  \item \textbf{Animacje} --- Framer Motion \tsfunc{motion.div}, \tsfunc{whileInView} (Client)
+  \item \textbf{localStorage / IndexedDB} --- cały pipeline danych to API przeglądarki (Client)
+  \item \textbf{SSE streaming} --- hooki \tsfunc{useEffect} + \tstype{EventSource} (Client)
+  \item \textbf{Formularze i~stan} --- quiz, simulator, uploader (Client)
+  \item \textbf{Canvas rendering} --- html2canvas dla share cards (Client)
+\end{enumerate}
+
+\begin{metricbox}
+\textbf{Ocena:} Proporcja jest \score{akceptowalna} dla aplikacji typu SPA z~heavy interactivity. Próba forsowania Server Components na siłę (np.\ dla wykresów) byłaby antyproduktywna. Jedyna optymalizacja: wydzielenie statycznych sekcji landing page'a (FAQ, Footer, SocialProof) jako Server Components --- szacowana oszczędność: $\sim$15\,KB JS.
+\end{metricbox}
+
+
+\subsection{Przegląd optymalizacji bundla}
+\label{sec:seo-bundle}
+
+\subsubsection{Obecne optymalizacje}
+
+\begin{table}[H]
+\centering
+\caption{Optymalizacje bundla --- stan obecny}
+\label{tab:seo-bundle-current}
+\begin{tabularx}{\textwidth}{L{5cm}C{2cm}X}
+\toprule
+\textbf{Optymalizacja} & \textbf{Status} & \textbf{Szczegóły} \\
+\midrule
+\tstype{optimizePackageImports} & \score{Tak} & framer-motion, lucide-react, recharts \\
+Dynamic imports (\tsfunc{next/dynamic}) & \score{Tak} & 20+ komponentów (Spline, story, analysis) \\
+\tstype{React.lazy} & \score{Tak} & $\sim$5 komponentów (Wrapped, share cards) \\
+Tree shaking & \score{Tak} & Automatyczne przez Turbopack/SWC \\
+\tstype{output: 'standalone'} & \score{Tak} & Minimalny Docker image \\
+\midrule
+Bundle analyzer & \danger{Brak} & Brak \tstype{@next/bundle-analyzer} \\
+\tstype{images.formats} & \danger{Brak} & Brak WebP/AVIF konfiguracji \\
+\tstype{images.remotePatterns} & \danger{Brak} & Brak whitelist domen obrazów \\
+CSS code splitting & \warn{Brak} & Jeden \filepath{globals.css} dla całej aplikacji \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Dynamic imports --- analiza}
+
+Projekt używa 28 dynamicznych importów, ale wiele z~nich ładuje się \textbf{eagerly} na stronie analizy, ponieważ leżą w~jednym drzewie renderowania (\filepath{page.tsx} importuje wszystko):
+
+\begin{itemize}
+  \item \tsfunc{next/dynamic} z~\tstype{ssr: false} --- poprawne dla komponentów Spline 3D, canvas-heavy kart share
+  \item Problem: brak code splitting \textbf{między sekcjami} strony analizy --- wszystkie 50+ komponentów ładowane jednocześnie
+  \item Rozwiązanie: architektura tabowa (\secref{sec:architektura-tabowa}) naturalnie wprowadza code splitting per tab
+\end{itemize}
+
+\subsubsection{Brakujące optymalizacje}
+
+\begin{warningbox}[title={\warn{Brak \tstype{@next/bundle-analyzer}}}]
+Bez analizatora bundla nie ma danych o:
+\begin{itemize}
+  \item Rozmiarze poszczególnych chunk'ów JS
+  \item Które biblioteki dominują w~bundlu (podejrzane: Recharts, Framer Motion, jsPDF)
+  \item Duplikacji kodu między chunk'ami
+  \item Efektywności tree shakingu
+\end{itemize}
+
+\textbf{Instalacja:} \texttt{pnpm add -D @next/bundle-analyzer} + wrapper w~\filepath{next.config.ts}:
+\begin{lstlisting}[style=podcode, caption={Konfiguracja bundle analyzer}, label={lst:seo-bundle-analyzer}]
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+module.exports = withBundleAnalyzer(nextConfig);
+\end{lstlisting}
+Uruchomienie: \texttt{ANALYZE=true pnpm build}.
+\end{warningbox}
+
+
+\subsection{Rekomendacje wydajnościowe --- priorytetyzacja}
+\label{sec:seo-recommendations}
+
+\begin{table}[H]
+\centering
+\caption{Rekomendacje SEO i~performance --- uporządkowane wg wpływu}
+\label{tab:seo-recommendations}
+\begin{tabularx}{\textwidth}{C{0.6cm}C{1.5cm}L{4cm}C{2cm}X}
+\toprule
+\textbf{Nr} & \textbf{Priorytet} & \textbf{Rekomendacja} & \textbf{Szac.\ wpływ} & \textbf{Nakład} \\
+\midrule
+1 & \danger{P0} & Naprawić domenę w~robots.txt & SEO: krytyczny & 1 minuta \\
+2 & \warn{P1} & Zainstalować bundle analyzer & Diagnostyka & 15 minut \\
+3 & \warn{P1} & Warunkowe ładowanie fontów Story (JetBrains Mono + Space Grotesk) & $-$145\,KB initial & 1--2h \\
+4 & \warn{P1} & Dodać \tstype{images.formats} + \tstype{remotePatterns} do next.config.ts & Gotowość na obrazy & 15 minut \\
+5 & \warn{P1} & Server Components dla statycznych sekcji landing page'a & $-$15\,KB JS & 2--3h \\
+6 & \score{P2} & Zamienić \tstype{<img>} na \tstype{next/image} (3 instancje) & Lazy load, WebP & 30 minut \\
+7 & \score{P2} & Dodać \tstype{canonical} URL do metadata & SEO: deduplikacja & 5 minut \\
+8 & \score{P2} & CSS code splitting (wydzielić story.css, wrapped.css) & $-$20--30\,KB CSS & 1--2h \\
+9 & \score{P3} & Dodać structured data (JSON-LD: WebApplication) & SEO: rich snippets & 30 minut \\
+10 & \score{P3} & Rozważyć usunięcie \filepath{/share/} z~indeksowania & Prywatność & 5 minut \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{featurebox}
+\textbf{Podsumowanie SEO:}
+\begin{itemize}
+  \item \textbf{Metadane:} \score{doskonałe} --- 12/12 pól OG + Twitter poprawnie skonfigurowanych
+  \item \textbf{robots.txt:} \danger{1 krytyczny błąd} --- stara domena \texttt{chatscope.app} w~Sitemap
+  \item \textbf{Fonty:} \warn{ciężkie} --- 5 rodzin / 245\,KB, z~czego 145\,KB ładowane na stronach, które ich nie potrzebują
+  \item \textbf{Obrazy:} \warn{brak optymalizacji} --- zero \tstype{next/image}, brak konfiguracji formatów
+  \item \textbf{Bundle:} \warn{brak diagnostyki} --- bez bundle analyzer trudno ocenić realny rozmiar
+  \item \textbf{Client/Server:} \score{uzasadnione} --- 95\% Client Components wynika z~natury aplikacji (SPA)
+\end{itemize}
+\end{featurebox}

@@ -406,3 +406,10 @@ body::after {
 .recharts-active-dot circle {
   stroke: none !important;
 }
+
+/* ═══════════════════════════════════════
+   SCROLL ANCHORS — offset for sticky topbar
+═══════════════════════════════════════ */
+[id^="section-"] {
+  scroll-margin-top: calc(var(--topbar-h) + 1rem);
+}

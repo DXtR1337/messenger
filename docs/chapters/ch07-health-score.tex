@@ -1,0 +1,599 @@
+% ============================================================
+% Rozdział 7 — Wynik Zdrowia Relacji (Health Score)
+% ============================================================
+
+\chapter{Wynik Zdrowia Relacji}
+\label{ch:health-score}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Zdrowa relacja nie wymaga perfekcji --- wymaga równowagi.''
+\end{center}
+
+\vspace{8pt}
+
+Wynik Zdrowia Relacji (\emph{Health Score}) to centralny, kompozytowy wskaźnik systemu \podtekst. Pojedyncza liczba w~skali 0--100, która próbuje odpowiedzieć na najtrudniejsze pytanie: \textbf{,,czy ta relacja jest zdrowa?''}
+
+W~odróżnieniu od prostych metryk ilościowych (kto pisze więcej, kto szybciej odpowiada), Health Score integruje wiele wymiarów komunikacji w~jeden ważony wynik. Jest obliczany \textbf{dwutorowo}: deterministycznie z~danych ilościowych oraz niezależnie przez AI (Pass 4), a~następnie poddawany walidacji krzyżowej.
+
+\begin{infobox}[title=Plik źródłowy]
+Implementacja deterministycznego Health Score: \filepath{src/lib/analysis/health-score.ts}
+
+Definicje typów AI Health Score: \filepath{src/lib/analysis/types.ts} (interfejsy \tstype{HealthScore}, \tstype{HealthScoreComponents})
+\end{infobox}
+
+
+% ============================================================
+\section{Przegląd}
+\label{sec:hs-overview}
+\index{Health Score!przegląd}
+
+Health Score to metryka kompozytowa 0--100, gdzie:
+\begin{itemize}
+  \item \score{100} = idealnie zdrowa, zrównoważona komunikacja
+  \item \warn{50} = funkcjonalna relacja z~wyraźnymi obszarami do poprawy
+  \item \danger{0} = poważnie zaburzone wzorce komunikacji
+\end{itemize}
+
+Wynik jest obliczany z~5~komponentów, z~których każdy mierzy inny aspekt relacji. Wagi komponentów zostały skalibrowane na podstawie badań z~psychologii klinicznej dotyczących predyktorów satysfakcji z~relacji:
+
+\begin{lstlisting}[style=podcode, caption={Stałe wagowe Health Score}]
+export const HEALTH_SCORE_WEIGHTS = {
+  BALANCE: 0.25,           // rownowaga sil
+  RECIPROCITY: 0.20,       // wzajemnosc
+  RESPONSE_PATTERN: 0.20,  // wzorce odpowiedzi
+  EMOTIONAL_SAFETY: 0.20,  // bezpieczenstwo emocjonalne
+  GROWTH: 0.15,            // trajektoria rozwoju
+} as const;
+\end{lstlisting}
+
+\begin{warningbox}[title=Ważne zastrzeżenie]
+Health Score \textbf{nie jest diagnozą kliniczną}. Jest wskaźnikiem statystycznym opartym na wzorcach komunikacji tekstowej. Nie zastępuje profesjonalnej oceny psychologa lub terapeuty par. Disclaimery są eksponowane w~każdym widoku UI prezentującym ten wynik.
+\end{warningbox}
+
+
+% ============================================================
+\section{Komponenty wyniku}
+\label{sec:hs-components}
+\index{Health Score!komponenty}
+
+Health Score składa się z~5~niezależnych komponentów, każdy oceniany w~skali 0--100.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs HealthScoreComponents}]
+export interface HealthScoreComponents {
+  balance: number;           // 0-100
+  reciprocity: number;       // 0-100
+  response_pattern: number;  // 0-100
+  emotional_safety: number;  // 0-100
+  growth_trajectory: number; // 0-100
+}
+\end{lstlisting}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.95]
+  % Central gauge circle
+  \fill[PodBlue!8] (0,0) circle (2.8cm);
+  \draw[PodBlue, line width=2pt] (0,0) circle (2.8cm);
+
+  % Score display
+  \node[font=\fontsize{36}{40}\selectfont\bfseries, PodBlueDark] at (0, 0.3) {73};
+  \node[font=\small\bfseries, PodBlue] at (0, -0.5) {Stabilna};
+  \node[font=\scriptsize, PodTextMuted] at (0, -1.0) {Health Score};
+
+  % Component bars emanating outward
+  % Balance - 25%
+  \begin{scope}[shift={(5.5, 3.5)}]
+    \node[font=\small\bfseries, anchor=west, PodBlueDark] at (0, 0.3) {Równowaga sił};
+    \node[font=\scriptsize, anchor=west, PodTextMuted] at (0, -0.1) {Waga: 25\%};
+    \fill[PodBlue!15, rounded corners=2pt] (0, -0.6) rectangle (6, -0.3);
+    \fill[PodBlue, rounded corners=2pt] (0, -0.6) rectangle (4.5, -0.3);
+    \node[font=\scriptsize\bfseries, anchor=east, PodBlueDark] at (6.4, -0.45) {75};
+    \draw[PodBlue!60, thick, ->, >=stealth] (0, -0.45) -- (-2.2, -0.45) -- (-2.8, -1.5);
+  \end{scope}
+
+  % Reciprocity - 20%
+  \begin{scope}[shift={(5.5, 1.5)}]
+    \node[font=\small\bfseries, anchor=west, PodPurpleDark] at (0, 0.3) {Wzajemność};
+    \node[font=\scriptsize, anchor=west, PodTextMuted] at (0, -0.1) {Waga: 20\%};
+    \fill[PodPurple!15, rounded corners=2pt] (0, -0.6) rectangle (6, -0.3);
+    \fill[PodPurple, rounded corners=2pt] (0, -0.6) rectangle (4.8, -0.3);
+    \node[font=\scriptsize\bfseries, anchor=east, PodPurpleDark] at (6.4, -0.45) {80};
+    \draw[PodPurple!60, thick, ->, >=stealth] (0, -0.45) -- (-2.5, -0.45) -- (-2.7, -0.5);
+  \end{scope}
+
+  % Response Pattern - 20%
+  \begin{scope}[shift={(5.5, -0.5)}]
+    \node[font=\small\bfseries, anchor=west, PodBlueDark] at (0, 0.3) {Wzorce odpowiedzi};
+    \node[font=\scriptsize, anchor=west, PodTextMuted] at (0, -0.1) {Waga: 20\%};
+    \fill[PodBlue!15, rounded corners=2pt] (0, -0.6) rectangle (6, -0.3);
+    \fill[PodBlue, rounded corners=2pt] (0, -0.6) rectangle (4.2, -0.3);
+    \node[font=\scriptsize\bfseries, anchor=east, PodBlueDark] at (6.4, -0.45) {70};
+    \draw[PodBlue!60, thick, ->, >=stealth] (0, -0.45) -- (-2.5, -0.45) -- (-2.8, 0);
+  \end{scope}
+
+  % Emotional Safety - 20%
+  \begin{scope}[shift={(5.5, -2.5)}]
+    \node[font=\small\bfseries, anchor=west, PodSuccess!80!black] at (0, 0.3) {Bezpieczeństwo emocjonalne};
+    \node[font=\scriptsize, anchor=west, PodTextMuted] at (0, -0.1) {Waga: 20\%};
+    \fill[PodSuccess!15, rounded corners=2pt] (0, -0.6) rectangle (6, -0.3);
+    \fill[PodSuccess, rounded corners=2pt] (0, -0.6) rectangle (3.6, -0.3);
+    \node[font=\scriptsize\bfseries, anchor=east, PodSuccess!80!black] at (6.4, -0.45) {60};
+    \draw[PodSuccess!60, thick, ->, >=stealth] (0, -0.45) -- (-2.5, -0.45) -- (-2.5, 0.5);
+  \end{scope}
+
+  % Growth Trajectory - 15%
+  \begin{scope}[shift={(5.5, -4.5)}]
+    \node[font=\small\bfseries, anchor=west, PodWarning!80!black] at (0, 0.3) {Trajektoria rozwoju};
+    \node[font=\scriptsize, anchor=west, PodTextMuted] at (0, -0.1) {Waga: 15\%};
+    \fill[PodWarning!15, rounded corners=2pt] (0, -0.6) rectangle (6, -0.3);
+    \fill[PodWarning, rounded corners=2pt] (0, -0.6) rectangle (4.2, -0.3);
+    \node[font=\scriptsize\bfseries, anchor=east, PodWarning!80!black] at (6.4, -0.45) {70};
+    \draw[PodWarning!60, thick, ->, >=stealth] (0, -0.45) -- (-2.5, -0.45) -- (-2.0, 1.2);
+  \end{scope}
+\end{tikzpicture}
+\caption{Diagram komponentów Health Score z~wagami. Przykład: wynik 73 (,,Stabilna'') z~rozkładem komponentów.}
+\label{fig:health-score-gauge}
+\end{figure}
+
+\subsection{Balance --- Równowaga sił (25\%)}
+\label{subsec:hs-balance}
+\index{Health Score!balance}
+
+\begin{metricbox}
+\textbf{Waga:} 0.25 \quad \textbf{Zakres:} 0--100 \quad \textbf{Źródło:} dane ilościowe
+\end{metricbox}
+
+Komponent \metric{Balance} mierzy, jak równomiernie rozłożona jest ,,siła'' w~relacji komunikacyjnej. Opiera się na trzech pod-metrykach:
+
+\begin{enumerate}
+  \item \textbf{Proporcja wiadomości} (\texttt{messageRatio}) --- czy obie strony piszą mniej więcej tyle samo? Ideał: 50/50. Proporcja 70/30 to wyraźna dominacja.
+  \item \textbf{Proporcja inicjacji} (\texttt{conversationInitiations}) --- czy obie strony zaczynają rozmowy? Jednostronne inicjowanie ($> 80\%$) to silny sygnał nierównowagi.
+  \item \textbf{Symetria czasu odpowiedzi} (\texttt{medianResponseTimeMs}) --- czy obie strony odpowiadają z~podobną prędkością? Gdy jedna odpowiada w~2~minuty, a~druga w~2~godziny, to wyraźna asymetria.
+\end{enumerate}
+
+\textbf{Uzasadnienie wagi 25\%:} Badania kliniczne (Gottman, 1994; Christensen \& Heavey, 1990) konsekwentnie wskazują równowagę sił jako \emph{najsilniejszy} predyktor satysfakcji z~relacji. Nierówna dynamika sił prowadzi do resentymentu u~strony dominowanej i~utraty szacunku u~strony dominującej.
+
+\subsection{Reciprocity --- Wzajemność (20\%)}
+\label{subsec:hs-reciprocity}
+\index{Health Score!reciprocity}
+
+\begin{metricbox}
+\textbf{Waga:} 0.20 \quad \textbf{Zakres:} 0--100 \quad \textbf{Źródło:} \tstype{ReciprocityIndex.overall}
+\end{metricbox}
+
+Komponent \metric{Reciprocity} korzysta bezpośrednio z~indeksu wzajemności obliczonego w~silniku ilościowym (sekcja~\ref{sec:reciprocity-index}). Mierzy równowagę \emph{inwestycji} obu stron:
+
+\begin{itemize}
+  \item Równy podział wiadomości
+  \item Równe inicjowanie rozmów
+  \item Symetryczne czasy odpowiedzi
+  \item Równe dawanie reakcji
+\end{itemize}
+
+\textbf{Uzasadnienie wagi 20\%:} Wzajemność zapobiega narastaniu resentymentu. Gdy jedna strona konsekwentnie ,,daje'' więcej (więcej pisze, więcej inicjuje, szybciej odpowiada, częściej reaguje), prowadzi to do emocjonalnego wypalenia.
+
+\subsection{Response Pattern --- Wzorce odpowiedzi (20\%)}
+\label{subsec:hs-response-pattern}
+\index{Health Score!response pattern}
+
+\begin{metricbox}
+\textbf{Waga:} 0.20 \quad \textbf{Zakres:} 0--100 \quad \textbf{Źródło:} dane ilościowe
+\end{metricbox}
+
+Komponent \metric{Response Pattern} mierzy \emph{jakość} komunikacji, nie tylko jej ilość:
+
+\begin{enumerate}
+  \item \textbf{Stabilność czasu odpowiedzi} --- niska wariancja = konsekwencja i~przewidywalność. Wysoka wariancja (raz po 30s, raz po 5h) generuje lęk.
+  \item \textbf{Brak dramatycznych spowolnień} --- trend czasu odpowiedzi nie powinien dramatycznie rosnąć (\texttt{responseTimeTrend}).
+  \item \textbf{Rozsądne czasy odpowiedzi} --- mediana odpowiedzi $< 2$h jest typowa dla aktywnych relacji. Powyżej 4h sygnalizuje niski priorytet.
+\end{enumerate}
+
+\textbf{Uzasadnienie wagi 20\%:} Konsekwentność komunikacji jest sygnałem zaangażowania (\emph{commitment signaling}). Osoby, które odpowiadają przewidywalnie, sygnalizują: ,,Ty jesteś dla mnie priorytetem''.
+
+\subsection{Emotional Safety --- Bezpieczeństwo emocjonalne (20\%)}
+\label{subsec:hs-emotional-safety}
+\index{Health Score!emotional safety}
+
+\begin{metricbox}
+\textbf{Waga:} 0.20 \quad \textbf{Zakres:} 0--100 \quad \textbf{Źródło:} AI (Pass 2) + fallback deterministyczny
+\end{metricbox}
+
+Komponent \metric{Emotional Safety} mierzy, czy uczestnicy mogą być \emph{wrażliwi} bez konsekwencji:
+
+\begin{itemize}
+  \item \textbf{Źródło primarne (AI):} Pass 2 analizy AI ocenia markery intymności (\texttt{intimacy\_markers}), profile wrażliwości (\texttt{vulnerability\_level}), i~brak wzorców manipulacji (\texttt{red\_flags}).
+  \item \textbf{Fallback deterministyczny:} Gdy analiza AI nie jest dostępna, silnik bazuje na \emph{braku} ekstremalnych wzorców: braku nadmiernego double textingu, braku drastycznych różnic w~inicjacji, stabilnych trendach.
+\end{itemize}
+
+\textbf{Uzasadnienie wagi 20\%:} Bezpieczeństwo emocjonalne to fundament głębokich relacji (Bowlby, 1969; Johnson, 2004). Bez niego rozmowa pozostaje na poziomie powierzchownym.
+
+\subsection{Growth Trajectory --- Trajektoria rozwoju (15\%)}
+\label{subsec:hs-growth}
+\index{Health Score!growth trajectory}
+
+\begin{metricbox}
+\textbf{Waga:} 0.15 \quad \textbf{Zakres:} 0--100 \quad \textbf{Źródło:} dane ilościowe + AI (Pass 4)
+\end{metricbox}
+
+Komponent \metric{Growth Trajectory} mierzy, \emph{dokąd zmierza} relacja:
+
+\begin{enumerate}
+  \item \textbf{Trend wolumenu} (\texttt{volumeTrend}) --- rosnący $\rightarrow$ pozytywny sygnał; malejący $\rightarrow$ ostrzegawczy
+  \item \textbf{Trend czasu odpowiedzi} (\texttt{responseTimeTrend}) --- malejący (szybsze odpowiedzi) $\rightarrow$ pozytywny; rosnący $\rightarrow$ negatywny
+  \item \textbf{Ocena AI} (\texttt{trajectory} z~Pass 4) --- ,,strengthening'', ,,stable'', ,,weakening'', ,,volatile''
+\end{enumerate}
+
+\textbf{Uzasadnienie wagi 15\%:} Trajektoria jest ważna, ale ma najniższą wagę, ponieważ: (a)~naturalne fluktuacje nie oznaczają problemu, (b)~krótkoterminowe spadki mogą wynikać z~czynników zewnętrznych (podróże, sesja egzaminacyjna), (c)~stagnacja $\neq$ problem --- niektóre relacje osiągają ,,komfortowy plateau''.
+
+
+% ============================================================
+\section{Formuła obliczeniowa}
+\label{sec:hs-formula}
+\index{Health Score!formuła}
+
+Wynik końcowy jest średnią ważoną 5~komponentów, zaokrągloną do najbliższej liczby całkowitej i~ograniczoną do zakresu $[0, 100]$:
+
+\begin{equation}
+\label{eq:health-score}
+\boxed{
+H = \text{clamp}\left(\lfloor
+  B \cdot 0.25 + R \cdot 0.20 + P \cdot 0.20 + E \cdot 0.20 + G \cdot 0.15
+\rceil, \; 0, 100\right)
+}
+\end{equation}
+
+gdzie:
+\begin{align*}
+B &= \text{Balance (Równowaga sił)} \in [0, 100] \\
+R &= \text{Reciprocity (Wzajemność)} \in [0, 100] \\
+P &= \text{Response Pattern (Wzorce odpowiedzi)} \in [0, 100] \\
+E &= \text{Emotional Safety (Bezpieczeństwo emocjonalne)} \in [0, 100] \\
+G &= \text{Growth Trajectory (Trajektoria rozwoju)} \in [0, 100]
+\end{align*}
+
+\textbf{Uwaga:} Wagi sumują się dokładnie do 1.0: $0.25 + 0.20 + 0.20 + 0.20 + 0.15 = 1.00$.
+
+\subsection{Implementacja}
+
+\begin{lstlisting}[style=podcode, caption={Funkcja computeHealthScore()}]
+export function computeHealthScore(
+  components: HealthScoreComponents,
+  explanation?: string,
+): HealthScoreResult {
+  const w = HEALTH_SCORE_WEIGHTS;
+
+  const raw =
+    components.balance * w.BALANCE +
+    components.reciprocity * w.RECIPROCITY +
+    components.response_pattern * w.RESPONSE_PATTERN +
+    components.emotional_safety * w.EMOTIONAL_SAFETY +
+    components.growth_trajectory * w.GROWTH;
+
+  // Clamp to 0-100
+  const overall = Math.round(Math.max(0, Math.min(100, raw)));
+
+  return {
+    overall,
+    components,
+    label: getHealthScoreLabel(overall),
+    explanation: explanation ?? generateExplanation(overall, components),
+  };
+}
+\end{lstlisting}
+
+Funkcja zwraca obiekt \tstype{HealthScoreResult} zawierający:
+\begin{itemize}
+  \item \texttt{overall} --- wynik końcowy (0--100)
+  \item \texttt{components} --- wartości poszczególnych komponentów
+  \item \texttt{label} --- etykieta tekstowa w~języku polskim
+  \item \texttt{explanation} --- automatycznie wygenerowane wyjaśnienie lub wyjaśnienie podane przez AI
+\end{itemize}
+
+\subsection{Automatyczne wyjaśnienie}
+
+Funkcja \tsfunc{generateExplanation()} tworzy tekstowe podsumowanie na podstawie wyniku:
+
+\begin{lstlisting}[style=podcode, caption={Automatyczna generacja wyjaśnienia Health Score}]
+function generateExplanation(
+  overall: number,
+  components: HealthScoreComponents,
+): string {
+  const sorted = Object.entries(components)
+    .sort(([, a], [, b]) => a - b);
+
+  const weakest = sorted[0];     // najslabszy komponent
+  const strongest = sorted[sorted.length - 1]; // najsilniejszy
+
+  const parts: string[] = [];
+
+  if (overall >= 80) {
+    parts.push('Relacja wykazuje zdrowe wzorce komunikacji.');
+  } else if (overall >= 60) {
+    parts.push('Relacja jest ogolnie stabilna, ale istnieja
+      obszary do poprawy.');
+  } else if (overall >= 40) {
+    parts.push('Relacja wymaga uwagi -- kilka wskaznikow
+      sygnalizuje nierowno wage.');
+  } else {
+    parts.push('Relacja wykazuje niepokojace wzorce
+      wymagajace glebszej refleksji.');
+  }
+
+  // Highlight weakest if below 50
+  if (weakest[1] < 50) {
+    parts.push('Najslabszy obszar: ... (' + weakest[1] + '/100).');
+  }
+  // Highlight strongest if above 70
+  if (strongest[1] >= 70) {
+    parts.push('Mocna strona: ... (' + strongest[1] + '/100).');
+  }
+
+  return parts.join(' ');
+}
+\end{lstlisting}
+
+Nazwy komponentów są mapowane na polski za pomocą słownika:
+
+\begin{lstlisting}[style=podcode]
+const labels: Record<string, string> = {
+  balance: 'rownowaga sil',
+  reciprocity: 'wzajemnosc',
+  response_pattern: 'wzorce odpowiedzi',
+  emotional_safety: 'bezpieczenstwo emocjonalne',
+  growth_trajectory: 'trajektoria rozwoju',
+};
+\end{lstlisting}
+
+
+% ============================================================
+\section{Etykiety i~interpretacja}
+\label{sec:hs-labels}
+\index{Health Score!etykiety}
+
+\begin{lstlisting}[style=podcode, caption={Funkcja getHealthScoreLabel()}]
+export function getHealthScoreLabel(score: number): string {
+  if (score >= 80) return 'Zdrowa';
+  if (score >= 60) return 'Stabilna';
+  if (score >= 40) return 'Wymaga uwagi';
+  return 'Niepokojaca';
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Etykiety Health Score z~interpretacją}
+\label{tab:health-score-labels}
+\rowcolors{2}{white}{PodBlue!3}
+\begin{tabularx}{\textwidth}{C{1.8cm} L{2.2cm} C{1.5cm} X}
+\toprule
+\textbf{Zakres} & \textbf{Etykieta} & \textbf{Kolor} & \textbf{Interpretacja} \\
+\midrule
+80--100 & \score{Zdrowa} & \textcolor{PodSuccess}{Zielony} &
+Zrównoważona, wzajemna komunikacja. Obie strony angażują się podobnie, odpowiadają konsekwentnie, i~relacja się rozwija lub utrzymuje stabilny poziom. \\
+
+60--79 & \textcolor{PodBlue}{Stabilna} & \textcolor{PodBlue}{Niebieski} &
+Funkcjonalna relacja z~drobnymi nierównowagami. Możliwe: lekka asymetria w~inicjacji, niewielkie różnice w~czasie odpowiedzi, lub jeden komponent wyraźnie niższy od pozostałych. \\
+
+40--59 & \warn{Wymaga uwagi} & \textcolor{PodWarning}{Bursztynowy} &
+Wyraźne nierównowagi wymagające świadomej refleksji. Możliwe: znaczna asymetria w~zaangażowaniu, rosnące czasy odpowiedzi, spadek wolumenu komunikacji, lub brak wzajemności w~reakcjach. \\
+
+0--39 & \danger{Niepokojąca} & \textcolor{PodDanger}{Czerwony} &
+Poważne zaburzenia wzorców komunikacji. Możliwe: skrajna jednostronność, brak odpowiedzi, oznaki emocjonalnej niedostępności, lub aktywne wzorce manipulacji. Zalecana profesjonalna konsultacja. \\
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[xscale=0.11, yscale=0.7]
+  % Background bar
+  \fill[PodDanger!30, rounded corners=3pt] (0, 0) rectangle (40, 1);
+  \fill[PodWarning!30, rounded corners=0pt] (40, 0) rectangle (60, 1);
+  \fill[PodBlue!30, rounded corners=0pt] (60, 0) rectangle (80, 1);
+  \fill[PodSuccess!30, rounded corners=3pt] (80, 0) rectangle (100, 1);
+
+  % Labels
+  \node[font=\scriptsize\bfseries, PodDanger] at (20, 0.5) {Niepokojąca};
+  \node[font=\scriptsize\bfseries, PodWarning!80!black] at (50, 0.5) {Wymaga uwagi};
+  \node[font=\scriptsize\bfseries, PodBlue] at (70, 0.5) {Stabilna};
+  \node[font=\scriptsize\bfseries, PodSuccess!80!black] at (90, 0.5) {Zdrowa};
+
+  % Boundaries
+  \draw[PodTextMuted, dashed] (40, -0.2) -- (40, 1.2);
+  \draw[PodTextMuted, dashed] (60, -0.2) -- (60, 1.2);
+  \draw[PodTextMuted, dashed] (80, -0.2) -- (80, 1.2);
+
+  % Scale numbers
+  \node[font=\scriptsize, PodTextMuted, below] at (0, -0.2) {0};
+  \node[font=\scriptsize, PodTextMuted, below] at (40, -0.2) {40};
+  \node[font=\scriptsize, PodTextMuted, below] at (60, -0.2) {60};
+  \node[font=\scriptsize, PodTextMuted, below] at (80, -0.2) {80};
+  \node[font=\scriptsize, PodTextMuted, below] at (100, -0.2) {100};
+
+  % Example marker
+  \fill[PodBlueDark] (73, 0.5) circle (4pt);
+  \draw[PodBlueDark, thick, ->] (73, 1.4) -- (73, 0.9);
+  \node[font=\scriptsize\bfseries, PodBlueDark, above] at (73, 1.4) {73};
+\end{tikzpicture}
+\caption{Wizualizacja skali Health Score z~przedziałami etykiet. Przykład: wynik 73 w~strefie ,,Stabilna''.}
+\label{fig:health-score-scale}
+\end{figure}
+
+
+% ============================================================
+\section{Normalizacja wolumenu}
+\label{sec:hs-normalization}
+\index{Health Score!normalizacja}
+
+Jednym z~kluczowych wyzwań Health Score jest \textbf{niezależność od rozmiaru rozmowy}. Rozmowa licząca 500~wiadomości i~rozmowa z~50\,000~wiadomości powinny móc uzyskać ten sam wynik zdrowia, o~ile wzorce komunikacji są zdrowe.
+
+\subsection{Problem}
+
+Bez normalizacji metryki takie jak ,,łączna liczba sesji'' czy ,,liczba double textów'' byłyby naturalnie wyższe w~dłuższych rozmowach, fałszując komponenty Health Score.
+
+\subsection{Rozwiązanie --- skalowanie logarytmiczne}
+
+\begin{lstlisting}[style=podcode, caption={Funkcja normalizeByVolume()}]
+export function normalizeByVolume(
+  value: number,
+  totalMessages: number,
+  minMessages: number = 50,
+): number {
+  if (totalMessages < minMessages) {
+    // Penalize very short conversations
+    const penalty = totalMessages / minMessages;
+    return value * penalty;
+  }
+  // Log-normalize: diminishing returns past ~1000 messages
+  const logFactor = Math.log10(Math.min(totalMessages, 10000))
+                  / Math.log10(10000);
+  return value * (0.7 + 0.3 * logFactor);
+}
+\end{lstlisting}
+
+\textbf{Działanie:}
+
+\begin{enumerate}
+  \item \textbf{Kara za krótkie rozmowy} ($< 50$ wiadomości): liniowe skalowanie w~dół. Rozmowa z~25~wiadomościami otrzymuje mnożnik 0.5 --- za mało danych, aby wiarygodnie ocenić zdrowie.
+
+  \item \textbf{Normalizacja logarytmiczna} ($\geq 50$ wiadomości): Mnożnik z~zakresu $[0.7, 1.0]$ oparty na $\log_{10}$:
+  \begin{equation}
+    f(\text{msgs}) = 0.7 + 0.3 \cdot \frac{\log_{10}(\min(\text{msgs}, 10000))}{\log_{10}(10000)}
+  \end{equation}
+
+  \item \textbf{Ograniczenie górne}: Rozmowy powyżej 10\,000 wiadomości nie otrzymują dodatkowego bonusu --- po tym progu mamy wystarczająco dużo danych.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Przykładowe wartości mnożnika normalizacji}
+\label{tab:normalization-values}
+\rowcolors{2}{white}{PodBlue!3}
+\begin{tabular}{rcl}
+\toprule
+\textbf{Liczba wiadomości} & \textbf{Mnożnik} & \textbf{Komentarz} \\
+\midrule
+25 & 0.50 & Kara za krótką rozmowę \\
+50 & 0.83 & Minimalny próg \\
+100 & 0.85 & Wystarczająca baza \\
+500 & 0.90 & Solidna baza \\
+1\,000 & 0.93 & Bogata rozmowa \\
+5\,000 & 0.97 & Bardzo bogata \\
+10\,000+ & 1.00 & Pełna normalizacja \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{infobox}[title=Minimalna liczba wiadomości]
+System wymaga minimum 100~wiadomości dla jakiejkolwiek analizy (warunek w~warstwie UI). Dla $< 500$ wiadomości wyświetlane jest ostrzeżenie o~ograniczonej wiarygodności wyników. Health Score jest obliczany zawsze, ale z~odpowiednią penalizacją.
+\end{infobox}
+
+
+% ============================================================
+\section{Walidacja krzyżowa}
+\label{sec:hs-cross-validation}
+\index{Health Score!walidacja krzyżowa}
+
+Unikalną cechą systemu \podtekst jest \textbf{dwutorowe} obliczanie Health Score i~ich wzajemna walidacja.
+
+\subsection{Dwa niezależne źródła}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=1.2cm]
+  % Deterministic path
+  \node[pipeline, minimum width=3.5cm] (quant) {Dane ilościowe};
+  \node[process, below=0.8cm of quant, minimum width=3.5cm] (det) {computeHealthScore()};
+  \node[podbox blue, below=0.8cm of det, minimum width=3.5cm] (det_score) {$H_{\text{det}}$ = 68};
+
+  % AI path
+  \node[pipeline active, right=4cm of quant, minimum width=3.5cm] (ai_input) {Próbki wiadomości};
+  \node[process, below=0.8cm of ai_input, minimum width=3.5cm, draw=PodPurple!60, fill=PodPurple!8] (ai) {Gemini API (Pass 4)};
+  \node[podbox purple, below=0.8cm of ai, minimum width=3.5cm] (ai_score) {$H_{\text{AI}}$ = 72};
+
+  % Cross-validation
+  \node[decision, below right=1.5cm and -0.5cm of det_score, minimum width=3cm] (check) {$|H_{\text{det}} - H_{\text{AI}}|$\\$> 20$?};
+
+  % Final result
+  \node[startstop, below=1.5cm of check, minimum width=4cm] (final) {$H_{\text{final}} = 0.6 \cdot H_{\text{AI}} + 0.4 \cdot H_{\text{det}}$};
+
+  % Flag
+  \node[podbox red, right=2.5cm of check, minimum width=2.5cm, font=\small\bfseries] (flag) {Flaga:\\przeglądowy};
+
+  % Arrows
+  \draw[dataarrow] (quant) -- (det);
+  \draw[dataarrow] (det) -- (det_score);
+  \draw[dataarrow] (ai_input) -- (ai);
+  \draw[dataarrow] (ai) -- (ai_score);
+  \draw[podarrow] (det_score) -- (check);
+  \draw[podarrow] (ai_score) -- (check);
+  \draw[dataarrow] (check) -- node[left, font=\scriptsize] {Nie} (final);
+  \draw[podarrow, color=PodDanger!60] (check) -- node[above, font=\scriptsize] {Tak} (flag);
+  \draw[podarrow dashed] (flag) |- (final);
+\end{tikzpicture}
+\caption{Schemat walidacji krzyżowej Health Score. Dwa niezależne wyniki są porównywane i~łączone w~wynik końcowy.}
+\label{fig:cross-validation}
+\end{figure}
+
+\begin{description}[style=nextline]
+
+\item[Wynik deterministyczny ($H_{\text{det}}$)]
+Obliczany przez \tsfunc{computeHealthScore()} z~danych ilościowych. Całkowicie powtarzalny, szybki, bezpłatny. Dostępny natychmiast po analizie ilościowej.
+
+\item[Wynik AI ($H_{\text{AI}}$)]
+Generowany przez Gemini API w~Pass 4 (synteza). AI ocenia zdrowie relacji na podstawie jakościowej analizy treści wiadomości, dynamiki emocjonalnej i~wzorców komunikacji niemierzalnych ilościowo.
+
+\end{description}
+
+\subsection{Procedura walidacji}
+
+\begin{enumerate}
+  \item \textbf{Porównanie:} Oblicz $\Delta = |H_{\text{det}} - H_{\text{AI}}|$.
+
+  \item \textbf{Flagowanie:} Jeśli $\Delta > 20$ punktów, wynik jest oflagowany jako wymagający przeglądu. Duża rozbieżność oznacza, że dane ilościowe i~jakościowe opowiadają \emph{różne historie} --- np.\ osoba pisze dużo i~szybko (wysoki $H_{\text{det}}$), ale treść jest pasywno-agresywna (niski $H_{\text{AI}}$).
+
+  \item \textbf{Łączenie:} Wynik końcowy jest średnią ważoną:
+  \begin{equation}
+  \label{eq:hs-final}
+  H_{\text{final}} = 0.60 \cdot H_{\text{AI}} + 0.40 \cdot H_{\text{det}}
+  \end{equation}
+
+  Wyższa waga AI (60\%) wynika z~faktu, że analiza jakościowa uwzględnia kontekst, ton i~niuanse niedostępne w~danych ilościowych.
+
+  \item \textbf{Fallback:} Gdy analiza AI jest niedostępna (użytkownik bez planu Pro, błąd API), wynik końcowy = $H_{\text{det}}$.
+\end{enumerate}
+
+\subsection{Przykłady rozbieżności}
+
+\begin{table}[H]
+\centering
+\caption{Scenariusze rozbieżności między $H_{\text{det}}$ a~$H_{\text{AI}}$}
+\label{tab:divergence-scenarios}
+\rowcolors{2}{white}{PodWarning!5}
+\small
+\begin{tabularx}{\textwidth}{C{1.2cm} C{1.2cm} C{1.2cm} X}
+\toprule
+$H_{\text{det}}$ & $H_{\text{AI}}$ & $\Delta$ & \textbf{Wyjaśnienie} \\
+\midrule
+82 & 78 & 4 & Norma. Obie oceny spójne --- zdrowa relacja. \\
+75 & 45 & 30 & \danger{Flaga.} Ilościowo wygląda dobrze, ale AI wykrywa pasywno-agresywny ton lub manipulację. \\
+40 & 70 & 30 & \danger{Flaga.} Nierówna aktywność ilościowa, ale AI rozpoznaje ciepłą, wspierającą komunikację (np.\ jedna osoba pisze rzadko, ale treściwie). \\
+55 & 50 & 5 & Norma. Obie oceny sugerują umiarkowane problemy. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title=Dlaczego 60/40, nie 50/50?]
+Waga 60\% dla AI i~40\% dla danych ilościowych odzwierciedla fundamentalną prawdę komunikacji: \emph{nie chodzi o~to, ile mówisz, ale co mówisz}. Osoba wysyłająca 5~przemyślanych wiadomości dziennie może mieć zdrowszą relację niż osoba wysyłająca 50~pustych ,,ok'' i~,,haha''. AI potrafi to rozróżnić; metryki ilościowe nie.
+
+Jednocześnie 40\% wagi dla danych ilościowych chroni przed halucynacjami AI i~zapewnia kotwicę w~obiektywnych, powtarzalnych danych.
+\end{infobox}
+
+\vfill
+\begin{center}
+\small\color{PodTextMuted}
+\rule{4cm}{0.5pt}\\[4pt]
+Koniec Rozdziału~\thechapter. Następny: Rozdział~8 --- Interfejs Użytkownika.
+\end{center}

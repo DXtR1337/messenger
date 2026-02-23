@@ -1,0 +1,1683 @@
+% ============================================================
+% Rozdział 5 — Silnik Analizy Ilościowej
+% ============================================================
+
+\chapter{Silnik Analizy Ilościowej}
+\label{ch:analiza-ilosciowa}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Dane nie kłamią --- ale musisz wiedzieć, co z~nich wycisnąć.''
+\end{center}
+
+\vspace{8pt}
+
+Silnik analizy ilościowej stanowi fundament całego systemu \podtekst. Zanim jakikolwiek model AI zobaczy choćby fragment rozmowy, silnik ilościowy przetwarza \emph{każdą} wiadomość i~wydobywa z~niej ponad 60~metryk statystycznych. To czysta matematyka: zero wywołań API, zero kosztów, zero halucynacji.
+
+Niniejszy rozdział dokumentuje kompletną implementację silnika, od architektury jednoprzebiegowej po algorytmy wykrywania wzorców aktywności. Każda metryka jest opisana pod kątem: \emph{co mierzy}, \emph{jak jest obliczana} i~\emph{dlaczego ma znaczenie} dla analizy relacji.
+
+\begin{infobox}[title=Pliki źródłowe]
+Główna implementacja silnika znajduje się w~następujących plikach:
+\begin{itemize}
+  \item \filepath{src/lib/analysis/quantitative.ts} --- główna funkcja \tsfunc{computeQuantitativeAnalysis()}
+  \item \filepath{src/lib/analysis/constants.ts} --- stałe i~funkcje współdzielone (stopwords, regresja liniowa)
+  \item \filepath{src/lib/analysis/viral-scores.ts} --- wyniki wiralne (kompatybilność, zainteresowanie, ghosting)
+  \item \filepath{src/lib/analysis/badges.ts} --- system odznak i~osiągnięć
+  \item \filepath{src/lib/analysis/catchphrases.ts} --- frazy charakterystyczne i~najlepszy czas na wiadomość
+  \item \filepath{src/lib/analysis/network.ts} --- metryki sieci (czaty grupowe)
+  \item \filepath{src/lib/parsers/types.ts} --- definicje typów wynikowych
+  \item \filepath{src/lib/analysis/quant/} --- submoduły refaktoryzacji:
+  \begin{itemize}
+    \item \filepath{helpers.ts} --- funkcje pomocnicze (extractEmojis, countWords, tokenizeWords, median, percentile, topN)
+    \item \filepath{types.ts} --- interfejs \tstype{PersonAccumulator} i~factory \tsfunc{createPersonAccumulator()}
+    \item \filepath{bursts.ts} --- detekcja burstów aktywności (\tsfunc{detectBursts()})
+    \item \filepath{trends.ts} --- obliczanie trendów miesięcznych (\tsfunc{computeTrends()})
+    \item \filepath{reciprocity.ts} --- indeks wzajemności (\tsfunc{computeReciprocityIndex()})
+    \item \filepath{sentiment.ts} --- analiza sentymentu (\tsfunc{computeSentimentScore()})
+    \item \filepath{conflicts.ts} --- detekcja konfliktów (\tsfunc{detectConflicts()})
+    \item \filepath{intimacy.ts} --- progresja intymności (\tsfunc{computeIntimacyProgression()})
+    \item \filepath{index.ts} --- barrel export
+  \end{itemize}
+\end{itemize}
+\end{infobox}
+
+% ============================================================
+\section{Przegląd architektury silnika}
+\label{sec:architektura-silnika}
+\index{silnik ilościowy!architektura}
+
+Centralnym punktem silnika jest funkcja:
+
+\begin{lstlisting}[style=podcode, caption={Sygnatura głównej funkcji silnika ilościowego}]
+export function computeQuantitativeAnalysis(
+  conversation: ParsedConversation,
+): QuantitativeAnalysis
+\end{lstlisting}
+
+Przyjmuje ona obiekt \tstype{ParsedConversation} (wynik parsowania --- patrz Rozdział~4) i~zwraca kompletny obiekt \tstype{QuantitativeAnalysis} zawierający wszystkie metryki.
+
+\subsection{Projekt jednoprzebiegowy --- O(n)}
+\index{silnik ilościowy!złożoność O(n)}
+
+Silnik został zaprojektowany z~myślą o~wydajności. Główna pętla przechodzi przez tablicę wiadomości \textbf{dokładnie raz} (złożoność $O(n)$, gdzie $n$ = liczba wiadomości), akumulując dane w~strukturach per-osoba (\emph{accumulators}).
+
+\begin{warningbox}[title=Cel wydajnościowy]
+Target: przetworzenie 50\,000 wiadomości w~$< 200$~ms. Cała analiza ilościowa odbywa się po stronie klienta (w~przeglądarce), więc wydajność jest krytyczna dla UX.
+\end{warningbox}
+
+Architektura silnika dzieli się na trzy fazy:
+
+\begin{enumerate}
+  \item \textbf{Inicjalizacja akumulatorów} --- utworzenie struktur danych per-osoba (mapy częstotliwości, liczniki, tablice czasów odpowiedzi) oraz globalnych akumulatorów (heatmapa, wolumen miesięczny, dzienne zliczenia).
+  \item \textbf{Główny przebieg} --- jednokrotna iteracja po \tskey{messages[]} z~aktualizacją wszystkich akumulatorów w~każdej iteracji.
+  \item \textbf{Przetwarzanie końcowe} --- obliczenie metryk pochodnych z~akumulatorów: mediany, średnie, regresje liniowe, wykrywanie burstów, indeks wzajemności, wyniki wiralne, odznaki.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.8cm]
+  % Phase 1
+  \node[pipeline] (init) {Faza 1\\Inicjalizacja\\akumulatorów};
+
+  % Phase 2
+  \node[pipeline active, right=2cm of init] (main) {Faza 2\\Główny przebieg\\$O(n)$};
+
+  % Phase 3
+  \node[pipeline, right=2cm of main] (post) {Faza 3\\Przetwarzanie\\końcowe};
+
+  % Input
+  \node[startstop, left=1.5cm of init] (input) {\tstype{ParsedConversation}};
+
+  % Output
+  \node[startstop, right=1.5cm of post] (output) {\tstype{QuantitativeAnalysis}};
+
+  % Arrows
+  \draw[dataarrow] (input) -- (init);
+  \draw[dataarrow] (init) -- (main);
+  \draw[dataarrow] (main) -- (post);
+  \draw[dataarrow] (post) -- (output);
+
+  % Sub-modules below Phase 3
+  \node[podbox blue, below=1.2cm of post, minimum width=2cm, font=\scriptsize\bfseries] (viral) {Viral Scores};
+  \node[podbox purple, left=0.3cm of viral, minimum width=1.5cm, font=\scriptsize\bfseries] (badges) {Badges};
+  \node[podbox blue, right=0.3cm of viral, minimum width=1.5cm, font=\scriptsize\bfseries] (catch) {Catchphrases};
+  \node[podbox purple, below=0.5cm of viral, minimum width=2cm, font=\scriptsize\bfseries] (network) {Network Metrics};
+
+  \draw[podarrow] (post) -- (viral);
+  \draw[podarrow] (post) -- (badges);
+  \draw[podarrow] (post) -- (catch);
+  \draw[podarrow] (viral) -- (network);
+\end{tikzpicture}
+\caption{Trójfazowa architektura silnika analizy ilościowej z~modułami przetwarzania końcowego.}
+\label{fig:engine-architecture}
+\end{figure}
+
+\subsection{Akumulatory per-osoba}
+
+Wewnętrznie silnik używa interfejsu \tstype{PersonAccumulator} (niepublikowanego, wewnętrznego), który gromadzi surowe dane podczas głównego przebiegu:
+
+\begin{lstlisting}[style=podcode, caption={Wewnętrzny interfejs akumulatora per-osoba}]
+interface PersonAccumulator {
+  totalMessages: number;
+  totalWords: number;
+  totalCharacters: number;
+  longestMessage: { content: string; length: number; timestamp: number };
+  shortestMessage: { content: string; length: number; timestamp: number };
+  messagesWithEmoji: number;
+  emojiCount: number;
+  emojiFreq: Map<string, number>;
+  questionsAsked: number;
+  mediaShared: number;
+  linksShared: number;
+  reactionsGiven: number;
+  reactionsReceived: number;
+  reactionsGivenFreq: Map<string, number>;
+  unsentMessages: number;
+  responseTimes: number[];
+  monthlyResponseTimes: Map<string, number[]>;
+  monthlyWordCounts: Map<string, number[]>;
+  messagesReceived: number;
+  wordFreq: Map<string, number>;
+  phraseFreq: Map<string, number>;
+}
+\end{lstlisting}
+
+Po zakończeniu głównego przebiegu akumulatory są transformowane do publicznego interfejsu \tstype{PersonMetrics} (sekcja~\ref{sec:person-metrics}), a~dane czasowe do \tstype{TimingMetrics} (sekcja~\ref{sec:timing-metrics}).
+
+
+% ============================================================
+\section{Stałe i~konfiguracja}
+\label{sec:stale-konfiguracja}
+\index{silnik ilościowy!stałe}
+
+\subsection{SESSION\_GAP\_MS}
+\label{subsec:session-gap}
+
+\begin{metricbox}
+\textbf{Wartość:} \texttt{6 * 60 * 60 * 1000 = 21\,600\,000 ms} (6~godzin)
+\end{metricbox}
+
+Stała \texttt{SESSION\_GAP\_MS} definiuje granicę sesji konwersacyjnej. Jeśli przerwa między dwiema kolejnymi wiadomościami przekracza 6~godzin, silnik traktuje je jako koniec jednej sesji i~początek następnej. Wartość ta wpływa na:
+
+\begin{itemize}
+  \item \textbf{Inicjacje rozmów} (\metric{conversationInitiations}) --- pierwsza wiadomość po przerwie $\geq$ 6h jest liczona jako inicjacja nowej rozmowy.
+  \item \textbf{Zakończenia rozmów} (\metric{conversationEndings}) --- ostatnia wiadomość przed przerwą $\geq$ 6h zamyka sesję.
+  \item \textbf{Czas odpowiedzi} (\metric{responseTime}) --- odpowiedzi po przerwie $\geq$ 6h \emph{nie} są liczone do czasu odpowiedzi (nie chcemy zawyżać średnich przerwy nocne).
+  \item \textbf{Sesje ogółem} (\metric{totalSessions}) --- liczba odrębnych sesji konwersacyjnych.
+  \item \textbf{Sieć interakcji} (\metric{networkMetrics}) --- interakcje sekwencyjne po przerwie $\geq$ 6h nie tworzą krawędzi grafu.
+\end{itemize}
+
+\begin{infobox}[title=Dlaczego 6 godzin?]
+Próg 6~godzin został dobrany empirycznie. Przerwa nocna trwa zazwyczaj 6--8~godzin, więc wartość ta pozwala odróżnić ,,pójście spać'' od ,,nowej rozmowy następnego dnia''. Przerwa w~ciągu dnia trwająca $>6$h zazwyczaj oznacza, że temat się wyczerpał, a~kolejna wiadomość to nowy wątek.
+\end{infobox}
+
+\subsection{STOPWORDS}
+\label{subsec:stopwords}
+\index{stopwords}
+
+Lista \texttt{STOPWORDS} to zbiór 130+ najczęstszych słów w~języku polskim i~angielskim, wykluczonych z~analizy częstotliwości słów. Implementacja używa struktury \tstype{Set<string>} dla wyszukiwania w~$O(1)$.
+
+Plik: \filepath{src/lib/analysis/constants.ts}
+
+\begin{lstlisting}[style=podcode, caption={Fragment listy stopwords (polski + angielski)}]
+export const STOPWORDS = new Set([
+  // English
+  'i', 'me', 'my', 'myself', 'we', 'our', 'you', 'your',
+  'he', 'him', 'she', 'her', 'it', 'they', 'them',
+  'what', 'which', 'who', 'this', 'that', 'am', 'is', 'are',
+  'was', 'were', 'be', 'been', 'have', 'has', 'had',
+  'do', 'does', 'did', 'a', 'an', 'the', 'and', 'but',
+  'if', 'or', 'of', 'at', 'by', 'for', 'with', 'to',
+  'from', 'in', 'out', 'on', 'off', 'ok', 'yes', 'yeah',
+  'lol', 'haha', 'hahaha', 'xd', 'xdd',
+  // Polish
+  'i', 'w', 'z', 'na', 'do', 'to', 'je', 'nie', 'co',
+  'tak', 'za', 'ale', 'od', 'po', 'jak', 'mi', 'ty', 'ja',
+  'jest', 'bo', 'ze', 'sobie', 'tylko', 'jeszcze',
+  'bardzo', 'teraz', 'ok', 'dobra', 'xd', 'xdd',
+  // ... 130+ pozycji
+]);
+\end{lstlisting}
+
+\begin{warningbox}[title=Dwujęzyczność]
+Lista zawiera słowa z~\textbf{obu} języków, ponieważ polskie rozmowy na Messengerze bardzo często mieszają polski z~angielskim (np.\ ,,lol'', ,,ok'', ,,haha''). Słowa takie jak ,,xd'' i~,,xdd'' to specyficznie polskie markery emocjonalne, ubiquitous w~komunikacji młodych Polaków.
+\end{warningbox}
+
+\subsection{linearRegressionSlope()}
+\label{subsec:linear-regression}
+\index{regresja liniowa}
+
+Funkcja \tsfunc{linearRegressionSlope(values)} oblicza nachylenie prostej regresji liniowej dla ciągu wartości liczbowych. Służy do detekcji trendów (rosnący/malejący) w~danych miesięcznych.
+
+\begin{lstlisting}[style=podcode, caption={Implementacja regresji liniowej}]
+export function linearRegressionSlope(values: number[]): number {
+  const clean = values.filter((v) => Number.isFinite(v));
+  const n = clean.length;
+  if (n < 2) return 0;
+  const xMean = (n - 1) / 2;
+  const yMean = clean.reduce((a, b) => a + b, 0) / n;
+  const numerator = clean.reduce(
+    (sum, y, x) => sum + (x - xMean) * (y - yMean), 0,
+  );
+  const denominator = clean.reduce(
+    (sum, _, x) => sum + (x - xMean) ** 2, 0,
+  );
+  if (denominator === 0) return 0;
+  const slope = numerator / denominator;
+  return Number.isFinite(slope) ? slope : 0;
+}
+\end{lstlisting}
+
+Matematycznie, dla ciągu wartości $y_0, y_1, \ldots, y_{n-1}$ nachylenie prostej metodą najmniejszych kwadratów wynosi:
+
+\begin{equation}
+\label{eq:linear-regression}
+\beta = \frac{\sum_{i=0}^{n-1} (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=0}^{n-1} (x_i - \bar{x})^2}
+\end{equation}
+
+gdzie $x_i = i$ (indeks kolejnego punktu), $\bar{x} = \frac{n-1}{2}$, a~$\bar{y}$ to średnia arytmetyczna wartości $y$.
+
+\textbf{Interpretacja:}
+\begin{itemize}
+  \item $\beta > 0$ --- trend rosnący (np.\ więcej wiadomości każdego miesiąca)
+  \item $\beta < 0$ --- trend malejący (np.\ spadek aktywności)
+  \item $\beta \approx 0$ --- brak wyraźnego trendu
+\end{itemize}
+
+Funkcja automatycznie filtruje wartości \texttt{NaN} i~\texttt{Infinity} oraz zwraca 0, gdy mniej niż 2~punkty danych są dostępne.
+
+
+% ============================================================
+\section{Funkcje pomocnicze}
+\label{sec:funkcje-pomocnicze}
+\index{silnik ilościowy!funkcje pomocnicze}
+
+Poniżej opisane są wszystkie funkcje pomocnicze używane przez główny silnik. Każda z~nich jest czystą funkcją bez efektów ubocznych.
+
+\subsection{extractEmojis(text)}
+\label{subsec:extract-emojis}
+\index{emoji!ekstrakcja}
+
+\begin{lstlisting}[style=podcode, caption={Ekstrakcja emoji z~tekstu}]
+function extractEmojis(text: string): string[] {
+  const emojiRegex = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
+  return text.match(emojiRegex) ?? [];
+}
+\end{lstlisting}
+
+Używa kategorii Unicode \texttt{Emoji\_Presentation} i~\texttt{Extended\_Pictographic} z~flagą \texttt{u} (Unicode mode). Zwraca tablicę znalezionych emoji. Pusta tablica oznacza brak emoji w~wiadomości.
+
+\subsection{countWords(text)}
+\label{subsec:count-words}
+
+\begin{lstlisting}[style=podcode]
+function countWords(text: string): number {
+  if (!text.trim()) return 0;
+  return text.trim().split(/\s+/).length;
+}
+\end{lstlisting}
+
+Dzieli tekst po białych znakach (\texttt{\textbackslash s+}) i~zwraca liczbę tokenów. Pusty tekst daje 0.
+
+\subsection{median(arr)}
+\label{subsec:median}
+
+\begin{lstlisting}[style=podcode]
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+\end{lstlisting}
+
+Oblicza medianę zbioru wartości liczbowych. Tworzy kopię tablicy (nie modyfikuje oryginału), sortuje rosnąco, zwraca element środkowy (lub średnią dwóch środkowych dla parzystej liczby elementów).
+
+\begin{infobox}[title=Dlaczego mediana, nie średnia?]
+Dla czasu odpowiedzi mediana jest znacznie bardziej miarodajna niż średnia arytmetyczna. Pojedyncza przerwa 8-godzinna zawyży średnią drastycznie, podczas gdy mediana pozostaje stabilna. Mediana lepiej odpowiada na pytanie: ,,jak szybko ta osoba \emph{zwykle} odpowiada?''
+\end{infobox}
+
+\subsection{tokenizeWords(text)}
+\label{subsec:tokenize-words}
+
+\begin{lstlisting}[style=podcode, caption={Tokenizacja tekstu do słów}]
+function tokenizeWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+    .split(/[\s.,!?;:()\[\]{}"'\-\/\\<>@#$%^&*+=|~`]+/)
+    .filter(w => w.length >= 2 && !STOPWORDS.has(w));
+}
+\end{lstlisting}
+
+Transformacje zastosowane kolejno:
+\begin{enumerate}
+  \item Konwersja do małych liter (\tsfunc{toLowerCase()})
+  \item Usunięcie emoji (regex Unicode)
+  \item Podział po znakach interpunkcyjnych i~białych
+  \item Filtracja: minimum 2 znaki, nie należy do \texttt{STOPWORDS}
+\end{enumerate}
+
+\subsection{topN(map, n) / topNWords(map, n) / topNPhrases(map, n)}
+\label{subsec:top-n}
+
+Trzy warianty tej samej operacji: sortowanie mapy częstotliwości malejąco i~zwrócenie $n$~najczęstszych wpisów. Różnią się jedynie nazwą pola w~obiekcie wynikowym (\texttt{emoji}, \texttt{word}, \texttt{phrase}).
+
+\begin{lstlisting}[style=podcode]
+function topN(
+  map: Map<string, number>, n: number,
+): Array<{ emoji: string; count: number }> {
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([emoji, count]) => ({ emoji, count }));
+}
+\end{lstlisting}
+
+Złożoność: $O(k \log k)$ gdzie $k$ = rozmiar mapy.
+
+\subsection{isLateNight(hour) / isWeekend(day)}
+\label{subsec:late-night-weekend}
+
+\begin{lstlisting}[style=podcode]
+function isLateNight(timestamp: number): boolean {
+  const hour = new Date(timestamp).getHours();
+  return hour >= 22 || hour < 4;
+}
+
+function isWeekend(timestamp: number): boolean {
+  const day = new Date(timestamp).getDay();
+  return day === 0 || day === 6; // Sunday or Saturday
+}
+\end{lstlisting}
+
+\textbf{Late night:} godzina $\geq 22$ lub godzina $< 4$. Pokrywa przedział 22:00--03:59.
+
+\textbf{Weekend:} \texttt{getDay()} zwraca 0 (niedziela) lub 6 (sobota).
+
+\subsection{getMonthKey(timestamp) / getDayKey(timestamp)}
+\label{subsec:date-keys}
+
+\begin{lstlisting}[style=podcode]
+function getMonthKey(timestamp: number): string {
+  return new Date(timestamp).toISOString().slice(0, 7); // "YYYY-MM"
+}
+
+function getDayKey(timestamp: number): string {
+  return new Date(timestamp).toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+\end{lstlisting}
+
+Tworzą klucze grupujące wiadomości po miesiącach lub dniach. Format ISO zapewnia poprawne sortowanie leksykograficzne.
+
+
+% ============================================================
+\section{Metryki per osoba (PersonMetrics)}
+\label{sec:person-metrics}
+\index{PersonMetrics}
+\index{metryki!per osoba}
+
+Interfejs \tstype{PersonMetrics} zawiera 22~pola opisujące aktywność komunikacyjną każdego uczestnika rozmowy. Metryki te są obliczane dla \emph{każdej} osoby niezależnie.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs PersonMetrics --- definicja typu}]
+export interface PersonMetrics {
+  totalMessages: number;
+  totalWords: number;
+  totalCharacters: number;
+  averageMessageLength: number;    // words
+  averageMessageChars: number;     // characters
+  longestMessage: { content: string; length: number; timestamp: number };
+  shortestMessage: { content: string; length: number; timestamp: number };
+  messagesWithEmoji: number;
+  emojiCount: number;
+  topEmojis: Array<{ emoji: string; count: number }>;
+  questionsAsked: number;
+  mediaShared: number;
+  linksShared: number;
+  reactionsGiven: number;
+  reactionsReceived: number;
+  topReactionsGiven: Array<{ emoji: string; count: number }>;
+  unsentMessages: number;
+  topWords: Array<{ word: string; count: number }>;
+  topPhrases: Array<{ phrase: string; count: number }>;
+  uniqueWords: number;
+  vocabularyRichness: number;
+}
+\end{lstlisting}
+
+Poniżej szczegółowy opis każdego pola.
+
+\subsection{Metryki wolumenu}
+
+\begin{description}[style=nextline]
+
+\item[\metric{totalMessages}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Całkowita liczba wiadomości wysłanych przez osobę.\\
+\textbf{Obliczanie:} Inkrementacja licznika \texttt{acc.totalMessages++} dla każdej wiadomości.\\
+\textbf{Znaczenie:} Podstawowy wskaźnik aktywności. Duża dysproporcja (np.\ 3:1) sugeruje nierównowagę w~zaangażowaniu.
+
+\item[\metric{totalWords}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Suma słów we wszystkich wiadomościach osoby.\\
+\textbf{Obliczanie:} \texttt{acc.totalWords += countWords(msg.content)}.\\
+\textbf{Znaczenie:} Bardziej miarodajny niż \texttt{totalMessages} --- osoba pisząca krótkie ,,ok'' i~,,haha'' ma wysoki totalMessages, ale niski totalWords.
+
+\item[\metric{totalCharacters}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Suma znaków (łącznie z~białymi) we wszystkich wiadomościach.\\
+\textbf{Obliczanie:} \texttt{acc.totalCharacters += msg.content.length}.\\
+\textbf{Znaczenie:} Uzupełnia totalWords --- uwzględnia różnicę między polskimi (dłuższymi) a~angielskimi (krótszymi) słowami.
+
+\item[\metric{averageMessageLength}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Jednostka:} słowa/wiadomość\\
+\textbf{Obliczanie:}
+\begin{equation}
+  \text{averageMessageLength} = \frac{\text{totalWords}}{\text{totalMessages}}
+\end{equation}
+\textbf{Znaczenie:} Wskaźnik stylu komunikacji. Osoby piszące średnio 2--3 słowa/wiadomość komunikują się w~stylu ,,szybkich strzałów''; $> 15$ słów/wiadomość to narracyjny, refleksyjny styl.
+
+\item[\metric{averageMessageChars}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Jednostka:} znaki/wiadomość\\
+\textbf{Obliczanie:}
+\begin{equation}
+  \text{averageMessageChars} = \frac{\text{totalCharacters}}{\text{totalMessages}}
+\end{equation}
+\textbf{Znaczenie:} Alternatywna miara długości, bardziej precyzyjna dla języka polskiego (gdzie słowa są dłuższe z~powodu deklinacji i~koniugacji).
+
+\end{description}
+
+\subsection{Metryki skrajne}
+
+\begin{description}[style=nextline]
+
+\item[\metric{longestMessage}]
+\textbf{Typ:} \tstype{\{content: string, length: number, timestamp: number\}}\\
+\textbf{Co mierzy:} Najdłuższa wiadomość osoby pod względem liczby słów.\\
+\textbf{Obliczanie:} Podczas przejścia, jeśli \texttt{wordCount > acc.longestMessage.length}, następuje aktualizacja. Puste wiadomości są pomijane.\\
+\textbf{Znaczenie:} Najdłuższa wiadomość często jest emocjonalnie naładowana --- wyznania, tłumaczenia się, przeprosiny. Pole \texttt{timestamp} pozwala zlokalizować ją na osi czasu relacji.
+
+\item[\metric{shortestMessage}]
+\textbf{Typ:} \tstype{\{content: string, length: number, timestamp: number\}}\\
+\textbf{Co mierzy:} Najkrótsza niepusta wiadomość (minimum 1~słowo).\\
+\textbf{Obliczanie:} Inicjalizacja z~\texttt{length: Infinity}. Aktualizacja gdy \texttt{wordCount > 0 \&\& wordCount < acc.shortestMessage.length}. Po przebiegu, jeśli length = Infinity, ustawiane na \texttt{\{content: '', length: 0, timestamp: 0\}}.\\
+\textbf{Znaczenie:} Ujawnia typowe jednowyrazowe reakcje osoby (np.\ ,,ok'', ,,hmm'', ,,co'').
+
+\end{description}
+
+\subsection{Metryki emoji}
+\index{emoji!metryki}
+
+\begin{description}[style=nextline]
+
+\item[\metric{messagesWithEmoji}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Liczba wiadomości zawierających przynajmniej jedno emoji.\\
+\textbf{Obliczanie:} \texttt{if (emojis.length > 0) acc.messagesWithEmoji++}.\\
+\textbf{Znaczenie:} Informuje o~stylu ekspresji --- niektóre osoby dodają emoji do prawie każdej wiadomości, inne nie używają ich wcale.
+
+\item[\metric{emojiCount}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Łączna liczba emoji we wszystkich wiadomościach.\\
+\textbf{Obliczanie:} \texttt{acc.emojiCount += emojis.length}.\\
+\textbf{Znaczenie:} Metryka intensywności wyrażania emocji. Stosunek emojiCount/totalMessages daje wskaźnik ,,gęstości emoji''.
+
+\item[\metric{topEmojis}]
+\textbf{Typ:} \tstype{Array<\{emoji: string, count: number\}>} \quad \textbf{Rozmiar:} top 10\\
+\textbf{Co mierzy:} 10 najczęściej używanych emoji przez osobę.\\
+\textbf{Obliczanie:} Zliczanie w~mapie \texttt{emojiFreq}, potem \tsfunc{topN(emojiFreq, 10)}.\\
+\textbf{Znaczenie:} Profil emocjonalny: dominacja serduszek ($\heartsuit$) vs.\ emoji śmiechowych sugeruje różny charakter komunikacji.
+
+\end{description}
+
+\subsection{Metryki treści}
+
+\begin{description}[style=nextline]
+
+\item[\metric{questionsAsked}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Liczba wiadomości zawierających znak zapytania (po wykluczeniu URL-i).\\
+\textbf{Obliczanie:}
+\begin{lstlisting}[style=podcode]
+const contentWithoutUrls = msg.content.replace(/https?:\/\/\S+/g, '');
+if (contentWithoutUrls.includes('?')) acc.questionsAsked++;
+\end{lstlisting}
+\textbf{Znaczenie:} Osoba zadająca więcej pytań wykazuje ciekawość i~zainteresowanie drugą osobą. Duża dysproporcja (jedna osoba pyta, druga nie) może wskazywać na nierówną dynamikę relacji.
+
+\begin{warningbox}[title=Wykluczanie URL-i]
+URL-e (np.\ \texttt{https://example.com/search?q=test}) często zawierają znaki zapytania jako parametry query string. Bez filtrowania zafałszowałoby to statystykę pytań.
+\end{warningbox}
+
+\item[\metric{mediaShared}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Liczba wiadomości z~załączonym mediem (zdjęcia, filmy, pliki audio).\\
+\textbf{Obliczanie:} \texttt{if (msg.hasMedia) acc.mediaShared++}.
+
+\item[\metric{linksShared}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Liczba wiadomości zawierających linki.\\
+\textbf{Obliczanie:} \texttt{if (msg.hasLink) acc.linksShared++}.\\
+\textbf{Znaczenie:} Dzielenie się linkami to forma ekspresji zainteresowań --- osoba wysyłająca wiele linków aktywnie buduje wspólne doświadczenie.
+
+\end{description}
+
+\subsection{Metryki reakcji}
+\index{reakcje!metryki}
+
+\begin{description}[style=nextline]
+
+\item[\metric{reactionsGiven}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Ile razy osoba zareagowała na wiadomości innych.\\
+\textbf{Obliczanie:} Inkrementacja \texttt{actorAcc.reactionsGiven++} w~pętli po \texttt{msg.reactions}, gdzie actor to osoba reagująca.
+
+\item[\metric{reactionsReceived}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Ile reakcji otrzymały wiadomości osoby.\\
+\textbf{Obliczanie:} Inkrementacja \texttt{acc.reactionsReceived++} (akumulator nadawcy wiadomości) dla każdej reakcji na wiadomość.
+
+\item[\metric{topReactionsGiven}]
+\textbf{Typ:} \tstype{Array<\{emoji: string, count: number\}>} \quad \textbf{Rozmiar:} top 5\\
+\textbf{Co mierzy:} 5 najczęściej używanych emoji reakcji dawanych przez osobę.\\
+\textbf{Obliczanie:} Zliczanie w~mapie \texttt{reactionsGivenFreq}, potem \tsfunc{topN(reactionsGivenFreq, 5)}.
+
+\end{description}
+
+\subsection{Metryki wycofanych wiadomości}
+
+\begin{description}[style=nextline]
+
+\item[\metric{unsentMessages}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Liczba wiadomości wycofanych/usuniętych przez osobę.\\
+\textbf{Obliczanie:} \texttt{if (msg.isUnsent) acc.unsentMessages++}.\\
+\textbf{Znaczenie:} Częste wycofywanie wiadomości może wskazywać na niepewność, impulsywność lub lęk przed oceną.
+
+\end{description}
+
+\subsection{Metryki słownictwa}
+\index{słownictwo!metryki}
+
+\begin{description}[style=nextline]
+
+\item[\metric{topWords}]
+\textbf{Typ:} \tstype{Array<\{word: string, count: number\}>} \quad \textbf{Rozmiar:} top 20\\
+\textbf{Co mierzy:} 20 najczęściej używanych słów (po odrzuceniu stopwords).\\
+\textbf{Obliczanie:} Tokenizacja przez \tsfunc{tokenizeWords()}, zliczanie w~mapie \texttt{wordFreq}, \tsfunc{topNWords(wordFreq, 20)}.
+
+\item[\metric{topPhrases}]
+\textbf{Typ:} \tstype{Array<\{phrase: string, count: number\}>} \quad \textbf{Rozmiar:} top 10\\
+\textbf{Co mierzy:} 10 najczęstszych bigramów (par kolejnych słów).\\
+\textbf{Obliczanie:} Bigramy tworzone z~tokenów: \texttt{tokens[j] + " " + tokens[j+1]}, zliczanie w~\texttt{phraseFreq}.
+
+\item[\metric{uniqueWords}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Co mierzy:} Liczba unikalnych słów użytych przez osobę (po filtracji stopwords).\\
+\textbf{Obliczanie:} \texttt{acc.wordFreq.size} --- rozmiar mapy częstotliwości.
+
+\item[\metric{vocabularyRichness}]
+\textbf{Typ:} \tstype{number} \quad \textbf{Zakres:} $[0, 1]$\\
+\textbf{Co mierzy:} Bogactwo słownictwa --- stosunek słów unikalnych do wszystkich słów.
+\begin{equation}
+  \text{vocabularyRichness} = \frac{\text{uniqueWords}}{\text{totalWords}}
+\end{equation}
+\textbf{Znaczenie:} Wartość bliska 1 oznacza duże zróżnicowanie słownictwa (osoby czytające, wykształcone). Wartość bliska 0 oznacza powtarzanie tych samych słów. Typowy zakres: 0.15--0.5.
+
+\end{description}
+
+\begin{table}[H]
+\centering
+\caption{Podsumowanie 22 pól interfejsu \tstype{PersonMetrics}}
+\label{tab:person-metrics-summary}
+\rowcolors{2}{white}{PodBlue!3}
+\small
+\begin{tabularx}{\textwidth}{L{3.5cm} C{1.8cm} X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+totalMessages & number & Łączna liczba wysłanych wiadomości \\
+totalWords & number & Suma słów we wszystkich wiadomościach \\
+totalCharacters & number & Suma znaków we wszystkich wiadomościach \\
+averageMessageLength & number & Średnia długość wiadomości (słowa) \\
+averageMessageChars & number & Średnia długość wiadomości (znaki) \\
+longestMessage & object & Najdłuższa wiadomość (treść, długość, timestamp) \\
+shortestMessage & object & Najkrótsza niepusta wiadomość \\
+messagesWithEmoji & number & Wiadomości zawierające emoji \\
+emojiCount & number & Łączna liczba emoji \\
+topEmojis & array & Top 10 najczęstszych emoji \\
+questionsAsked & number & Wiadomości z~pytajnikiem (bez URL) \\
+mediaShared & number & Wiadomości z~mediami \\
+linksShared & number & Wiadomości z~linkami \\
+reactionsGiven & number & Dane reakcje na wiadomości innych \\
+reactionsReceived & number & Otrzymane reakcje na własne wiadomości \\
+topReactionsGiven & array & Top 5 najczęstszych reakcji dawanych \\
+unsentMessages & number & Wycofane/usunięte wiadomości \\
+topWords & array & Top 20 najczęstszych słów \\
+topPhrases & array & Top 10 najczęstszych bigramów \\
+uniqueWords & number & Liczba unikalnych słów \\
+vocabularyRichness & number & Stosunek unikalnych do wszystkich słów \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Metryki czasowe (TimingMetrics)}
+\label{sec:timing-metrics}
+\index{TimingMetrics}
+\index{metryki!czasowe}
+
+Metryki czasowe analizują \emph{kiedy} i~\emph{jak szybko} uczestnicy komunikują się. Interfejs \tstype{TimingMetrics} dzieli się na dwie części: metryki per-osoba i~metryki globalne.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs TimingMetrics}]
+export interface TimingMetrics {
+  perPerson: Record<string, {
+    averageResponseTimeMs: number;
+    medianResponseTimeMs: number;
+    fastestResponseMs: number;
+    slowestResponseMs: number;
+    responseTimeTrend: number;
+  }>;
+  conversationInitiations: Record<string, number>;
+  conversationEndings: Record<string, number>;
+  longestSilence: {
+    durationMs: number;
+    startTimestamp: number;
+    endTimestamp: number;
+    lastSender: string;
+    nextSender: string;
+  };
+  lateNightMessages: Record<string, number>;
+}
+\end{lstlisting}
+
+\subsection{Metryki czasu odpowiedzi (per osoba)}
+
+\begin{description}[style=nextline]
+
+\item[\metric{averageResponseTimeMs}]
+Średnia arytmetyczna czasów odpowiedzi. Czas odpowiedzi osoby A = czas między wiadomością osoby B a~następną wiadomością osoby A, pod warunkiem, że przerwa $<$ 6h.
+
+\begin{equation}
+  \text{averageResponseTimeMs} = \frac{1}{|\mathcal{R}|} \sum_{r \in \mathcal{R}} r
+\end{equation}
+
+gdzie $\mathcal{R}$ = zbiór czasów odpowiedzi osoby w~milisekundach.
+
+\item[\metric{medianResponseTimeMs}]
+Mediana zbioru czasów odpowiedzi. Bardziej miarodajna niż średnia (odporna na wartości odstające --- patrz sekcja~\ref{subsec:median}).
+
+\item[\metric{fastestResponseMs}]
+Najszybsza odpowiedź (minimum z~$\mathcal{R}$). Często poniżej 10~sekund --- sygnalizuje aktywną rozmowę w~czasie rzeczywistym.
+
+\item[\metric{slowestResponseMs}]
+Najwolniejsza odpowiedź (maksimum z~$\mathcal{R}$, ale $< 6$h bo powyżej to nowa sesja). Może wskazywać na ,,zamyślenie się'' lub brak zaangażowania w~danym momencie.
+
+\item[\metric{responseTimeTrend}]
+Nachylenie regresji liniowej (\ref{eq:linear-regression}) obliczonej na miesięcznych średnich czasach odpowiedzi.
+
+\textbf{Interpretacja:}
+\begin{itemize}
+  \item Wartość \textbf{dodatnia}: czas odpowiedzi \emph{rośnie} z~miesiąca na miesiąc --- potencjalny spadek zainteresowania.
+  \item Wartość \textbf{ujemna}: czas odpowiedzi \emph{maleje} --- rosnące zaangażowanie.
+  \item Bliska \textbf{zeru}: stabilny wzorzec odpowiedzi.
+\end{itemize}
+
+\end{description}
+
+\begin{warningbox}[title=Warunek zaliczenia odpowiedzi]
+Czas odpowiedzi jest rejestrowany \textbf{tylko} gdy:
+\begin{enumerate}
+  \item Nadawca aktualnej wiadomości $\neq$ nadawca poprzedniej (zmiana rozmówcy)
+  \item Przerwa $<$ \texttt{SESSION\_GAP\_MS} (6h) --- inaczej to nowa sesja, nie odpowiedź
+\end{enumerate}
+Te warunki eliminują zarówno ,,double texting'' (ta sama osoba pisze kilka razy z~rzędu), jak i~przerwy nocne/długie.
+\end{warningbox}
+
+\subsection{Metryki sesji (globalne)}
+
+\begin{description}[style=nextline]
+
+\item[\metric{conversationInitiations}]
+\textbf{Typ:} \tstype{Record<string, number>} \quad \textbf{Co mierzy:} Ile razy każda osoba rozpoczęła nową sesję konwersacyjną.\\
+\textbf{Algorytm:} Pierwsza wiadomość po przerwie $\geq$ 6h jest liczona jako inicjacja. Pierwsza wiadomość w~całej rozmowie również.\\
+\textbf{Znaczenie:} Kto inicjuje kontakt? Duża dysproporcja (np.\ 80/20) jest jednym z~najsilniejszych wskaźników nierównego zainteresowania.
+
+\item[\metric{conversationEndings}]
+\textbf{Typ:} \tstype{Record<string, number>} \quad \textbf{Co mierzy:} Ile razy każda osoba wysłała ostatnią wiadomość przed przerwą $\geq$ 6h.\\
+\textbf{Algorytm:} Ostatnia wiadomość przed przerwą $\geq$ 6h jest liczona jako zakończenie sesji. Ostatnia wiadomość w~całej rozmowie również.
+
+\item[\metric{longestSilence}]
+\textbf{Typ:} obiekt z~polami \texttt{durationMs}, \texttt{startTimestamp}, \texttt{endTimestamp}, \texttt{lastSender}, \texttt{nextSender}.\\
+\textbf{Co mierzy:} Najdłuższa przerwa (cisza) między jakimikolwiek dwiema kolejnymi wiadomościami w~rozmowie.\\
+\textbf{Algorytm:} Porównanie \texttt{gap} z~bieżącym rekordem w~każdej iteracji.\\
+\textbf{Znaczenie:} Cisza może oznaczać kłótnię, okres bez kontaktu, podróż, lub po prostu koniec relacji na jakiś czas. Pola \texttt{lastSender} i~\texttt{nextSender} pozwalają określić, kto ,,zgasił'' rozmowę i~kto ją wznowił.
+
+\item[\metric{lateNightMessages}]
+\textbf{Typ:} \tstype{Record<string, number>} \quad \textbf{Co mierzy:} Liczba wiadomości wysłanych między 22:00 a~03:59 per osoba.\\
+\textbf{Znaczenie:} Nocne wiadomości mają szczególny charakter emocjonalny --- często bardziej intymne, impulsywne lub wyrażające tęsknotę.
+
+\end{description}
+
+\subsection{Próg 6 godzin --- uzasadnienie}
+\label{subsec:prog-6h}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[xscale=0.5, yscale=0.7]
+  % Time axis
+  \draw[->, thick, PodTextMuted] (0,0) -- (30,0) node[right] {\small czas};
+
+  % Session 1
+  \fill[PodBlue!30, rounded corners=2pt] (1,0.3) rectangle (8,1.5);
+  \node[font=\scriptsize\bfseries, PodBlueDark] at (4.5, 0.9) {Sesja 1};
+
+  % Messages in session 1
+  \foreach \x/\c in {1.5/PodBlue, 2.2/PodPurple, 3.0/PodBlue, 4.5/PodPurple, 5.5/PodBlue, 7/PodPurple, 7.5/PodBlue} {
+    \fill[\c] (\x, 0.1) circle (3pt);
+  }
+
+  % Gap
+  \draw[<->, PodDanger, thick] (8, -0.5) -- (16, -0.5)
+    node[midway, below, font=\scriptsize\color{PodDanger}] {$\geq$ 6h (nowa sesja)};
+
+  % Session 2
+  \fill[PodPurple!20, rounded corners=2pt] (16,0.3) rectangle (27,1.5);
+  \node[font=\scriptsize\bfseries, PodPurpleDark] at (21.5, 0.9) {Sesja 2};
+
+  % Messages in session 2
+  \foreach \x/\c in {16.5/PodPurple, 17.5/PodBlue, 18.5/PodPurple, 20/PodBlue, 22/PodPurple, 24/PodBlue, 26/PodPurple} {
+    \fill[\c] (\x, 0.1) circle (3pt);
+  }
+
+  % Labels
+  \node[font=\scriptsize, PodBlue, above] at (1.5, 1.5) {Inicjacja};
+  \node[font=\scriptsize, PodBlue, above] at (7.5, 1.5) {Zakończenie};
+  \node[font=\scriptsize, PodPurple, above] at (16.5, 1.5) {Inicjacja};
+
+  % Legend
+  \fill[PodBlue] (1, -1.5) circle (3pt);
+  \node[font=\scriptsize, anchor=west] at (1.4, -1.5) {Osoba A};
+  \fill[PodPurple] (6, -1.5) circle (3pt);
+  \node[font=\scriptsize, anchor=west] at (6.4, -1.5) {Osoba B};
+\end{tikzpicture}
+\caption{Wizualizacja podziału na sesje konwersacyjne z~progiem 6~godzin.}
+\label{fig:session-gap}
+\end{figure}
+
+
+% ============================================================
+\section{Metryki zaangażowania (EngagementMetrics)}
+\label{sec:engagement-metrics}
+\index{EngagementMetrics}
+\index{metryki!zaangażowania}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs EngagementMetrics}]
+export interface EngagementMetrics {
+  doubleTexts: Record<string, number>;
+  maxConsecutive: Record<string, number>;
+  messageRatio: Record<string, number>;
+  reactionRate: Record<string, number>;
+  avgConversationLength: number;
+  totalSessions: number;
+}
+\end{lstlisting}
+
+\begin{description}[style=nextline]
+
+\item[\metric{doubleTexts}]
+\textbf{Co mierzy:} Ile razy osoba wysłała 2 lub więcej wiadomości z~rzędu \emph{bez odpowiedzi} drugiej strony.\\
+\textbf{Algorytm:} Śledzenie zmiennych \texttt{consecutiveSender} i~\texttt{consecutiveCount}. Gdy nadawca zmienia się i~\texttt{consecutiveCount >= 2}, inkrementacja \texttt{doubleTexts[consecutiveSender]++}.\\
+\textbf{Znaczenie:} Częste ,,double texting'' może wskazywać na niepokój, desperację kontaktu lub po prostu entuzjazm.
+
+\item[\metric{maxConsecutive}]
+\textbf{Co mierzy:} Maksymalna liczba wiadomości z~rzędu wysłanych przez osobę bez odpowiedzi.\\
+\textbf{Algorytm:} \texttt{Math.max(maxConsecutive[sender], consecutiveCount)} przy każdej zmianie nadawcy.\\
+\textbf{Znaczenie:} Wartość 15+ wiadomości z~rzędu to potencjalny sygnał lęku przed porzuceniem lub bombardowania emocjonalnego.
+
+\item[\metric{messageRatio}]
+\textbf{Co mierzy:} Proporcja wiadomości osoby do ogółu wiadomości.
+\begin{equation}
+  \text{messageRatio}[p] = \frac{\text{totalMessages}[p]}{\sum_i \text{totalMessages}[i]}
+\end{equation}
+\textbf{Zakres:} $[0, 1]$. Ideał dla dwóch osób: 0.5 (równy podział).\\
+\textbf{Znaczenie:} Podstawowy wskaźnik równowagi konwersacji.
+
+\item[\metric{reactionRate}]
+\textbf{Co mierzy:} Wskaźnik reaktywności --- stosunek danych reakcji do otrzymanych wiadomości od innych.
+\begin{equation}
+  \text{reactionRate}[p] = \frac{\text{reactionsGiven}[p]}{\text{messagesReceived}[p]}
+\end{equation}
+\textbf{Znaczenie:} Osoba o~wysokim reactionRate aktywnie angażuje się emocjonalnie w~wiadomości innych. Zerowy reactionRate sugeruje pasywny odbiór.
+
+\item[\metric{avgConversationLength}]
+\textbf{Co mierzy:} Średnia liczba wiadomości w~jednej sesji konwersacyjnej.
+\begin{equation}
+  \text{avgConversationLength} = \frac{\text{totalMessages}}{\text{totalSessions}}
+\end{equation}
+\textbf{Znaczenie:} Krótkie sesje (5--10 wiadomości) = komunikacja transakcyjna. Długie sesje (100+) = głębokie, angażujące rozmowy.
+
+\item[\metric{totalSessions}]
+\textbf{Co mierzy:} Łączna liczba odrębnych sesji konwersacyjnych (rozdzielonych przerwami $\geq$ 6h).\\
+\textbf{Znaczenie:} W~połączeniu z~zakresem dat pozwala obliczyć częstotliwość kontaktu (np.\ 2.3~sesji/dzień).
+
+\end{description}
+
+
+% ============================================================
+\section{Metryki wzorców (PatternMetrics)}
+\label{sec:pattern-metrics}
+\index{PatternMetrics}
+\index{metryki!wzorców}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs PatternMetrics}]
+export interface PatternMetrics {
+  monthlyVolume: Array<{
+    month: string;
+    perPerson: Record<string, number>;
+    total: number;
+  }>;
+  weekdayWeekend: {
+    weekday: Record<string, number>;
+    weekend: Record<string, number>;
+  };
+  volumeTrend: number;
+  bursts: Array<{
+    startDate: string;
+    endDate: string;
+    messageCount: number;
+    avgDaily: number;
+  }>;
+}
+\end{lstlisting}
+
+\subsection{monthlyVolume}
+
+Tablica obiektów, jeden na każdy miesiąc kalendarzowy obecny w~rozmowie, posortowana chronologicznie. Każdy obiekt zawiera:
+\begin{itemize}
+  \item \texttt{month} --- klucz w~formacie \texttt{"YYYY-MM"} (np.\ \texttt{"2024-06"})
+  \item \texttt{perPerson} --- mapa \texttt{nazwa -> liczba wiadomości}
+  \item \texttt{total} --- suma wiadomości w~tym miesiącu
+\end{itemize}
+
+\subsection{weekdayWeekend}
+
+Podział aktywności na dni robocze (poniedziałek--piątek) i~weekend (sobota--niedziela) per osoba.
+
+\subsection{volumeTrend}
+
+Nachylenie regresji liniowej na miesięcznych sumach wiadomości (\texttt{monthlyTotals}). Wartość dodatnia = rozmowa się rozwija; ujemna = zamiera.
+
+\subsection{Wykrywanie burstów}
+\label{subsec:burst-detection}
+\index{burst detection}
+
+\textbf{Burst} to okres nadzwyczaj intensywnej komunikacji --- dzień, w~którym liczba wiadomości przekracza $3\times$ średnią ruchomą z~7~dni.
+
+\begin{lstlisting}[style=podcode, caption={Algorytm wykrywania burstów}]
+function detectBursts(dailyCounts: Map<string, number>): Burst[] {
+  const sortedDays = [...dailyCounts.keys()].sort();
+  if (sortedDays.length < 8) return [];
+
+  // Compute rolling 7-day average
+  for (let i = 0; i < dayValues.length; i++) {
+    let rollingAvg;
+    if (i < 7) {
+      rollingAvg = overallAvg; // fallback for first 7 days
+    } else {
+      rollingAvg = sum(dayValues[i-7..i]) / 7;
+    }
+
+    if (dayValues[i].count > 3 * rollingAvg && rollingAvg > 0) {
+      burstDays.push(dayValues[i]);
+    }
+  }
+
+  // Merge consecutive burst days into periods
+  // ...
+}
+\end{lstlisting}
+
+\textbf{Algorytm krok po kroku:}
+
+\begin{enumerate}
+  \item Posortuj dni chronologicznie.
+  \item Dla każdego dnia oblicz 7-dniową średnią ruchomą (dla pierwszych 7 dni użyj średniej ogólnej jako baseline).
+  \item Jeśli liczba wiadomości w~danym dniu $> 3 \times$ średnia ruchoma, oznacz jako dzień burstowy.
+  \item Scal kolejne dni burstowe w~ciągłe okresy: dwa dni są ,,kolejne'' jeśli różnica $\leq 1$ dzień kalendarzowy.
+  \item Dla każdego okresu burstowego oblicz \texttt{avgDaily = messageCount / days}.
+\end{enumerate}
+
+\textbf{Interpretacja burstów:} Nagłe skoki aktywności często korelują z~ważnymi wydarzeniami relacyjnymi --- zakochanie, kłótnia, pojednanie, kryzys, wyjazd.
+
+
+% ============================================================
+\section{Mapa cieplna (HeatmapData)}
+\label{sec:heatmap}
+\index{heatmap}
+\index{mapa cieplna}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs HeatmapData}]
+export interface HeatmapData {
+  perPerson: Record<string, number[][]>;  // 7x24 matrix
+  combined: number[][];                    // 7x24 matrix
+}
+\end{lstlisting}
+
+Mapa cieplna to macierz $7 \times 24$ (dzień tygodnia $\times$ godzina dnia), gdzie każda komórka zawiera liczbę wiadomości wysłanych w~danym przedziale. Indeksowanie:
+\begin{itemize}
+  \item Wiersz 0 = niedziela, 1 = poniedziałek, ..., 6 = sobota (konwencja JavaScript \tsfunc{getDay()})
+  \item Kolumna 0 = 00:00--00:59, 1 = 01:00--01:59, ..., 23 = 23:00--23:59
+\end{itemize}
+
+Generowane są dwie wersje: \texttt{perPerson} (osobna heatmapa dla każdego uczestnika) i~\texttt{combined} (zsumowana).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.48]
+  % Title
+  \node[font=\small\bfseries, PodBlueDark] at (12, 8.5) {Przykładowa mapa cieplna --- aktywność łączna};
+
+  % Day labels (left)
+  \node[font=\tiny, anchor=east] at (-0.3, 7) {Nd};
+  \node[font=\tiny, anchor=east] at (-0.3, 6) {Pn};
+  \node[font=\tiny, anchor=east] at (-0.3, 5) {Wt};
+  \node[font=\tiny, anchor=east] at (-0.3, 4) {Sr};
+  \node[font=\tiny, anchor=east] at (-0.3, 3) {Cz};
+  \node[font=\tiny, anchor=east] at (-0.3, 2) {Pt};
+  \node[font=\tiny, anchor=east] at (-0.3, 1) {Sb};
+
+  % Hour labels (bottom)
+  \foreach \h in {0,2,...,22} {
+    \node[font=\tiny, anchor=north] at (\h+0.5, 0.4) {\h};
+  }
+  \node[font=\scriptsize, PodTextSecondary] at (12, -0.2) {Godzina dnia};
+
+  % Heatmap cells — example data pattern
+  % Night hours (0-7): low activity
+  % Morning (8-11): moderate
+  % Afternoon (12-17): moderate-high
+  % Evening (18-22): high peak
+  % Late night (23): moderate
+
+  \foreach \day in {0,...,6} {
+    \foreach \hour in {0,...,23} {
+      % Generate pseudo-random intensity based on typical messaging patterns
+      \pgfmathsetmacro{\baseval}{
+        (\hour >= 0 && \hour <= 6) ? 5 :
+        (\hour >= 7 && \hour <= 9) ? 25 :
+        (\hour >= 10 && \hour <= 14) ? 40 :
+        (\hour >= 15 && \hour <= 17) ? 55 :
+        (\hour >= 18 && \hour <= 21) ? 80 :
+        (\hour == 22) ? 60 :
+        30
+      }
+      % Weekend boost for late hours
+      \pgfmathsetmacro{\weekendboost}{
+        (\day == 0 || \day == 6) ? (
+          (\hour >= 22 || \hour <= 2) ? 20 : 5
+        ) : 0
+      }
+      \pgfmathsetmacro{\intensity}{min(\baseval + \weekendboost, 100)}
+      \pgfmathsetmacro{\colorval}{\intensity/100}
+      \fill[PodBlue!\intensity!white] (\hour, {7-\day}) rectangle ++(1, 1);
+      \draw[white, line width=0.3pt] (\hour, {7-\day}) rectangle ++(1, 1);
+    }
+  }
+
+  % Color scale legend
+  \node[font=\tiny, anchor=east] at (26.5, 7) {Więcej};
+  \node[font=\tiny, anchor=east] at (26.5, 1) {Mniej};
+  \foreach \i in {0,...,5} {
+    \pgfmathsetmacro{\pct}{\i*20}
+    \fill[PodBlue!\pct!white] (27, {1+\i}) rectangle ++(0.7, 1);
+    \draw[white, line width=0.3pt] (27, {1+\i}) rectangle ++(0.7, 1);
+  }
+\end{tikzpicture}
+\caption{Przykładowa mapa cieplna aktywności wiadomości (7 dni $\times$ 24~godziny). Intensywność koloru odpowiada liczbie wiadomości w~danym przedziale.}
+\label{fig:heatmap-example}
+\end{figure}
+
+
+% ============================================================
+\section{Dane trendów (TrendData)}
+\label{sec:trend-data}
+\index{TrendData}
+\index{metryki!trendów}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs TrendData}]
+export interface TrendData {
+  responseTimeTrend: Array<{
+    month: string;
+    perPerson: Record<string, number>;
+  }>;
+  messageLengthTrend: Array<{
+    month: string;
+    perPerson: Record<string, number>;
+  }>;
+  initiationTrend: Array<{
+    month: string;
+    perPerson: Record<string, number>;
+  }>;
+}
+\end{lstlisting}
+
+Obiekt \tstype{TrendData} zawiera trzy tablice trendów miesięcznych:
+
+\begin{description}[style=nextline]
+
+\item[\metric{responseTimeTrend}]
+Średni czas odpowiedzi (w~ms) per osoba w~każdym miesiącu. Obliczany z~akumulatora \texttt{monthlyResponseTimes}. Rosnący trend = malejące zainteresowanie; malejący = rosnące zaangażowanie.
+
+\item[\metric{messageLengthTrend}]
+Średnia długość wiadomości (w~słowach) per osoba w~każdym miesiącu. Obliczana z~akumulatora \texttt{monthlyWordCounts}. Malejący trend = coraz krótsze odpowiedzi, możliwe znudzenie.
+
+\item[\metric{initiationTrend}]
+Liczba inicjacji rozmów per osoba w~każdym miesiącu. Obliczana z~mapy \texttt{monthlyInitiations}. Trend ujawnia zmiany w~tym, kto częściej szuka kontaktu.
+
+\end{description}
+
+Wszystkie trzy trendy są kluczowymi danymi wejściowymi dla wyników wiralnych (sekcja~\ref{sec:viral-scores}) --- w~szczególności \metric{interestScores} i~\metric{ghostRisk}.
+
+
+% ============================================================
+\section{Indeks wzajemności (ReciprocityIndex)}
+\label{sec:reciprocity-index}
+\index{ReciprocityIndex}
+\index{indeks wzajemności}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs ReciprocityIndex}]
+export interface ReciprocityIndex {
+  overall: number;          // 0-100, 50 = perfect balance
+  messageBalance: number;   // 0-100
+  initiationBalance: number;// 0-100
+  responseTimeSymmetry: number; // 0-100
+  reactionBalance: number;  // 0-100
+}
+\end{lstlisting}
+
+Indeks wzajemności to metryka kompozytowa mierząca \textbf{równowagę} między uczestnikami. Składa się z~4~komponentów, każdy w~skali 0--100, gdzie 50 oznacza idealną równowagę (dla rozmów 1:1).
+
+\subsection{Komponenty}
+
+\begin{description}[style=nextline]
+
+\item[\metric{messageBalance}]
+Jak blisko podziału 50/50 jest proporcja wiadomości.
+\begin{equation}
+  \text{messageBalance} = \lfloor 100 \cdot (1 - 2 \cdot |\text{ratioA} - 0.5|) \rceil
+\end{equation}
+Wartości: 100 gdy ratio = 0.5 (idealnie); 0 gdy ratio = 0 lub 1 (jednostronna).
+
+\item[\metric{initiationBalance}]
+Jak równomiernie rozkładają się inicjacje rozmów.
+\begin{equation}
+  \text{initiationBalance} = \lfloor 100 \cdot \left(1 - 2 \cdot \left|\frac{\text{initA}}{\text{initA} + \text{initB}} - 0.5\right|\right) \rceil
+\end{equation}
+
+\item[\metric{responseTimeSymmetry}]
+Jak podobne są mediany czasu odpowiedzi obu osób.
+\begin{equation}
+  \text{responseTimeSymmetry} = \lfloor \frac{\min(\text{rtA}, \text{rtB})}{\max(\text{rtA}, \text{rtB})} \cdot 100 \rceil
+\end{equation}
+Wartość 100 gdy obie osoby odpowiadają tak samo szybko; spada gdy jedna jest znacząco wolniejsza.
+
+\item[\metric{reactionBalance}]
+Jak równomiernie obie strony reagują na wiadomości.
+\begin{equation}
+  \text{reactionBalance} = \lfloor 100 \cdot \left(1 - 2 \cdot \left|\frac{\text{reactA}}{\text{reactA} + \text{reactB}} - 0.5\right|\right) \rceil
+\end{equation}
+
+\end{description}
+
+\subsection{Wynik ogólny}
+
+\begin{equation}
+\label{eq:reciprocity-overall}
+\text{overall} = \lfloor \frac{\text{messageBalance} + \text{initiationBalance} + \text{responseTimeSymmetry} + \text{reactionBalance}}{4} \rceil
+\end{equation}
+
+Wszystkie 4~komponenty mają jednakową wagę. Wynik \texttt{overall} jest następnie używany jako komponent \metric{Reciprocity} w~wyniku zdrowia relacji (Rozdział~\ref{ch:health-score}).
+
+\begin{infobox}[title=Ograniczenie do rozmów 1:1]
+Indeks wzajemności jest najbardziej miarodajny dla rozmów dwuosobowych. Dla rozmów grupowych ($> 2$ uczestników) silnik używa pierwszych dwóch uczestników z~listy, co daje wynik przybliżony. Pełna analiza wzajemności w~grupach wymaga analizy każdej pary osobno.
+\end{infobox}
+
+
+% ============================================================
+\section{Wyniki wiralne (ViralScores)}
+\label{sec:viral-scores}
+\index{ViralScores}
+\index{wyniki wiralne}
+
+Moduł wiralny oblicza ,,zabawne'' metryki zaprojektowane z~myślą o~udostępnianiu w~mediach społecznościowych. Wszystkie wyniki to czysta matematyka, bez AI.
+
+Plik: \filepath{src/lib/analysis/viral-scores.ts}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs ViralScores}]
+export interface ViralScores {
+  compatibilityScore: number;       // 0-100
+  interestScores: Record<string, number>;  // 0-100 per person
+  ghostRisk: Record<string, GhostRiskData>; // per person
+  delusionScore: number;            // 0-100
+  delusionHolder?: string;
+}
+\end{lstlisting}
+
+\subsection{compatibilityScore (0--100)}
+\label{subsec:compatibility}
+\index{compatibility score}
+
+Wynik kompatybilności oparty na 5~równoważnych pod-metrykach:
+
+\begin{equation}
+\text{compatibilityScore} = \text{clamp}\left(\lfloor\frac{S_1 + S_2 + S_3 + S_4 + S_5}{5}\rceil, 0, 100\right)
+\end{equation}
+
+\begin{table}[H]
+\centering
+\caption{Pod-metryki wyniku kompatybilności}
+\label{tab:compatibility-submetrics}
+\rowcolors{2}{white}{PodPurple!5}
+\small
+\begin{tabularx}{\textwidth}{L{3.5cm} X}
+\toprule
+\textbf{Pod-metryka} & \textbf{Opis i~algorytm} \\
+\midrule
+$S_1$: Activity Overlap &
+Nakładanie się rozkładów godzinowych aktywności. Sumuje rozkłady procentowe na 24~godziny i~oblicza overlap jako $\sum_{h=0}^{23} \min(\text{pct}_A[h], \text{pct}_B[h])$. Wzorzec Szymkiewicza-Simpsona. \\
+
+$S_2$: Response Symmetry &
+Symetria medianowych czasów odpowiedzi: $100 - \frac{|\text{med}_A - \text{med}_B|}{\max(\text{med}_A, \text{med}_B)} \cdot 100$. \\
+
+$S_3$: Message Balance &
+Równowaga ilości wiadomości: $100 - |\text{ratio}_A - 0.5| \cdot 200$. \\
+
+$S_4$: Engagement Balance &
+Symetria wskaźników reaktywności: $100 - |\text{rate}_A - \text{rate}_B| \cdot 500$. Współczynnik 500 penalizuje nawet niewielkie różnice. \\
+
+$S_5$: Length Match &
+Podobieństwo średnich długości wiadomości: $100 - \frac{|\text{avg}_A - \text{avg}_B|}{\max(\text{avg}_A, \text{avg}_B)} \cdot 100$. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{interestScores (0--100, per osoba)}
+\label{subsec:interest-scores}
+\index{interest score}
+
+Wynik zainteresowania mierzy, jak bardzo dana osoba jest zaangażowana w~relację. Obliczany z~6~ważonych czynników:
+
+\begin{equation}
+\label{eq:interest-score}
+\text{interest} = 0.25 \cdot I_1 + 0.20 \cdot I_2 + 0.15 \cdot I_3 + 0.20 \cdot I_4 + 0.10 \cdot I_5 + 0.10 \cdot I_6
+\end{equation}
+
+\begin{table}[H]
+\centering
+\caption{Czynniki wyniku zainteresowania z~wagami}
+\label{tab:interest-factors}
+\rowcolors{2}{white}{PodBlue!3}
+\small
+\begin{tabularx}{\textwidth}{C{1cm} L{3cm} C{1.2cm} X}
+\toprule
+\textbf{Nr} & \textbf{Czynnik} & \textbf{Waga} & \textbf{Algorytm} \\
+\midrule
+$I_1$ & Częstotliwość inicjacji & 25\% & $\frac{\text{init}[p]}{\sum \text{init}} \cdot 100$ --- wyżej = bardziej aktywnie szuka kontaktu \\
+$I_2$ & Trend czasu odpowiedzi & 20\% & $50 - \frac{\text{slope}}{1200}$ --- ujemny slope (szybsze odpowiedzi) = wyższy wynik \\
+$I_3$ & Trend długości wiadomości & 15\% & $50 + \text{slope} \cdot 25$ --- rosnąca długość = większe zaangażowanie \\
+$I_4$ & Częstotliwość reakcji & 20\% & $\text{reactionRate} \cdot 500$ --- wiecej reakcji = więcej uwagi \\
+$I_5$ & Double texting (odwrotność) & 10\% & $\frac{\text{dt} \cdot 1000}{\text{total}} \cdot 2$ --- więcej double textów = wyższe zaangażowanie \\
+$I_6$ & Aktywność nocna & 10\% & $\frac{\text{lateNight}}{\text{totalMessages}} \cdot 1000$ --- nocne wiadomości = silniejsze emocje \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{ghostRisk (0--100, per osoba)}
+\label{subsec:ghost-risk}
+\index{ghost risk}
+
+Ryzyko ghostingu mierzy prawdopodobieństwo, że osoba odejdzie z~rozmowy. Opiera się na porównaniu \textbf{ostatnich 3~miesięcy} z~\textbf{wcześniejszym okresem}. Wymaga minimum 6~miesięcy danych.
+
+\begin{equation}
+\label{eq:ghost-risk}
+\text{ghostRisk} = \text{clamp}\left(0.30 \cdot G_1 + 0.25 \cdot G_2 + 0.25 \cdot G_3 + 0.20 \cdot G_4, \; 0, 100\right)
+\end{equation}
+
+\begin{table}[H]
+\centering
+\caption{4 trendy analizowane przez algorytm ghostRisk}
+\label{tab:ghost-risk-trends}
+\rowcolors{2}{white}{PodDanger!5}
+\small
+\begin{tabularx}{\textwidth}{C{1cm} L{3.2cm} C{1.2cm} X}
+\toprule
+\textbf{Nr} & \textbf{Trend} & \textbf{Waga} & \textbf{Negatywny sygnał} \\
+\midrule
+$G_1$ & Czas odpowiedzi & 30\% & Rośnie --- osoba odpowiada coraz wolniej \\
+$G_2$ & Długość wiadomości & 25\% & Maleje --- osoba pisze coraz krócej \\
+$G_3$ & Inicjacje rozmów & 25\% & Maleje --- osoba rzadziej inicjuje kontakt \\
+$G_4$ & Wolumen wiadomości & 20\% & Maleje --- osoba pisze mniej wiadomości \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Każdy pod-wynik $G_i$ jest obliczany jako procentowy wzrost/spadek między okresami:
+\begin{equation}
+  G_i = \text{clamp}\left(\frac{|\text{earlier}_i - \text{recent}_i|}{\text{earlier}_i} \cdot 100, \; 0, 100\right)
+\end{equation}
+
+Gdy $G_i > 30$, do tablicy \texttt{factors[]} dodawany jest opis w~języku polskim (np.\ ,,Czas odpowiedzi rośnie'').
+
+\subsection{delusionScore (0--100) i delusionHolder}
+\label{subsec:delusion-score}
+\index{delusion score}
+
+Wynik ,,urojeniowy'' mierzy \textbf{asymetrię zainteresowania} --- jak bardzo różnią się interest scores obu osób.
+
+\begin{equation}
+  \text{delusionScore} = |\text{interest}_A - \text{interest}_B|
+\end{equation}
+
+\begin{itemize}
+  \item \texttt{delusionHolder} = osoba z~\emph{wyższym} interestem (ta, która ,,bardziej się stara'' podczas gdy druga strona jest mniej zaangażowana)
+  \item Jeśli różnica $< 5$ punktów, \texttt{delusionHolder = undefined} (nie ma ,,urojenia'')
+  \item Wynik 0 = idealna symetria; 100 = skrajnie jednostronne zainteresowanie
+\end{itemize}
+
+\begin{infobox}[title=Kontekst wiralowy]
+Nazwa ,,delusion score'' jest celowo prowokacyjna --- ma zachęcać do udostępniania wyników w~social media. W~interfejsie UI jest prezentowana z~humorem i~odpowiednim disclaimerem.
+\end{infobox}
+
+
+% ============================================================
+\section{System odznak (Badges)}
+\label{sec:badges}
+\index{badges}
+\index{odznaki}
+
+System odznak przyznaje zabawne osiągnięcia uczestnikom na podstawie ich wzorców komunikacji. Każda odznaka ma unikalnego zwycięzcę --- osobę z~najwyższym wynikiem w~danej kategorii.
+
+Plik: \filepath{src/lib/analysis/badges.ts}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Badge}]
+export interface Badge {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  holder: string;      // kto zdobył odznakę
+  evidence: string;    // dowód (wartość liczbowa)
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Kompletna lista 12 odznak systemu \podtekst}
+\label{tab:badges}
+\rowcolors{2}{white}{PodPurple!4}
+\small
+\begin{tabularx}{\textwidth}{C{0.5cm} C{0.5cm} L{2.3cm} L{3.2cm} X}
+\toprule
+\textbf{\#} & \textbf{} & \textbf{Nazwa} & \textbf{ID} & \textbf{Kryterium przyznania} \\
+\midrule
+1 & \raisebox{-1pt}{\Large $\bigcirc$} & Nocny Marek & \texttt{night-owl} & Najwyższy \% wiadomości wysłanych 22:00--3:59 \\
+2 & \raisebox{-1pt}{\Large $\bigcirc$} & Ranny Ptaszek & \texttt{early-bird} & Najwyższa łączna liczba wiadomości przed 8:00 \\
+3 & \raisebox{-1pt}{\Large $\bigcirc$} & Ghosting Champion & \texttt{ghost-champion} & Wysłał(a) ostatnią wiadomość przed najdłuższą ciszą \\
+4 & \raisebox{-1pt}{\Large $\bigcirc$} & Double Texter & \texttt{double-texter} & Najczęściej pisał(a) 2+ wiadomości bez odpowiedzi \\
+5 & \raisebox{-1pt}{\Large $\bigcirc$} & Powieściopisarz & \texttt{novelist} & Najwyższa średnia długość wiadomości (słowa) \\
+6 & \raisebox{-1pt}{\Large $\bigcirc$} & Speed Demon & \texttt{speed-demon} & Najszybsza mediana czasu odpowiedzi (\tsfunc{findLowest}) \\
+7 & \raisebox{-1pt}{\Large $\bigcirc$} & Emoji King/Queen & \texttt{emoji-monarch} & Najwyższy stosunek emoji na wiadomość \\
+8 & \raisebox{-1pt}{\Large $\bigcirc$} & Inicjator & \texttt{initiator} & Najczęstsze rozpoczynanie rozmów \\
+9 & \raisebox{-1pt}{\Large $\bigcirc$} & Heart Bomber & \texttt{heart-bomber} & Najwięcej reakcji serduszkowych (wszystkie warianty $\heartsuit$) \\
+10 & \raisebox{-1pt}{\Large $\bigcirc$} & Link Lord & \texttt{link-lord} & Najwięcej udostępnionych linków \\
+11 & \raisebox{-1pt}{\Large $\bigcirc$} & Streak Master & \texttt{streak-master} & Najdłuższa seria kolejnych dni z~wiadomościami \\
+12 & \raisebox{-1pt}{\Large $\bigcirc$} & Detektyw & \texttt{question-master} & Najwięcej zadanych pytań \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Algorytm computeStreaks()}
+\label{subsec:compute-streaks}
+\index{streak!algorytm}
+
+Odznaka \emph{Streak Master} wymaga obliczenia najdłuższej serii kolejnych dni, w~których osoba wysłała przynajmniej jedną wiadomość.
+
+\begin{lstlisting}[style=podcode, caption={Algorytm obliczania streak-ów}]
+function computeStreaks(
+  conversation: ParsedConversation,
+): Record<string, number> {
+  // 1. Zbierz unikalne dni per osoba
+  const daysPerPerson = new Map<string, Set<string>>();
+  for (const msg of conversation.messages) {
+    const dayKey = new Date(msg.timestamp).toISOString().slice(0, 10);
+    if (!daysPerPerson.has(msg.sender))
+      daysPerPerson.set(msg.sender, new Set());
+    daysPerPerson.get(msg.sender)!.add(dayKey);
+  }
+
+  // 2. Dla kazdej osoby: posortuj dni, znajdz najdluzszy ciag
+  for (const [name, daySet] of daysPerPerson) {
+    const sortedDays = [...daySet].sort();
+    let maxStreak = 1, currentStreak = 1;
+
+    for (let i = 1; i < sortedDays.length; i++) {
+      const prevDate = new Date(sortedDays[i - 1] + 'T00:00:00Z');
+      const currDate = new Date(sortedDays[i] + 'T00:00:00Z');
+      const diffDays = (currDate - prevDate) / (1000 * 60 * 60 * 24);
+
+      if (Math.round(diffDays) === 1) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else {
+        currentStreak = 1;
+      }
+    }
+    streaks[name] = maxStreak;
+  }
+  return streaks;
+}
+\end{lstlisting}
+
+\textbf{Krok po kroku:}
+\begin{enumerate}
+  \item Dla każdej wiadomości oblicz klucz dnia (format ISO \texttt{YYYY-MM-DD}) i~dodaj do zbioru \tstype{Set<string>} danej osoby.
+  \item Posortuj unikalne dni leksykograficznie (format ISO gwarantuje poprawne sortowanie).
+  \item Iteruj po parach kolejnych dni: jeśli różnica wynosi dokładnie 1~dzień, inkrementuj \texttt{currentStreak}; w~przeciwnym razie resetuj do 1.
+  \item Śledź \texttt{maxStreak} --- najdłuższa znaleziona seria.
+\end{enumerate}
+
+\textbf{Uwaga:} Odznaka jest przyznawana tylko gdy \texttt{maxStreak > 1} (seria minimum 2 dni).
+
+\subsection{Mechanizm Heart Bomber}
+\label{subsec:heart-bomber}
+
+Odznaka Heart Bomber wymaga identyfikacji reakcji serduszkowych we wszystkich ich wariantach Unicode. Implementacja używa wyrażenia regularnego dopasowującego 15~wariantów:
+
+\begin{lstlisting}[style=podcode]
+// Match all heart emoji variants
+if (/\u2764|\u{1F493}|\u{1F496}|\u{1F497}|\u{1F498}|
+     \u{1F499}|\u{1F49A}|\u{1F49B}|\u{1F49C}|\u{1F5A4}|
+     \u{1F90D}|\u{1F90E}|\u{1FA77}|\u{2763}|\u{1F9E1}/u
+    .test(reaction.emoji)) {
+  hearts += reaction.count;
+}
+\end{lstlisting}
+
+Warianty obejmują: czerwone serce ($\heartsuit$), pulsujące, rosnące, ze strzałą, niebieskie, zielone, żółte, fioletowe, czarne, białe, brązowe, różowe, wykrzyknikowe i~ogniste.
+
+
+% ============================================================
+\section{Najlepszy czas na wiadomość (BestTimeToText)}
+\label{sec:best-time-to-text}
+\index{BestTimeToText}
+\index{najlepszy czas}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs BestTimeToText}]
+export interface BestTimeToText {
+  perPerson: Record<string, {
+    bestDay: string;        // Polska nazwa dnia (np. "Poniedziałek")
+    bestHour: number;       // 0-23
+    bestWindow: string;     // np. "Poniedziałki 14:00-16:00"
+    avgResponseMs: number;  // mediana czasu odpowiedzi
+  }>;
+}
+\end{lstlisting}
+
+Algorytm iteruje po macierzy heatmapy danej osoby ($7 \times 24$) i~znajduje komórkę \texttt{(day, hour)} z~najwyższą liczbą wiadomości. Wynik prezentowany jest w~formie czytelnego okna czasowego.
+
+\textbf{Algorytm:}
+\begin{enumerate}
+  \item Dla każdej osoby: przeszukaj macierz heatmapy, znajdź \texttt{(bestDay, bestHour)} z~maksymalnym zliczeniem.
+  \item Utwórz 2-godzinne okno zaczynające się od \texttt{bestHour}.
+  \item Sformatuj wynik: polska nazwa dnia w~liczbie mnogiej + zakres godzin (np.\ ,,Piątki 20:00--22:00'').
+  \item Dodaj medianę czasu odpowiedzi jako informację uzupełniającą.
+\end{enumerate}
+
+Polskie nazwy dni są mapowane za pomocą stałych:
+
+\begin{lstlisting}[style=podcode]
+const POLISH_DAYS: Record<number, string> = {
+  0: 'Niedziela', 1: 'Poniedzialek', 2: 'Wtorek',
+  3: 'Sroda',     4: 'Czwartek',     5: 'Piatek',
+  6: 'Sobota',
+};
+const POLISH_DAYS_PLURAL: Record<number, string> = {
+  0: 'Niedziele', 1: 'Poniedzialki', 2: 'Wtorki',
+  3: 'Srody',     4: 'Czwartki',     5: 'Piatki',
+  6: 'Soboty',
+};
+\end{lstlisting}
+
+
+% ============================================================
+\section{Frazy charakterystyczne (Catchphrases)}
+\label{sec:catchphrases}
+\index{catchphrases}
+\index{frazy charakterystyczne}
+
+Moduł \texttt{catchphrases} identyfikuje unikalne frazy (bigramy i~trigramy), które dana osoba używa \emph{znacznie częściej} niż inni uczestnicy rozmowy.
+
+Plik: \filepath{src/lib/analysis/catchphrases.ts}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs CatchphraseEntry}]
+export interface CatchphraseEntry {
+  phrase: string;     // 2-3 slowa, np. "no dobra"
+  count: number;      // minimum 3
+  uniqueness: number; // 0-1, minimum 0.6
+}
+\end{lstlisting}
+
+\subsection{Algorytm}
+
+\begin{enumerate}
+  \item \textbf{Ekstrakcja n-gramów:} Dla każdej wiadomości każdej osoby:
+  \begin{itemize}
+    \item Tokenizacja (lowercase, bez emoji, bez stopwords, min.\ 2~znaki)
+    \item Generacja bigramów: \texttt{tokens[j] + " " + tokens[j+1]}
+    \item Generacja trigramów: \texttt{tokens[j] + " " + tokens[j+1] + " " + tokens[j+2]}
+  \end{itemize}
+
+  \item \textbf{Zliczanie globalne:} Sumuj wystąpienia każdej frazy \emph{po wszystkich} osobach.
+
+  \item \textbf{Obliczenie unikalności:} Dla każdej frazy osoby:
+  \begin{equation}
+    \text{uniqueness} = \frac{\text{count}_{person}}{\text{count}_{global}}
+  \end{equation}
+  Wartość 1.0 oznacza, że \emph{tylko} ta osoba używa tej frazy. Wartość 0.5 oznacza, że dwie osoby używają jej równo.
+
+  \item \textbf{Filtracja:}
+  \begin{itemize}
+    \item \texttt{count $\geq$ 3} --- fraza musi pojawić się przynajmniej 3~razy
+    \item \texttt{uniqueness $\geq$ 0.6} --- fraza musi być używana w~$\geq 60\%$ przez tę osobę
+  \end{itemize}
+
+  \item \textbf{Ranking:} Sortuj malejąco po $\text{count} \times \text{uniqueness}$. Weź top 8 per osoba.
+\end{enumerate}
+
+\begin{infobox}[title=Przykłady catchphrases]
+Typowe wyniki:
+\begin{itemize}
+  \item Anna: ,,no dobra'' (count: 47, uniqueness: 0.92), ,,wiesz co'' (count: 31, uniqueness: 0.78)
+  \item Michał: ,,dawaj jutro'' (count: 22, uniqueness: 0.85), ,,spoko luzik'' (count: 15, uniqueness: 1.0)
+\end{itemize}
+\end{infobox}
+
+
+% ============================================================
+\section{Metryki sieci (NetworkMetrics)}
+\label{sec:network-metrics}
+\index{NetworkMetrics}
+\index{metryki sieci}
+\index{czat grupowy}
+
+Moduł sieciowy jest aktywowany \textbf{wyłącznie} dla czatów grupowych (\texttt{conversation.metadata.isGroup === true}). Buduje ważony graf interakcji między uczestnikami.
+
+Plik: \filepath{src/lib/analysis/network.ts}
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy NetworkNode, NetworkEdge, NetworkMetrics}]
+export interface NetworkNode {
+  name: string;
+  totalMessages: number;
+  centrality: number;    // 0-1, degree centrality
+}
+
+export interface NetworkEdge {
+  from: string;
+  to: string;
+  weight: number;        // total mutual interaction count
+  fromToCount: number;   // messages from->to
+  toFromCount: number;   // messages to->from
+}
+
+export interface NetworkMetrics {
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  density: number;       // actual edges / possible edges
+  mostConnected: string; // highest centrality
+}
+\end{lstlisting}
+
+\subsection{Budowa grafu interakcji}
+
+\textbf{Definicja interakcji:} Gdy osoba A wysyła wiadomość bezpośrednio po osobie B (w~tej samej sesji, $< 6$h), tworzona jest krawędź B$\rightarrow$A (B ,,rozpoczął'' interakcję, A ,,odpowiedział''). Wiadomości tej samej osoby z~rzędu nie tworzą krawędzi.
+
+\textbf{Algorytm:}
+\begin{enumerate}
+  \item Inicjalizuj macierz interakcji $n \times n$ (zerami), gdzie $n$ = liczba uczestników.
+  \item Iteruj po wiadomościach: jeśli \texttt{prev.sender $\neq$ curr.sender} i~\texttt{gap $<$ 6h}, inkrementuj \texttt{interactions[prev.sender][curr.sender]}.
+  \item Scal krawędzie w~nieskierowane: \texttt{weight = fromToCount + toFromCount}.
+  \item Oblicz centralność stopniową: $\text{centrality}[p] = \frac{|\text{connections}[p]|}{n - 1}$.
+  \item Oblicz gęstość grafu: $\text{density} = \frac{\text{actual edges}}{\binom{n}{2}}$.
+\end{enumerate}
+
+\subsection{Centralność stopniowa (Degree Centrality)}
+\index{centralność stopniowa}
+
+\begin{equation}
+  C_D(v) = \frac{\deg(v)}{n - 1}
+\end{equation}
+
+gdzie $\deg(v)$ = liczba unikalnych osób, z~którymi $v$ wymienia wiadomości, a~$n$ = łączna liczba uczestników. Wartość 1.0 oznacza, że osoba wchodzi w~interakcje z~\emph{każdym} uczestnikiem.
+
+\subsection{Gęstość grafu}
+
+\begin{equation}
+  D = \frac{|E|}{\frac{n(n-1)}{2}}
+\end{equation}
+
+gdzie $|E|$ = liczba krawędzi z~wagą $> 0$. Gęstość 1.0 oznacza, że każda para uczestników wymienia wiadomości.
+
+\textbf{Interpretacja:}
+\begin{itemize}
+  \item $D > 0.8$ --- intensywna, wielostronna rozmowa grupowa
+  \item $0.4 < D < 0.8$ --- typowy czat grupowy z~podgrupami
+  \item $D < 0.4$ --- fragmentaryczna komunikacja; kilka osób dominuje
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+  % Nodes
+  \node[badge, fill=PodBlue!15, draw=PodBlue] (a) at (0, 2) {\small A};
+  \node[badge, fill=PodPurple!15, draw=PodPurple] (b) at (3, 3.5) {\small B};
+  \node[badge, fill=PodSuccess!15, draw=PodSuccess] (c) at (5, 1) {\small C};
+  \node[badge, fill=PodWarning!15, draw=PodWarning] (d) at (2, -0.5) {\small D};
+
+  % Edges with varying thickness
+  \draw[PodBlue, line width=3pt, opacity=0.5] (a) -- (b) node[midway, above left, font=\scriptsize] {147};
+  \draw[PodPurple, line width=2pt, opacity=0.5] (b) -- (c) node[midway, above right, font=\scriptsize] {89};
+  \draw[PodSuccess, line width=1.5pt, opacity=0.5] (a) -- (c) node[midway, below, font=\scriptsize] {52};
+  \draw[PodWarning, line width=1pt, opacity=0.5] (a) -- (d) node[midway, left, font=\scriptsize] {31};
+  \draw[PodBlue!50, line width=2.5pt, opacity=0.5] (b) -- (d) node[midway, right, font=\scriptsize] {103};
+  \draw[PodPurple!50, line width=0.5pt, opacity=0.5] (c) -- (d) node[midway, below right, font=\scriptsize] {12};
+
+  % Centrality labels
+  \node[font=\scriptsize\color{PodTextMuted}, below=3pt of a] {$C_D=1.0$};
+  \node[font=\scriptsize\color{PodTextMuted}, above=3pt of b] {$C_D=1.0$};
+  \node[font=\scriptsize\color{PodTextMuted}, right=3pt of c] {$C_D=1.0$};
+  \node[font=\scriptsize\color{PodTextMuted}, below=3pt of d] {$C_D=1.0$};
+
+  % Density label
+  \node[font=\small\bfseries\color{PodBlueDark}, anchor=west] at (6.5, 2) {$D = \frac{6}{6} = 1.0$};
+  \node[font=\scriptsize\color{PodTextSecondary}, anchor=west] at (6.5, 1.3) {Pełne połączenie};
+\end{tikzpicture}
+\caption{Przykładowy graf sieci dla czatu 4-osobowego. Grubość krawędzi odpowiada wadze (liczbie interakcji). Liczby na krawędziach = łączna liczba sekwencyjnych wymian.}
+\label{fig:network-graph}
+\end{figure}
+
+
+% ============================================================
+\subsection{Refaktoryzacja modularna (TIER 3.3)}
+\label{subsec:quant-refactoring}
+\index{silnik ilościowy!refaktoryzacja}
+
+W~ramach audytu technicznego TIER~3.3 przeprowadzono refaktoryzację monolitycznego pliku \filepath{quantitative.ts} (629~LOC) na orkiestrator (490~LOC) delegujący obliczenia do 9~wyspecjalizowanych submodułów w~katalogu \filepath{src/lib/analysis/quant/}.
+
+Główna funkcja \tsfunc{computeQuantitativeAnalysis()} pozostaje jedynym publicznym punktem wejścia --- jej sygnatura i~zwracany typ \tstype{QuantitativeAnalysis} nie uległy zmianie. Wewnętrznie deleguje ona obliczenia do submodułów, co poprawia czytelność, testowalność i~możliwość niezależnego rozwoju poszczególnych algorytmów.
+
+\begin{table}[H]
+\centering
+\caption{Submoduły katalogu \filepath{src/lib/analysis/quant/}}
+\label{tab:quant-submodules}
+\begin{tabularx}{\textwidth}{L{2.8cm}L{5.5cm}X}
+\toprule
+\textbf{Moduł} & \textbf{Eksportowane funkcje} & \textbf{Opis} \\
+\midrule
+\filepath{helpers.ts} & \tsfunc{extractEmojis}, \tsfunc{countWords}, \tsfunc{tokenizeWords}, \tsfunc{median}, \tsfunc{percentile}, \tsfunc{topN} & Funkcje narzędziowe wielokrotnego użytku \\
+\filepath{types.ts} & \tstype{PersonAccumulator}, \tsfunc{createPersonAccumulator} & Typ akumulatora per osoba i~jego factory \\
+\filepath{bursts.ts} & \tsfunc{detectBursts} & Detekcja serii wiadomości (burst activity) \\
+\filepath{trends.ts} & \tsfunc{computeTrends} & Obliczanie trendów miesięcznych \\
+\filepath{reciprocity.ts} & \tsfunc{computeReciprocityIndex} & Indeks wzajemności komunikacji \\
+\filepath{sentiment.ts} & \tsfunc{computeSentimentScore} & Wynik sentymentu wiadomości \\
+\filepath{conflicts.ts} & \tsfunc{detectConflicts} & Detekcja konfliktów w~konwersacji \\
+\filepath{intimacy.ts} & \tsfunc{computeIntimacyProgression} & Progresja intymności w~czasie \\
+\filepath{index.ts} & (re-eksporty) & Barrel export --- agreguje eksporty wszystkich submodułów \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title=Korzyści refaktoryzacji]
+\begin{itemize}
+  \item \textbf{Testowalność} --- każdy submoduł może być testowany w~izolacji (patrz TIER~3.1: Vitest test suite)
+  \item \textbf{Czytelność} --- orkiestrator (\filepath{quantitative.ts}) zawiera wyłącznie logikę kompozycji, a~nie szczegóły implementacyjne poszczególnych algorytmów
+  \item \textbf{Rozszerzalność} --- dodanie nowej metryki wymaga utworzenia nowego submodułu i~jednolinijkowego importu w~orkiestratorze
+  \item \textbf{Kompatybilność} --- publiczny interfejs (\tsfunc{computeQuantitativeAnalysis()} $\to$ \tstype{QuantitativeAnalysis}) pozostał niezmieniony --- żaden konsument nie wymagał modyfikacji
+\end{itemize}
+\end{infobox}
+
+
+% ============================================================
+\section{Kompletny przepływ danych}
+\label{sec:data-flow-complete}
+
+Na zakończenie rozdziału przedstawiamy kompletny schemat przepływu danych przez silnik analizy ilościowej --- od wejścia \tstype{ParsedConversation} do wyjścia \tstype{QuantitativeAnalysis}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.6cm, font=\small]
+  % Input
+  \node[startstop, minimum width=4cm] (input) {ParsedConversation};
+
+  % Main function
+  \node[pipeline active, below=0.8cm of input, minimum width=5cm] (main) {computeQuantitativeAnalysis()};
+
+  % Phase 2 outputs
+  \node[podbox blue, below left=1cm and -0.5cm of main, minimum width=2.8cm] (pm) {PersonMetrics};
+  \node[podbox blue, below=1cm of main, minimum width=2.8cm] (tm) {TimingMetrics};
+  \node[podbox blue, below right=1cm and -0.5cm of main, minimum width=2.8cm] (em) {EngagementMetrics};
+
+  % Phase 3 outputs
+  \node[podbox purple, below left=0.8cm and -0.5cm of pm, minimum width=2.2cm] (pat) {PatternMetrics};
+  \node[podbox purple, below=0.8cm of tm, minimum width=2.2cm] (heat) {HeatmapData};
+  \node[podbox purple, below right=0.8cm and -0.5cm of em, minimum width=2.2cm] (trend) {TrendData};
+
+  % Sub-modules
+  \node[podbox green, below left=0.8cm and 0.3cm of heat, minimum width=2.2cm] (recip) {ReciprocityIndex};
+  \node[podbox green, below=0.8cm of heat, minimum width=2.2cm] (viral) {ViralScores};
+  \node[podbox green, below right=0.8cm and 0.3cm of heat, minimum width=2.2cm] (badge) {Badges};
+
+  \node[podbox amber, below left=0.5cm and -0.2cm of viral, minimum width=2.2cm] (best) {BestTimeToText};
+  \node[podbox amber, below right=0.5cm and -0.2cm of viral, minimum width=2.2cm] (catch) {Catchphrases};
+  \node[podbox amber, below=1.2cm of viral, minimum width=2.2cm] (net) {NetworkMetrics};
+
+  % Output
+  \node[startstop, below=1cm of net, minimum width=4cm] (output) {QuantitativeAnalysis};
+
+  % Arrows
+  \draw[dataarrow] (input) -- (main);
+  \draw[podarrow] (main) -- (pm);
+  \draw[podarrow] (main) -- (tm);
+  \draw[podarrow] (main) -- (em);
+  \draw[podarrow] (pm) -- (pat);
+  \draw[podarrow] (tm) -- (heat);
+  \draw[podarrow] (em) -- (trend);
+  \draw[podarrow] (heat) -- (recip);
+  \draw[podarrow] (heat) -- (viral);
+  \draw[podarrow] (heat) -- (badge);
+  \draw[podarrow] (viral) -- (best);
+  \draw[podarrow] (viral) -- (catch);
+  \draw[podarrow] (viral) -- (net);
+  \draw[dataarrow] (net) -- (output);
+\end{tikzpicture}
+\caption{Kompletny schemat przepływu danych w~silniku analizy ilościowej. Kolory: \textcolor{PodBlue}{niebieski} = metryki fazy 2, \textcolor{PodPurple}{fioletowy} = metryki fazy 3, \textcolor{PodSuccess}{zielony} = metryki kompozytowe, \textcolor{PodWarning}{pomarańczowy} = moduły specjalistyczne.}
+\label{fig:complete-data-flow}
+\end{figure}
+
+Wynikowy obiekt \tstype{QuantitativeAnalysis} zawiera 12~grup metryk:
+
+\begin{lstlisting}[style=podcode, caption={Kompletny interfejs QuantitativeAnalysis}]
+export interface QuantitativeAnalysis {
+  perPerson: Record<string, PersonMetrics>;
+  timing: TimingMetrics;
+  engagement: EngagementMetrics;
+  patterns: PatternMetrics;
+  heatmap: HeatmapData;
+  trends: TrendData;
+  viralScores?: ViralScores;
+  badges?: Badge[];
+  bestTimeToText?: BestTimeToText;
+  catchphrases?: CatchphraseResult;
+  networkMetrics?: NetworkMetrics;
+  reciprocityIndex?: ReciprocityIndex;
+}
+\end{lstlisting}
+
+Pola oznaczone \texttt{?} (opcjonalne) są obecne po fazie 3 przetwarzania końcowego. \texttt{networkMetrics} jest dostępny wyłącznie dla czatów grupowych.
+
+\vfill
+\begin{center}
+\small\color{PodTextMuted}
+\rule{4cm}{0.5pt}\\[4pt]
+Koniec Rozdziału~\thechapter. Następny: Rozdział~6 --- Silnik Analizy AI.
+\end{center}

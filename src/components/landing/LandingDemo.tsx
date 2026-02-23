@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
+import { createPortal } from 'react-dom';
 import {
   motion,
+  AnimatePresence,
   useMotionValue,
   animate,
   type PanInfo,
 } from 'framer-motion';
+import { X } from 'lucide-react';
 import Link from 'next/link';
 
 // ═══════════════════════════════════════════════════════════
@@ -2444,6 +2447,27 @@ export default function LandingDemo() {
   const sectionRef = useRef<HTMLElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
+  const [expandedSlide, setExpandedSlide] = useState<number | null>(null);
+
+  // Body scroll lock when mobile overlay is open
+  useEffect(() => {
+    if (expandedSlide === null) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [expandedSlide]);
+
+  // Keyboard navigation in fullscreen overlay
+  useEffect(() => {
+    if (expandedSlide === null) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExpandedSlide(null);
+      if (e.key === 'ArrowLeft') setExpandedSlide((p) => p !== null ? ((p - 1) + total) % total : null);
+      if (e.key === 'ArrowRight') setExpandedSlide((p) => p !== null ? (p + 1) % total : null);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [expandedSlide, total]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') setCurrent((p) => (p - 1 + total) % total);
@@ -2555,6 +2579,7 @@ export default function LandingDemo() {
           style={{ x }}
           onDragStart={() => setDragging(true)}
           onDragEnd={handleDragEnd}
+          onTap={() => setExpandedSlide(current)}
         />
 
         <div ref={carouselRef} className="relative" style={{ transformStyle: 'preserve-3d' }}>
@@ -2569,15 +2594,31 @@ export default function LandingDemo() {
             return (
               <div
                 key={s.id}
-                className="flex w-full flex-col"
+                className="group/slide flex w-full flex-col"
                 style={{
                   ...style,
                   position: diff === 0 ? 'relative' : 'absolute',
                   top: diff === 0 ? undefined : 0,
                   left: 0,
                 }}
-                onClick={() => { if (diff !== 0) goTo(i); }}
+                onClick={() => {
+                  if (diff !== 0) goTo(i);
+                  else if (!dragging) setExpandedSlide(i);
+                }}
               >
+                {/* Expand hint on active slide */}
+                {diff === 0 && (
+                  <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover/slide:opacity-100">
+                    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-2 backdrop-blur-sm">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/70">
+                        <circle cx="7" cy="7" r="4.5" />
+                        <path d="M10.5 10.5L14 14" />
+                        <path d="M5.5 7h3M7 5.5v3" />
+                      </svg>
+                      <span className="font-mono text-[10px] font-medium tracking-wider text-white/70">POWIĘKSZ</span>
+                    </div>
+                  </div>
+                )}
                 <BrowserChrome onShare={() => handleShare(i)}>
                   {s.render()}
                 </BrowserChrome>
@@ -2627,8 +2668,73 @@ export default function LandingDemo() {
         {copied && (
           <span className="font-mono text-xs text-green-400">Skopiowano link!</span>
         )}
-        <p className="font-mono text-[10px] text-muted-foreground/40">Psycholog: 200 zł/h. PodTeksT: za darmo. AI analizuje w 2 min.</p>
       </div>
+
+      {/* Mobile fullscreen overlay for expanded demo slide — swipe left/right to navigate */}
+      {expandedSlide !== null && typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          <motion.div
+            key="demo-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/95"
+            onClick={(e) => { if (e.target === e.currentTarget) setExpandedSlide(null); }}
+          >
+            <button
+              onClick={() => setExpandedSlide(null)}
+              className="fixed top-4 right-4 z-[60] flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-card-hover hover:text-foreground"
+              aria-label="Zamknij"
+            >
+              <X className="size-5" />
+            </button>
+
+            {/* Slide category label + counter */}
+            <div className="sticky top-0 z-[55] flex items-center justify-center gap-3 py-3" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.9) 60%, transparent)' }}>
+              <span className="font-mono text-[10px] text-muted-foreground">{expandedSlide + 1}/{total}</span>
+              <span className="font-mono text-xs font-bold uppercase tracking-widest" style={{ color: SLIDES[expandedSlide].accent }}>
+                {SLIDES[expandedSlide].category}
+              </span>
+            </div>
+
+            {/* Desktop: side arrow buttons */}
+            <button
+              onClick={() => setExpandedSlide(((expandedSlide - 1) + total) % total)}
+              className="fixed left-3 top-1/2 z-[60] hidden -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-card-hover hover:text-foreground md:flex md:size-10"
+              aria-label="Poprzedni"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 4l-4 4 4 4" /></svg>
+            </button>
+            <button
+              onClick={() => setExpandedSlide((expandedSlide + 1) % total)}
+              className="fixed right-3 top-1/2 z-[60] hidden -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-card-hover hover:text-foreground md:flex md:size-10"
+              aria-label="Następny"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 4l4 4-4 4" /></svg>
+            </button>
+
+            {/* Swipeable content area */}
+            <motion.div
+              className="px-3 pb-16 md:mx-auto md:max-w-4xl md:px-16"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.15}
+              onDragEnd={(_, info) => {
+                if (info.offset.x < -60) {
+                  setExpandedSlide((expandedSlide + 1) % total);
+                } else if (info.offset.x > 60) {
+                  setExpandedSlide(((expandedSlide - 1) + total) % total);
+                }
+              }}
+            >
+              {SLIDES[expandedSlide].render()}
+            </motion.div>
+
+          </motion.div>
+        </AnimatePresence>,
+        document.body,
+      )}
     </section>
   );
 }

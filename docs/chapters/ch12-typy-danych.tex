@@ -1,0 +1,2773 @@
+% ============================================================
+% Rozdział 12 — Struktura Danych: Kompletna Referencja
+% ============================================================
+\chapter{Struktura Danych --- Kompletna Referencja}
+\label{ch:typy-danych}
+
+\begin{infobox}[title={Zakres rozdziału}]
+Niniejszy rozdział stanowi wyczerpującą referencję wszystkich typów danych
+używanych w~\podtekst. Obejmuje typy parserowe (model zunifikowanych wiadomości
+i~wyniki analizy ilościowej), typy analizy AI (schematy wyjściowe każdego przebiegu),
+typy magazynowania (localStorage) oraz diagramy relacji między typami.
+Każde pole jest udokumentowane z~typem, opisem i~ograniczeniami.
+\end{infobox}
+
+\begin{warningbox}[title={Konwencja nazewnicza}]
+Wszystkie interfejsy zdefiniowane są w~\typescript w~trybie \texttt{strict}.
+Klucze JSON (pola interfejsów) zapisane są w~języku angielskim, natomiast
+wartości tekstowe generowane przez AI są w~języku polskim (pl-PL).
+Pola opcjonalne oznaczone są znakiem \texttt{?} w~definicji TypeScript.
+\end{warningbox}
+
+
+% ============================================================
+\section{Typy parserowe}
+\label{sec:parser-types}
+
+Wszystkie typy z~tej sekcji zdefiniowane są w~pliku:
+
+\filepath{src/lib/parsers/types.ts}
+
+Stanowią one model zunifikowany --- niezależny od platformy źródłowej.
+Parser każdej platformy (Messenger, WhatsApp, Instagram, Telegram, Discord) normalizuje dane
+do tych samych interfejsów.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Participant}
+\label{subsec:participant}
+
+Reprezentuje uczestnika rozmowy.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Participant}]
+export interface Participant {
+  name: string;
+  platformId?: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{Participant}}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\texttt{name} & \tstype{string} & tak & Nazwa wyświetlana uczestnika (po dekodowaniu Unicode) \\
+\texttt{platformId} & \tstype{string} & nie & Identyfikator platformowy (np. Facebook ID), jeśli dostępny \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Reaction}
+\label{subsec:reaction}
+
+Reakcja na wiadomość (emoji).
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Reaction}]
+export interface Reaction {
+  emoji: string;
+  actor: string;
+  timestamp?: number;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{Reaction}}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\texttt{emoji} & \tstype{string} & tak & Emoji reakcji (po dekodowaniu Unicode z~Facebooka) \\
+\texttt{actor} & \tstype{string} & tak & Kto dodał reakcję \\
+\texttt{timestamp} & \tstype{number} & nie & Timestamp w~ms (jeśli dostępny z~platformy) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{UnifiedMessage}
+\label{subsec:unified-message}
+
+Zunifikowany model wiadomości --- rdzeń systemu typów.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs UnifiedMessage}]
+export interface UnifiedMessage {
+  index: number;
+  sender: string;
+  content: string;
+  timestamp: number;
+  type: 'text' | 'media' | 'sticker' | 'link'
+      | 'call' | 'system' | 'unsent';
+  reactions: Reaction[];
+  hasMedia: boolean;
+  hasLink: boolean;
+  isUnsent: boolean;
+}
+\end{lstlisting}
+
+\begin{longtable}{l l l p{6.5cm}}
+\caption{Pola interfejsu \tstype{UnifiedMessage}} \label{tab:unified-message} \\
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\endhead
+\texttt{index} & \tstype{number} & tak & Sekwencyjny indeks w~rozmowie (0-based) \\
+\texttt{sender} & \tstype{string} & tak & Kto wysłał wiadomość \\
+\texttt{content} & \tstype{string} & tak & Treść tekstowa. Pusty string dla wiadomości czysto medialnych \\
+\texttt{timestamp} & \tstype{number} & tak & Unix timestamp w~milisekundach \\
+\texttt{type} & enum & tak & Typ wiadomości: \texttt{text}, \texttt{media}, \texttt{sticker}, \texttt{link}, \texttt{call}, \texttt{system}, \texttt{unsent} \\
+\texttt{reactions} & \tstype{Reaction[]} & tak & Lista reakcji na tę wiadomość (może być pusta) \\
+\texttt{hasMedia} & \tstype{boolean} & tak & Czy wiadomość zawiera załącznik multimedialny \\
+\texttt{hasLink} & \tstype{boolean} & tak & Czy wiadomość zawiera link/udostępnienie \\
+\texttt{isUnsent} & \tstype{boolean} & tak & Czy wiadomość została wycofana/usunięta \\
+\bottomrule
+\end{longtable}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{ParsedConversation}
+\label{subsec:parsed-conversation}
+
+Kontener rozmowy po parsowaniu.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs ParsedConversation}]
+export interface ParsedConversation {
+  platform: 'messenger' | 'whatsapp'
+           | 'instagram' | 'telegram';
+  title: string;
+  participants: Participant[];
+  messages: UnifiedMessage[];
+  metadata: {
+    totalMessages: number;
+    dateRange: {
+      start: number; // Unix ms
+      end: number;   // Unix ms
+    };
+    isGroup: boolean;
+    durationDays: number;
+  };
+}
+\end{lstlisting}
+
+\begin{longtable}{l l l p{6cm}}
+\caption{Pola interfejsu \tstype{ParsedConversation}} \label{tab:parsed-conversation} \\
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\endhead
+\texttt{platform} & enum & tak & Platforma źródłowa: \texttt{messenger}, \texttt{whatsapp}, \texttt{instagram}, \texttt{telegram} \\
+\texttt{title} & \tstype{string} & tak & Tytuł rozmowy (z~parsera lub generowany) \\
+\texttt{participants} & \tstype{Participant[]} & tak & Lista uczestników \\
+\texttt{messages} & \tstype{UnifiedMessage[]} & tak & Wszystkie wiadomości, posortowane chronologicznie (najstarsze pierwsze) \\
+\texttt{metadata.totalMessages} & \tstype{number} & tak & Łączna liczba wiadomości \\
+\texttt{metadata.dateRange.start} & \tstype{number} & tak & Unix ms --- początek rozmowy \\
+\texttt{metadata.dateRange.end} & \tstype{number} & tak & Unix ms --- koniec rozmowy \\
+\texttt{metadata.isGroup} & \tstype{boolean} & tak & Czy to czat grupowy (3+ uczestników) \\
+\texttt{metadata.durationDays} & \tstype{number} & tak & Czas trwania rozmowy w~dniach \\
+\bottomrule
+\end{longtable}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{PersonMetrics}
+\label{subsec:person-metrics}
+
+Metryki ilościowe obliczane per uczestnik. Łącznie 22~pola.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs PersonMetrics}]
+export interface PersonMetrics {
+  totalMessages: number;
+  totalWords: number;
+  totalCharacters: number;
+  averageMessageLength: number;
+  averageMessageChars: number;
+  longestMessage: {
+    content: string; length: number; timestamp: number;
+  };
+  shortestMessage: {
+    content: string; length: number; timestamp: number;
+  };
+  messagesWithEmoji: number;
+  emojiCount: number;
+  topEmojis: Array<{ emoji: string; count: number }>;
+  questionsAsked: number;
+  mediaShared: number;
+  linksShared: number;
+  reactionsGiven: number;
+  reactionsReceived: number;
+  topReactionsGiven: Array<{
+    emoji: string; count: number;
+  }>;
+  unsentMessages: number;
+  topWords: Array<{ word: string; count: number }>;
+  topPhrases: Array<{
+    phrase: string; count: number;
+  }>;
+  uniqueWords: number;
+  vocabularyRichness: number;
+}
+\end{lstlisting}
+
+\begin{longtable}{l l p{6.5cm}}
+\caption{Pola interfejsu \tstype{PersonMetrics} (22 pola)} \label{tab:person-metrics} \\
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\endhead
+\texttt{totalMessages} & \tstype{number} & Łączna liczba wiadomości wysłanych przez tę osobę \\
+\texttt{totalWords} & \tstype{number} & Łączna liczba słów \\
+\texttt{totalCharacters} & \tstype{number} & Łączna liczba znaków \\
+\texttt{averageMessageLength} & \tstype{number} & Średnia długość wiadomości w~słowach \\
+\texttt{averageMessageChars} & \tstype{number} & Średnia długość wiadomości w~znakach \\
+\texttt{longestMessage} & \tstype{object} & Najdłuższa wiadomość: \texttt{content}, \texttt{length} (słowa), \texttt{timestamp} \\
+\texttt{shortestMessage} & \tstype{object} & Najkrótsza wiadomość z~treścią: \texttt{content}, \texttt{length}, \texttt{timestamp} \\
+\texttt{messagesWithEmoji} & \tstype{number} & Liczba wiadomości zawierających co najmniej jedno emoji \\
+\texttt{emojiCount} & \tstype{number} & Łączna liczba emoji użytych \\
+\texttt{topEmojis} & \tstype{Array} & Najczęściej używane emoji: \texttt{[\{emoji, count\}]} \\
+\texttt{questionsAsked} & \tstype{number} & Wiadomości zawierające znak ,,?'' \\
+\texttt{mediaShared} & \tstype{number} & Liczba wiadomości z~załącznikami multimedialnymi \\
+\texttt{linksShared} & \tstype{number} & Liczba wiadomości z~linkami \\
+\texttt{reactionsGiven} & \tstype{number} & Łączna liczba reakcji wystawionych innym \\
+\texttt{reactionsReceived} & \tstype{number} & Łączna liczba reakcji otrzymanych \\
+\texttt{topReactionsGiven} & \tstype{Array} & Najczęściej dawane reakcje: \texttt{[\{emoji, count\}]} \\
+\texttt{unsentMessages} & \tstype{number} & Liczba wycofanych/usuniętych wiadomości \\
+\texttt{topWords} & \tstype{Array} & Top 20 najczęstszych słów (bez stopwords): \texttt{[\{word, count\}]} \\
+\texttt{topPhrases} & \tstype{Array} & Top 10 najczęstszych fraz (2--3 słowa): \texttt{[\{phrase, count\}]} \\
+\texttt{uniqueWords} & \tstype{number} & Liczba unikalnych słów użytych \\
+\texttt{vocabularyRichness} & \tstype{number} & Bogactwo słownictwa: $\frac{\text{uniqueWords}}{\text{totalWords}}$, zakres 0--1 \\
+\bottomrule
+\end{longtable}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{TimingMetrics}
+\label{subsec:timing-metrics}
+
+Metryki czasowe rozmowy.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs TimingMetrics}]
+export interface TimingMetrics {
+  perPerson: Record<string, {
+    averageResponseTimeMs: number;
+    medianResponseTimeMs: number;
+    fastestResponseMs: number;
+    slowestResponseMs: number;
+    responseTimeTrend: number;
+  }>;
+  conversationInitiations: Record<string, number>;
+  conversationEndings: Record<string, number>;
+  longestSilence: {
+    durationMs: number;
+    startTimestamp: number;
+    endTimestamp: number;
+    lastSender: string;
+    nextSender: string;
+  };
+  lateNightMessages: Record<string, number>;
+}
+\end{lstlisting}
+
+\begin{longtable}{l l p{6cm}}
+\caption{Pola interfejsu \tstype{TimingMetrics}} \label{tab:timing-metrics} \\
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\endhead
+\texttt{perPerson[].averageResponseTimeMs} & \tstype{number} & Średni czas odpowiedzi w~ms \\
+\texttt{perPerson[].medianResponseTimeMs} & \tstype{number} & Mediana czasu odpowiedzi w~ms (bardziej miarodajna niż średnia) \\
+\texttt{perPerson[].fastestResponseMs} & \tstype{number} & Najszybsza odpowiedź w~ms \\
+\texttt{perPerson[].slowestResponseMs} & \tstype{number} & Najwolniejsza odpowiedź w~ms \\
+\texttt{perPerson[].responseTimeTrend} & \tstype{number} & Trend czasu odpowiedzi: wartość dodatnia = coraz wolniej \\
+\texttt{conversationInitiations} & \tstype{Record} & Ile razy dana osoba zainicjowała rozmowę (pierwsza wiadomość po przerwie >6h) \\
+\texttt{conversationEndings} & \tstype{Record} & Ile razy dana osoba zakończyła rozmowę (ostatnia wiadomość przed przerwą >6h) \\
+\texttt{longestSilence.durationMs} & \tstype{number} & Czas trwania najdłuższej ciszy w~ms \\
+\texttt{longestSilence.startTimestamp} & \tstype{number} & Timestamp ostatniej wiadomości przed ciszą \\
+\texttt{longestSilence.endTimestamp} & \tstype{number} & Timestamp pierwszej wiadomości po ciszy \\
+\texttt{longestSilence.lastSender} & \tstype{string} & Kto wysłał ostatnią wiadomość przed ciszą \\
+\texttt{longestSilence.nextSender} & \tstype{string} & Kto przerwał ciszę \\
+\texttt{lateNightMessages} & \tstype{Record} & Wiadomości wysłane między 22:00 a~04:00, per osoba \\
+\bottomrule
+\end{longtable}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{EngagementMetrics}
+\label{subsec:engagement-metrics}
+
+Metryki zaangażowania w~rozmowę.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs EngagementMetrics}]
+export interface EngagementMetrics {
+  doubleTexts: Record<string, number>;
+  maxConsecutive: Record<string, number>;
+  messageRatio: Record<string, number>;
+  reactionRate: Record<string, number>;
+  avgConversationLength: number;
+  totalSessions: number;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{EngagementMetrics} (6 pól)}
+\label{tab:engagement-metrics}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{doubleTexts} & \tstype{Record} & Liczba ,,double texts'' (2+ wiadomości z~rzędu bez odpowiedzi), per osoba \\
+\texttt{maxConsecutive} & \tstype{Record} & Maks. wiadomości z~rzędu bez odpowiedzi, per osoba \\
+\texttt{messageRatio} & \tstype{Record} & Proporcja: wiadomości osoby / łącznie. Zakres 0--1 \\
+\texttt{reactionRate} & \tstype{Record} & Wskaźnik reakcji: reakcje dane / wiadomości otrzymane \\
+\texttt{avgConversationLength} & \tstype{number} & Średnia liczba wiadomości na sesję konwersacyjną \\
+\texttt{totalSessions} & \tstype{number} & Łączna liczba sesji konwersacyjnych (rozdzielonych przerwą >6h) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{PatternMetrics}
+\label{subsec:pattern-metrics}
+
+Metryki wzorców aktywności.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs PatternMetrics}]
+export interface PatternMetrics {
+  monthlyVolume: Array<{
+    month: string; // YYYY-MM
+    perPerson: Record<string, number>;
+    total: number;
+  }>;
+  weekdayWeekend: {
+    weekday: Record<string, number>;
+    weekend: Record<string, number>;
+  };
+  volumeTrend: number;
+  bursts: Array<{
+    startDate: string;
+    endDate: string;
+    messageCount: number;
+    avgDaily: number;
+  }>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{PatternMetrics} (4 pola)}
+\label{tab:pattern-metrics}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{monthlyVolume} & \tstype{Array} & Wolumen wiadomości per miesiąc: \texttt{month} (YYYY-MM), \texttt{perPerson}, \texttt{total} \\
+\texttt{weekdayWeekend} & \tstype{object} & Podział aktywności: dni robocze vs. weekendy, per osoba \\
+\texttt{volumeTrend} & \tstype{number} & Trend wolumenu: $>0.1$ = rosnący, $<-0.1$ = malejący, reszta = stabilny \\
+\texttt{bursts} & \tstype{Array} & Wykryte ,,wybuchy'' aktywności ($>3\times$ średnia dzienna): daty, liczba msg, średnia/dzień \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{HeatmapData}
+\label{subsec:heatmap-data}
+
+Dane do mapy ciepła aktywności.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs HeatmapData}]
+export interface HeatmapData {
+  perPerson: Record<string, number[][]>;
+  combined: number[][];
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{HeatmapData}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{perPerson} & \tstype{Record<string, number[][]>} & Macierz $7 \times 24$ per osoba: \texttt{[dayOfWeek][hourOfDay] = messageCount} \\
+\texttt{combined} & \tstype{number[][]} & Macierz $7 \times 24$ zsumowana ze wszystkich uczestników \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Indeksy: dzień tygodnia 0 (poniedziałek) -- 6 (niedziela), godzina 0--23.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{TrendData}
+\label{subsec:trend-data}
+
+Dane trendów miesięcznych.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs TrendData}]
+export interface TrendData {
+  responseTimeTrend: Array<{
+    month: string;
+    perPerson: Record<string, number>;
+  }>;
+  messageLengthTrend: Array<{
+    month: string;
+    perPerson: Record<string, number>;
+  }>;
+  initiationTrend: Array<{
+    month: string;
+    perPerson: Record<string, number>;
+  }>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{TrendData}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{responseTimeTrend} & \tstype{Array} & Miesięczny średni czas odpowiedzi per osoba \\
+\texttt{messageLengthTrend} & \tstype{Array} & Miesięczna średnia długość wiadomości per osoba \\
+\texttt{initiationTrend} & \tstype{Array} & Miesięczna proporcja inicjacji rozmów per osoba \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{ViralScores}
+\label{subsec:viral-scores}
+
+Metryki ,,wiralowe'' --- zaprojektowane jako angażujące, udostępnialne wyniki.
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy ViralScores i~GhostRiskData}]
+export interface ViralScores {
+  compatibilityScore: number;
+  interestScores: Record<string, number>;
+  ghostRisk: Record<string, GhostRiskData>;
+  delusionScore: number;
+  delusionHolder?: string;
+}
+
+export interface GhostRiskData {
+  score: number;
+  factors: string[];
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{ViralScores}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{compatibilityScore} & 0--100 & Wynik kompatybilności na podstawie nakładania aktywności, symetrii odpowiedzi, równowagi zaangażowania \\
+\texttt{interestScores} & 0--100, per os. & Wynik zainteresowania na podstawie inicjacji, trendów czasu odpowiedzi, trendów długości wiadomości \\
+\texttt{ghostRisk} & per os. & Ryzyko ghostingu: \texttt{score} (0--100, wyższy = większe ryzyko) + \texttt{factors} (czynniki ryzyka) \\
+\texttt{delusionScore} & 0--100 & Rozbieżność poziomów zainteresowania między uczestnikami \\
+\texttt{delusionHolder} & \tstype{string?} & Kto jest bardziej ,,zludzony'' (ma wyższe zainteresowanie przy niższym drugiej strony) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Badge}
+\label{subsec:badge}
+
+Odznaki i~osiągnięcia przyznawane automatycznie.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Badge}]
+export interface Badge {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  holder: string;
+  evidence: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{Badge}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{id} & \tstype{string} & Unikalny identyfikator odznaki (np. \texttt{early\_bird}) \\
+\texttt{name} & \tstype{string} & Wyświetlana nazwa odznaki \\
+\texttt{emoji} & \tstype{string} & Emoji reprezentujące odznakę \\
+\texttt{description} & \tstype{string} & Opis warunku przyznania \\
+\texttt{holder} & \tstype{string} & Kto zdobył odznakę \\
+\texttt{evidence} & \tstype{string} & Wartość statystyczna potwierdzająca przyznanie \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{BestTimeToText}
+\label{subsec:best-time}
+
+Najlepszy czas na napisanie wiadomości per osoba.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs BestTimeToText}]
+export interface BestTimeToText {
+  perPerson: Record<string, {
+    bestDay: string;
+    bestHour: number;
+    bestWindow: string;
+    avgResponseMs: number;
+  }>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{BestTimeToText}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{bestDay} & \tstype{string} & Dzień tygodnia z~najszybszymi odpowiedziami \\
+\texttt{bestHour} & \tstype{number} & Godzina (0--23) z~najszybszymi odpowiedziami \\
+\texttt{bestWindow} & \tstype{string} & Opis okna czasowego (np. ,,wtorek 14:00--16:00'') \\
+\texttt{avgResponseMs} & \tstype{number} & Średni czas odpowiedzi w~tym oknie (ms) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{CatchphraseEntry i~CatchphraseResult}
+\label{subsec:catchphrase}
+
+Charakterystyczne frazy (catchphrases) per osoba.
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy CatchphraseEntry i~CatchphraseResult}]
+export interface CatchphraseEntry {
+  phrase: string;
+  count: number;
+  uniqueness: number;
+}
+
+export interface CatchphraseResult {
+  perPerson: Record<string, CatchphraseEntry[]>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{CatchphraseEntry}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{phrase} & \tstype{string} & Fraza (2--4 słowa) \\
+\texttt{count} & \tstype{number} & Ile razy użyta \\
+\texttt{uniqueness} & 0--1 & Unikalność frazy dla tej osoby vs. inne osoby (1 = tylko ta osoba używa) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{NetworkNode, NetworkEdge, NetworkMetrics}
+\label{subsec:network}
+
+Metryki sieciowe (głównie dla czatów grupowych).
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy sieciowe}]
+export interface NetworkNode {
+  name: string;
+  totalMessages: number;
+  centrality: number;
+}
+
+export interface NetworkEdge {
+  from: string;
+  to: string;
+  weight: number;
+  fromToCount: number;
+  toFromCount: number;
+}
+
+export interface NetworkMetrics {
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  density: number;
+  mostConnected: string;
+}
+\end{lstlisting}
+
+\begin{longtable}{l l p{6cm}}
+\caption{Pola interfejsów sieciowych} \label{tab:network} \\
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\endhead
+\multicolumn{3}{l}{\textbf{\tstype{NetworkNode}}} \\
+\midrule
+\texttt{name} & \tstype{string} & Nazwa uczestnika \\
+\texttt{totalMessages} & \tstype{number} & Łączna liczba wiadomości \\
+\texttt{centrality} & 0--1 & Centralność stopnia (degree centrality) --- jak połączony jest ten węzeł \\
+\midrule
+\multicolumn{3}{l}{\textbf{\tstype{NetworkEdge}}} \\
+\midrule
+\texttt{from} & \tstype{string} & Uczestnik źródłowy \\
+\texttt{to} & \tstype{string} & Uczestnik docelowy \\
+\texttt{weight} & \tstype{number} & Łączna liczba wzajemnych interakcji \\
+\texttt{fromToCount} & \tstype{number} & Wiadomości \texttt{from} $\rightarrow$ \texttt{to} (A wysłała po B) \\
+\texttt{toFromCount} & \tstype{number} & Wiadomości \texttt{to} $\rightarrow$ \texttt{from} (B wysłała po A) \\
+\midrule
+\multicolumn{3}{l}{\textbf{\tstype{NetworkMetrics}}} \\
+\midrule
+\texttt{nodes} & \tstype{NetworkNode[]} & Lista wszystkich węzłów \\
+\texttt{edges} & \tstype{NetworkEdge[]} & Lista wszystkich krawędzi \\
+\texttt{density} & 0--1 & Gęstość grafu: rzeczywiste krawędzie / możliwe krawędzie \\
+\texttt{mostConnected} & \tstype{string} & Osoba o~najwyższej centralności \\
+\bottomrule
+\end{longtable}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{ReciprocityIndex}
+\label{subsec:reciprocity}
+
+Indeks wzajemności --- kompozytowa metryka mierząca równowagę relacji.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs ReciprocityIndex}]
+export interface ReciprocityIndex {
+  overall: number;
+  messageBalance: number;
+  initiationBalance: number;
+  responseTimeSymmetry: number;
+  reactionBalance: number;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{ReciprocityIndex}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{overall} & 0--100 & Ogólny wynik wzajemności. 50 = idealna równowaga. 0~lub 100 = całkowita jednostronność \\
+\texttt{messageBalance} & 0--100 & Równowaga liczby wiadomości \\
+\texttt{initiationBalance} & 0--100 & Kto inicjuje rozmowy --- równowaga \\
+\texttt{responseTimeSymmetry} & 0--100 & Symetria czasów odpowiedzi \\
+\texttt{reactionBalance} & 0--100 & Równowaga dawania reakcji/emoji \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{QuantitativeAnalysis}
+\label{subsec:quantitative-analysis}
+
+Kontener zbierający wszystkie metryki ilościowe.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs QuantitativeAnalysis}]
+export interface QuantitativeAnalysis {
+  perPerson: Record<string, PersonMetrics>;
+  timing: TimingMetrics;
+  engagement: EngagementMetrics;
+  patterns: PatternMetrics;
+  heatmap: HeatmapData;
+  trends: TrendData;
+  viralScores?: ViralScores;
+  badges?: Badge[];
+  bestTimeToText?: BestTimeToText;
+  catchphrases?: CatchphraseResult;
+  networkMetrics?: NetworkMetrics;
+  reciprocityIndex?: ReciprocityIndex;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{QuantitativeAnalysis}}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{perPerson} & \tstype{Record<PersonMetrics>} & tak & Metryki per uczestnik \\
+\texttt{timing} & \tstype{TimingMetrics} & tak & Metryki czasowe \\
+\texttt{engagement} & \tstype{EngagementMetrics} & tak & Metryki zaangażowania \\
+\texttt{patterns} & \tstype{PatternMetrics} & tak & Wzorce aktywności \\
+\texttt{heatmap} & \tstype{HeatmapData} & tak & Dane mapy ciepła \\
+\texttt{trends} & \tstype{TrendData} & tak & Trendy miesięczne \\
+\texttt{viralScores} & \tstype{ViralScores} & nie & Wyniki ,,wiralowe'' \\
+\texttt{badges} & \tstype{Badge[]} & nie & Przyznane odznaki \\
+\texttt{bestTimeToText} & \tstype{BestTimeToText} & nie & Najlepszy czas na wiadomość \\
+\texttt{catchphrases} & \tstype{CatchphraseResult} & nie & Charakterystyczne frazy \\
+\texttt{networkMetrics} & \tstype{NetworkMetrics} & nie & Metryki sieciowe (grupy) \\
+\texttt{reciprocityIndex} & \tstype{ReciprocityIndex} & nie & Indeks wzajemności \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy analizy AI}
+\label{sec:ai-types}
+
+Wszystkie typy z~tej sekcji zdefiniowane są w~plikach:
+
+\filepath{src/lib/analysis/types.ts}
+
+\filepath{src/lib/analysis/communication-patterns.ts}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Pass 1: RelationshipType, PersonTone, OverallDynamic}
+\label{subsec:pass1-types}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{RelationshipType}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{category} & enum & \texttt{romantic | friendship | family | professional | acquaintance} \\
+\texttt{sub\_type} & \tstype{string} & Podtyp relacji (np. ,,wczesne randkowanie'', ,,bliscy przyjaciele'') \\
+\texttt{confidence} & 0--100 & Pewność klasyfikacji \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{PersonTone}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{primary\_tone} & \tstype{string} & Dominujący ton emocjonalny \\
+\texttt{secondary\_tones} & \tstype{string[]} & Drugorzędne tony \\
+\texttt{formality\_level} & 1--10 & Poziom formalności \\
+\texttt{humor\_presence} & 1--10 & Obecność humoru \\
+\texttt{humor\_style} & enum & \texttt{self-deprecating | teasing | absurdist | sarcastic | wordplay | absent} \\
+\texttt{warmth} & 1--10 & Ciepłota emocjonalna \\
+\texttt{confidence} & 0--100 & Pewność oceny \\
+\texttt{evidence\_indices} & \tstype{number[]} & Indeksy wiadomości jako dowody \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{OverallDynamic}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{description} & \tstype{string} & 2--3 zdania opisujące główną dynamikę \\
+\texttt{energy} & enum & \texttt{high | medium | low} \\
+\texttt{balance} & enum & \texttt{balanced | person\_a\_dominant | person\_b\_dominant} \\
+\texttt{trajectory} & enum & \texttt{warming | stable | cooling | volatile} \\
+\texttt{confidence} & 0--100 & Pewność oceny \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Pass1Result (kontener)}]
+export interface Pass1Result {
+  relationship_type: RelationshipType;
+  tone_per_person: Record<string, PersonTone>;
+  overall_dynamic: OverallDynamic;
+}
+\end{lstlisting}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Pass 2: Dynamika relacyjna}
+\label{subsec:pass2-types}
+
+\subsubsection{PowerDynamics}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{PowerDynamics}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{balance\_score} & $-100$ do $+100$ & $-100$: A dominuje. $0$: równowaga. $+100$: B dominuje \\
+\texttt{who\_adapts\_more} & \tstype{string} & Nazwa osoby, która dostosowuje się bardziej \\
+\texttt{adaptation\_type} & enum & \texttt{linguistic | emotional | topical | scheduling} \\
+\texttt{evidence} & \tstype{string[]} & Opisy dowodów \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{EmotionalLaborPattern i~EmotionalLabor}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{EmotionalLaborPattern}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{type} & enum & \texttt{comforting | checking\_in | remembering\_details | managing\_mood | initiating\_plans | emotional\_support} \\
+\texttt{performed\_by} & \tstype{string} & Kto wykonuje tę pracę \\
+\texttt{frequency} & enum & \texttt{frequent | occasional | rare} \\
+\texttt{evidence\_indices} & \tstype{number[]} & Indeksy wiadomości \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{EmotionalLabor}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{primary\_caregiver} & \tstype{string} & Główny opiekun emocjonalny lub \texttt{"balanced"} \\
+\texttt{patterns} & \tstype{EmotionalLaborPattern[]} & Lista wzorców pracy emocjonalnej \\
+\texttt{balance\_score} & $-100$ do $+100$ & Równowaga pracy emocjonalnej \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{ConflictPatterns}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{ConflictPatterns}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{conflict\_frequency} & enum & \texttt{none\_observed | rare | occasional | frequent} \\
+\texttt{typical\_trigger} & \tstype{string | null} & Typowy wyzwalacz konfliktów \\
+\texttt{resolution\_style} & \tstype{Record<string, enum>} & Styl rozwiązywania per osoba: \texttt{direct\_confrontation | avoidant | passive\_aggressive | apologetic | deflecting | humor} \\
+\texttt{unresolved\_tensions} & \tstype{string[]} & Lista nierozwiązanych napięć \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{VulnerabilityProfile i~SharedLanguage}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów \tstype{VulnerabilityProfile} i~\tstype{SharedLanguage}}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\multirow{3}{*}{\tstype{VulnerabilityProfile}} & \texttt{score} & 1--10 & Poziom odsłaniania podatności na zranienie \\
+ & \texttt{examples} & \tstype{string[]} & Przykłady \\
+ & \texttt{trend} & enum & \texttt{increasing | stable | decreasing} \\
+\midrule
+\multirow{4}{*}{\tstype{SharedLanguage}} & \texttt{inside\_jokes} & 0--10 & Liczba wewnętrznych żartów \\
+ & \texttt{pet\_names} & \tstype{boolean} & Czy używają pieszczotliwych imion \\
+ & \texttt{unique\_phrases} & \tstype{string[]} & Unikalne frazy \\
+ & \texttt{language\_mirroring} & 1--10 & Stopień lustrzanego odbijania języka \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{IntimacyMarkers}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{IntimacyMarkers}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{vulnerability\_level} & \tstype{Record<string, VulnerabilityProfile>} & Profile podatności per osoba \\
+\texttt{shared\_language} & \tstype{SharedLanguage} & Wspólny język relacji \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{RedFlag i~GreenFlag}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów \tstype{RedFlag} i~\tstype{GreenFlag}}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\multirow{5}{*}{\tstype{RedFlag}} & \texttt{pattern} & \tstype{string} & Opis wzorca (PL) \\
+ & \texttt{severity} & enum & \texttt{mild | moderate | severe} \\
+ & \texttt{context\_note} & \tstype{string?} & Kontekst powagi w~danej fazie relacji \\
+ & \texttt{evidence\_indices} & \tstype{number[]} & Indeksy wiadomości \\
+ & \texttt{confidence} & 0--100 & Pewność \\
+\midrule
+\multirow{3}{*}{\tstype{GreenFlag}} & \texttt{pattern} & \tstype{string} & Opis wzorca (PL) \\
+ & \texttt{evidence\_indices} & \tstype{number[]} & Indeksy wiadomości \\
+ & \texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Pass2Result (kontener)}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Pass2Result}]
+export interface Pass2Result {
+  power_dynamics: PowerDynamics;
+  emotional_labor: EmotionalLabor;
+  conflict_patterns: ConflictPatterns;
+  intimacy_markers: IntimacyMarkers;
+  relationship_phase?: 'new' | 'developing'
+    | 'established' | 'long_term';
+  red_flags: RedFlag[];
+  green_flags: GreenFlag[];
+}
+\end{lstlisting}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Pass 3: Profile indywidualne}
+\label{subsec:pass3-types}
+
+\subsubsection{BigFiveTrait i~BigFiveApproximation}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów Wielkiej Piątki}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\multirow{3}{*}{\tstype{BigFiveTrait}} & \texttt{range} & \tstype{[number, number]} & Zakres estymacji [dolny, górny], każdy 1--10 \\
+ & \texttt{evidence} & \tstype{string} & Dowody tekstowe \\
+ & \texttt{confidence} & 0--100 & Pewność \\
+\midrule
+\multirow{5}{*}{\tstype{BigFiveApproximation}} & \texttt{openness} & \tstype{BigFiveTrait} & Otwartość na doświadczenia \\
+ & \texttt{conscientiousness} & \tstype{BigFiveTrait} & Sumienność \\
+ & \texttt{extraversion} & \tstype{BigFiveTrait} & Ekstrawersja \\
+ & \texttt{agreeableness} & \tstype{BigFiveTrait} & Ugodowość \\
+ & \texttt{neuroticism} & \tstype{BigFiveTrait} & Neurotyczność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{AttachmentIndicator i~AttachmentIndicators}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów stylu przywiązania}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\multirow{3}{*}{\tstype{AttachmentIndicator}} & \texttt{behavior} & \tstype{string} & Opis obserwowanego zachowania \\
+ & \texttt{attachment\_relevance} & \tstype{string} & Co to sugeruje o~przywiązaniu \\
+ & \texttt{evidence\_indices} & \tstype{number[]} & Indeksy wiadomości \\
+\midrule
+\multirow{4}{*}{\tstype{AttachmentIndicators}} & \texttt{primary\_style} & enum & \texttt{secure | anxious | avoidant | disorganized | insufficient\_data} \\
+ & \texttt{indicators} & \tstype{AttachmentIndicator[]} & Lista wskaźników \\
+ & \texttt{confidence} & 0--65 & \textbf{Maks. 65} --- ograniczenie analizy tekstowej \\
+ & \texttt{disclaimer} & \tstype{string?} & Obowiązkowe zastrzeżenie \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{CommunicationProfile}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{CommunicationProfile}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{style} & enum & \texttt{direct | indirect | mixed} \\
+\texttt{assertiveness} & 1--10 & Asertywność \\
+\texttt{emotional\_expressiveness} & 1--10 & Ekspresja emocjonalna \\
+\texttt{self\_disclosure\_depth} & 1--10 & Głębokość ujawniania siebie \\
+\texttt{question\_to\_statement\_ratio} & enum & \texttt{asks\_more | states\_more | balanced} \\
+\texttt{typical\_message\_structure} & \tstype{string} & Opis typowej struktury wiadomości \\
+\texttt{verbal\_tics} & \tstype{string[]} & Powtarzane frazy, filler words \\
+\texttt{emoji\_personality} & \tstype{string} & Opis osobowości emoji \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{CommunicationNeeds}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{CommunicationNeeds}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{primary} & enum & \texttt{affirmation | space | consistency | spontaneity | depth | humor | control | freedom} \\
+\texttt{secondary} & \tstype{string} & Opis wtórnej potrzeby \\
+\texttt{unmet\_needs\_signals} & \tstype{string[]} & Zachowania sygnalizujące niezaspokojone potrzeby \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{EmotionalPatterns}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{EmotionalPatterns}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{emotional\_range} & 1--10 & Zakres emocjonalny (1 = monotonny, 10 = szeroki) \\
+\texttt{dominant\_emotions} & \tstype{string[]} & Dominujące emocje \\
+\texttt{coping\_mechanisms\_visible} & \tstype{string[]} & Widoczne mechanizmy radzenia sobie \\
+\texttt{stress\_indicators} & \tstype{string[]} & Jak stres przejawia się w~wiadomościach \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{ClinicalObservations}
+
+\begin{longtable}{l l p{6cm}}
+\caption{Pola interfejsu \tstype{ClinicalObservations}} \label{tab:clinical-obs-type} \\
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\endhead
+\texttt{anxiety\_markers.present} & \tstype{boolean} & Czy wykryto markery lękowe \\
+\texttt{anxiety\_markers.patterns} & \tstype{string[]} & Konkretne wzorce \\
+\texttt{anxiety\_markers.severity} & enum & \texttt{none | mild | moderate | significant} \\
+\texttt{anxiety\_markers.confidence} & 0--100 & Pewność \\
+\midrule
+\texttt{avoidance\_markers.present} & \tstype{boolean} & Czy wykryto markery unikania \\
+\texttt{avoidance\_markers.patterns} & \tstype{string[]} & Konkretne wzorce \\
+\texttt{avoidance\_markers.severity} & enum & \texttt{none | mild | moderate | significant} \\
+\texttt{avoidance\_markers.confidence} & 0--100 & Pewność \\
+\midrule
+\texttt{manipulation\_patterns.present} & \tstype{boolean} & Czy wykryto wzorce manipulacji \\
+\texttt{manipulation\_patterns.types} & \tstype{string[]} & Typy manipulacji \\
+\texttt{manipulation\_patterns.severity} & enum & \texttt{none | mild | moderate | severe} \\
+\texttt{manipulation\_patterns.confidence} & 0--100 & Pewność. Musi być $\geq 70$ aby \texttt{present = true} \\
+\midrule
+\texttt{boundary\_respect.score} & 1--10 & Szacunek dla granic \\
+\texttt{boundary\_respect.examples} & \tstype{string[]} & Przykłady \\
+\texttt{boundary\_respect.confidence} & 0--100 & Pewność \\
+\midrule
+\texttt{codependency\_signals.present} & \tstype{boolean} & Czy wykryto sygnały współzależności \\
+\texttt{codependency\_signals.indicators} & \tstype{string[]} & Wskaźniki \\
+\texttt{codependency\_signals.confidence} & 0--100 & Pewność \\
+\midrule
+\texttt{disclaimer} & \tstype{string} & Obowiązkowe zastrzeżenie prawne \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{ConflictResolution}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{ConflictResolution}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{primary\_style} & enum & \texttt{direct\_confrontation | avoidant | explosive | passive\_aggressive | collaborative | humor\_deflection} \\
+\texttt{triggers} & \tstype{string[]} & Tematy/sytuacje wyzwalające konflikt \\
+\texttt{recovery\_speed} & enum & \texttt{fast | moderate | slow | unresolved} \\
+\texttt{de\_escalation\_skills} & 1--10 & Umiejętności deeskalacji \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{EmotionalIntelligence}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{EmotionalIntelligence}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{empathy.score} & 1--10 & Empatia \\
+\texttt{empathy.evidence} & \tstype{string} & Dowody \\
+\texttt{self\_awareness.score} & 1--10 & Samoświadomość \\
+\texttt{self\_awareness.evidence} & \tstype{string} & Dowody \\
+\texttt{emotional\_regulation.score} & 1--10 & Regulacja emocjonalna \\
+\texttt{emotional\_regulation.evidence} & \tstype{string} & Dowody \\
+\texttt{social\_skills.score} & 1--10 & Umiejętności społeczne \\
+\texttt{social\_skills.evidence} & \tstype{string} & Dowody \\
+\texttt{overall} & 1--10 & Ogólny wynik EQ \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{MBTIResult}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{MBTIResult}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{type} & \tstype{string} & 4-literowy typ MBTI (np. ,,INFJ'', ,,ENTP'') \\
+\texttt{confidence} & 0--100 & Pewność ogólna \\
+\texttt{reasoning.ie.letter} & \tstype{'I' | 'E'} & Introwersja vs. Ekstrawersja \\
+\texttt{reasoning.ie.evidence} & \tstype{string} & Dowody \\
+\texttt{reasoning.ie.confidence} & 0--100 & Pewność wymiaru \\
+\texttt{reasoning.sn.letter} & \tstype{'S' | 'N'} & Odczuwanie vs. Intuicja \\
+\texttt{reasoning.sn.evidence} & \tstype{string} & Dowody \\
+\texttt{reasoning.sn.confidence} & 0--100 & Pewność wymiaru \\
+\texttt{reasoning.tf.letter} & \tstype{'T' | 'F'} & Myślenie vs. Odczuwanie \\
+\texttt{reasoning.tf.evidence} & \tstype{string} & Dowody \\
+\texttt{reasoning.tf.confidence} & 0--100 & Pewność wymiaru \\
+\texttt{reasoning.jp.letter} & \tstype{'J' | 'P'} & Osądzanie vs. Percepcja \\
+\texttt{reasoning.jp.evidence} & \tstype{string} & Dowody \\
+\texttt{reasoning.jp.confidence} & 0--100 & Pewność wymiaru \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{LoveLanguageResult}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{LoveLanguageResult}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ/Zakres} & \textbf{Opis} \\
+\midrule
+\texttt{primary} & enum & Główny język miłości: \texttt{words\_of\_affirmation | quality\_time | acts\_of\_service | gifts\_pebbling | physical\_touch} \\
+\texttt{secondary} & enum & Drugorzędny język miłości \\
+\texttt{scores.words\_of\_affirmation} & 0--100 & Wynik: Słowa potwierdzenia \\
+\texttt{scores.quality\_time} & 0--100 & Wynik: Czas jakościowy \\
+\texttt{scores.acts\_of\_service} & 0--100 & Wynik: Akty służby \\
+\texttt{scores.gifts\_pebbling} & 0--100 & Wynik: Prezenty / pebbling \\
+\texttt{scores.physical\_touch} & 0--100 & Wynik: Dotyk fizyczny \\
+\texttt{evidence} & \tstype{string} & Dowody z~wiadomości \\
+\texttt{confidence} & 0--100 & Pewność \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{PersonProfile (kontener Pass 3)}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs PersonProfile}]
+export interface PersonProfile {
+  big_five_approximation: BigFiveApproximation;
+  attachment_indicators: AttachmentIndicators;
+  communication_profile: CommunicationProfile;
+  communication_needs: CommunicationNeeds;
+  emotional_patterns: EmotionalPatterns;
+  clinical_observations: ClinicalObservations;
+  conflict_resolution: ConflictResolution;
+  emotional_intelligence: EmotionalIntelligence;
+  mbti?: MBTIResult;
+  love_language?: LoveLanguageResult;
+}
+\end{lstlisting}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Pass 4: Synteza}
+\label{subsec:pass4-types}
+
+\subsubsection{HealthScoreComponents i~HealthScore}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów Health Score}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Zakres} & \textbf{Opis (waga)} \\
+\midrule
+\multirow{5}{*}{\tstype{HealthScoreComponents}} & \texttt{balance} & 0--100 & Równowaga wkładu (25\%) \\
+ & \texttt{reciprocity} & 0--100 & Wzajemność (20\%) \\
+ & \texttt{response\_pattern} & 0--100 & Wzorce odpowiedzi (20\%) \\
+ & \texttt{emotional\_safety} & 0--100 & Bezpieczeństwo emocjonalne (20\%) \\
+ & \texttt{growth\_trajectory} & 0--100 & Trajektoria wzrostu (15\%) \\
+\midrule
+\multirow{3}{*}{\tstype{HealthScore}} & \texttt{overall} & 0--100 & Wynik ważony (wzór \ref{eq:health-score} z~rozdz.~6) \\
+ & \texttt{components} & \tstype{HealthScoreComponents} & Poszczególne komponenty \\
+ & \texttt{explanation} & \tstype{string} & Co napędza wynik w~górę/dół \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Wzór na wynik ogólny (powtórzony z~rozdziału~\ref{ch:analiza-ai}):
+\begin{equation}
+\text{overall} = 0.25b + 0.20r + 0.20p + 0.20s + 0.15g
+\tag{12.1}
+\end{equation}
+gdzie $b$ = balance, $r$ = reciprocity, $p$ = response\_pattern, $s$ = emotional\_safety, $g$ = growth\_trajectory.
+
+\subsubsection{KeyFinding, InflectionPoint, RelationshipTrajectory}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów Pass 4 --- obserwacje i~trajektoria}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\multirow{3}{*}{\tstype{KeyFinding}} & \texttt{finding} & \tstype{string} & Jedno zdanie \\
+ & \texttt{significance} & enum & \texttt{positive | neutral | concerning} \\
+ & \texttt{detail} & \tstype{string} & 2--3 zdania kontekstu \\
+\midrule
+\multirow{3}{*}{\tstype{InflectionPoint}} & \texttt{approximate\_date} & \tstype{string} & Format YYYY-MM \\
+ & \texttt{description} & \tstype{string} & Co się zmieniło i~dlaczego \\
+ & \texttt{evidence} & \tstype{string} & Dowody \\
+\midrule
+\multirow{3}{*}{\tstype{RelationshipTrajectory}} & \texttt{current\_phase} & \tstype{string} & Obecna faza relacji \\
+ & \texttt{direction} & enum & \texttt{strengthening | stable | weakening | volatile} \\
+ & \texttt{inflection\_points} & \tstype{InflectionPoint[]} & Lista punktów przełomowych \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Insight}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{Insight}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{for} & \tstype{string} & Dla kogo: nazwa osoby lub \texttt{"both"} \\
+\texttt{insight} & \tstype{string} & Konkretna, wykonalna obserwacja \\
+\texttt{priority} & enum & \texttt{high | medium | low} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{ConversationPersonality}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{ConversationPersonality}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{if\_this\_conversation\_were\_a.movie\_genre} & \tstype{string} & Gatunek filmowy \\
+\texttt{if\_this\_conversation\_were\_a.weather} & \tstype{string} & Pogoda \\
+\texttt{if\_this\_conversation\_were\_a.one\_word} & \tstype{string} & Jedno słowo \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Pass4Result (kontener)}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Pass4Result}]
+export interface Pass4Result {
+  executive_summary: string;
+  health_score: HealthScore;
+  key_findings: KeyFinding[];
+  relationship_trajectory: RelationshipTrajectory;
+  insights: Insight[];
+  conversation_personality: ConversationPersonality;
+}
+\end{lstlisting}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{RoastResult}
+\label{subsec:roast-type}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs RoastResult}]
+export interface RoastResult {
+  roasts_per_person: Record<string, string[]>;
+  relationship_roast: string;
+  superlatives: Array<{
+    title: string;
+    holder: string;
+    roast: string;
+  }>;
+  verdict: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{RoastResult}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{roasts\_per\_person} & \tstype{Record<string, string[]>} & Nazwa osoby $\rightarrow$ tablica roastów (4--6 per osoba) \\
+\texttt{relationship\_roast} & \tstype{string} & Akapit roastujący dynamikę relacji (3--4 zdania) \\
+\texttt{superlatives} & \tstype{Array} & Zabawne tytuły/odznaki: \texttt{title}, \texttt{holder}, \texttt{roast} \\
+\texttt{verdict} & \tstype{string} & Jedno zdanie --- brutalny werdykt \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{StandUpAct i~StandUpRoastResult}
+\label{subsec:standup-type}
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy Stand-Up Roast}]
+export interface StandUpAct {
+  number: number;
+  title: string;
+  emoji: string;
+  lines: string[];
+  callback?: string;
+  gradientColors: [string, string];
+}
+
+export interface StandUpRoastResult {
+  showTitle: string;
+  acts: StandUpAct[];
+  closingLine: string;
+  audienceRating: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów Stand-Up Roast}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\multirow{6}{*}{\tstype{StandUpAct}} & \texttt{number} & \tstype{number} & Numer aktu (1--7) \\
+ & \texttt{title} & \tstype{string} & Tytuł aktu (np. ,,Otwarcie'') \\
+ & \texttt{emoji} & \tstype{string} & Emoji dla aktu \\
+ & \texttt{lines} & \tstype{string[]} & 4--6 punchline'ów \\
+ & \texttt{callback} & \tstype{string?} & Nawiązanie do wcześniejszego aktu \\
+ & \texttt{gradientColors} & \tstype{[string, string]} & Para kolorów hex gradientu \\
+\midrule
+\multirow{4}{*}{\tstype{StandUpRoastResult}} & \texttt{showTitle} & \tstype{string} & Kreatywny tytuł występu \\
+ & \texttt{acts} & \tstype{StandUpAct[]} & 7 aktów \\
+ & \texttt{closingLine} & \tstype{string} & Nokautująca kwestia końcowa \\
+ & \texttt{audienceRating} & \tstype{string} & Zabawna ocena publiczności \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Typy CPS (Communication Pattern Screening)}
+\label{subsec:cps-types}
+
+Zdefiniowane w~pliku: \filepath{src/lib/analysis/communication-patterns.ts}
+
+\subsubsection{CPSQuestion i~CPSPattern}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów \tstype{CPSQuestion} i~\tstype{CPSPattern}}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\multirow{4}{*}{\tstype{CPSQuestion}} & \texttt{id} & \tstype{number} & Numer pytania (1--63) \\
+ & \texttt{text} & \tstype{string} & Treść pytania (po polsku, oryginalna) \\
+ & \texttt{pattern} & \tstype{string} & Klucz wzorca, do którego należy \\
+ & \texttt{messageSignals} & \tstype{string} & Sygnały do szukania w~wiadomościach (EN, wewnętrzne) \\
+\midrule
+\multirow{7}{*}{\tstype{CPSPattern}} & \texttt{key} & \tstype{string} & Klucz wzorca (np. \texttt{intimacy\_avoidance}) \\
+ & \texttt{name} & \tstype{string} & Nazwa po polsku (opisowa, nie kliniczna) \\
+ & \texttt{nameEn} & \tstype{string} & Nazwa po angielsku \\
+ & \texttt{description} & \tstype{string} & 1-zdaniowy opis \\
+ & \texttt{color} & \tstype{string} & Kolor hex do wizualizacji \\
+ & \texttt{threshold} & \tstype{number} & Minimum odpowiedzi ,,tak'' do przekroczenia progu \\
+ & \texttt{recommendation} & \tstype{string} & Rekomendacja (PL) jeśli próg przekroczony \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{CPSAnswer, CPSPatternResult, CPSResult}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsów wynikowych CPS}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Interfejs} & \textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\multirow{3}{*}{\tstype{CPSAnswer}} & \texttt{answer} & \tstype{boolean | null} & Odpowiedź: \texttt{true}, \texttt{false}, lub \texttt{null} (nieocenialne) \\
+ & \texttt{confidence} & 0--100 & Pewność oceny \\
+ & \texttt{evidence} & \tstype{string[]} & Cytaty lub opisy wzorców (maks. 5) \\
+\midrule
+\multirow{7}{*}{\tstype{CPSPatternResult}} & \texttt{yesCount} & \tstype{number} & Liczba odpowiedzi ,,tak'' \\
+ & \texttt{total} & \tstype{number} & Łączna liczba ocenionych pytań \\
+ & \texttt{threshold} & \tstype{number} & Próg dla tego wzorca \\
+ & \texttt{meetsThreshold} & \tstype{boolean} & yesCount $\geq$ threshold \\
+ & \texttt{percentage} & 0--100 & $\min(100, \lfloor\frac{\text{yesCount}}{\text{threshold}} \times 100\rfloor)$ \\
+ & \texttt{confidence} & 0--100 & Średnia pewność odpowiedzi wzorca \\
+ & \texttt{answers} & \tstype{Record<number, CPSAnswer>} & Odpowiedzi na pytania tego wzorca \\
+\midrule
+\multirow{6}{*}{\tstype{CPSResult}} & \texttt{answers} & \tstype{Record<number, CPSAnswer>} & Wszystkie 63 odpowiedzi \\
+ & \texttt{patterns} & \tstype{Record<string, CPSPatternResult>} & Wyniki 10 wzorców \\
+ & \texttt{overallConfidence} & 0--100 & Średnia pewność wszystkich odpowiedzi \\
+ & \texttt{disclaimer} & \tstype{string} & Zastrzeżenie prawne \\
+ & \texttt{analyzedAt} & \tstype{number} & Unix timestamp ms \\
+ & \texttt{participantName} & \tstype{string} & Czyj profil analizowano \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy magazynowania}
+\label{sec:storage-types}
+
+Typy definiujące strukturę danych zapisywanych w~\texttt{localStorage} przeglądarki.
+
+% ────────────────────────────────────────────────────────────
+\subsection{QualitativeAnalysis}
+\label{subsec:qualitative-analysis}
+
+Kontener na wszystkie wyniki analizy AI, z~informacją o~statusie wykonania.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs QualitativeAnalysis}]
+export interface QualitativeAnalysis {
+  status: 'pending' | 'running' | 'complete'
+        | 'partial' | 'error';
+  error?: string;
+  currentPass?: number;
+  pass1?: Pass1Result;
+  pass2?: Pass2Result;
+  pass3?: Record<string, PersonProfile>;
+  pass4?: Pass4Result;
+  roast?: RoastResult;
+  cps?: CPSResult;
+  standupRoast?: StandUpRoastResult;
+  completedAt?: number;
+}
+\end{lstlisting}
+
+\begin{longtable}{l l l p{5.5cm}}
+\caption{Pola interfejsu \tstype{QualitativeAnalysis}} \label{tab:qualitative-analysis} \\
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\endhead
+\texttt{status} & enum & tak & Stan wykonania: \texttt{pending} (oczekuje), \texttt{running} (w~trakcie), \texttt{complete} (ukończono), \texttt{partial} (częściowy sukces), \texttt{error} (porażka) \\
+\texttt{error} & \tstype{string} & nie & Komunikat błędu (jeśli \texttt{status = 'error' | 'partial'}) \\
+\texttt{currentPass} & \tstype{number} & nie & Numer aktualnie wykonywanego przebiegu (1--4) \\
+\texttt{pass1} & \tstype{Pass1Result} & nie & Wynik Pass~1 (ton, styl, typ relacji) \\
+\texttt{pass2} & \tstype{Pass2Result} & nie & Wynik Pass~2 (dynamika, konflikt, bliskość) \\
+\texttt{pass3} & \tstype{Record<PersonProfile>} & nie & Wyniki Pass~3, kluczowane po nazwie uczestnika \\
+\texttt{pass4} & \tstype{Pass4Result} & nie & Wynik Pass~4 (synteza, health score, insights) \\
+\texttt{roast} & \tstype{RoastResult} & nie & Wynik trybu Roast \\
+\texttt{cps} & \tstype{CPSResult} & nie & Wynik Pass~5 CPS \\
+\texttt{standupRoast} & \tstype{StandUpRoastResult} & nie & Wynik Stand-Up Roast \\
+\texttt{completedAt} & \tstype{number} & nie & Unix timestamp ms ukończenia analizy \\
+\bottomrule
+\end{longtable}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{StoredAnalysis}
+\label{subsec:stored-analysis}
+
+Pełny rekord analizy utrwalany w~\texttt{localStorage}.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs StoredAnalysis}]
+export interface StoredAnalysis {
+  id: string;
+  title: string;
+  createdAt: number;
+  relationshipContext?: RelationshipContext;
+  conversation: ParsedConversation;
+  quantitative: QuantitativeAnalysis;
+  qualitative?: QualitativeAnalysis;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{StoredAnalysis}}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{id} & \tstype{string} & tak & Unikalny identyfikator (UUID) \\
+\texttt{title} & \tstype{string} & tak & Tytuł rozmowy \\
+\texttt{createdAt} & \tstype{number} & tak & Unix timestamp ms utworzenia analizy \\
+\texttt{relationshipContext} & \tstype{RelationshipContext} & nie & Zadeklarowany typ relacji: \texttt{romantic | friendship | colleague | professional | family | other} \\
+\texttt{conversation} & \tstype{ParsedConversation} & tak & Sparsowana rozmowa (pełna) \\
+\texttt{quantitative} & \tstype{QuantitativeAnalysis} & tak & Wyniki analizy ilościowej \\
+\texttt{qualitative} & \tstype{QualitativeAnalysis} & nie & Wyniki analizy AI (jeśli uruchomiono) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{AnalysisIndexEntry}
+\label{subsec:index-entry}
+
+Lekki wpis do listy analiz na dashboardzie.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs AnalysisIndexEntry}]
+export interface AnalysisIndexEntry {
+  id: string;
+  title: string;
+  createdAt: number;
+  messageCount: number;
+  participants: string[];
+  hasQualitative: boolean;
+  healthScore?: number;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{AnalysisIndexEntry}}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{id} & \tstype{string} & tak & UUID analizy \\
+\texttt{title} & \tstype{string} & tak & Tytuł rozmowy \\
+\texttt{createdAt} & \tstype{number} & tak & Unix timestamp ms \\
+\texttt{messageCount} & \tstype{number} & tak & Łączna liczba wiadomości \\
+\texttt{participants} & \tstype{string[]} & tak & Nazwy uczestników \\
+\texttt{hasQualitative} & \tstype{boolean} & tak & Czy przeprowadzono analizę AI \\
+\texttt{healthScore} & \tstype{number} & nie & Health Score 0--100 (jeśli dostępny) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Diagramy relacji typów}
+\label{sec:type-diagrams}
+
+Poniższe diagramy UML ilustrują zależności kompozycji między kluczowymi typami \podtekst.
+
+\subsection{Diagram główny: StoredAnalysis}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.2cm and 2.5cm,
+  every node/.style={font=\small},
+  classbox/.style={
+    rectangle,
+    draw=PodBlue!50,
+    fill=PodBlue!5,
+    rounded corners=3pt,
+    minimum width=3.8cm,
+    minimum height=0.9cm,
+    align=center,
+    font=\small\bfseries,
+    text=PodBlueDark,
+    inner sep=6pt,
+  },
+  classbox purple/.style={
+    classbox,
+    draw=PodPurple!50,
+    fill=PodPurple!5,
+    text=PodPurpleDark,
+  },
+  classbox green/.style={
+    classbox,
+    draw=PodSuccess!50,
+    fill=PodSuccess!5,
+    text=PodSuccess!80!black,
+  },
+  composition/.style={
+    ->,
+    >=open diamond,
+    thick,
+    color=PodBlue!60,
+  },
+  optional/.style={
+    ->,
+    >=open diamond,
+    thick,
+    dashed,
+    color=PodPurple!50,
+  },
+]
+  % ── Root ──
+  \node[classbox, minimum width=5cm, fill=PodBlue!12] (stored) {StoredAnalysis};
+
+  % ── Level 1 ──
+  \node[classbox, below left=1.5cm and 1cm of stored] (conv) {ParsedConversation};
+  \node[classbox, below=1.5cm of stored] (quant) {QuantitativeAnalysis};
+  \node[classbox purple, below right=1.5cm and 1cm of stored] (qual) {QualitativeAnalysis};
+
+  % ── Level 2 — Quantitative ──
+  \node[classbox, below left=1.5cm and -0.5cm of quant] (person) {PersonMetrics};
+  \node[classbox, below=1.5cm of quant] (timing) {TimingMetrics};
+  \node[classbox, below right=1.5cm and -1.3cm of quant] (engage) {EngagementMetrics};
+
+  \node[classbox, below left=2.8cm and 0.5cm of quant] (pattern) {PatternMetrics};
+  \node[classbox, below=2.8cm of quant] (heat) {HeatmapData};
+  \node[classbox, below right=2.8cm and 0.5cm of quant] (trend) {TrendData};
+
+  \node[classbox green, below=4cm of quant] (viral) {ViralScores};
+
+  % ── Level 2 — Qualitative ──
+  \node[classbox purple, below left=1.5cm and -0.5cm of qual] (p1) {Pass1Result};
+  \node[classbox purple, below=1.5cm of qual] (p2) {Pass2Result};
+  \node[classbox purple, below right=1.5cm and -0.5cm of qual] (p3) {PersonProfile};
+
+  \node[classbox purple, below=2.8cm of qual] (p4) {Pass4Result};
+  \node[classbox green, below left=4cm and -0.5cm of qual] (roast) {RoastResult};
+  \node[classbox green, below right=4cm and -0.5cm of qual] (cps) {CPSResult};
+
+  % ── Level 1 arrows ──
+  \draw[composition] (stored) -- (conv);
+  \draw[composition] (stored) -- (quant);
+  \draw[optional] (stored) -- (qual);
+
+  % ── Level 2 — Quant arrows ──
+  \draw[composition] (quant) -- (person);
+  \draw[composition] (quant) -- (timing);
+  \draw[composition] (quant) -- (engage);
+  \draw[composition] (quant) -- (pattern);
+  \draw[composition] (quant) -- (heat);
+  \draw[composition] (quant) -- (trend);
+  \draw[optional] (quant) -- (viral);
+
+  % ── Level 2 — Qual arrows ──
+  \draw[optional] (qual) -- (p1);
+  \draw[optional] (qual) -- (p2);
+  \draw[optional] (qual) -- (p3);
+  \draw[optional] (qual) -- (p4);
+  \draw[optional] (qual) -- (roast);
+  \draw[optional] (qual) -- (cps);
+
+  % ── Legend ──
+  \node[anchor=north west, font=\scriptsize, text=PodTextMuted] at (-6.5, -7.5) {
+    \begin{tabular}{ll}
+    \tikz\draw[composition] (0,0) -- (0.8,0); & Kompozycja (wymagane) \\
+    \tikz\draw[optional] (0,0) -- (0.8,0); & Kompozycja (opcjonalne) \\
+    \end{tabular}
+  };
+
+\end{tikzpicture}
+\caption{Diagram kompozycji \tstype{StoredAnalysis} --- główny kontener danych.
+Linie ciągłe oznaczają wymagane składniki, przerywane --- opcjonalne.}
+\label{fig:stored-analysis-uml}
+\end{figure}
+
+
+\subsection{Diagram: QuantitativeAnalysis --- szczegóły}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.8cm and 1.5cm,
+  every node/.style={font=\scriptsize},
+  qbox/.style={
+    rectangle,
+    draw=PodBlue!40,
+    fill=PodBlue!5,
+    rounded corners=2pt,
+    minimum width=3.2cm,
+    minimum height=0.7cm,
+    align=center,
+    font=\scriptsize\bfseries,
+    text=PodBlueDark,
+    inner sep=4pt,
+  },
+  obox/.style={
+    qbox,
+    draw=PodSuccess!40,
+    fill=PodSuccess!5,
+    text=PodSuccess!80!black,
+  },
+  arr/.style={->, >=stealth, thick, PodBlue!50},
+  oarr/.style={->, >=stealth, dashed, PodSuccess!50},
+]
+  \node[qbox, minimum width=4.5cm, fill=PodBlue!10] (root) {QuantitativeAnalysis};
+
+  % Required
+  \node[qbox, below left=1.0cm and 2.5cm of root] (pm) {Record<PersonMetrics>};
+  \node[qbox, below left=1.0cm and 0cm of root] (tm) {TimingMetrics};
+  \node[qbox, below right=1.0cm and 0cm of root] (em) {EngagementMetrics};
+  \node[qbox, below right=1.0cm and 2.5cm of root] (ptm) {PatternMetrics};
+
+  \node[qbox, below=2.0cm of root, xshift=-2cm] (hm) {HeatmapData};
+  \node[qbox, below=2.0cm of root, xshift=2cm] (td) {TrendData};
+
+  % Optional
+  \node[obox, below=3.0cm of root, xshift=-4cm] (vs) {ViralScores?};
+  \node[obox, below=3.0cm of root, xshift=-1.5cm] (bd) {Badge[]?};
+  \node[obox, below=3.0cm of root, xshift=1cm] (btt) {BestTimeToText?};
+  \node[obox, below=3.0cm of root, xshift=3.5cm] (cp) {CatchphraseResult?};
+
+  \node[obox, below=4.0cm of root, xshift=-2cm] (nm) {NetworkMetrics?};
+  \node[obox, below=4.0cm of root, xshift=2cm] (ri) {ReciprocityIndex?};
+
+  % Arrows
+  \draw[arr] (root) -- (pm);
+  \draw[arr] (root) -- (tm);
+  \draw[arr] (root) -- (em);
+  \draw[arr] (root) -- (ptm);
+  \draw[arr] (root) -- (hm);
+  \draw[arr] (root) -- (td);
+  \draw[oarr] (root) -- (vs);
+  \draw[oarr] (root) -- (bd);
+  \draw[oarr] (root) -- (btt);
+  \draw[oarr] (root) -- (cp);
+  \draw[oarr] (root) -- (nm);
+  \draw[oarr] (root) -- (ri);
+
+\end{tikzpicture}
+\caption{Szczegółowy diagram \tstype{QuantitativeAnalysis}.
+Pola wymagane (linia ciągła) i~opcjonalne (linia przerywana, oznaczone \texttt{?}).}
+\label{fig:quant-uml}
+\end{figure}
+
+
+\subsection{Diagram: QualitativeAnalysis --- szczegóły}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.8cm and 1.5cm,
+  every node/.style={font=\scriptsize},
+  pbox/.style={
+    rectangle,
+    draw=PodPurple!40,
+    fill=PodPurple!5,
+    rounded corners=2pt,
+    minimum width=3.2cm,
+    minimum height=0.7cm,
+    align=center,
+    font=\scriptsize\bfseries,
+    text=PodPurpleDark,
+    inner sep=4pt,
+  },
+  arr/.style={->, >=stealth, dashed, PodPurple!50},
+]
+  \node[pbox, minimum width=4.5cm, fill=PodPurple!10] (root) {QualitativeAnalysis};
+
+  % Pass results
+  \node[pbox, below left=1.0cm and 3cm of root] (p1) {Pass1Result?};
+  \node[pbox, below left=1.0cm and 0.5cm of root] (p2) {Pass2Result?};
+  \node[pbox, below right=1.0cm and 0.5cm of root] (p3) {Record<PersonProfile>?};
+  \node[pbox, below right=1.0cm and 3cm of root] (p4) {Pass4Result?};
+
+  % Optional extras
+  \node[pbox, below=2.2cm of root, xshift=-3cm] (roast) {RoastResult?};
+  \node[pbox, below=2.2cm of root] (standup) {StandUpRoastResult?};
+  \node[pbox, below=2.2cm of root, xshift=3cm] (cps) {CPSResult?};
+
+  % Sub-types of Pass2
+  \node[pbox, below=1.8cm of p2, xshift=-1cm] (pd) {PowerDynamics};
+  \node[pbox, below=1.8cm of p2, xshift=1.5cm] (el) {EmotionalLabor};
+  \node[pbox, below=2.8cm of p2, xshift=-1cm] (cp2) {ConflictPatterns};
+  \node[pbox, below=2.8cm of p2, xshift=1.5cm] (im) {IntimacyMarkers};
+
+  % Sub-types of PersonProfile
+  \node[pbox, below=1.8cm of p3, xshift=-1cm] (bf) {BigFiveApproximation};
+  \node[pbox, below=1.8cm of p3, xshift=1.5cm] (ai) {AttachmentIndicators};
+  \node[pbox, below=2.8cm of p3, xshift=-1cm] (cpr) {CommunicationProfile};
+  \node[pbox, below=2.8cm of p3, xshift=1.5cm] (ei) {EmotionalIntelligence};
+
+  % Arrows from root
+  \draw[arr] (root) -- (p1);
+  \draw[arr] (root) -- (p2);
+  \draw[arr] (root) -- (p3);
+  \draw[arr] (root) -- (p4);
+  \draw[arr] (root) -- (roast);
+  \draw[arr] (root) -- (standup);
+  \draw[arr] (root) -- (cps);
+
+  % Sub arrows
+  \draw[arr] (p2) -- (pd);
+  \draw[arr] (p2) -- (el);
+  \draw[arr] (p2) -- (cp2);
+  \draw[arr] (p2) -- (im);
+
+  \draw[arr] (p3) -- (bf);
+  \draw[arr] (p3) -- (ai);
+  \draw[arr] (p3) -- (cpr);
+  \draw[arr] (p3) -- (ei);
+
+\end{tikzpicture}
+\caption{Szczegółowy diagram \tstype{QualitativeAnalysis} z~kluczowymi pod-typami
+Pass~2 i~Pass~3. Wszystkie pola opcjonalne (przerywane strzałki).}
+\label{fig:qual-uml}
+\end{figure}
+
+
+\subsection{Diagram: PersonProfile --- pełne drzewo}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm and 1.2cm,
+  every node/.style={font=\scriptsize},
+  leaf/.style={
+    rectangle,
+    draw=PodBlue!30,
+    fill=white,
+    rounded corners=2pt,
+    minimum width=2.8cm,
+    minimum height=0.5cm,
+    align=center,
+    font=\scriptsize,
+    text=PodBlueDark,
+    inner sep=3pt,
+  },
+  root/.style={
+    leaf,
+    draw=PodPurple!50,
+    fill=PodPurple!8,
+    font=\scriptsize\bfseries,
+    text=PodPurpleDark,
+    minimum width=3.5cm,
+  },
+  arr/.style={->, >=stealth, thin, PodBlue!40},
+]
+  \node[root] (pp) {PersonProfile};
+
+  % Left column
+  \node[leaf, below left=0.8cm and 2.5cm of pp] (bf) {BigFiveApproximation};
+  \node[leaf, below=0.5cm of bf] (att) {AttachmentIndicators};
+  \node[leaf, below=0.5cm of att] (comm) {CommunicationProfile};
+  \node[leaf, below=0.5cm of comm] (needs) {CommunicationNeeds};
+  \node[leaf, below=0.5cm of needs] (emot) {EmotionalPatterns};
+
+  % Right column
+  \node[leaf, below right=0.8cm and 2.5cm of pp] (clin) {ClinicalObservations};
+  \node[leaf, below=0.5cm of clin] (conf) {ConflictResolution};
+  \node[leaf, below=0.5cm of conf] (ei) {EmotionalIntelligence};
+  \node[leaf, below=0.5cm of ei] (mbti) {MBTIResult?};
+  \node[leaf, below=0.5cm of mbti] (love) {LoveLanguageResult?};
+
+  % Arrows
+  \draw[arr] (pp) -- (bf);
+  \draw[arr] (pp) -- (att);
+  \draw[arr] (pp) -- (comm);
+  \draw[arr] (pp) -- (needs);
+  \draw[arr] (pp) -- (emot);
+  \draw[arr] (pp) -- (clin);
+  \draw[arr] (pp) -- (conf);
+  \draw[arr] (pp) -- (ei);
+  \draw[arr] (pp) -- (mbti);
+  \draw[arr] (pp) -- (love);
+
+\end{tikzpicture}
+\caption{Drzewo kompozycji \tstype{PersonProfile} --- 10~sekcji tematycznych.
+\texttt{MBTIResult} i~\texttt{LoveLanguageResult} są opcjonalne.}
+\label{fig:person-profile-tree}
+\end{figure}
+
+
+\subsection{Podsumowanie zależności}
+
+\begin{table}[H]
+\centering
+\caption{Mapa zależności typów --- ile interfejsów zawiera każdy kontener}
+\label{tab:type-dependency-map}
+\begin{tabularx}{\textwidth}{l c X}
+\toprule
+\textbf{Kontener} & \textbf{Podtypów} & \textbf{Kluczowe składniki} \\
+\midrule
+\tstype{StoredAnalysis} & 3 & ParsedConversation, QuantitativeAnalysis, QualitativeAnalysis? \\
+\tstype{QuantitativeAnalysis} & 12 & PersonMetrics, TimingMetrics, EngagementMetrics, PatternMetrics, HeatmapData, TrendData, ViralScores?, Badge[]?, BestTimeToText?, CatchphraseResult?, NetworkMetrics?, ReciprocityIndex? \\
+\tstype{QualitativeAnalysis} & 7 & Pass1Result?, Pass2Result?, Record<PersonProfile>?, Pass4Result?, RoastResult?, StandUpRoastResult?, CPSResult? \\
+\tstype{PersonProfile} & 10 & BigFiveApproximation, AttachmentIndicators, CommunicationProfile, CommunicationNeeds, EmotionalPatterns, ClinicalObservations, ConflictResolution, EmotionalIntelligence, MBTIResult?, LoveLanguageResult? \\
+\tstype{Pass2Result} & 7 & PowerDynamics, EmotionalLabor, ConflictPatterns, IntimacyMarkers, RedFlag[], GreenFlag[], relationship\_phase? \\
+\tstype{CPSResult} & 4 & CPSAnswer (63$\times$), CPSPatternResult (10$\times$), disclaimer, participantName \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Łączna liczba zdefiniowanych interfejsów w~\podtekst: \textbf{47}, w~tym:
+\begin{itemize}
+  \item 15 interfejsów parserowych/ilościowych
+  \item 25 interfejsów analizy AI
+  \item 4 interfejsy CPS
+  \item 3 interfejsy magazynowania
+\end{itemize}
+
+% ============================================================
+\section{Typy Dekodera Podtekstów}
+\label{sec:subtext-types}
+% ============================================================
+
+Typy z~tej sekcji zdefiniowane są w~pliku:
+
+\filepath{src/lib/analysis/subtext.ts}
+
+Dekoder Podtekstów (Subtext Decoder) stanowi osobny moduł analizy AI, który interpretuje ukryte znaczenia w~wybranych wiadomościach. Wykorzystuje system okien kontekstowych (\tstype{ExchangeWindow}) do ekstrakcji fragmentów rozmowy, które następnie są przetwarzane wsadowo przez model \gemini.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SubtextCategory}
+\label{subsec:subtext-category}
+
+Typ unii literałowej definiujący 12~kategorii ukrytych podtekstów.
+
+\begin{lstlisting}[style=podcode, caption={Typ SubtextCategory}]
+type SubtextCategory =
+  | 'deflection'         // unikanie tematu
+  | 'hidden_anger'       // ukryty gniew
+  | 'seeking_validation' // szukanie potwierdzenia
+  | 'power_move'         // gra o wladze
+  | 'genuine'            // szczere
+  | 'testing'            // testowanie partnera
+  | 'guilt_trip'         // wzbudzanie poczucia winy
+  | 'passive_aggressive' // bierna agresja
+  | 'love_signal'        // ukryty sygnal milosci
+  | 'insecurity'         // niepewnosc
+  | 'distancing'         // dystansowanie sie
+  | 'humor_shield';      // humor jako tarcza
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Wartości \tstype{SubtextCategory} z~opisami}
+\label{tab:subtext-categories-types}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Wartość} & \textbf{Pol. etykieta} & \textbf{Opis} \\
+\midrule
+\texttt{deflection} & Unikanie tematu & Zmiana tematu lub unik, gdy rozmowa staje się niewygodna \\
+\texttt{hidden\_anger} & Ukryty gniew & Kontrolowany gniew maskowany neutralnym tonem \\
+\texttt{seeking\_validation} & Szukanie potwierdzenia & Subtelne próby uzyskania aprobaty lub zapewnienia \\
+\texttt{power\_move} & Gra o~władzę & Próba przejęcia kontroli nad dynamiką rozmowy \\
+\texttt{genuine} & Szczere & Brak ukrytego podtekstu --- wiadomość jest autentyczna \\
+\texttt{testing} & Testowanie partnera & Prowokacja lub próba sprawdzenia reakcji drugiej strony \\
+\texttt{guilt\_trip} & Wzbudzanie winy & Manipulacja poprzez wywoływanie poczucia winy \\
+\texttt{passive\_aggressive} & Bierna agresja & Agresja wyrażona w~sposób pośredni lub pozornie neutralny \\
+\texttt{love\_signal} & Ukryty sygnał miłości & Uczucia wyrażone nie wprost, zamaskowane humorem lub nonszalancją \\
+\texttt{insecurity} & Niepewność & Lęk lub brak pewności siebie ujawniający się w~stylu komunikacji \\
+\texttt{distancing} & Dystansowanie się & Emocjonalne wycofywanie się z~relacji lub tematu \\
+\texttt{humor\_shield} & Humor jako tarcza & Używanie żartów do unikania wrażliwych tematów \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SubtextItem}
+\label{subsec:subtext-item}
+
+Pojedynczy zdekodowany podtekst --- centralny element wyników dekodera.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs SubtextItem}]
+interface SubtextItem {
+  originalMessage: string;
+  sender: string;
+  timestamp: number;
+  subtext: string;
+  emotion: string;
+  confidence: number;      // 0-100
+  category: SubtextCategory;
+  isHighlight: boolean;
+  exchangeContext: string;
+  windowId: number;
+  surroundingMessages: Array<{
+    sender: string;
+    content: string;
+    timestamp: number;
+  }>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SubtextItem}}
+\label{tab:subtext-item}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{originalMessage} & \tstype{string} & tak & Oryginalna treść wiadomości (po dekodowaniu Unicode) \\
+\texttt{sender} & \tstype{string} & tak & Nazwa nadawcy wiadomości \\
+\texttt{timestamp} & \tstype{number} & tak & Unix timestamp ms oryginalnej wiadomości \\
+\texttt{subtext} & \tstype{string} & tak & Zdekodowany podtekst --- co naprawdę miała na myśli osoba \\
+\texttt{emotion} & \tstype{string} & tak & Dominująca emocja ukryta w~wiadomości (np.~,,frustracja'', ,,tęsknota'') \\
+\texttt{confidence} & 0--100 & tak & Pewność AI co do poprawności dekodowania podtekstu \\
+\texttt{category} & \tstype{SubtextCategory} & tak & Jedna z~12 kategorii podtekstu \\
+\texttt{isHighlight} & \tstype{boolean} & tak & Czy wiadomość jest szczególnie odkrywcza (top 20\%) \\
+\texttt{exchangeContext} & \tstype{string} & tak & Krótki opis kontekstu wymiany zdań \\
+\texttt{windowId} & \tstype{number} & tak & Identyfikator okna kontekstowego (\tstype{ExchangeWindow}) \\
+\texttt{surroundingMessages} & \tstype{Array} & tak & Wiadomości otaczające --- kontekst dla interpretacji (3--5 wiadomości) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm and 1.4cm,
+  every node/.style={font=\scriptsize},
+  leaf/.style={
+    rectangle,
+    draw=PodPurple!30,
+    fill=white,
+    rounded corners=2pt,
+    minimum width=3cm,
+    minimum height=0.5cm,
+    align=center,
+    font=\scriptsize,
+    text=PodPurpleDark,
+    inner sep=3pt,
+  },
+  root/.style={
+    leaf,
+    draw=PodPurple!50,
+    fill=PodPurple!8,
+    font=\scriptsize\bfseries,
+    text=PodPurpleDark,
+    minimum width=3.5cm,
+  },
+  typelabel/.style={
+    font=\tiny,
+    text=PodTextMuted,
+    anchor=west,
+  },
+  arr/.style={->, >=stealth, thin, PodPurple!40},
+]
+  \node[root] (si) {SubtextItem};
+
+  % Left column
+  \node[leaf, below left=0.8cm and 2.5cm of si] (orig) {originalMessage};
+  \node[leaf, below=0.5cm of orig] (sender) {sender};
+  \node[leaf, below=0.5cm of sender] (ts) {timestamp};
+  \node[leaf, below=0.5cm of ts] (sub) {subtext};
+  \node[leaf, below=0.5cm of sub] (emo) {emotion};
+  \node[leaf, below=0.5cm of emo] (conf) {confidence};
+
+  % Right column
+  \node[leaf, below right=0.8cm and 2.5cm of si] (cat) {category};
+  \node[leaf, below=0.5cm of cat] (hl) {isHighlight};
+  \node[leaf, below=0.5cm of hl] (ctx) {exchangeContext};
+  \node[leaf, below=0.5cm of ctx] (wid) {windowId};
+  \node[leaf, below=0.5cm of wid] (surr) {surroundingMessages};
+
+  % Type labels
+  \node[typelabel] at (orig.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (sender.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (ts.east) {\hspace{4pt}\texttt{number}};
+  \node[typelabel] at (sub.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (emo.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (conf.east) {\hspace{4pt}\texttt{0--100}};
+  \node[typelabel] at (cat.east) {\hspace{4pt}\texttt{SubtextCategory}};
+  \node[typelabel] at (hl.east) {\hspace{4pt}\texttt{boolean}};
+  \node[typelabel] at (ctx.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (wid.east) {\hspace{4pt}\texttt{number}};
+  \node[typelabel] at (surr.east) {\hspace{4pt}\texttt{Array}};
+
+  % Arrows
+  \draw[arr] (si) -- (orig);
+  \draw[arr] (si) -- (sender);
+  \draw[arr] (si) -- (ts);
+  \draw[arr] (si) -- (sub);
+  \draw[arr] (si) -- (emo);
+  \draw[arr] (si) -- (conf);
+  \draw[arr] (si) -- (cat);
+  \draw[arr] (si) -- (hl);
+  \draw[arr] (si) -- (ctx);
+  \draw[arr] (si) -- (wid);
+  \draw[arr] (si) -- (surr);
+
+\end{tikzpicture}
+\caption{Drzewo pól \tstype{SubtextItem} --- 11~pól, z~czego \texttt{category} jest typem unii (\tstype{SubtextCategory}), a~\texttt{surroundingMessages} zawiera tablicę wiadomości kontekstowych.}
+\label{fig:subtext-item-tree}
+\end{figure}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SubtextSummary}
+\label{subsec:subtext-summary}
+
+Zagregowane podsumowanie wyników dekodera podtekstów.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs SubtextSummary}]
+interface SubtextSummary {
+  hiddenEmotionBalance: Record<string, number>;
+  mostDeceptivePerson: string;
+  deceptionScore: Record<string, number>;
+  topCategories: Array<{
+    category: SubtextCategory;
+    count: number;
+  }>;
+  biggestReveal: SubtextItem;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SubtextSummary}}
+\label{tab:subtext-summary}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{hiddenEmotionBalance} & \tstype{Record<string, number>} & Bilans ukrytych emocji per osoba --- stosunek emocji negatywnych do pozytywnych \\
+\texttt{mostDeceptivePerson} & \tstype{string} & Osoba z~największą liczbą podtekstów niezgodnych z~dosłownym przekazem \\
+\texttt{deceptionScore} & \tstype{Record<string, number>} & Wynik ,,zwodniczości'' per osoba (0--100, wyższy = więcej ukrytych intencji) \\
+\texttt{topCategories} & \tstype{Array} & Ranking najczęstszych kategorii podtekstów z~liczbą wystąpień \\
+\texttt{biggestReveal} & \tstype{SubtextItem} & Wiadomość z~największą rozbieżnością między dosłownym a~ukrytym przekazem \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SubtextResult}
+\label{subsec:subtext-result}
+
+Kontener wyników --- główny interfejs zwracany przez dekoder.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs SubtextResult}]
+interface SubtextResult {
+  items: SubtextItem[];
+  summary: SubtextSummary;
+  disclaimer: string;
+  analyzedAt: number;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SubtextResult}}
+\label{tab:subtext-result}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{items} & \tstype{SubtextItem[]} & tak & Tablica zdekodowanych podtekstów (typowo 20--60 elementów) \\
+\texttt{summary} & \tstype{SubtextSummary} & tak & Zagregowane statystyki i~podsumowanie \\
+\texttt{disclaimer} & \tstype{string} & tak & Klauzula prawna: analiza ma charakter rozrywkowy, nie diagnostyczny \\
+\texttt{analyzedAt} & \tstype{number} & tak & Unix timestamp ms zakończenia analizy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Typy pomocnicze: SimplifiedMsg i~ExchangeWindow}
+\label{subsec:exchange-window}
+
+Wewnętrzne typy pipeline'u dekodera --- ekstrakcja okien kontekstowych z~rozmowy.
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy SimplifiedMsg i~ExchangeWindow}]
+interface SimplifiedMsg {
+  sender: string;
+  content: string;
+  timestamp: number;
+  index: number;
+}
+
+interface ExchangeWindow {
+  windowId: number;
+  messages: SimplifiedMsg[];
+  targetIndices: number[];
+  context: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SimplifiedMsg}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{sender} & \tstype{string} & Nazwa nadawcy \\
+\texttt{content} & \tstype{string} & Treść wiadomości (uproszczona, bez mediów) \\
+\texttt{timestamp} & \tstype{number} & Unix timestamp ms \\
+\texttt{index} & \tstype{number} & Indeks wiadomości w~oryginalnej tablicy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{ExchangeWindow}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{windowId} & \tstype{number} & Unikalny identyfikator okna kontekstowego \\
+\texttt{messages} & \tstype{SimplifiedMsg[]} & Wiadomości w~oknie (typowo 5--15 wiadomości) \\
+\texttt{targetIndices} & \tstype{number[]} & Indeksy wiadomości wybranych do dekodowania \\
+\texttt{context} & \tstype{string} & Krótki opis kontekstu okna (generowany automatycznie) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy Procesu Sądowego (Chat Court)}
+\label{sec:court-types}
+% ============================================================
+
+Typy trybu ,,Twój Chat w~Sądzie'' --- satyrycznego procesu sądowego generowanego przez AI na podstawie wzorców komunikacyjnych. Zdefiniowane w~typach analizy jakościowej.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{CourtCharge}
+\label{subsec:court-charge}
+
+Pojedynczy zarzut w~procesie sądowym.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs CourtCharge}]
+interface CourtCharge {
+  id: string;
+  charge: string;
+  article: string;
+  severity: 'wykroczenie' | 'wystepek' | 'zbrodnia';
+  evidence: string[];
+  defendant: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{CourtCharge}}
+\label{tab:court-charge}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{id} & \tstype{string} & tak & Unikalny identyfikator zarzutu (np.~\texttt{"Z-001"}) \\
+\texttt{charge} & \tstype{string} & tak & Treść zarzutu w~języku prawniczym (satyrycznym) \\
+\texttt{article} & \tstype{string} & tak & Fikcyjny artykuł ,,Kodeksu Komunikacji'' \\
+\texttt{severity} & \tstype{union} & tak & Powaga: \texttt{'wykroczenie'} $|$ \texttt{'występek'} $|$ \texttt{'zbrodnia'} \\
+\texttt{evidence} & \tstype{string[]} & tak & Dowody --- parafrazy wzorców komunikacyjnych (bez cytatów) \\
+\texttt{defendant} & \tstype{string} & tak & Imię oskarżonego uczestnika \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{PersonVerdict}
+\label{subsec:person-verdict}
+
+Wyrok indywidualny dla jednego uczestnika.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs PersonVerdict}]
+interface PersonVerdict {
+  name: string;
+  verdict: 'winny' | 'niewinny' | 'warunkowo';
+  mainCharge: string;
+  sentence: string;
+  mugshotLabel: string;
+  funFact: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{PersonVerdict}}
+\label{tab:person-verdict}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{name} & \tstype{string} & tak & Imię osądzonego uczestnika \\
+\texttt{verdict} & \tstype{union} & tak & Wyrok: \texttt{'winny'} $|$ \texttt{'niewinny'} $|$ \texttt{'warunkowo'} \\
+\texttt{mainCharge} & \tstype{string} & tak & Główny zarzut, za który wydano wyrok \\
+\texttt{sentence} & \tstype{string} & tak & Kara (satyryczna, np.~,,500h przymusowego słuchania partnera'') \\
+\texttt{mugshotLabel} & \tstype{string} & tak & Etykieta do generowanego ,,mugshota'' (karty oskarżonego) \\
+\texttt{funFact} & \tstype{string} & tak & Zabawny fakt o~komunikacji oskarżonego \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{CourtResult}
+\label{subsec:court-result}
+
+Główny kontener wyników procesu sądowego.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs CourtResult}]
+interface CourtResult {
+  caseNumber: string;
+  courtName: string;
+  charges: CourtCharge[];
+  prosecution: string;
+  defense: string;
+  verdict: CourtVerdict;
+  perPerson: Record<string, PersonVerdict>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{CourtResult}}
+\label{tab:court-result}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{caseNumber} & \tstype{string} & tak & Sygnatura akt (generowana, np.~\texttt{"PT/2026/001"}) \\
+\texttt{courtName} & \tstype{string} & tak & Nazwa sądu (satyryczna, np.~,,Sąd Najwyższy ds.~Komunikacji'') \\
+\texttt{charges} & \tstype{CourtCharge[]} & tak & Lista zarzutów (typowo 3--8) \\
+\texttt{prosecution} & \tstype{string} & tak & Mowa oskarżyciela --- humorystyczne podsumowanie zarzutów \\
+\texttt{defense} & \tstype{string} & tak & Mowa obrońcy --- próba usprawiedliwienia wzorców \\
+\texttt{verdict} & \tstype{CourtVerdict} & tak & Wyrok ogólny sądu z~uzasadnieniem \\
+\texttt{perPerson} & \tstype{Record<string, PersonVerdict>} & tak & Wyroki indywidualne, kluczowane po imieniu uczestnika \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy Profilu Randkowego}
+\label{sec:dating-profile-types}
+% ============================================================
+
+Typy generatora ,,Szczery Profil Randkowy'' --- funkcjonalno\'{s}ci tworz\k{a}cej profil Tinder/Hinge na podstawie rzeczywistych danych komunikacyjnych. Zdefiniowane w~pliku:
+
+\filepath{src/lib/analysis/dating-profile-prompts.ts} (253 LOC).
+
+\begin{infobox}[title={Podej\'{s}cie do generowania profilu}]
+Profil randkowy jest generowany wy\l{}\k{a}cznie po stronie serwera przez Gemini API. Dane wej\'{s}ciowe obejmuj\k{a} pr\'{o}bki wiadomo\'{s}ci, metryki ilo\'{s}ciowe oraz opcjonalnie wyniki analizy psychologicznej (Pass~1 i~3). Ka\.{z}dy profil zawiera bio napisane \textbf{w~stylu pisania} danej osoby --- jej s\l{}ownictwem, interpunkcj\k{a} i~d\l{}ugo\'{s}ci\k{a} wiadomo\'{s}ci.
+\end{infobox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{DatingProfileStat}
+\label{subsec:dating-profile-stat}
+
+Pojedyncza statystyka w~profilu randkowym --- \l{}\k{a}czy metryki z~roast-style komentarzem.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs DatingProfileStat}]
+interface DatingProfileStat {
+  label: string;
+  value: string;
+  emoji: string;
+}
+\end{lstlisting}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{DatingProfilePrompt}
+\label{subsec:dating-profile-prompt}
+
+Prompt w~stylu Hinge --- pytanie i~brutalnie szczera odpowied\'{z}.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs DatingProfilePrompt}]
+interface DatingProfilePrompt {
+  prompt: string;
+  answer: string;
+}
+\end{lstlisting}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{PersonDatingProfile}
+\label{subsec:person-dating-profile}
+
+Pe\l{}ny profil randkowy jednego uczestnika rozmowy.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs PersonDatingProfile}]
+interface PersonDatingProfile {
+  name: string;
+  age_vibe: string;
+  bio: string;
+  stats: DatingProfileStat[];
+  prompts: DatingProfilePrompt[];
+  red_flags: string[];
+  green_flags: string[];
+  match_prediction: string;
+  dealbreaker: string;
+  overall_rating: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{PersonDatingProfile}}
+\label{tab:person-dating-profile}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{name} & \tstype{string} & tak & Imi\k{e} uczestnika \\
+\texttt{age\_vibe} & \tstype{string} & tak & ,,Energia wiekowa'' --- sarkastyczna diagnoza, nie prawdziwy wiek \\
+\texttt{bio} & \tstype{string} & tak & 2--3 zdania \textbf{w~stylu pisania} tej osoby (ich s\l{}ownictwo, interpunkcja, emoji) \\
+\texttt{stats} & \tstype{DatingProfileStat[]} & tak & 5--6 statystyk z~konkretnymi liczbami (np.~czas odpowiedzi, inicjatywa) \\
+\texttt{prompts} & \tstype{DatingProfilePrompt[]} & tak & 3 prompty w~stylu Hinge z~brutalnymi odpowiedziami \\
+\texttt{red\_flags} & \tstype{string[]} & tak & Czerwone flagi oparte na danych (ghosting, double texting itp.) \\
+\texttt{green\_flags} & \tstype{string[]} & tak & Zielone flagi z~konkretnym wzorcem i~liczb\k{a} \\
+\texttt{match\_prediction} & \tstype{string} & tak & Prognoza dopasowania na podstawie stylu komunikacji \\
+\texttt{dealbreaker} & \tstype{string} & tak & Jeden konkretny pattern z~danych z~liczb\k{a} \\
+\texttt{overall\_rating} & \tstype{string} & tak & Ocena gwiazdkowa (1--5) + kr\'{o}tki komentarz \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{DatingProfileResult}
+\label{subsec:dating-profile-result}
+
+G\l{}\'{o}wny kontener wynik\'{o}w --- mapuje imiona uczestnik\'{o}w na ich profile randkowe.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs DatingProfileResult}]
+interface DatingProfileResult {
+  profiles: Record<string, PersonDatingProfile>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{DatingProfileResult}}
+\label{tab:dating-profile-result}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{profiles} & \tstype{Record<string, PersonDatingProfile>} & tak & Mapa profili, kluczowana po imieniu uczestnika \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy Quizu Samo\'{s}wiadomo\'{s}ci (Delusion Quiz)}
+\label{sec:delusion-types}
+% ============================================================
+
+Typy modu\l{}u ,,Stawiam Zak\l{}ad'' --- quizu samo\'{s}wiadomo\'{s}ci, kt\'{o}ry por\'{o}wnuje subiektywne odpowiedzi u\.{z}ytkownika z~rzeczywistymi danymi ilo\'{s}ciowymi. Ca\l{}o\'{s}\'{c} dzia\l{}a \textbf{po stronie klienta} --- bez AI. Zdefiniowane w~pliku:
+
+\filepath{src/lib/analysis/delusion-quiz.ts} (569 LOC).
+
+\begin{infobox}[title={Wzorzec callback\'{o}w w~DelusionQuestion}]
+Interfejs \tstype{DelusionQuestion} u\.{z}ywa funkcji zwrotnych (\tsfunc{getCorrectAnswer}, \tsfunc{getRevealText}) zamiast statycznych p\'{o}l danych. Pozwala to ka\.{z}demu pytaniu dynamicznie oblicza\'{c} poprawn\k{a} odpowied\'{z} na podstawie bie\.{z}\k{a}cych metryk ilo\'{s}ciowych. Jest to wyj\k{a}tek od typowego wzorca ,,p\l{}askich danych'' --- uzasadniony konieczno\'{s}ci\k{a} por\'{o}wnywania odpowiedzi u\.{z}ytkownika z~rzeczywistymi warto\'{s}ciami.
+\end{infobox}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{DelusionQuestion}
+\label{subsec:delusion-question}
+
+Definicja pojedynczego pytania quizu --- zawiera tre\'{s}\'{c}, opcje odpowiedzi oraz callbacki obliczeniowe.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs DelusionQuestion}]
+interface DelusionQuestion {
+  id: string;
+  question: string;
+  options: Array<{ label: string; value: string }>;
+  getCorrectAnswer: (
+    quantitative: QuantitativeAnalysis,
+    conversation: ParsedConversation,
+  ) => string;
+  getRevealText: (
+    correct: string,
+    userAnswer: string,
+    quantitative: QuantitativeAnalysis,
+    conversation: ParsedConversation,
+  ) => string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{DelusionQuestion}}
+\label{tab:delusion-question}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{id} & \tstype{string} & tak & Unikalny identyfikator pytania (np.~\texttt{"q1\_more\_messages"}) \\
+\texttt{question} & \tstype{string} & tak & Tre\'{s}\'{c} pytania wy\'{s}wietlanego u\.{z}ytkownikowi \\
+\texttt{options} & \tstype{Array<\{label, value\}>} & tak & Opcje odpowiedzi --- tablica lub pusta (dynamicznie wype\l{}niana imionami) \\
+\texttt{getCorrectAnswer} & \tstype{(quant, conv) => string} & tak & Callback obliczaj\k{a}cy poprawn\k{a} odpowied\'{z} z~danych ilo\'{s}ciowych \\
+\texttt{getRevealText} & \tstype{(correct, user, quant, conv) => string} & tak & Callback generuj\k{a}cy tekst ods\l{}ony z~konkretnymi liczbami \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{DelusionAnswer}
+\label{subsec:delusion-answer}
+
+Wynik pojedynczego pytania --- por\'{o}wnanie odpowiedzi u\.{z}ytkownika z~rzeczywisto\'{s}ci\k{a}.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs DelusionAnswer}]
+interface DelusionAnswer {
+  questionId: string;
+  userAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  revealText: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{DelusionAnswer}}
+\label{tab:delusion-answer}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{questionId} & \tstype{string} & tak & Referencja do \texttt{DelusionQuestion.id} \\
+\texttt{userAnswer} & \tstype{string} & tak & Odpowied\'{z} wybrana przez u\.{z}ytkownika \\
+\texttt{correctAnswer} & \tstype{string} & tak & Poprawna odpowied\'{z} obliczona z~danych ilo\'{s}ciowych \\
+\texttt{isCorrect} & \tstype{boolean} & tak & Czy odpowied\'{z} u\.{z}ytkownika by\l{}a poprawna \\
+\texttt{revealText} & \tstype{string} & tak & Tekst ods\l{}ony z~konkretnymi liczbami i~danymi \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{DelusionQuizResult}
+\label{subsec:delusion-quiz-result}
+
+Kontener wyniku ca\l{}ego quizu --- agreguje odpowiedzi i~oblicza Delusion Index.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs DelusionQuizResult}]
+interface DelusionQuizResult {
+  answers: DelusionAnswer[];
+  score: number;
+  delusionIndex: number;
+  label: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{DelusionQuizResult}}
+\label{tab:delusion-quiz-result}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{answers} & \tstype{DelusionAnswer[]} & tak & Tablica wynik\'{o}w 15~pyta\'{n} \\
+\texttt{score} & \tstype{number} & tak & Liczba poprawnych odpowiedzi (0--15) \\
+\texttt{delusionIndex} & \tstype{number} & tak & Indeks z\l{}udze\'{n} (0--100), wa\.{z}ony --- pytania o~sobie licz\k{a} si\k{e}~2$\times$ \\
+\texttt{label} & \tstype{string} & tak & Etykieta: \texttt{BAZOWANY} $|$ \texttt{REALISTA} $|$ \texttt{LEKKO ODJECHANY} $|$ \texttt{TOTAL DELULU} $|$ \texttt{POZA RZECZYWISTO\'{S}CI\k{A}} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy Symulatora Odpowiedzi}
+\label{sec:simulator-types}
+% ============================================================
+
+Typy modu\l{}u ,,Reply Simulator'' --- funkcjonalno\'{s}ci symuluj\k{a}cej odpowied\'{z} konkretnej osoby na podstawie jej rzeczywistych wzorc\'{o}w komunikacyjnych. Generowanie po stronie serwera (Gemini API). Zdefiniowane w~pliku:
+
+\filepath{src/lib/analysis/simulator-prompts.ts} (359 LOC).
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SimulationParams}
+\label{subsec:simulation-params}
+
+Parametry wej\'{s}ciowe symulacji --- 14~p\'{o}l opisuj\k{a}cych styl i~kontekst docelowej osoby.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs SimulationParams}]
+interface SimulationParams {
+  userMessage: string;
+  targetPerson: string;
+  participants: string[];
+  quantitativeContext: string;
+  topWords: Array<{ word: string; count: number }>;
+  topPhrases: Array<{ phrase: string; count: number }>;
+  avgMessageLengthWords: number;
+  avgMessageLengthChars: number;
+  emojiFrequency: number;
+  topEmojis: Array<{ emoji: string; count: number }>;
+  medianResponseTimeMs: number;
+  exampleMessages: string[];
+  previousExchanges: Array<{ role: 'user' | 'target'; message: string }>;
+  personalityProfile?: PersonProfile;
+  toneAnalysis?: Pass1Result;
+  dynamicsAnalysis?: Pass2Result;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SimulationParams} (14~p\'{o}l + 3~opcjonalne)}
+\label{tab:simulation-params}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{userMessage} & \tstype{string} & tak & Wiadomo\'{s}\'{c} wpisana przez u\.{z}ytkownika (maks.~200 znak\'{o}w) \\
+\texttt{targetPerson} & \tstype{string} & tak & Imi\k{e} osoby, kt\'{o}rej odpowied\'{z} jest symulowana \\
+\texttt{participants} & \tstype{string[]} & tak & Lista wszystkich uczestnik\'{o}w rozmowy \\
+\texttt{quantitativeContext} & \tstype{string} & tak & Zserializowany kontekst metryk ilo\'{s}ciowych \\
+\texttt{topWords} & \tstype{Array<\{word, count\}>} & tak & Najcz\k{e}\'{s}ciej u\.{z}ywane s\l{}owa przez docelow\k{a} osob\k{e} \\
+\texttt{topPhrases} & \tstype{Array<\{phrase, count\}>} & tak & Najcz\k{e}stsze frazy docelowej osoby \\
+\texttt{avgMessageLengthWords} & \tstype{number} & tak & \'{S}rednia d\l{}ugo\'{s}\'{c} wiadomo\'{s}ci w~s\l{}owach \\
+\texttt{avgMessageLengthChars} & \tstype{number} & tak & \'{S}rednia d\l{}ugo\'{s}\'{c} wiadomo\'{s}ci w~znakach \\
+\texttt{emojiFrequency} & \tstype{number} & tak & Cz\k{e}stotliwo\'{s}\'{c} u\.{z}ycia emoji (0--1+) \\
+\texttt{topEmojis} & \tstype{Array<\{emoji, count\}>} & tak & Najcz\k{e}\'{s}ciej u\.{z}ywane emoji z~licznikami \\
+\texttt{medianResponseTimeMs} & \tstype{number} & tak & Mediana czasu odpowiedzi w~milisekundach \\
+\texttt{exampleMessages} & \tstype{string[]} & tak & 20--30 rzeczywistych wiadomo\'{s}ci od docelowej osoby \\
+\texttt{previousExchanges} & \tstype{Array<\{role, message\}>} & tak & Poprzednie wymiany w~bie\.{z}\k{a}cej sesji symulacji \\
+\texttt{personalityProfile} & \tstype{PersonProfile} & nie & Profil osobowo\'{s}ci z~Pass~3 (je\'{s}li dost\k{e}pny) \\
+\texttt{toneAnalysis} & \tstype{Pass1Result} & nie & Analiza tonu i~dynamiki z~Pass~1 \\
+\texttt{dynamicsAnalysis} & \tstype{Pass2Result} & nie & Analiza konflikt\'{o}w, pracy emocjonalnej, flag z~Pass~2 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SimulationResponse}
+\label{subsec:simulation-response}
+
+Wynik symulacji --- wygenerowana odpowied\'{z} z~ocen\k{a} pewno\'{s}ci.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs SimulationResponse}]
+interface SimulationResponse {
+  reply: string;
+  confidence: number;
+  styleNotes: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SimulationResponse}}
+\label{tab:simulation-response}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{reply} & \tstype{string} & tak & Wygenerowana wiadomo\'{s}\'{c} w~stylu docelowej osoby \\
+\texttt{confidence} & \tstype{number} & tak & Pewno\'{s}\'{c} symulacji (0--100) --- jak prawdopodobne, \.{z}e osoba odpowiedzia\l{}aby podobnie \\
+\texttt{styleNotes} & \tstype{string} & tak & Kr\'{o}tki opis odwzorowanych element\'{o}w stylu (osobowo\'{s}\'{c}, ton, nawyki) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy walidacji Zod}
+\label{sec:zod-types}
+% ============================================================
+
+Walidacja runtime'owa za pomocą biblioteki Zod zapewnia typobezpieczeństwo na granicy API --- waliduje dane wejściowe od klienta oraz wyjścia z~modelu AI. Schematy zdefiniowane są w~pliku:
+
+\filepath{src/lib/analysis/schemas.ts}
+
+\begin{infobox}[title={Rola schematów Zod}]
+Schematy Zod zamykają wektor prompt injection: nawet jeśli model AI zwróci nieoczekiwane pola, schemat Zod odetnie je zanim trafią do frontendu. Każdy z~9~endpointów API posiada dedykowany schemat wejściowy.
+\end{infobox}
+
+Kluczowe eksportowane typy (inferowane z~schematów \tsfunc{z.infer<>}):
+
+\begin{table}[H]
+\centering
+\caption{Typy Zod eksportowane ze \filepath{schemas.ts}}
+\label{tab:zod-types}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Typ / Schemat} & \textbf{Endpoint} & \textbf{Walidowane pola} \\
+\midrule
+\tstype{AnalyzeInput} & \texttt{/api/analyze} & messages (limit), participants, relationshipContext (enum) \\
+\tstype{SubtextInput} & \texttt{/api/analyze/subtext} & messages, participants, windowCount (1--20) \\
+\tstype{CourtInput} & \texttt{/api/analyze/court} & messages, participants, relationshipContext \\
+\tstype{CPSInput} & \texttt{/api/analyze/cps} & messages, participants, participantName \\
+\tstype{StandupInput} & \texttt{/api/analyze/standup} & messages, participants, targetPerson \\
+\tstype{RoastInput} & \texttt{/api/analyze/roast} & messages, participants \\
+\tstype{ImageInput} & \texttt{/api/analyze/image} & prompt, style (enum), aspect (enum) \\
+\tstype{DatingProfileInput} & \texttt{/api/analyze/dating-profile} & samples, participants, quantitativeContext, existingAnalysis? (pass1?, pass3?) \\
+\tstype{SimulateInput} & \texttt{/api/analyze/simulate} & userMessage (max 200), targetPerson, participants, topWords?, topPhrases?, topEmojis?, previousExchanges?, personalityProfile?, toneAnalysis?, dynamicsAnalysis? \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Schemat \tstype{relationshipContext} jest ograniczony do wartości wyliczeniowych: \texttt{romantic}, \texttt{friendship}, \texttt{colleague}, \texttt{professional}, \texttt{family}, \texttt{other} --- co eliminuje dowolne ciągi tekstowe jako wektor ataku.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Zaktualizowane podsumowanie zależności}
+\label{subsec:updated-dependency-summary}
+
+\begin{table}[H]
+\centering
+\caption{Zaktualizowana mapa zależności typów --- Faza 19--20}
+\label{tab:type-dependency-map-v2}
+\begin{tabularx}{\textwidth}{l c X}
+\toprule
+\textbf{Kontener} & \textbf{Podtypów} & \textbf{Kluczowe składniki} \\
+\midrule
+\tstype{StoredAnalysis} & 3 & ParsedConversation, QuantitativeAnalysis, QualitativeAnalysis? \\
+\tstype{QuantitativeAnalysis} & 12 & PersonMetrics, TimingMetrics, EngagementMetrics, PatternMetrics, HeatmapData, TrendData, ViralScores?, Badge[]?, BestTimeToText?, CatchphraseResult?, NetworkMetrics?, ReciprocityIndex? \\
+\tstype{QualitativeAnalysis} & 9 & Pass1--4?, RoastResult?, StandUpRoastResult?, CPSResult?, \textbf{SubtextResult?}, \textbf{CourtResult?} \\
+\tstype{PersonProfile} & 10 & BigFiveApproximation, AttachmentIndicators, CommunicationProfile, CommunicationNeeds, EmotionalPatterns, ClinicalObservations, ConflictResolution, EmotionalIntelligence, MBTIResult?, LoveLanguageResult? \\
+\tstype{Pass2Result} & 7 & PowerDynamics, EmotionalLabor, ConflictPatterns, IntimacyMarkers, RedFlag[], GreenFlag[], relationship\_phase? \\
+\tstype{CPSResult} & 4 & CPSAnswer (63$\times$), CPSPatternResult (10$\times$), disclaimer, participantName \\
+\tstype{SubtextResult} & 3 & SubtextItem[], SubtextSummary, disclaimer \\
+\tstype{CourtResult} & 4 & CourtCharge[], CourtVerdict, Record<PersonVerdict>, strings \\
+\tstype{DatingProfileResult} & 3 & DatingProfileStat, DatingProfilePrompt, PersonDatingProfile \\
+\tstype{DelusionQuizResult} & 1 & DelusionAnswer \\
+\tstype{SimulationResponse} & 0 & samodzielny (standalone) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Łączna liczba zdefiniowanych interfejsów w~\podtekst: \textbf{$\sim$65}, w~tym:
+\begin{itemize}
+  \item 15 interfejsów parserowych/ilościowych
+  \item 25 interfejsów analizy AI (Pass 1--5)
+  \item 6 interfejsów Dekodera Podtekstów (SubtextCategory, SubtextItem, SubtextSummary, SubtextResult, SimplifiedMsg, ExchangeWindow)
+  \item 4 interfejsy Procesu S\k{a}dowego (CourtResult, CourtCharge, PersonVerdict, CourtVerdict)
+  \item 4 interfejsy Profilu Randkowego (DatingProfileResult, PersonDatingProfile, DatingProfileStat, DatingProfilePrompt)
+  \item 3 interfejsy Quizu Samo\'{s}wiadomo\'{s}ci (DelusionQuizResult, DelusionAnswer, DelusionQuestion)
+  \item 2 interfejsy Symulatora Odpowiedzi (SimulationParams, SimulationResponse)
+  \item 4 interfejsy CPS
+  \item 3 interfejsy magazynowania
+  \item 9 schemat\'{o}w walidacji Zod (inferowane typy)
+\end{itemize}

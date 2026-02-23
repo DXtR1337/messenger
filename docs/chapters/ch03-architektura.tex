@@ -1,0 +1,927 @@
+% ============================================================
+% Rozdział 3 — Architektura Systemu
+% ============================================================
+
+\chapter{Architektura Systemu}
+\label{ch:architektura}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Dobra architektura to taka, która pozwala podejmować decyzje \\
+jak najpóźniej --- i~cofać je jak najtaniej.''
+\end{center}
+
+\vspace{12pt}
+
+Architektura \podtekst opiera się na kilku kluczowych zasadach: prywatność użytkownika (dane nie opuszczają przeglądarki bez wyraźnej potrzeby), koszt bliski zeru na etapie MVP (brak bazy danych na serwerze, brak systemu kolejek), oraz szybkość iteracji (monolit Next.js z~wyraźnym podziałem na warstwy). Niniejszy rozdział przedstawia kompletny obraz techniczny systemu --- od diagramu wysokopoziomowego, przez stos technologiczny, po szczegóły implementacji każdego etapu pipeline'u analizy.
+
+% ============================================================
+\section{Przegląd architektury}
+\label{sec:arch-overview}
+
+\podtekst jest aplikacją hybrydową: ciężkie obliczenia ilościowe wykonywane są po stronie klienta (w~przeglądarce), natomiast analiza AI odbywa się na serwerze --- wyłącznie dlatego, że klucz API do Gemini musi pozostać po stronie serwerowej. Poniższy diagram przedstawia kompletny przepływ danych od momentu uploadu pliku do wyświetlenia raportu.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm and 1.2cm,
+  every node/.style={font=\small},
+]
+
+% ---- CLIENT GROUP ----
+\begin{scope}[local bounding box=clientbox]
+  \node[podbox blue, minimum width=3cm] (upload) {Upload pliku\\(JSON / TXT)};
+  \node[podbox blue, below=of upload, minimum width=3cm] (parser) {Parser\\{\scriptsize Messenger / WhatsApp / IG / TG / Discord}};
+  \node[podbox blue, below=of parser, minimum width=3cm] (quant) {Silnik ilościowy\\{\scriptsize O(n) single-pass}};
+  \node[podbox blue, below=of quant, minimum width=3cm] (sampling) {Sampling\\{\scriptsize 200--500 wiad.}};
+  \node[podbox green, below=of sampling, minimum width=3cm] (idb) {IndexedDB\\{\scriptsize localStorage++}};
+
+  \draw[podarrow] (upload) -- (parser);
+  \draw[podarrow] (parser) -- (quant);
+  \draw[podarrow] (quant) -- (sampling);
+  \draw[podarrow] (sampling.south west) -- ++(0,-0.3) -| (idb.north west);
+\end{scope}
+
+\node[podgroup blue, fit=(clientbox), inner sep=14pt] (clientframe) {};
+\node[podlabel blue, above=2pt of clientframe.north] {\large KLIENT (przeglądarka)};
+
+% ---- SERVER GROUP ----
+\begin{scope}[shift={(8,0)}, local bounding box=serverbox]
+  \node[podbox purple, minimum width=3cm] (api) {/api/analyze\\{\scriptsize SSE endpoint}};
+  \node[podbox purple, below=of api, minimum width=3cm] (gemini) {Gemini API\\{\scriptsize gemini-3-flash}};
+  \node[podbox purple, below=of gemini, minimum width=3cm] (passes) {4 pasy analizy\\{\scriptsize ton / dynamika / profil / synteza}};
+  \node[podbox amber, below=of passes, minimum width=3cm] (ratelimit) {Rate Limiter\\{\scriptsize 5 req / 10 min}};
+
+  \draw[podarrow purple] (api) -- (gemini);
+  \draw[podarrow purple] (gemini) -- (passes);
+  \draw[podarrow purple] (passes.south east) -- ++(0,-0.3) -| (ratelimit.north east);
+\end{scope}
+
+\node[podgroup purple, fit=(serverbox), inner sep=14pt] (serverframe) {};
+\node[podlabel, text=PodPurple, fill=PodPurple!5, above=2pt of serverframe.north] {\large SERWER (Next.js API Route)};
+
+% ---- ARROWS BETWEEN CLIENT AND SERVER ----
+\draw[dataarrow, color=PodBlue]
+  (sampling.east) -- ++(1.2,0) node[midway, above, font=\scriptsize\color{PodTextSecondary}] {POST}
+  -- ++(0,3.6) -- (api.west)
+  node[midway, above, font=\scriptsize, text=PodBlue] {samples + context};
+
+\draw[dataarrow, color=PodPurple]
+  (api.west) ++(0, -0.3) -- ++(-0.8,0) -- ++(0,-3.6) -- ++(-0.4,0)
+  node[near start, below, font=\scriptsize, text=PodPurple] {SSE stream}
+  -- (sampling.east |- idb.east) -- (idb.east);
+
+% ---- VISUALIZATION at bottom ----
+\node[podbox green, below=1.5cm of idb, minimum width=3cm] (viz) {Wizualizacja\\{\scriptsize Recharts + Motion}};
+\draw[podarrow, color=PodSuccess] (idb) -- (viz);
+
+\end{tikzpicture}
+\caption{Diagram wysokopoziomowy architektury \podtekst --- przepływ danych od uploadu do raportu.}
+\label{fig:arch-overview}
+\end{figure}
+
+\begin{infobox}[title=Dlaczego taki podział?]
+Kluczowe uzasadnienie architektury:
+\begin{enumerate}
+  \item \textbf{Prywatność:} surowe wiadomości nigdy nie opuszczają przeglądarki w~całości --- na serwer trafia jedynie próbka 200--500 wiadomości (z~potencjalnie 50\,000+).
+  \item \textbf{Koszt:} analiza ilościowa nie wymaga GPU ani API --- jest to czysty JavaScript działający w~przeglądarce. Jedyny koszt to wywołania Gemini API.
+  \item \textbf{Szybkość:} parsowanie i~analiza ilościowa trwają $\sim$3~sekundy łącznie, co daje użytkownikowi natychmiastowy feedback jeszcze przed uruchomieniem AI.
+\end{enumerate}
+\end{infobox}
+
+
+% ============================================================
+\section{Stos technologiczny}
+\label{sec:tech-stack}
+
+\podtekst wykorzystuje nowoczesny stos technologiczny oparty na ekosystemie React/Next.js. Poniższa tabela zawiera kompletny wykaz wszystkich technologii wraz z~ich wersjami i~rolą w~systemie.
+
+\begin{table}[H]
+\centering
+\caption{Kompletny stos technologiczny \podtekst}
+\label{tab:tech-stack}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{Kategoria} & \textbf{Technologia} & \textbf{Rola w~systemie} \\
+\midrule
+\rowcolor{PodBlue!3}
+Framework & Next.js 16.1.6 & App Router, standalone output, SSR/SSG, API Routes \\
+Runtime & React 19.2.3 & Renderowanie UI, Server Components, Suspense \\
+\rowcolor{PodBlue!3}
+Język & TypeScript 5.x & Strict mode, pełne typowanie, zero \tskey{any} \\
+Styling & Tailwind CSS v4 & Utility-first CSS, \tskey{@theme inline}, PostCSS \\
+\rowcolor{PodBlue!3}
+Komponenty UI & shadcn/ui (new-york) & Radix UI primitives, dostosowane do dark theme \\
+Prymitywy & Radix UI 1.4.3 & Dostępne (a11y) prymitywy: Collapsible, Dialog, etc. \\
+\rowcolor{PodBlue!3}
+Wykresy & Recharts 3.7.0 & Wykresy liniowe, radarowe, słupkowe, heatmapy \\
+Animacje & Framer Motion 12.34.0 & Animacje wejścia, przejścia stron, spring physics \\
+\rowcolor{PodBlue!3}
+3D & Spline (react-spline 4.1.0) & Sceny 3D na landing page, runtime 1.12.58 \\
+AI & Google Generative AI 0.24.1 & Gemini API --- analiza jakościowa, generowanie obrazów \\
+\rowcolor{PodBlue!3}
+Ikony & Lucide React 0.570.0 & 1500+ ikon SVG, tree-shakeable \\
+PDF & jspdf 4.1.0 & Eksport raportów do PDF \\
+\rowcolor{PodBlue!3}
+Rendering & html2canvas-pro 1.6.7 & Rasteryzacja komponentów React do canvas (dla PDF) \\
+Kompresja & lz-string 1.5.0 & Kompresja danych w~IndexedDB (UTF-16) \\
+\rowcolor{PodBlue!3}
+Narzędzia CSS & class-variance-authority 0.7.1 & Warianty klas CSS dla komponentów \\
+Merge & clsx 2.1.1 + tailwind-merge 3.4.1 & Bezpieczne łączenie klas Tailwind \\
+\rowcolor{PodBlue!3}
+Server-only & server-only 0.0.1 & Gwarancja, że moduł Gemini nie trafi do bundla klienta \\
+\midrule
+\rowcolor{PodPurple!3}
+\multicolumn{3}{@{}l}{\textbf{Dev Dependencies}} \\
+\rowcolor{PodPurple!3}
+PostCSS & @tailwindcss/postcss 4.x & Plugin PostCSS dla Tailwind v4 \\
+Typy & @types/node, @types/react 19 & Definicje typów dla Node.js i~React \\
+\rowcolor{PodPurple!3}
+Linter & ESLint 9 + eslint-config-next & Statyczna analiza kodu \\
+Formatter & Prettier 3.8.1 & Formatowanie kodu \\
+\rowcolor{PodPurple!3}
+UI Generator & shadcn 3.8.5 & CLI do dodawania komponentów shadcn/ui \\
+Animacje CSS & tw-animate-css 1.4.0 & Animacje CSS zintegrowane z~Tailwind \\
+\rowcolor{PodPurple!3}
+Package Manager & pnpm & Szybki, deterministyczny menedżer pakietów \\
+Runtime & Node.js 22 (Alpine) & Środowisko uruchomieniowe (Docker) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title=Wersje krytyczne]
+Następujące wersje są ściśle powiązane i~wymagają synchronicznej aktualizacji:
+\begin{itemize}
+  \item \textbf{Next.js 16.1.6} $\leftrightarrow$ \textbf{React 19.2.3} --- Next.js 16 wymaga React 19 (Server Components, \tskey{use} hook).
+  \item \textbf{Tailwind CSS v4} $\leftrightarrow$ \textbf{@tailwindcss/postcss v4} --- Tailwind v4 nie jest kompatybilny wstecz z~v3. Brak pliku \filepath{tailwind.config.ts} --- konfiguracja odbywa się przez \tskey{@theme inline} w~CSS.
+  \item \textbf{shadcn/ui 3.8.5} $\leftrightarrow$ \textbf{Radix UI 1.4.3} --- shadcn generuje komponenty oparte na konkretnej wersji Radix.
+\end{itemize}
+\end{warningbox}
+
+
+% ============================================================
+\section{Architektura App Router}
+\label{sec:app-router}
+
+\podtekst wykorzystuje App Router Next.js 16 z~route groups (nawiasy okrągłe) do organizacji layoutów. Poniższy diagram przedstawia kompletne drzewo routingu aplikacji.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  grow=down,
+  level distance=1.6cm,
+  sibling distance=3.2cm,
+  every node/.style={
+    draw=PodBorder,
+    fill=white,
+    rounded corners=3pt,
+    font=\ttfamily\small,
+    inner sep=5pt,
+    minimum height=0.7cm,
+  },
+  edge from parent/.style={
+    draw=PodBlue!50,
+    thick,
+    ->,
+    >=stealth,
+  },
+  level 1/.style={sibling distance=4.5cm},
+  level 2/.style={sibling distance=3cm},
+  level 3/.style={sibling distance=2.8cm},
+]
+  \node[fill=PodBlue!10, draw=PodBlue!50, font=\ttfamily\small\bfseries] {src/app/}
+    child {
+      node[fill=PodBlue!8, draw=PodBlue!40] {/}
+        edge from parent node[left, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {landing}
+    }
+    child {
+      node[fill=PodPurple!8, draw=PodPurple!40] {(dashboard)}
+        child {
+          node {/dashboard}
+            edge from parent node[left, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {lista}
+        }
+        child {
+          node {/analysis}
+            child {
+              node {/new}
+                edge from parent node[left, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {upload}
+            }
+            child {
+              node {/[id]}
+                edge from parent node[right, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {wyniki}
+            }
+            child {
+              node {/compare}
+                edge from parent node[right, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {por\'own.}
+            }
+        }
+    }
+    child {
+      node[fill=PodSuccess!8, draw=PodSuccess!40] {(story)}
+        child {
+          node {/[id]/story}
+            edge from parent node[left, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {story mode}
+        }
+        child {
+          node {/[id]/wrapped}
+            edge from parent node[right, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {wrapped}
+        }
+    }
+    child {
+      node[fill=PodWarning!8, draw=PodWarning!40] {/api}
+        child {
+          node {/analyze}
+            edge from parent node[left, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {SSE}
+        }
+        child {
+          node {/analyze/image}
+            edge from parent node[left, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {obraz}
+        }
+        child {
+          node {/analyze/cps}
+            edge from parent node[right, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {CPS}
+        }
+        child {
+          node {/health}
+            edge from parent node[right, font=\scriptsize\color{PodTextSecondary}, draw=none, fill=none] {health}
+        }
+    };
+\end{tikzpicture}
+\caption{Drzewo routingu App Router --- route groups \texttt{(dashboard)} i~\texttt{(story)} dzielą wspólne layouty, ale nie wpływają na URL.}
+\label{fig:app-router-tree}
+\end{figure}
+
+\subsection{Route groups i~layouty}
+
+\begin{description}
+  \item[(dashboard)] Grupa zawierająca boczne menu nawigacyjne (\tstype{Navigation}), górny pasek (\tstype{Topbar}) oraz kontekst sidebara (\tstype{SidebarContext}). Obejmuje dashboard, upload i~widok wyników analizy.
+
+  \item[(story)] Grupa bez sidebara --- pełnoekranowy, immersyjny widok Story Mode i~Wrapped. Własny layout z~ciemnym tłem i~animacjami scroll-driven.
+
+  \item[/api] Endpointy serwerowe. Nie mają layoutu --- to czyste funkcje \tskey{POST}/\tskey{GET} eksportowane z~plików \filepath{route.ts}.
+\end{description}
+
+\subsection{Endpointy API}
+
+\begin{table}[H]
+\centering
+\caption{Endpointy API \podtekst}
+\label{tab:api-endpoints}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l l l X@{}}
+\toprule
+\textbf{Ścieżka} & \textbf{Metoda} & \textbf{Rate Limit} & \textbf{Opis} \\
+\midrule
+\filepath{/api/analyze} & POST & 5/10min & Główny SSE endpoint --- 4 pasy analizy AI + tryb roast \\
+\filepath{/api/analyze/image} & POST & 10/10min & Generowanie obrazów (comic strip) via Gemini \\
+\filepath{/api/analyze/cps} & POST & 5/10min & Communication Pattern Screening (Pass 5) \\
+\filepath{/api/analyze/standup} & POST & 5/10min & Stand-up roast generowanie \\
+\filepath{/api/health} & GET & brak & Healthcheck --- zwraca \tstype{\{status: "ok"\}} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Rozdzielenie klient/serwer}
+\label{sec:client-server}
+
+\podtekst stosuje wyraźny podział odpowiedzialności między przeglądarką a~serwerem. Nie jest to przypadkowe --- każda decyzja o~lokalizacji kodu wynika z~konkretnych ograniczeń technicznych i~biznesowych.
+
+\subsection{Operacje po stronie klienta}
+
+Następujące operacje wykonywane są w~całości w~przeglądarce użytkownika:
+
+\begin{enumerate}
+  \item \textbf{Parsowanie pliku JSON/TXT} --- deserializacja, dekodowanie Unicode Facebooka (\tsfunc{decodeFBString}), normalizacja do formatu \tstype{UnifiedMessage}. Plik nie jest nigdy wysyłany na serwer.
+
+  \item \textbf{Analiza ilościowa} --- obliczenie 60+ metryk w~jednym przejściu O(n) przez tablicę wiadomości. Obejmuje: wolumen, timing, engagement, wzorce. Brak potrzeby AI.
+
+  \item \textbf{Sampling wiadomości} --- selekcja 200--500 wiadomości metodą stratyfikowaną (60\% waga na ostatnie 25\% zakresu czasowego) + sampling wokół punktów przegięcia.
+
+  \item \textbf{Wizualizacja} --- renderowanie 40+ komponentów (wykresy Recharts, animacje Framer Motion, siatki KPI, radary, heatmapy).
+
+  \item \textbf{Przechowywanie danych} --- zapis kompletnej analizy w~IndexedDB. Brak serwera bazodanowego.
+
+  \item \textbf{Eksport PDF} --- rasteryzacja komponentów React via html2canvas-pro, generowanie PDF via jspdf.
+\end{enumerate}
+
+\subsection{Operacje po stronie serwera}
+
+Na serwerze wykonywane są wyłącznie operacje wymagające poufnego klucza API:
+
+\begin{enumerate}
+  \item \textbf{Analiza AI} --- 4 pasy analizy jakościowej via Gemini API (\filepath{/api/analyze}). Klucz \tskey{GEMINI\_API\_KEY} jest zmienną środowiskową serwera.
+
+  \item \textbf{Generowanie obrazów} --- tworzenie ilustracji comic-strip via Gemini Pro Image (\filepath{/api/analyze/image}).
+
+  \item \textbf{Rate limiting} --- ochrona przed nadużyciami. In-memory sliding window per IP.
+
+  \item \textbf{Communication Pattern Screening} --- opcjonalny Pass 5, analiza 119 pytań przesiewowych (\filepath{/api/analyze/cps}).
+\end{enumerate}
+
+\subsection{Uzasadnienie podziału}
+
+\begin{table}[H]
+\centering
+\caption{Uzasadnienie podziału klient/serwer}
+\label{tab:client-server-rationale}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
+\toprule
+\textbf{Kryterium} & \textbf{Klient} & \textbf{Serwer} \\
+\midrule
+\rowcolor{PodBlue!3}
+Bezpieczeństwo & Wiadomości nie opuszczają przeglądarki & Klucz API chroniony server-side \\
+Koszt & Zero --- CPU użytkownika & Tylko koszt Gemini API (\textasciitilde\$0.01/analiza) \\
+\rowcolor{PodBlue!3}
+Latencja & Parsowanie + quant: $\sim$3s & AI: 60--90s (ograniczenie modelu) \\
+Prywatność & Pełna kontrola użytkownika & Tylko próbka trafia na serwer \\
+\rowcolor{PodBlue!3}
+Skalowalność & Skaluje się z~liczbą userów (ich CPU) & Stateless --- brak bazy danych \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title=Moduł \texttt{server-only}]
+Plik \filepath{src/lib/analysis/gemini.ts} importuje pakiet \tstype{server-only} w~pierwszej linii. Gwarantuje to, że bundler Next.js rzuci błąd kompilacji, jeśli jakikolwiek komponent kliencki spróbuje zaimportować ten moduł --- klucz API nigdy nie trafi do bundla JavaScript wysyłanego do przeglądarki.
+\end{infobox}
+
+
+% ============================================================
+\section{Pipeline analizy}
+\label{sec:analysis-pipeline}
+
+Pipeline analizy \podtekst składa się z~czterech etapów wykonywanych sekwencyjnie. Dwa pierwsze etapy działają po stronie klienta, trzeci na serwerze, a~czwarty ponownie po stronie klienta. Cały proces trwa średnio 65--95 sekund, z~czego $\sim$3~sekundy to obliczenia klienckie, a~reszta to czas odpowiedzi modelu AI.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.4cm,
+  every node/.style={font=\small},
+]
+
+% Stage 1
+\node[pipeline, minimum width=13cm, minimum height=2cm] (s1) {};
+\node[font=\large\bfseries, text=PodBlueDark, anchor=north west] at ([shift={(8pt,-6pt)}]s1.north west) {Etap 1: Upload i~Parsowanie};
+\node[font=\small, text=PodBlueDark, anchor=south west] at ([shift={(8pt,6pt)}]s1.south west) {
+  \begin{minipage}{12cm}
+  \textbf{Środowisko:} klient (przeglądarka) \quad \textbf{Czas:} $\sim$2s \\
+  \textbf{Wejście:} plik JSON/TXT \quad \textbf{Wyjście:} \tstype{ParsedConversation} \\
+  Parser dekoduje Unicode FB, normalizuje formaty, waliduje strukturę.
+  \end{minipage}
+};
+
+% Stage 2
+\node[pipeline, minimum width=13cm, minimum height=2cm, below=0.5cm of s1] (s2) {};
+\node[font=\large\bfseries, text=PodBlueDark, anchor=north west] at ([shift={(8pt,-6pt)}]s2.north west) {Etap 2: Analiza ilościowa};
+\node[font=\small, text=PodBlueDark, anchor=south west] at ([shift={(8pt,6pt)}]s2.south west) {
+  \begin{minipage}{12cm}
+  \textbf{Środowisko:} klient \quad \textbf{Czas:} $\sim$1s \quad \textbf{Złożoność:} O(n) single-pass \\
+  \textbf{Wejście:} \tstype{ParsedConversation} \quad \textbf{Wyjście:} \tstype{QuantitativeAnalysis} \\
+  60+ metryk: wolumen, timing, engagement, wzorce. Czysty JavaScript, zero AI.
+  \end{minipage}
+};
+
+% Stage 3
+\node[pipeline active, minimum width=13cm, minimum height=2.4cm, below=0.5cm of s2] (s3) {};
+\node[font=\large\bfseries, text=PodPurpleDark, anchor=north west] at ([shift={(8pt,-6pt)}]s3.north west) {Etap 3: Analiza AI (4 pasy)};
+\node[font=\small, text=PodPurpleDark, anchor=south west] at ([shift={(8pt,6pt)}]s3.south west) {
+  \begin{minipage}{12cm}
+  \textbf{Środowisko:} serwer (API Route) \quad \textbf{Czas:} 60--90s via SSE \\
+  \textbf{Wejście:} \tstype{AnalysisSamples} (200--500 wiad.) \quad \textbf{Wyjście:} \tstype{QualitativeAnalysis} \\
+  Pass 1: Ton i~styl $\rightarrow$ Pass 2: Dynamika relacji $\rightarrow$ \\
+  Pass 3: Profile osobowości (równolegle per osoba) $\rightarrow$ Pass 4: Synteza + raport
+  \end{minipage}
+};
+
+% Stage 4
+\node[pipeline, draw=PodSuccess, fill=PodSuccess!10, minimum width=13cm, minimum height=2cm, below=0.5cm of s3] (s4) {};
+\node[font=\large\bfseries, text=PodSuccess!80!black, anchor=north west] at ([shift={(8pt,-6pt)}]s4.north west) {Etap 4: Montaż raportu};
+\node[font=\small, text=PodSuccess!80!black, anchor=south west] at ([shift={(8pt,6pt)}]s4.south west) {
+  \begin{minipage}{12cm}
+  \textbf{Środowisko:} klient \quad \textbf{Czas:} natychmiast \\
+  \textbf{Wejście:} quant + qual \quad \textbf{Wyjście:} \tstype{StoredAnalysis} w~IndexedDB \\
+  Łączenie wyników ilościowych i~AI, zapis do IndexedDB, nawigacja do widoku raportu.
+  \end{minipage}
+};
+
+% Arrows
+\draw[dataarrow] (s1.south) -- (s2.north);
+\draw[dataarrow] (s2.south) -- (s3.north);
+\draw[dataarrow] (s3.south) -- (s4.north);
+
+% Time labels on the right
+\node[font=\scriptsize\color{PodTextMuted}, anchor=west] at ([xshift=10pt]s1.east) {$\sim$2s};
+\node[font=\scriptsize\color{PodTextMuted}, anchor=west] at ([xshift=10pt]s2.east) {$\sim$1s};
+\node[font=\scriptsize\color{PodTextMuted}, anchor=west] at ([xshift=10pt]s3.east) {60--90s};
+\node[font=\scriptsize\color{PodTextMuted}, anchor=west] at ([xshift=10pt]s4.east) {$\sim$0s};
+
+\end{tikzpicture}
+\caption{Cztery etapy pipeline'u analizy \podtekst z~podziałem na środowiska wykonania.}
+\label{fig:pipeline-stages}
+\end{figure}
+
+\subsection{Strategia samplingu}
+\label{subsec:sampling-strategy}
+
+Rozmowy mogą zawierać ponad 50\,000 wiadomości. Wysłanie ich wszystkich do modelu AI byłoby kosztowne, wolne i~niepotrzebne --- ludzki mózg też nie czyta każdej wiadomości, by ocenić relację. Moduł \filepath{src/lib/analysis/qualitative.ts} implementuje inteligentny sampling:
+
+\begin{description}
+  \item[Overview (250 wiad.)] Próba stratyfikowana: grupowanie wiadomości po miesiącach, podział na ,,stare'' (pierwsze 75\% zakresu) i~,,nowe'' (ostatnie 25\%). Nowe otrzymują 60\% budżetu.
+
+  \item[Dynamics (200 wiad.)] Sampling wokół punktów przegięcia:
+  \begin{itemize}
+    \item Wiadomości z~reakcjami (emocjonalnie znaczące)
+    \item Wiadomości wokół długich cisz ($>$48h przerwy --- 3 przed i~3 po)
+    \item Wiadomości z~miesięcy ze zmianą wolumenu $>$30\%
+    \item Najdłuższe wiadomości (top 5\% --- wysoka gęstość informacji)
+  \end{itemize}
+
+  \item[Per Person (150/osoba)] Próba stratyfikowana osobno dla każdego uczestnika. Służy do budowania indywidualnych profili osobowości w~Pass 3.
+\end{description}
+
+Łączny rozmiar payloadu wysyłanego na serwer to $\sim$70\,KB --- ułamek procenta oryginalnego pliku.
+
+
+% ============================================================
+\section{Streaming SSE}
+\label{sec:sse-streaming}
+
+Analiza AI trwa 60--90 sekund --- zbyt długo, by czekać na jedną odpowiedź HTTP. \podtekst używa Server-Sent Events (SSE) do strumieniowania postępu w~czasie rzeczywistym. Poniższy diagram sekwencji pokazuje pełny przebieg komunikacji.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0cm,
+  every node/.style={font=\small},
+]
+
+% Participants
+\node[seqparticipant, fill=PodBlue!10, draw=PodBlue!50, minimum width=3.5cm] (client) {Klient (React)};
+\node[seqparticipant, fill=PodPurple!10, draw=PodPurple!50, minimum width=3.5cm, right=8cm of client] (server) {Serwer (API Route)};
+
+% Lifelines
+\draw[dashed, PodBorder] (client.south) -- ++(0, -14);
+\draw[dashed, PodBorder] (server.south) -- ++(0, -14);
+
+% POST request
+\draw[->, thick, PodBlue] ([yshift=-1.5cm]client.south) --
+  node[above, font=\scriptsize] {\texttt{POST /api/analyze}}
+  node[below, font=\scriptsize\color{PodTextSecondary}] {\{samples, participants, context\}}
+  ([yshift=-1.5cm]server.south);
+
+% Rate limit check
+\node[font=\scriptsize\itshape\color{PodTextMuted}, anchor=west] at ([yshift=-2.3cm, xshift=0.5cm]server.south) {checkLimit(ip) $\rightarrow$ allowed};
+
+% SSE stream opened
+\draw[<-, thick, PodPurple] ([yshift=-3cm]client.south) --
+  node[above, font=\scriptsize] {\texttt{Content-Type: text/event-stream}}
+  ([yshift=-3cm]server.south);
+
+% Pass 1
+\draw[<-, thick, PodPurple!70] ([yshift=-4cm]client.south) --
+  node[above, font=\scriptsize] {\texttt{data: \{type:"progress", pass:1, status:"Analiza tonu..."\}}}
+  ([yshift=-4cm]server.south);
+
+% Heartbeat
+\draw[<-, dashed, PodTextMuted] ([yshift=-5cm]client.south) --
+  node[above, font=\scriptsize\color{PodTextMuted}] {\texttt{: } (heartbeat co 15s)}
+  ([yshift=-5cm]server.south);
+
+% Pass 2
+\draw[<-, thick, PodPurple!70] ([yshift=-6cm]client.south) --
+  node[above, font=\scriptsize] {\texttt{data: \{type:"progress", pass:2, status:"Dynamika relacji..."\}}}
+  ([yshift=-6cm]server.south);
+
+% Pass 3
+\draw[<-, thick, PodPurple!70] ([yshift=-7.5cm]client.south) --
+  node[above, font=\scriptsize] {\texttt{data: \{type:"progress", pass:3, status:"Profile osobowości..."\}}}
+  ([yshift=-7.5cm]server.south);
+
+% Pass 4
+\draw[<-, thick, PodPurple!70] ([yshift=-9cm]client.south) --
+  node[above, font=\scriptsize] {\texttt{data: \{type:"progress", pass:4, status:"Raport końcowy..."\}}}
+  ([yshift=-9cm]server.south);
+
+% Complete
+\draw[<-, very thick, PodSuccess] ([yshift=-10.5cm]client.south) --
+  node[above, font=\scriptsize\bfseries\color{PodSuccess}] {\texttt{data: \{type:"complete", result: QualitativeAnalysis\}}}
+  ([yshift=-10.5cm]server.south);
+
+% Connection close
+\draw[<-, thick, PodDanger!60] ([yshift=-11.5cm]client.south) --
+  node[above, font=\scriptsize\color{PodDanger}] {connection close}
+  ([yshift=-11.5cm]server.south);
+
+% Client saves
+\node[font=\scriptsize\itshape\color{PodTextMuted}, anchor=east] at ([yshift=-12.5cm, xshift=-0.5cm]client.south) {saveAnalysis() $\rightarrow$ IndexedDB};
+
+% Time annotations
+\node[font=\scriptsize\color{PodTextMuted}, anchor=east] at ([yshift=-1.5cm, xshift=-4cm]client.south) {t = 0s};
+\node[font=\scriptsize\color{PodTextMuted}, anchor=east] at ([yshift=-4cm, xshift=-4cm]client.south) {t $\sim$ 15s};
+\node[font=\scriptsize\color{PodTextMuted}, anchor=east] at ([yshift=-6cm, xshift=-4cm]client.south) {t $\sim$ 30s};
+\node[font=\scriptsize\color{PodTextMuted}, anchor=east] at ([yshift=-7.5cm, xshift=-4cm]client.south) {t $\sim$ 50s};
+\node[font=\scriptsize\color{PodTextMuted}, anchor=east] at ([yshift=-9cm, xshift=-4cm]client.south) {t $\sim$ 70s};
+\node[font=\scriptsize\color{PodTextMuted}, anchor=east] at ([yshift=-10.5cm, xshift=-4cm]client.south) {t $\sim$ 90s};
+
+\end{tikzpicture}
+\caption{Diagram sekwencji SSE --- strumieniowanie postępu analizy AI w~czasie rzeczywistym.}
+\label{fig:sse-sequence}
+\end{figure}
+
+\subsection{Implementacja SSE}
+
+Endpoint \filepath{/api/analyze} tworzy strumień \tstype{ReadableStream} i~zwraca go jako odpowiedź HTTP z~nagłówkami SSE:
+
+\begin{lstlisting}[style=podcode, caption={Kluczowe nagłówki SSE w~odpowiedzi API}]
+return new Response(stream, {
+  headers: {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  },
+});
+\end{lstlisting}
+
+\subsection{Mechanizm heartbeat}
+
+Wiele proxy (Cloud Run, Nginx, load balancery) zamyka połączenia idle po 60 sekundach. Aby temu zapobiec, serwer wysyła komentarz SSE (\texttt{:\textbackslash n\textbackslash n}) co 15 sekund --- jest to prawidłowy pakiet SSE ignorowany przez parsery zdarzeń, ale podtrzymujący połączenie TCP:
+
+\begin{lstlisting}[style=podcode, caption={Heartbeat keepalive w~strumieniu SSE}]
+const heartbeat = setInterval(() => {
+  try {
+    controller.enqueue(encoder.encode(':\n\n'));
+  } catch {
+    clearInterval(heartbeat);
+  }
+}, 15000);
+\end{lstlisting}
+
+\subsection{Obsługa rozłączenia klienta}
+
+Serwer sprawdza \tstype{request.signal.aborted} przed każdym wysłaniem danych. Jeśli klient zamknął kartę przeglądarki lub anulował żądanie, serwer natychmiast przerywa przetwarzanie:
+
+\begin{lstlisting}[style=podcode, caption={Sprawdzanie rozłączenia klienta}]
+if (signal.aborted) {
+  clearInterval(heartbeat);
+  controller.close();
+  return;
+}
+\end{lstlisting}
+
+\subsection{Typy zdarzeń SSE}
+
+\begin{table}[H]
+\centering
+\caption{Typy zdarzeń w~strumieniu SSE}
+\label{tab:sse-events}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{Typ} & \textbf{Pola} & \textbf{Opis} \\
+\midrule
+\rowcolor{PodBlue!3}
+\tstype{progress} & \tskey{pass}, \tskey{status} & Postęp --- numer pasa (1--4) i~komunikat statusu \\
+\tstype{complete} & \tskey{result} & Sukces --- pełny wynik \tstype{QualitativeAnalysis} \\
+\rowcolor{PodBlue!3}
+\tstype{error} & \tskey{error} & Błąd --- komunikat tekstowy \\
+\tstype{roast\_complete} & \tskey{result} & Sukces trybu roast --- wynik \tstype{RoastResult} \\
+\rowcolor{PodBlue!3}
+\texttt{:} (komentarz) & --- & Heartbeat keepalive (co 15s) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Ograniczenia czasowe}
+
+\begin{itemize}
+  \item \textbf{maxDuration:} 120 sekund --- maksymalny czas trwania API Route (konfiguracja Next.js).
+  \item \textbf{Heartbeat:} co 15 sekund --- zapobiega timeout'om proxy.
+  \item \textbf{Gemini API:} typowy czas odpowiedzi 10--25 sekund per pass.
+\end{itemize}
+
+
+% ============================================================
+\section{Przechowywanie danych}
+\label{sec:data-storage}
+
+\podtekst w~wersji MVP nie posiada serwera bazodanowego. Wszystkie dane przechowywane są lokalnie w~przeglądarce użytkownika za pomocą IndexedDB --- niskopoziomowego API przeglądarki do przechowywania dużych ilości strukturyzowanych danych.
+
+\subsection{Schemat bazy danych}
+
+\begin{table}[H]
+\centering
+\caption{Schemat IndexedDB --- baza \texttt{podtekst}, wersja 1}
+\label{tab:indexeddb-schema}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l l X@{}}
+\toprule
+\textbf{Object Store} & \textbf{Key Path} & \textbf{Typ wartości} & \textbf{Opis} \\
+\midrule
+\rowcolor{PodBlue!3}
+\texttt{analyses} & \texttt{id} & \tstype{StoredAnalysis} & Pełne obiekty analizy --- konwersacja, metryki ilościowe, wyniki AI, metadane \\
+\texttt{index} & \texttt{id} & \tstype{AnalysisIndexEntry} & Lekki indeks do wyświetlania listy na dashboardzie \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Struktura StoredAnalysis}
+
+Każdy obiekt w~store \texttt{analyses} zawiera:
+
+\begin{description}
+  \item[id] UUID wygenerowany przez \tsfunc{crypto.randomUUID()} lub fallback.
+  \item[title] Tytuł rozmowy (z~pola \tskey{title} eksportu Facebooka lub nazwa pliku).
+  \item[createdAt] Timestamp utworzenia analizy (\tstype{number}).
+  \item[conversation] Kompletna \tstype{ParsedConversation} --- uczestnicy, wiadomości, metadane.
+  \item[quantitative] Wyniki analizy ilościowej (\tstype{QuantitativeAnalysis}).
+  \item[qualitative] Wyniki analizy AI (\tstype{QualitativeAnalysis}) --- opcjonalne, dodawane po zakończeniu SSE.
+\end{description}
+
+\subsection{Struktura AnalysisIndexEntry}
+
+Lekki obiekt do wyświetlania na dashboardzie bez ładowania pełnych danych:
+
+\begin{description}
+  \item[id] UUID (taki sam jak w~\texttt{analyses}).
+  \item[title] Tytuł rozmowy.
+  \item[createdAt] Timestamp.
+  \item[messageCount] Łączna liczba wiadomości.
+  \item[participants] Lista imion uczestników (\tstype{string[]}).
+  \item[hasQualitative] Czy analiza AI została ukończona (\tstype{boolean}).
+  \item[healthScore] Wynik Health Score (0--100) z~Pass 4 --- opcjonalny.
+\end{description}
+
+\subsection{Operacje CRUD}
+
+Moduł \filepath{src/lib/utils.ts} eksportuje cztery funkcje do operacji na IndexedDB:
+
+\begin{table}[H]
+\centering
+\caption{Funkcje CRUD dla IndexedDB}
+\label{tab:crud-ops}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{Funkcja} & \textbf{Sygnatura} & \textbf{Opis} \\
+\midrule
+\rowcolor{PodBlue!3}
+\tsfunc{saveAnalysis} & \tstype{(analysis: StoredAnalysis) => Promise<void>} & Zapisuje analizę do obu store'ów (full + index) \\
+\tsfunc{loadAnalysis} & \tstype{(id: string) => Promise<StoredAnalysis|null>} & Ładuje pełną analizę po UUID \\
+\rowcolor{PodBlue!3}
+\tsfunc{listAnalyses} & \tstype{() => Promise<AnalysisIndexEntry[]>} & Lista wszystkich analiz (sortowana po \tskey{createdAt} desc) \\
+\tsfunc{deleteAnalysis} & \tstype{(id: string) => Promise<void>} & Usuwa analizę z~obu store'ów w~jednej transakcji \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title=Dlaczego IndexedDB zamiast localStorage?]
+\tstype{localStorage} ma limit 5--10\,MB (zależnie od przeglądarki). Pojedyncza analiza rozmowy z~50\,000 wiadomościami zajmuje $\sim$15\,MB jako JSON. IndexedDB nie ma praktycznego limitu rozmiaru i~obsługuje operacje asynchroniczne, co nie blokuje głównego wątku UI.
+\end{infobox}
+
+\subsection{Kompresja lz-string}
+
+Duże rozmowy mogą generować obiekty \tstype{StoredAnalysis} o~rozmiarze 20--50\,MB. Pakiet \tstype{lz-string} jest dostępny w~projekcie do kompresji UTF-16, choć w~obecnej wersji MVP kompresja jest opcjonalna --- IndexedDB radzi sobie z~dużymi obiektami natywnie.
+
+\subsection{Migracja z~legacy}
+
+Wcześniejsza wersja aplikacji (ChatScope) używała bazy o~nazwie \texttt{chatscope}. Eksportowana stała \tstype{LEGACY\_DB\_NAME = 'chatscope'} służy do ewentualnej migracji danych ze starej wersji.
+
+
+% ============================================================
+\section{Integracja Gemini API}
+\label{sec:gemini-integration-arch}
+
+\podtekst wykorzystuje Google Generative AI SDK do komunikacji z~modelami Gemini. Moduł \filepath{src/lib/analysis/gemini.ts} jest oznaczony jako \tskey{server-only} i~eksportuje funkcje do uruchamiania poszczególnych pasów analizy.
+
+\subsection{Konfiguracja modelu}
+
+\begin{table}[H]
+\centering
+\caption{Parametry konfiguracji modelu Gemini}
+\label{tab:gemini-config-arch}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{Parametr} & \textbf{Wartość} & \textbf{Uzasadnienie} \\
+\midrule
+\rowcolor{PodBlue!3}
+\texttt{model} & \texttt{gemini-3-flash-preview} & Szybki, tani model z~dobrą jakością JSON output \\
+\texttt{temperature} & 0.3 & Niska losowość --- analiza powinna być powtarzalna \\
+\rowcolor{PodBlue!3}
+\texttt{responseMimeType} & \texttt{application/json} & Wymuszenie odpowiedzi w~formacie JSON \\
+\texttt{maxOutputTokens} & 8\,192 (16\,384 dla CPS) & Limit wyjścia --- wystarczający dla schematów JSON \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Mechanizm retry}
+
+Funkcja \tsfunc{callGeminiWithRetry()} implementuje exponential backoff z~maksymalnie 3~próbami:
+
+\begin{lstlisting}[style=podcode, caption={Exponential backoff w~callGeminiWithRetry()}]
+for (let attempt = 0; attempt < maxRetries; attempt++) {
+  try {
+    // ... wywolanie Gemini API ...
+    return text;
+  } catch (error) {
+    // Bledy nieodwracalne: brak klucza, billing, permissions
+    if (msg.includes('api key') || msg.includes('permission')
+        || msg.includes('billing') || msg.includes('not found')) {
+      throw new Error('Blad analizy AI');
+    }
+    // Bledy tymczasowe: czekaj i probuj ponownie
+    if (attempt < maxRetries - 1) {
+      await new Promise(r =>
+        setTimeout(r, 1000 * Math.pow(2, attempt))
+      );
+    }
+  }
+}
+\end{lstlisting}
+
+Czas oczekiwania między próbami wynosi: 1s, 2s, 4s (exponential backoff z~bazą 2). Błędy nieodwracalne (brak klucza API, brak uprawnień, problemy z~billingiem) powodują natychmiastowe przerwanie bez kolejnych prób.
+
+\subsection{Parsowanie odpowiedzi JSON}
+
+Mimo wymuszenia \tstype{responseMimeType: 'application/json'}, model Gemini czasami zwraca odpowiedź owiniętą w~bloki markdown (\texttt{```json ... ```}) lub poprzedzoną tekstem. Funkcja \tsfunc{parseGeminiJSON()} radzi sobie z~tymi przypadkami:
+
+\begin{enumerate}
+  \item Usunięcie ewentualnych fences markdown (\texttt{```json} i~\texttt{```}).
+  \item Jeśli tekst nie zaczyna się od \texttt{\{} lub \texttt{[}, wyszukanie pierwszego wystąpienia tych znaków.
+  \item Znalezienie pasującego zamykającego nawiasu (\texttt{\}} lub \texttt{]}).
+  \item Parsowanie wyciętego fragmentu via \tsfunc{JSON.parse()}.
+\end{enumerate}
+
+\subsection{Pasy analizy}
+
+\begin{table}[H]
+\centering
+\caption{Cztery pasy analizy AI --- wejście, wyjście, cel}
+\label{tab:analysis-passes}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}c l l l X@{}}
+\toprule
+\textbf{Pass} & \textbf{System prompt} & \textbf{Wejście} & \textbf{Wyjście} & \textbf{Cel analizy} \\
+\midrule
+\rowcolor{PodBlue!3}
+1 & \tstype{PASS\_1\_SYSTEM} & 250 wiad. overview & \tstype{Pass1Result} & Ton, styl, typ relacji \\
+2 & \tstype{PASS\_2\_SYSTEM} & 200 wiad. dynamics & \tstype{Pass2Result} & Władza, konflikt, intymność \\
+\rowcolor{PodBlue!3}
+3 & \tstype{PASS\_3\_SYSTEM} & 150 wiad./osoba & \tstype{PersonProfile} & Osobowość, przywiązanie \\
+4 & \tstype{PASS\_4\_SYSTEM} & wyniki P1--P3 + quant & \tstype{Pass4Result} & Synteza, Health Score, raport \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Pass 3 jest szczególny --- wykonuje się równolegle dla każdego uczestnika rozmowy za pomocą \tsfunc{Promise.all()}, co znacząco skraca czas analizy rozmów grupowych.
+
+\subsection{Kontekst relacji}
+
+Użytkownik może opcjonalnie wybrać typ relacji przed rozpoczęciem analizy (romantyczna, przyjacielska, rodzinna, zawodowa, koleżeńska). Funkcja \tsfunc{buildRelationshipPrefix()} generuje na tej podstawie instrukcję kalibracyjną dołączaną do każdego system prompt:
+
+\begin{lstlisting}[style=podcode, caption={Kalibracja dla relacji przyjacielskiej}]
+CALIBRATION FOR FRIENDSHIP:
+- Double texting is normal and expected,
+  NOT a sign of clinginess or anxious attachment.
+- Infrequent or slow replies are NOT "avoidant"
+  -- friends have separate lives.
+- "Power dynamics" refer to social influence,
+  NOT romantic control.
+- Long silences (days/weeks) are normal.
+- Banter and mild insults are often signs of closeness.
+\end{lstlisting}
+
+Ta kalibracja zapobiega typowemu błędowi modeli AI --- interpretowaniu wszystkich wzorców przez pryzmat relacji romantycznej.
+
+\subsection{Generowanie obrazów}
+
+Oprócz analizy tekstowej, moduł Gemini obsługuje generowanie ilustracji comic-strip za pomocą modelu \texttt{gemini-3-pro-image-preview}. Konfiguracja różni się od analizy tekstowej --- wykorzystuje \tstype{responseModalities: ['IMAGE', 'TEXT']}. Wynikowy obraz zwracany jest jako base64 w~polu \tskey{inlineData} odpowiedzi.
+
+
+% ============================================================
+\section{Rate limiting}
+\label{sec:rate-limiting-arch}
+
+\podtekst implementuje rate limiting po stronie serwera za pomocą mechanizmu in-memory sliding window. Moduł \filepath{src/lib/rate-limit.ts} eksportuje fabrykę \tsfunc{rateLimit()}, która zwraca funkcję sprawdzającą limit dla danego adresu IP.
+
+\subsection{Architektura}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.5cm,
+  every node/.style={font=\small},
+]
+  \node[podbox blue, minimum width=3.5cm] (req) {Żądanie HTTP};
+  \node[decision, right=2cm of req, minimum width=2.5cm] (check) {IP w~mapie\\i~count $<$ limit?};
+  \node[podbox green, right=2.5cm of check] (allow) {Przepuść\\count++};
+  \node[podbox red, below=1.5cm of check] (deny) {429 Too Many\\Requests};
+
+  \draw[podarrow] (req) -- (check) node[midway, above, font=\scriptsize\color{PodTextSecondary}] {x-forwarded-for};
+  \draw[podarrow, color=PodSuccess] (check) -- (allow) node[midway, above, font=\scriptsize\color{PodSuccess}] {tak};
+  \draw[podarrow, color=PodDanger] (check) -- (deny) node[midway, right, font=\scriptsize\color{PodDanger}] {nie};
+\end{tikzpicture}
+\caption{Mechanizm rate limitingu --- decyzja per adres IP.}
+\label{fig:rate-limit-flow}
+\end{figure}
+
+\subsection{Konfiguracja limitów}
+
+\begin{table}[H]
+\centering
+\caption{Limity rate limitingu per endpoint}
+\label{tab:rate-limits-arch}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l c c X@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Limit} & \textbf{Okno} & \textbf{Uzasadnienie} \\
+\midrule
+\rowcolor{PodBlue!3}
+\filepath{/api/analyze} & 5 & 10 min & Najdroższy --- 4 wywołania Gemini API per żądanie \\
+\filepath{/api/analyze/image} & 10 & 10 min & Kosztowny --- generowanie obrazu Gemini Pro \\
+\rowcolor{PodBlue!3}
+\filepath{/api/analyze/cps} & 5 & 10 min & Długi prompt (119 pytań), duży \tskey{maxOutputTokens} \\
+\filepath{/api/health} & --- & --- & Brak limitu --- lekki healthcheck \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Implementacja}
+
+Rate limiter używa \tstype{Map<string, \{count, resetTime\}>} jako magazynu in-memory. Dla każdego adresu IP przechowywany jest licznik żądań i~czas resetu okna. Przeterminowane wpisy są czyszczone co 5~minut przez \tsfunc{setInterval()}:
+
+\begin{lstlisting}[style=podcode, caption={Czyszczenie przeterminowanych wpisów}]
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitMap) {
+    if (now > value.resetTime) {
+      rateLimitMap.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+\end{lstlisting}
+
+\begin{warningbox}[title=Ograniczenie: in-memory]
+Rate limiter oparty na \tstype{Map} działa wyłącznie w~ramach jednej instancji serwera. W~środowisku wieloinstancyjnym (np.\ Cloud Run z~auto-scalingiem) każda instancja ma własną mapę. Dla MVP jest to akceptowalne --- docelowo należy użyć Redis lub innego współdzielonego magazynu.
+\end{warningbox}
+
+\subsection{Identyfikacja klienta}
+
+Adres IP odczytywany jest z~nagłówka \tskey{x-forwarded-for} (ustawianego przez proxy/load balancer). Jeśli nagłówek jest nieobecny, używana jest wartość fallback \tsstr{'unknown'} --- co oznacza, że wszystkie żądania bez nagłówka dzielą jeden limit.
+
+\begin{lstlisting}[style=podcode, caption={Ekstrakcja adresu IP z~nagłówka proxy}]
+const forwarded = request.headers.get('x-forwarded-for');
+const ip = forwarded?.split(',')[0]?.trim() ?? 'unknown';
+const { allowed, retryAfter } = checkLimit(ip);
+\end{lstlisting}
+
+W~przypadku przekroczenia limitu, odpowiedź zawiera nagłówek \tskey{Retry-After} z~liczbą sekund do resetu okna, zgodnie ze specyfikacją HTTP 429.
+
+
+% ============================================================
+\section{Architektura Discord Bot}
+\label{sec:discord-bot-arch}
+
+\podtekst integruje się z~Discordem na dwa sposoby: (1)~import wiadomości z~kanału przez Bot API do analizy w~głównym interfejsie, (2)~interaktywny bot z~11~komendami slash dostępnymi bezpośrednio w~Discordzie.
+
+\subsection{Import wiadomości (Discord Fetch)}
+
+Komponent \filepath{src/components/upload/DiscordImport.tsx} pozwala użytkownikowi wprowadzić token bota i~ID kanału. Endpoint \texttt{/api/discord/fetch-messages} pobiera wiadomości z~Discord API z~paginacją (po 100 wiadomości), streamując postęp przez SSE. Pobrane wiadomości parsowane są przez \filepath{src/lib/parsers/discord.ts} do formatu \tstype{ParsedConversation}.
+
+\subsection{Bot interaktywny (Slash Commands)}
+
+Bot Discord obsługuje 11~komend slash za pośrednictwem HTTP interactions (bez WebSocket):
+
+\begin{table}[H]
+\centering
+\caption{Komendy slash Discord Bot}
+\label{tab:discord-commands}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Komenda} & \textbf{Opis} \\
+\midrule
+\texttt{/stats} & Statystyki kanału --- wolumen, aktywność, top nadawcy \\
+\texttt{/versus} & Porównanie dwóch osób w~kanale \\
+\texttt{/whosimps} & Kto wysyła najwięcej wiadomości do kogo \\
+\texttt{/ghostcheck} & Analiza ghostingu --- kto ignoruje kogo \\
+\texttt{/besttime} & Najlepsza pora na wiadomość w~kanale \\
+\texttt{/catchphrase} & Charakterystyczne frazy per osoba \\
+\texttt{/emoji} & Ranking emoji per osoba \\
+\texttt{/nightowl} & Ranking nocnych sów (22:00--4:00) \\
+\texttt{/ranking} & Ogólny ranking aktywności \\
+\texttt{/roast} & AI roast wybranej osoby \\
+\texttt{/personality} & AI profil osobowości \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Architektura bota:
+\begin{itemize}
+  \item \textbf{Weryfikacja} --- Ed25519 signature verification (Discord Public Key)
+  \item \textbf{Cache} --- In-memory channel message cache (1h TTL, 50 wpisów LRU)
+  \item \textbf{Komendy AI} --- Deferred response + webhook follow-up (czas odpowiedzi Gemini > 3s limit Discorda)
+  \item \textbf{Pliki} --- \filepath{src/app/api/discord/interactions/route.ts}, \filepath{src/app/api/discord/lib/}, \filepath{src/app/api/discord/commands/}
+\end{itemize}

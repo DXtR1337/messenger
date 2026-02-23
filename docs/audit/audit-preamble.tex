@@ -1,0 +1,101 @@
+% ============================================================
+% PodTeksT Audit — Dodatkowe definicje (rozszerzenie ../preamble.tex)
+% ============================================================
+
+% --- Audit-specific tcolorbox environments ---
+
+% Critical bug box (red)
+\newtcolorbox{criticalbox}[1][]{%
+  enhanced,
+  colback=PodDanger!8,
+  colframe=PodDanger!70,
+  coltitle=white,
+  fonttitle=\bfseries,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  arc=3pt, boxrule=1.0pt,
+  breakable,
+  #1
+}
+
+% Moderate issue box (amber)
+\newtcolorbox{moderatebox}[1][]{%
+  enhanced,
+  colback=PodWarning!6,
+  colframe=PodWarning!55,
+  coltitle=white,
+  fonttitle=\bfseries,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  arc=3pt, boxrule=0.7pt,
+  breakable,
+  #1
+}
+
+% Strength / positive finding box (green)
+\newtcolorbox{strengthbox}[1][]{%
+  enhanced,
+  colback=PodSuccess!6,
+  colframe=PodSuccess!55,
+  coltitle=white,
+  fonttitle=\bfseries,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  arc=3pt, boxrule=0.7pt,
+  breakable,
+  #1
+}
+
+% Score / rating box
+\newtcolorbox{scorebox}[1][]{%
+  enhanced,
+  colback=white,
+  colframe=PodBlue!40,
+  left=10pt, right=10pt, top=6pt, bottom=6pt,
+  arc=3pt, boxrule=0.6pt,
+  fonttitle=\bfseries\color{PodBlueDark},
+  breakable,
+  #1
+}
+
+% --- Audit-specific commands ---
+
+% Bug/issue ID tags
+\newcommand{\bugid}[1]{\texttt{\textcolor{PodDanger}{\bfseries #1}}}
+\newcommand{\issueid}[1]{\texttt{\textcolor{PodWarning}{\bfseries #1}}}
+
+% Severity inline markers
+\newcommand{\critical}[1]{\textbf{\textcolor{PodDanger}{#1}}}
+\newcommand{\major}[1]{\textbf{\textcolor{PodWarning}{#1}}}
+\newcommand{\minor}[1]{\textcolor{PodTextSecondary}{\textbf{#1}}}
+
+% Agent attribution
+\newcommand{\agentone}{Agent~1 \emph{(Silnik Ilościowy)}\xspace}
+\newcommand{\agenttwo}{Agent~2 \emph{(Pipeline AI)}\xspace}
+\newcommand{\agentthree}{Agent~3 \emph{(Parsery i~UI)}\xspace}
+
+% Score number (color-coded)
+\newcommand{\scorehi}[1]{\textbf{\textcolor{PodSuccess}{#1}}}
+\newcommand{\scoremed}[1]{\textbf{\textcolor{PodWarning}{#1}}}
+\newcommand{\scorelo}[1]{\textbf{\textcolor{PodDanger}{#1}}}
+
+% --- Fix headheight for fancyhdr ---
+\setlength{\headheight}{22pt}
+\addtolength{\topmargin}{-8pt}
+
+% --- Override footer for audit ---
+\fancypagestyle{podstyle}{%
+  \fancyhf{}%
+  \fancyhead[LE]{\small\color{PodTextMuted}\leftmark}%
+  \fancyhead[RO]{\small\color{PodTextMuted}\rightmark}%
+  \fancyfoot[LE,RO]{\small\color{PodBlue}\thepage\color{PodTextMuted}\ /\ \pageref{LastPage}}%
+  \fancyfoot[RE,LO]{\small\color{PodTextMuted}PodTeksT --- Raport Audytu}%
+  \renewcommand{\headrulewidth}{0.4pt}%
+  \renewcommand{\footrulewidth}{0.2pt}%
+  \renewcommand{\headrule}{\hbox to\headwidth{\color{PodBorder}\leaders\hrule height \headrulewidth\hfill}}%
+  \renewcommand{\footrule}{\hbox to\headwidth{\color{PodBorder}\leaders\hrule height \footrulewidth\hfill}}%
+}
+\pagestyle{podstyle}
+
+% --- Override hyperref metadata ---
+\hypersetup{
+  pdftitle={PodTeksT --- Raport Audytu Eksperckiego},
+  pdfsubject={Audyt algorytmów, psychologii i architektury},
+}

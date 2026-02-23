@@ -45,12 +45,18 @@ interface SplineInternalApp {
   scene?: { background: unknown };
 }
 
-const Spline = lazy(() => import('@splinetool/react-spline'));
+const Spline = lazy(() =>
+  import('@splinetool/react-spline').catch(() => ({
+    default: (() => null) as unknown as typeof import('@splinetool/react-spline')['default'],
+  })),
+);
 
 /**
  * Probe WebGL2 for features Spline requires.
- * Returns false if clearBufferfv is missing or float textures aren't supported
- * (common Firefox issue that causes runtime crashes).
+ * Returns false only if WebGL2 context can't be created at all
+ * or clearBufferfv is missing (Firefox stub issue).
+ * Extension checks are intentionally relaxed — Spline handles
+ * missing extensions gracefully on most GPUs.
  */
 function checkWebGL2Support(): boolean {
   try {
@@ -64,14 +70,8 @@ function checkWebGL2Support(): boolean {
       return false;
     }
 
-    // Float textures needed for depth buffers
-    const hasColorBufferFloat = !!gl.getExtension('EXT_color_buffer_float');
-    const hasFloatBlend = !!gl.getExtension('EXT_float_blend');
-
     gl.getExtension('WEBGL_lose_context')?.loseContext();
-
-    // EXT_color_buffer_float is the critical one
-    return hasColorBufferFloat;
+    return true;
   } catch {
     return false;
   }
@@ -93,17 +93,24 @@ export function SplineScene({ scene, className, onLoad }: SplineSceneProps) {
     setWebglSupported(checkWebGL2Support());
   }, []);
 
-  // Defer Spline loading until browser is idle (only if WebGL2 is supported)
+  // Load Spline only when container is near viewport (IntersectionObserver with 200px margin)
   useEffect(() => {
     if (webglSupported !== true) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    if ('requestIdleCallback' in window) {
-      const id = requestIdleCallback(() => setShowSpline(true), { timeout: 2000 });
-      return () => cancelIdleCallback(id);
-    } else {
-      const timer = setTimeout(() => setShowSpline(true), 2000);
-      return () => clearTimeout(timer);
-    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShowSpline(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [webglSupported]);
 
   // Block wheel events on the Spline canvas so page scrolls normally
@@ -210,7 +217,11 @@ export function SplineScene({ scene, className, onLoad }: SplineSceneProps) {
       }}
     >
       {showSpline ? (
-        <SplineErrorBoundary fallback={null}>
+        <SplineErrorBoundary fallback={
+          <div className="h-full w-full" style={{
+            background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.08) 0%, rgba(168,85,247,0.05) 40%, transparent 70%)',
+          }} />
+        }>
           <Suspense
             fallback={
               <div className="flex h-full w-full items-center justify-center">

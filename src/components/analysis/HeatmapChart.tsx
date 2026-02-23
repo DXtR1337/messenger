@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import type { HeatmapData } from '@/lib/parsers/types';
 import { useIsMobile } from './chart-config';
@@ -24,7 +24,7 @@ function getHeatColor(intensity: number): string {
   return 'rgba(59,130,246,0.8)';
 }
 
-export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
+function HeatmapChart({ heatmap }: HeatmapChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inView = useInView(containerRef, { once: true, margin: '-50px' });
   const isMobile = useIsMobile();
@@ -139,3 +139,5 @@ export default function HeatmapChart({ heatmap }: HeatmapChartProps) {
     </motion.div>
   );
 }
+
+export default memo(HeatmapChart);

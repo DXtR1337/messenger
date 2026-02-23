@@ -10,6 +10,8 @@ export interface ShareBadge {
   id: string;
   name: string;
   emoji: string;
+  /** Optional custom icon filename (in /icons/badges/) */
+  icon?: string;
   description: string;
   holder: string;
   evidence: string;

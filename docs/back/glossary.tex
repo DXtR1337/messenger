@@ -1,0 +1,273 @@
+% ============================================================
+% Słownik pojęć (Glossary)
+% ============================================================
+
+\chapter*{Słownik pojęć}
+\addcontentsline{toc}{chapter}{Słownik pojęć}
+\markboth{Słownik pojęć}{Słownik pojęć}
+
+\begin{center}
+\large\itshape\color{PodBlue}
+Polsko-angielski słownik terminów technicznych, analitycznych i~produktowych\\
+używanych w~dokumentacji \podtekst.
+\end{center}
+
+\vspace{12pt}
+
+% ============================================================
+\section*{Terminy techniczne}
+% ============================================================
+
+\begin{description}[style=nextline, leftmargin=0.5cm, labelindent=0cm]
+
+\item[\textbf{API} (Application Programming Interface)]
+Interfejs programistyczny aplikacji --- zestaw endpointów HTTP, przez które zewnętrzne systemy mogą komunikować się z~\podtekst. W~kontekście MVP: endpointy \filepath{/api/analyze} i~\filepath{/api/analyze/image} obsługujące parsowanie i~analizę AI.
+
+\item[\textbf{App Router}]
+Architektura routingu w~Next.js 13+, w~której struktura katalogów \filepath{src/app/} definiuje ścieżki URL. Obsługuje Server Components, layouty zagnieżdżone, grupy routingu (np.~\filepath{(dashboard)/}), dynamiczne segmenty (\filepath{[id]/}).
+
+\item[\textbf{Bearer Token}]
+Typ tokenu autoryzacyjnego przesyłanego w~nagłówku HTTP \texttt{Authorization: Bearer <token>}. W~\podtekst używany do uwierzytelniania requestów do API w~planach Pro i~Unlimited.
+
+\item[\textbf{CI/CD} (Continuous Integration / Continuous Deployment)]
+Proces automatycznego testowania i~wdrażania kodu. Planowany w~Fazie 2: GitHub Actions $\to$ Vercel Preview Deployments $\to$ produkcja.
+
+\item[\textbf{Cookie}]
+Mały fragment danych przechowywany w~przeglądarce. W~\podtekst: sesja Supabase Auth przechowywana jako HttpOnly cookie dla bezpieczeństwa.
+
+\item[\textbf{CPS} (Conversation Partnership Score)]
+Wynik Zdrowia Relacji --- złożona metryka 0--100 obliczana jako ważona kombinacja metryk ilościowych i~ocen AI. Szczegółowy algorytm opisany w~Rozdziale~7.
+
+\item[\textbf{CSS Variables} (zmienne CSS)]
+Mechanizm Tailwind CSS v4, w~którym kolory i~wartości zdefiniowane w~\filepath{globals.css} jako \texttt{-{}-nazwa: wartość} są referencyjne w~klasach utility. Umożliwiają dynamiczną zmianę palety kolorów bez modyfikacji komponentów.
+
+\item[\textbf{Docker}]
+Platforma konteneryzacji. \podtekst posiada \filepath{Dockerfile} do budowania obrazu produkcyjnego opartego na Node.js Alpine.
+
+\item[\textbf{Endpoint}]
+Konkretny adres URL obsługujący żądania HTTP. Np.~\texttt{POST /api/analyze} to endpoint przyjmujący dane rozmowy do analizy.
+
+\item[\textbf{Framer Motion}]
+Biblioteka animacji React. Używana w~\podtekst do: staggered reveal kart, page transitions, animowanych liczników KPI, pop-in odznak.
+
+\item[\textbf{GDPR / RODO} (Rozporządzenie o~Ochronie Danych Osobowych)]
+Europejskie rozporządzenie o~ochronie danych. W~kontekście \podtekst: użytkownik ma prawo do usunięcia wszystkich swoich danych jedną akcją, surowe wiadomości nie są przechowywane, raporty publiczne są anonimizowane.
+
+\item[\textbf{Gemini API}]
+Interfejs programistyczny modeli AI Google (Gemini). W~MVP \podtekst służy do generowania analiz jakościowych w~5~przejściach streamowanych.
+
+\item[\textbf{Heatmapa} (mapa cieplna)]
+Wizualizacja dwuwymiarowa (godzina $\times$ dzień tygodnia) prezentująca natężenie aktywności komunikacyjnej za pomocą intensywności koloru.
+
+\item[\textbf{IndexedDB}]
+Przeglądarkowa baza danych NoSQL. W~MVP \podtekst przechowuje wyniki analiz lokalnie, eliminując potrzebę backendu.
+
+\item[\textbf{IntersectionObserver}]
+API przeglądarki wykrywające, kiedy element wchodzi w~pole widzenia. W~\podtekst używane do triggerowania animacji (reveal kart, rysowanie wykresów) przy scrollowaniu.
+
+\item[\textbf{JSON} (JavaScript Object Notation)]
+Format danych tekstowych. Format eksportu konwersacji z~Messengera, Instagrama i~Telegramu. Parsery \podtekst transformują JSON w~zunifikowany typ \tstype{ParsedConversation}.
+
+\item[\textbf{JWT} (JSON Web Token)]
+Standard tokenów autoryzacyjnych. Supabase Auth generuje JWT zawierające ID użytkownika, email, rolę i~metadane. Tokeny weryfikowane po stronie serwera w~middleware Next.js.
+
+\item[\textbf{localStorage}]
+Prosty mechanizm przechowywania danych w~przeglądarce (pary klucz-wartość, max 5--10~MB). W~MVP \podtekst przechowuje metadane analiz i~ustawienia użytkownika.
+
+\item[\textbf{Middleware}]
+Warstwa przetwarzania między żądaniem HTTP a~odpowiedzią. W~Next.js: plik \filepath{middleware.ts} sprawdzający sesję autoryzacyjną przed renderowaniem chronionych stron.
+
+\item[\textbf{OAuth 2.0}]
+Protokół autoryzacji umożliwiający logowanie przez konta zewnętrzne (Google, Apple). Użytkownik nie tworzy hasła --- autoryzuje dostęp przez Google, a~Supabase tworzy sesję.
+
+\item[\textbf{pnpm}]
+Menedżer pakietów Node.js, szybszy i~bardziej oszczędny niż npm. Używany w~\podtekst jako domyślny package manager.
+
+\item[\textbf{Prompt injection}]
+Atak polegający na wstrzyknięciu złośliwych instrukcji do promptu AI poprzez treść analizowanej rozmowy. \podtekst stosuje sanityzację wejścia i~separację kontekstu systemowego od danych użytkownika.
+
+\item[\textbf{Rate limiting}]
+Mechanizm ograniczający liczbę żądań do API w~jednostce czasu. Zapobiega nadużyciom i~chroni przed atakami DDoS.
+
+\item[\textbf{Recharts}]
+Biblioteka wykresów React oparta na D3.js. Używana w~\podtekst do: wykresów liniowych (timeline), słupkowych (porównania), radarowych (osobowość), heatmap.
+
+\item[\textbf{Server Components}]
+Komponenty React renderowane wyłącznie na serwerze (Next.js App Router). Nie wysyłają JavaScript do przeglądarki, redukując bundle size. W~\podtekst: layouty, strony statyczne, nagłówki.
+
+\item[\textbf{shadcn/ui}]
+Kolekcja komponentów React opartych na Radix UI Primitives. Nie jest biblioteką (npm package) --- to zestaw plików kopiowanych do projektu i~w~pełni modyfikowalnych.
+
+\item[\textbf{Sparkline}]
+Miniaturowy wykres liniowy osadzony inline w~tekście lub karcie KPI, pokazujący trend wartości w~czasie. Rozmiar: ok.~60$\times$20px.
+
+\item[\textbf{Spline}]
+Narzędzie do tworzenia scen 3D w~przeglądarce. W~\podtekst: animowana scena na stronie głównej (landing page hero).
+
+\item[\textbf{SSE} (Server-Sent Events)]
+Protokół jednokierunkowego streamowania danych z~serwera do klienta. W~\podtekst: streaming wyników analizy AI w~czasie rzeczywistym --- każde przejście analizy przesyła dane fragmentarycznie.
+
+\item[\textbf{Stripe}]
+Platforma płatności online. W~\podtekst (Faza 2): obsługa subskrypcji, Stripe Checkout, Customer Portal, webhooks.
+
+\item[\textbf{Supabase}]
+Platforma backend-as-a-service (BaaS) oparta na PostgreSQL. W~\podtekst (Faza 2): autoryzacja (Auth), baza danych (PostgreSQL), przechowywanie plików (Storage).
+
+\item[\textbf{Tailwind CSS v4}]
+Framework CSS oparty na klasach utility. Wersja 4 używa zmiennych CSS zamiast pliku konfiguracyjnego \filepath{tailwind.config.ts}. Cała paleta kolorów \podtekst jest zdefiniowana jako zmienne CSS.
+
+\item[\textbf{TikZ}]
+Pakiet \LaTeX{} do tworzenia grafik wektorowych. Wszystkie diagramy, schematy architektury i~swatche kolorów w~tej dokumentacji są wykonane w~TikZ.
+
+\item[\textbf{TypeScript} (TS)]
+Nadzbiór JavaScript z~typowaniem statycznym. \podtekst używa trybu \texttt{strict} z~regułą zero \texttt{any} --- każda wartość ma zdefiniowany typ.
+
+\item[\textbf{Unicode (dekodowanie Facebook)}]
+Facebook eksportuje tekst w~kodowaniu latin-1 escaped unicode. Funkcja \tsfunc{decodeFBString()} dekoduje te sekwencje do poprawnego UTF-8, przywracając polskie znaki diakrytyczne i~emoji.
+
+\item[\textbf{Webhook}]
+Mechanizm powiadomień HTTP --- serwer zewnętrzny (np.~Stripe) wysyła POST request do endpointu \podtekst po wystąpieniu zdarzenia (np.~udana płatność).
+
+\end{description}
+
+% ============================================================
+\section*{Terminy analityczne i~psychologiczne}
+% ============================================================
+
+\begin{description}[style=nextline, leftmargin=0.5cm, labelindent=0cm]
+
+\item[\textbf{Big Five} (Wielka Piątka)]
+Model pięciu cech osobowości: Otwartość na doświadczenia (\emph{Openness}), Sumienność (\emph{Conscientiousness}), Ekstrawersja (\emph{Extraversion}), Ugodowość (\emph{Agreeableness}), Neurotyczność (\emph{Neuroticism}). \podtekst aproksymuje profil Big Five na podstawie wzorców językowych z~pewnością 40--75\%.
+
+\item[\textbf{Burst detection} (detekcja serii)]
+Algorytm wykrywający klastry szybkich wiadomości (burst) --- okresy, gdy rozmowa jest intensywna, z~odpowiedziami w~ciągu sekund. Przeciwieństwo: okresy ciszy.
+
+\item[\textbf{Codependency} (współuzależnienie)]
+Wzorzec relacyjny, w~którym jedna osoba nadmiernie polega na drugiej emocjonalnie. \podtekst wykrywa sygnały: jednostronne inicjowanie, natychmiastowe odpowiedzi o~każdej porze, brak granic czasowych.
+
+\item[\textbf{Double-texting} (podwójne wysyłanie)]
+Wysyłanie dwóch lub więcej wiadomości z~rzędu bez otrzymania odpowiedzi. Metryka ilościowa mierząca częstość tego zachowania per osoba.
+
+\item[\textbf{Drama Score} (wynik dramatyczności)]
+Metryka wiralna mierząca intensywność emocjonalną rozmowy --- częstość wielkich liter, wykrzykników, nagłych zmian tonu, długich nocnych sesji. Skala 0--100.
+
+\item[\textbf{Dynamika władzy} (power dynamics)]
+Analiza AI oceniająca, kto w~relacji ma większy wpływ komunikacyjny: kto wyznacza tematy, kto adaptuje język, kto decyduje o~zakończeniu rozmowy, kto ma ,,ostatnie słowo''.
+
+\item[\textbf{Emotional labor} (praca emocjonalna)]
+Nierówny rozkład wysiłku emocjonalnego w~relacji: kto pocieszasz, kto pyta ,,jak się czujesz?'', kto inicjuje poważne rozmowy, kto zmienia temat, by unikać trudnych emocji.
+
+\item[\textbf{Gaslighting}]
+Manipulacyjny wzorzec komunikacji, w~którym jedna osoba podważa percepcję rzeczywistości drugiej. \podtekst AI wykrywa sygnały: negowanie wcześniejszych ustaleń, przerzucanie winy, minimalizowanie emocji partnera.
+
+\item[\textbf{Ghost Forecast} (prognoza ghostingu)]
+Metryka wiralna obliczana na podstawie trendów: malejący wolumen wiadomości, rosnący czas odpowiedzi, skracające się wiadomości, zanikające reakcje. Wynik 0--100\% prawdopodobieństwa ghostingu w~ciągu 30 dni.
+
+\item[\textbf{Ghosting}]
+Nagłe, jednostronne przerwanie komunikacji bez wyjaśnienia. \podtekst wykrywa wzorce pre-ghostingowe: systematyczne wydłużanie czasu odpowiedzi, skracanie wiadomości, zanik inicjowania.
+
+\item[\textbf{Inicjacja rozmowy} (conversation initiation)]
+Pierwsza wiadomość po przerwie dłuższej niż 6~godzin. Metryka ilościowa: stosunek inicjacji per osoba pokazuje, kto ,,potrzebuje'' kontaktu bardziej.
+
+\item[\textbf{Love bombing} (bombardowanie miłością)]
+Wzorzec manipulacyjny polegający na zasypywaniu osoby komplementami, deklaracjami i~uwagą na wczesnym etapie relacji. Odznaka ,,Bombardier Miłosny'' przyznawana przy wykryciu ekstremalnie wysokiej częstotliwości reakcji sercami i~długich wiadomości w~pierwszych tygodniach.
+
+\item[\textbf{MBTI} (Myers-Briggs Type Indicator)]
+System klasyfikacji osobowości na 16 typów (np.~INFJ, ENTP). \podtekst aproksymuje typ MBTI z~niską pewnością (30--50\%) na podstawie stylu komunikacji. Prezentowany z~disclaimerem o~ograniczeniach.
+
+\item[\textbf{Mediana czasu odpowiedzi}]
+Środkowa wartość czasu między wiadomością jednej osoby a~pierwszą odpowiedzią drugiej. Mediana jest lepsza od średniej, bo ignoruje outliers (np.~odpowiedź po 8~godzinach snu).
+
+\item[\textbf{Neurotyczność} (Neuroticism)]
+Jedna z~cech Big Five --- tendencja do doświadczania negatywnych emocji (lęk, złość, smutek). W~analizie \podtekst: wykrywana na podstawie częstotliwości słów lękowych, pytań retorycznych, nadmiernych przeprosin.
+
+\item[\textbf{Praca emocjonalna}]
+Zob. \emph{Emotional labor}.
+
+\item[\textbf{Reciprocity} (wzajemność)]
+Stopień symetrii wysiłku komunikacyjnego między uczestnikami. Mierzona jako stosunek: wiadomości, długości, inicjacji, reakcji, pytań. Idealna wzajemność: 50/50.
+
+\item[\textbf{Red flag} (czerwona flaga)]
+Wzorzec komunikacyjny wskazujący na potencjalnie toksyczne zachowanie: gaslighting, love bombing, nadmierna kontrola, systematyczna dewaluacja, ciche traktowanie (silent treatment).
+
+\item[\textbf{Styl przywiązania} (attachment style)]
+Model psychologiczny (Bowlby/Ainsworth) opisujący sposób tworzenia więzi emocjonalnych:
+\begin{itemize}
+  \item \textbf{Bezpieczny} (\emph{secure}) --- zrównoważone inicjowanie, spójny czas odpowiedzi, komfort z~ciszą
+  \item \textbf{Lękowo-zaabsorbowany} (\emph{anxious}) --- częste double-texting, szybkie odpowiedzi, pytania o~potwierdzenie
+  \item \textbf{Lękowo-unikający} (\emph{avoidant}) --- rzadkie inicjowanie, krótkie wiadomości, unikanie emocjonalnych tematów
+  \item \textbf{Zdezorganizowany} (\emph{disorganized}) --- niespójne wzorce, wahania między zbliżaniem a~wycofywaniem
+\end{itemize}
+
+\item[\textbf{Tone analysis} (analiza tonu)]
+Ocena AI emocjonalnego zabarwienia komunikatów: ciepły, neutralny, zdystansowany, lękowy, żartobliwy, sarkastyczny, formalny, nieformalny. Mapowana jako trajektoria emocjonalna w~czasie.
+
+\item[\textbf{Turning point} (punkt zwrotny)]
+Moment w~historii rozmowy, w~którym zmienia się dynamika relacji: nagła zmiana tonu, częstotliwości lub długości wiadomości. Identyfikowany przez AI na podstawie analizy kontekstowej i~metryk ilościowych.
+
+\item[\textbf{Vulnerability} (wrażliwość / otwartość emocjonalna)]
+Poziom głębokości samoujawniania (self-disclosure) w~wiadomościach. Wysoka: dzielenie się lękami, marzeniami, traumami. Niska: surface-level small talk, unikanie osobistych tematów.
+
+\end{description}
+
+% ============================================================
+\section*{Terminy produktowe PodTeksT}
+% ============================================================
+
+\begin{description}[style=nextline, leftmargin=0.5cm, labelindent=0cm]
+
+\item[\textbf{Dashboard klasyczny}]
+Główny widok wyników analizy w~\podtekst --- wielosekcyjna strona z~kartami KPI, wykresami, profilami osobowości, dynamiką relacji i~raportem końcowym. Ścieżka: \filepath{/analysis/[id]}.
+
+\item[\textbf{DropZone}]
+Komponent uploadowania pliku --- obszar drag-and-drop z~walidacją formatu (JSON/TXT), dekodowaniem i~automatycznym parsowaniem. Komponent: \tstype{DropZone}.
+
+\item[\textbf{Eksport PDF}]
+Funkcja generowania raportu w~formacie PDF zawierającego wszystkie wykresy i~analizy. Komponent: \tstype{ExportPDFButton}. Technologia: html2canvas + jsPDF.
+
+\item[\textbf{Karty do udostępniania} (share cards)]
+Generowane grafiki w~formatach Stories (1080$\times$1920), post (1080$\times$1080) i~desktop (1920$\times$1080) z~kluczowymi statystykami, gotowe do wrzucenia na Instagram, TikTok, Twitter. Katalog: \filepath{src/components/share-cards/}.
+
+\item[\textbf{Karty KPI}]
+Kompaktowe karty wyświetlające kluczowe metryki ilościowe: łączna liczba wiadomości, czas odpowiedzi, stosunek inicjacji, wynik CPS. Komponent: \tstype{KPICards}. Każda karta zawiera wartość, etykietę, sparkline i~wskaźnik trendu.
+
+\item[\textbf{Metryki wiralne} (viral scores)]
+Zestaw metryk zaprojektowanych specjalnie pod udostępnianie w~social media: Ghost Forecast, Drama Score, Cling Score, Relationship Age, Compatibility Percentage. Komponent: \tstype{ViralScoresSection}.
+
+\item[\textbf{Odznaki} (badges)]
+Automatycznie przyznawane ,,osiągnięcia'' na podstawie metryk ilościowych. 20+~odznak, w~tym: ,,Nocna Sowa'' (>40\% wiadomości nocnych), ,,Duch Czatu'' (<10\% udziału w~rozmowie), ,,Bombardier Miłosny'' (>50 reakcji sercami w~pierwszym tygodniu), ,,Mistrzowie Emoji'' (>15\% wiadomości z~emoji). Komponent: \tstype{BadgesGrid}.
+
+\item[\textbf{Osoba A / Osoba B}]
+Konwencja nazewnictwa uczestników rozmowy w~anonimizowanych raportach i~dokumentacji. \personA{Osoba A} jest wyświetlana w~kolorze PodBlue, \personB{Osoba B} w~kolorze PodPurple. W~rzeczywistym interfejsie używane są prawdziwe imiona uczestników.
+
+\item[\textbf{Profil osobowości} (personality profile)]
+Sekcja analizy AI generująca profil psychologiczny każdego uczestnika: aproksymacja Big Five (z~pewnością), sugerowany typ MBTI, styl przywiązania, potrzeby komunikacyjne, styl humoru, styl rozwiązywania konfliktów. Komponent: \tstype{PersonalityProfiles}.
+
+\item[\textbf{Przejście analizy} (analysis pass)]
+Pojedynczy etap wieloetapowej analizy AI. \podtekst wykonuje 5~przejść: przegląd, dynamika, profile indywidualne, synteza, roast. Każde przejście jest osobnym wywołaniem modelu AI z~dedykowanym promptem.
+
+\item[\textbf{Raport końcowy} (final report)]
+Synteza wszystkich wyników analizy w~formie narracyjnej: 3--5-zdaniowe podsumowanie, kluczowe wnioski, rekomendacje, ostrzeżenia. Komponent: \tstype{FinalReport}.
+
+\item[\textbf{Screening SCID-II}]
+Eksperymentalna funkcja screeningu zaburzeń osobowości na podstawie wzorców komunikacyjnych, inspirowana kwestionariuszem SCID-II. Wyniki prezentowane z~wyraźnymi disclaimerami o~braku wartości diagnostycznej. Komponent: \tstype{SCIDScreener}.
+
+\item[\textbf{Silnik analizy ilościowej}]
+Zestaw funkcji \typescript obliczających 28+~metryk bez użycia AI, w~całości po stronie klienta. Plik: \filepath{src/lib/analysis/quantitative.ts}. Przyjmuje \tstype{ParsedConversation}, zwraca \tstype{QuantitativeAnalysis}.
+
+\item[\textbf{Tryb porównania} (comparison mode)]
+Funkcja umożliwiająca analizę porównawczą dwóch rozmów: radar, timeline, tabela porównawcza, wyniki CPS obok siebie. Ścieżka: \filepath{/analysis/compare}. Komponenty: \tstype{ComparisonRadar}, \tstype{ComparisonTable}, \tstype{ComparisonTimeline}.
+
+\item[\textbf{Tryb Roast}]
+Humorystyczny tryb prezentacji, w~którym AI ,,hejtuje'' wzorce komunikacyjne uczestników rozmowy. Generuje prowokacyjne obserwacje i~opcjonalnie obraz roast (memiczny format). Komponent: \tstype{RoastSection}, \tstype{RoastImageCard}.
+
+\item[\textbf{Tryb Story}]
+Narracyjna prezentacja wyników inspirowana estetyką Spotify Wrapped. Pełnoekranowe slajdy z~animacjami, gradientami i~efektami wizualnymi. Czcionki: Syne (nagłówki) + Space Grotesk (treść). Ścieżka: \filepath{/story/[id]}. Katalog komponentów: \filepath{src/components/story/}.
+
+\item[\textbf{Wynik Zdrowia Relacji}]
+Zob. \emph{CPS (Conversation Partnership Score)}.
+
+\item[\textbf{Zunifikowany format wiadomości}]
+Typ \tstype{UnifiedMessage} --- wspólna struktura danych, do której parsery wszystkich platform transformują natywne formaty. Pola: \texttt{id}, \texttt{sender}, \texttt{timestamp}, \texttt{content}, \texttt{type}, \texttt{reactions}, \texttt{media}, \texttt{isUnsent}. Definicja: \filepath{src/lib/parsers/types.ts}.
+
+\end{description}

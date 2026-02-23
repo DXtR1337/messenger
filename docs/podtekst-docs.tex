@@ -1,0 +1,76 @@
+% ============================================================
+% PodTeksT — Dokumentacja Techniczna i Brandowa
+% Kompilacja: xelatex -shell-escape podtekst-docs.tex
+% ============================================================
+
+\input{preamble}
+
+\begin{document}
+
+% ---- Front Matter ----
+\frontmatter
+
+% Title page
+\input{front/titlepage}
+
+% Copyright
+\thispagestyle{empty}
+\vspace*{\fill}
+\begin{center}
+\small\color{PodTextSecondary}
+\textcopyright\ 2026 PodTeksT. Wszelkie prawa zastrzeżone.\\[4pt]
+Wersja 1.0 — luty 2026\\[4pt]
+Dokument wygenerowany automatycznie z kodu źródłowego projektu.\\[8pt]
+\textcolor{PodBlue}{Pod}\textcolor{PodPurple}{TeksT} — odkryj to, co kryje się między wierszami.
+\end{center}
+\vspace*{\fill}
+\cleardoublepage
+
+% Table of Contents
+{
+  \hypersetup{linkcolor=PodBlueDark}
+  \tableofcontents
+}
+\cleardoublepage
+
+% List of Figures
+\listoffigures
+\cleardoublepage
+
+% List of Tables
+\listoftables
+\cleardoublepage
+
+% Preface
+\input{front/preface}
+\cleardoublepage
+
+% ---- Main Matter ----
+\mainmatter
+
+\input{chapters/ch01-marka}
+\input{chapters/ch02-produkt}
+\input{chapters/ch03-architektura}
+\input{chapters/ch04-parsery}
+\input{chapters/ch05-analiza-ilosciowa}
+\input{chapters/ch06-analiza-ai}
+\input{chapters/ch07-health-score}
+\input{chapters/ch08-interfejs}
+\input{chapters/ch09-api}
+\input{chapters/ch10-infrastruktura}
+\input{chapters/ch11-prywatnosc}
+\input{chapters/ch12-typy-danych}
+\input{chapters/ch13-rozwoj}
+
+% ---- Back Matter ----
+\backmatter
+
+\input{back/glossary}
+
+% Index
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Indeks}
+\printindex
+
+\end{document}

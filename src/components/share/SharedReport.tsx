@@ -63,7 +63,7 @@ export default function SharedReport({ payload, shareUrl }: SharedReportProps) {
         {payload.badges.length > 0 && (
           <section className="mb-6 rounded-2xl border border-[#1a1a1a] bg-[#0a0a0a] p-5">
             <h2 className="mb-4 flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-widest text-[#888888]"><span className="inline-block size-1.5 rounded-full bg-[#10b981]" /> Osi\u0105gni\u0119cia</h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{payload.badges.map((badge) => (<div key={badge.id} className="rounded-lg border border-[#1a1a1a] bg-[#111111] p-3 text-center"><span className="mb-1 block text-2xl">{badge.emoji}</span><p className="text-xs font-semibold text-foreground">{badge.name}</p><p className="mt-0.5 text-[10px] text-[#555555]">{badge.holder}</p></div>))}</div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{payload.badges.map((badge) => (<div key={badge.id} className="rounded-lg border border-[#1a1a1a] bg-[#111111] p-3 text-center">{badge.icon ? (<img src={`/icons/badges/${badge.icon}`} alt={badge.name} className="mx-auto mb-1 size-8 object-contain" loading="lazy" />) : (<span className="mb-1 block text-2xl">{badge.emoji}</span>)}<p className="text-xs font-semibold text-foreground">{badge.name}</p><p className="mt-0.5 text-[10px] text-[#555555]">{badge.holder}</p></div>))}</div>
           </section>
         )}
         {payload.roastVerdict && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   RadarChart,
@@ -53,7 +53,7 @@ function normalize(valueA: number, valueB: number): [number, number] {
   return [(valueA / max) * 100, (valueB / max) * 100];
 }
 
-export default function ComparisonRadar({ analysisA, analysisB }: ComparisonRadarProps) {
+function ComparisonRadar({ analysisA, analysisB }: ComparisonRadarProps) {
   const chartHeight = useChartHeight(340);
   const data: RadarDataPoint[] = useMemo(() => {
     const a = analysisA;
@@ -187,3 +187,5 @@ export default function ComparisonRadar({ analysisA, analysisB }: ComparisonRada
     </motion.div>
   );
 }
+
+export default memo(ComparisonRadar);

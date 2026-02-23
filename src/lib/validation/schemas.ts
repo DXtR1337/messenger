@@ -52,6 +52,13 @@ export const megaRoastRequestSchema = z.object({
 });
 export type MegaRoastRequestParsed = z.infer<typeof megaRoastRequestSchema>;
 
+export const cwelTygodniaRequestSchema = z.object({
+  samples: samplesSchema,
+  participants: participantsSchema,
+  quantitativeContext: z.string(),
+});
+export type CwelTygodniaRequestParsed = z.infer<typeof cwelTygodniaRequestSchema>;
+
 const conversationExcerptItemSchema = z.object({
   sender: z.string(),
   content: z.string(),
@@ -98,6 +105,13 @@ export const courtRequestSchema = z.object({
   })),
 });
 export type CourtRequestParsed = z.infer<typeof courtRequestSchema>;
+
+export const discordFetchRequestSchema = z.object({
+  botToken: z.string().min(50, 'Invalid bot token'),
+  channelId: z.string().regex(/^\d{17,20}$/, 'Invalid channel ID (must be Discord snowflake)'),
+  messageLimit: z.optional(z.number().int().min(100).max(20000)),
+});
+export type DiscordFetchRequestParsed = z.infer<typeof discordFetchRequestSchema>;
 
 // --- Helper to format Zod errors into a user-friendly string ---
 

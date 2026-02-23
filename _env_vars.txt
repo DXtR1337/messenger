@@ -1,0 +1,12 @@
+[eval]:1
+const fs=require('fs'); const env=fs.readFileSync('.env.local','utf8').replace(/\r/g,''); const lines=env.split('\n'); const vars=[]; for(const l of lines){if(l && \!l.startsWith('#')){const eq=l.indexOf('='); if(eq>0){const k=l.substring(0,eq); const v=l.substring(eq+1).trim(); vars.push(k+'='+v)}}} vars.push('NEXT_PUBLIC_APP_URL=https://chatscope-9278095424.europe-west1.run.app'); console.log(vars.join(','))
+                                                                                                                                                                    ^
+Expression expected
+
+SyntaxError: Invalid or unexpected token
+    at makeContextifyScript (node:internal/vm:194:14)
+    at compileScript (node:internal/process/execution:388:10)
+    at evalTypeScript (node:internal/process/execution:260:22)
+    at node:internal/main/eval_string:71:3
+
+Node.js v24.12.0

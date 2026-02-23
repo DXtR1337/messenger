@@ -1,0 +1,1006 @@
+% ============================================================
+% PodTeksT — Rozdzia\l{} 9: API i Endpointy
+% ============================================================
+
+\chapter{API i Endpointy}
+\label{ch:api}
+
+\podtekst wykorzystuje architektur\k{e} API opart\k{a} na \textbf{Next.js App Router Route Handlers} --- ka\.zdy endpoint to plik \texttt{route.ts} w~odpowiednim katalogu \filepath{src/app/api/}. Endpointy s\k{a} wy\l{}\k{a}cznie serwerowe (server-only) --- klucze API, modele AI i~logika biznesowa nigdy nie s\k{a} eksponowane klientowi.
+
+\begin{infobox}[title=Konfiguracja runtime]
+Ka\.zdy endpoint produkcyjny deklaruje dwie sta\l{}e konfiguracyjne Next.js:
+\begin{itemize}
+  \item \texttt{export const dynamic = 'force-dynamic'} --- wy\l{}\k{a}cza cache'owanie odpowiedzi (wyniki analizy AI s\k{a} zawsze unikalne).
+  \item \texttt{export const maxDuration = 120} --- podnosi timeout do 120~sekund (domy\'slnie 10s na Vercelu). Analiza AI z~4~passami wymaga do 90s.
+\end{itemize}
+\end{infobox}
+
+
+% ============================================================
+\section{Architektura API}
+\label{sec:api-architecture}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.2cm and 2.5cm,
+  every node/.style={font=\small},
+]
+
+% Client
+\node[podbox blue, minimum width=4cm] (client) {Klient (przegl\k{a}darka)};
+
+% API routes
+\node[podbox purple, below=2cm of client, minimum width=4cm] (api) {Next.js API Routes\\{\scriptsize\filepath{src/app/api/}}};
+
+% Individual endpoints --- rz\k{a}d 1 (g\l{}ówne)
+\node[process, below left=1.8cm and 3cm of api] (analyze) {\texttt{/analyze}\\POST};
+\node[process, below left=1.8cm and 0.5cm of api] (image) {\texttt{/analyze/image}\\POST};
+\node[process, below right=1.8cm and 0.5cm of api] (cps) {\texttt{/analyze/cps}\\POST};
+\node[process, below right=1.8cm and 3cm of api] (subtext) {\texttt{/analyze/subtext}\\POST};
+
+% Individual endpoints --- rz\k{a}d 2 (nowe + discord)
+\node[process, below=3.8cm of api, xshift=-2cm] (court) {\texttt{/analyze/court}\\POST};
+\node[process, below=3.8cm of api, xshift=2cm] (discord) {\texttt{/discord/fetch-messages}\\POST};
+
+% Health --- na boku
+\node[process, right=3.5cm of api] (health) {\texttt{/health}\\GET};
+
+% AI layer
+\node[podbox green, below=6cm of api, minimum width=7cm] (gemini) {Gemini API (gemini-3-flash-preview)\\{\scriptsize\filepath{src/lib/analysis/gemini.ts}}};
+
+% Rate limiter
+\node[podbox amber, left=3.5cm of api] (ratelimit) {Rate Limiter\\{\scriptsize\filepath{src/lib/rate-limit.ts}}};
+
+% Discord API
+\node[podbox blue, right=2.5cm of discord] (discordapi) {Discord API\\{\scriptsize Bot Token}};
+
+% Arrows --- client to router
+\draw[dataarrow] (client) -- node[right, font=\scriptsize] {JSON / SSE} (api);
+
+% Arrows --- router to endpoints
+\draw[podarrow] (api) -- (analyze);
+\draw[podarrow] (api) -- (image);
+\draw[podarrow] (api) -- (cps);
+\draw[podarrow] (api) -- (subtext);
+\draw[podarrow] (api) -- (court);
+\draw[podarrow] (api) -- (discord);
+\draw[podarrow] (api) -- (health);
+
+% Arrows --- endpoints to Gemini
+\draw[dataarrow] (analyze.south) -- ++(0,-0.6) -| (gemini);
+\draw[dataarrow] (image.south) -- ++(0,-0.3) -| (gemini);
+\draw[dataarrow] (cps.south) -- ++(0,-0.3) -| (gemini);
+\draw[dataarrow] (subtext.south) -- ++(0,-0.6) -| (gemini);
+\draw[dataarrow] (court.south) -- ++(0,-0.3) -| (gemini);
+
+% Arrow --- discord to external API
+\draw[dataarrow] (discord) -- (discordapi);
+
+% Rate limiter
+\draw[podarrow dashed] (ratelimit) -- (api);
+
+\end{tikzpicture}
+\caption{Architektura API \podtekst{} --- 11 endpointów w~5 grupach funkcjonalnych}
+\label{fig:api-architecture}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Przegla\k{}d endpointów API}
+\label{tab:api-overview}
+\begin{tabularx}{\textwidth}{l l l r X}
+\toprule
+\textbf{Metoda} & \textbf{\'Scie\.zka} & \textbf{Odpowied\'z} & \textbf{Rate limit} & \textbf{Opis} \\
+\midrule
+\texttt{POST} & \texttt{/api/analyze}                & SSE stream & 5/10min  & G\l{}ówna analiza AI (4 passy lub roast) \\
+\texttt{POST} & \texttt{/api/analyze/enhanced-roast}  & SSE stream & 5/10min  & Rozszerzony roast z~kontekstem psychologicznym \\
+\texttt{POST} & \texttt{/api/analyze/standup}         & SSE stream & 5/10min  & Stand-Up Comedy --- 7 aktów \\
+\texttt{POST} & \texttt{/api/analyze/cps}             & SSE stream & 5/10min  & Communication Pattern Screening \\
+\texttt{POST} & \texttt{/api/analyze/subtext}         & SSE stream & 5/10min  & Dekoder Podtekstów \\
+\texttt{POST} & \texttt{/api/analyze/court}           & SSE stream & 5/10min  & Proces s\k{a}dowy chatu \\
+\texttt{POST} & \texttt{/api/analyze/dating-profile}  & SSE stream & 5/10min  & Generator profilu randkowego \\
+\texttt{POST} & \texttt{/api/analyze/simulate}        & SSE stream & 5/10min  & Symulator odpowiedzi \\
+\texttt{POST} & \texttt{/api/analyze/image}           & JSON       & 10/10min & Generowanie obrazu analizy \\
+\texttt{POST} & \texttt{/api/discord/fetch-messages}  & SSE stream & 3/10min  & Pobieranie wiadomo\'sci z~Discorda \\
+\texttt{GET}  & \texttt{/api/health}                  & JSON       & brak     & Health check \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{POST /api/analyze}
+\label{sec:api-analyze}
+
+G\l{}ówny endpoint analizy AI. Przyjmuje spróbkowane wiadomo\'sci i~kontekst ilo\'sciowy, uruchamia 4~passy analizy Gemini i~streamuje post\k{e}p przez SSE (Server-Sent Events). Obs\l{}uguje dwa tryby: \texttt{standard} (pe\l{}na analiza) i~\texttt{roast} (humorystyczny roast konwersacji).
+
+Plik: \filepath{src/app/api/analyze/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.z\k{a}dania POST /api/analyze}
+\label{tab:analyze-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'s\'c} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Maks. rozmiar body & 5~MB (\texttt{5 * 1024 * 1024} bajtów) \\
+Rate limit & 5 \.z\k{a}da\'n / 10 minut na IP \\
+Timeout & 120 sekund \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Struktura body \.z\k{a}dania POST /api/analyze}, label={lst:analyze-request-body}]
+{
+  "samples": {
+    "overview": [
+      {"sender": "Anna", "content": "Hej!", "timestamp": 1708000000000},
+      {"sender": "Jan", "content": "Cze\'s\'c!", "timestamp": 1708000060000}
+    ],
+    "dynamics": [
+      {"sender": "Anna", "content": "Musimy porozmawia\'c...", "timestamp": ...}
+    ],
+    "perPerson": {
+      "Anna": [{"sender": "Anna", "content": "...", "timestamp": ...}],
+      "Jan": [{"sender": "Jan", "content": "...", "timestamp": ...}]
+    },
+    "quantitativeContext": "Anna: 3421 msgs, Jan: 2876 msgs..."
+  },
+  "participants": ["Anna", "Jan"],
+  "relationshipContext": "romantic",
+  "mode": "standard",
+  "quantitativeContext": "Anna: 3421 msgs..."
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Opis pól request body}
+\label{tab:analyze-request-fields}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\texttt{samples}              & \tstype{AnalysisSamples} & Tak & Spróbkowane wiadomo\'sci podzielone na passy (patrz Rozdzia\l{}~6) \\
+\texttt{participants}         & \tstype{string[]}        & Tak & Nazwy uczestników konwersacji \\
+\texttt{relationshipContext}  & \tstype{string}          & Nie & Typ relacji: \texttt{"romantic"}, \texttt{"friendship"}, \texttt{"family"}, \texttt{"work"} \\
+\texttt{mode}                 & \tstype{string}          & Nie & Tryb analizy: \texttt{"standard"} (domy\'slny) lub \texttt{"roast"} \\
+\texttt{quantitativeContext}  & \tstype{string}          & Nie & Podsumowanie metryk ilo\'sciowych w~formie tekstowej \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Response --- SSE Stream}
+
+Endpoint zwraca strumie\'n SSE (\texttt{text/event-stream}) z~nag\l{}ówkami zapobiegaj\k{a}cymi cache'owaniu i~zrywaniu po\l{}\k{a}czenia:
+
+\begin{lstlisting}[style=podcode, caption={Nag\l{}ówki odpowiedzi SSE}, label={lst:sse-headers}]
+return new Response(stream, {
+  headers: {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  },
+});
+\end{lstlisting}
+
+\paragraph{Format zdarze\'n SSE:}
+Ka\.zde zdarzenie to linia \texttt{data: \{JSON\}\textbackslash n\textbackslash n}. Typy zdarze\'n:
+
+\begin{table}[H]
+\centering
+\caption{Typy zdarze\'n SSE w~trybie \texttt{standard}}
+\label{tab:sse-events-standard}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Typ zdarzenia} & \textbf{Pola} & \textbf{Opis} \\
+\midrule
+\texttt{progress} & \texttt{pass}, \texttt{status} & Post\k{e}p analizy --- wys\l{}any przed ka\.zdym passem \\
+\texttt{complete} & \texttt{result} & Kompletny wynik analizy (\tstype{QualitativeAnalysis}) \\
+\texttt{error}    & \texttt{error}  & Komunikat b\l{}\k{e}du \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Sekwencja zdarze\'n --- tryb standard:}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Przyk\l{}adowa sekwencja zdarze\'n SSE (tryb standard)}, label={lst:sse-sequence-standard}]
+data: {"type":"progress","pass":1,"status":"Analiza tonu i stylu..."}
+
+data: {"type":"progress","pass":2,"status":"Analiza dynamiki relacji..."}
+
+data: {"type":"progress","pass":3,"status":"Profile osobowo\'sci..."}
+
+data: {"type":"progress","pass":4,"status":"Synteza i raport ko\'ncowy..."}
+
+data: {"type":"complete","result":{...QualitativeAnalysis...}}
+\end{lstlisting}
+
+\paragraph{Sekwencja zdarze\'n --- tryb roast:}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Przyk\l{}adowa sekwencja zdarze\'n SSE (tryb roast)}, label={lst:sse-sequence-roast}]
+data: {"type":"progress","pass":1,"status":"Generowanie roastu..."}
+
+data: {"type":"roast_complete","result":{...RoastResult...}}
+\end{lstlisting}
+
+\subsection{Heartbeat}
+
+Aby zapobiec timeout'om proxy (np. Cloud Run 60s, Nginx 60s), endpoint wysy\l{}a komentarz SSE co 15~sekund:
+
+\begin{lstlisting}[style=podcode, caption={Mechanizm heartbeat SSE}, label={lst:heartbeat}]
+const heartbeat = setInterval(() => {
+  try {
+    // Komentarz SSE --- ignorowany przez klienta EventSource
+    controller.enqueue(encoder.encode(':\n\n'));
+  } catch {
+    clearInterval(heartbeat);
+  }
+}, 15000); // Co 15 sekund
+\end{lstlisting}
+
+Komentarz SSE (\texttt{:\textbackslash n\textbackslash n}) jest ignorowany przez przegl\k{a}darkowy \texttt{EventSource} API, ale resetuje timer bezczynno\'sci na proxy.
+
+\subsection{Obs\l{}uga roz\l{}\k{a}czenia klienta}
+
+Endpoint sprawdza \texttt{request.signal.aborted} przed ka\.zdym wys\l{}aniem danych. Je\'sli klient zamkn\k{a}\l{} po\l{}\k{a}czenie (np. nawigacja poza stron\k{e}), strumie\'n jest natychmiast zamykany --- oszcz\k{e}dzaj\k{a}c zasoby serwera i~koszty API Gemini:
+
+\begin{lstlisting}[style=podcode, caption={Sprawdzanie roz\l{}\k{a}czenia klienta}, label={lst:client-abort}]
+const { signal } = request;
+
+// Przed ka\.zdym passem
+if (signal.aborted) {
+  clearInterval(heartbeat);
+  controller.close();
+  return;
+}
+
+// W callbacku post\k{e}pu
+(pass, status) => {
+  if (!signal.aborted) {
+    send({ type: 'progress', pass, status });
+  }
+}
+\end{lstlisting}
+
+
+% ============================================================
+\section{POST /api/analyze/image}
+\label{sec:api-analyze-image}
+
+Endpoint generuj\k{a}cy obraz podsumowuj\k{a}cy analiz\k{e} lub roast. U\.zywany do tworzenia grafik do udost\k{e}pniania w~mediach spo\l{}eczno\'sciowych.
+
+Plik: \filepath{src/app/api/analyze/image/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.z\k{a}dania POST /api/analyze/image}
+\label{tab:image-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'s\'c} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Maks. rozmiar body & 2~MB (\texttt{2 * 1024 * 1024} bajtów) \\
+Rate limit & 10 \.z\k{a}da\'n / 10 minut na IP \\
+Timeout & 120 sekund \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Struktura body \.z\k{a}dania POST /api/analyze/image}, label={lst:image-request-body}]
+{
+  "participants": ["Anna", "Jan"],
+  "conversationExcerpt": [
+    {"sender": "Anna", "content": "Hej, t\k{e}skni\l{}am!"},
+    {"sender": "Jan", "content": "Ja te\.z :)"}
+  ],
+  "executiveSummary": "Ciep\l{}a, pe\l{}na wsparcia relacja...",
+  "healthScore": 78,
+  "roastContext": {
+    "verdict": "Para, która komunikuje si\k{e} w 90% memami",
+    "roastSnippets": ["Anna wysy\l{}a 3x wi\k{e}cej serduszek..."],
+    "superlativeTitles": ["Królowa Emoji", "Pan Jednowyrazowy"]
+  }
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Opis pól request body /api/analyze/image}
+\label{tab:image-request-fields}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\texttt{participants}         & \tstype{string[]}  & Tak & Nazwy uczestników \\
+\texttt{conversationExcerpt}  & \tstype{Array}     & Tak & Fragment konwersacji (sender + content) \\
+\texttt{executiveSummary}     & \tstype{string}    & Nie & Streszczenie analizy (tryb standard) \\
+\texttt{healthScore}          & \tstype{number}    & Nie & Wynik zdrowia relacji 0--100 (tryb standard) \\
+\texttt{roastContext}         & \tstype{object}    & Nie & Kontekst roastu (tryb roast) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Logika rozga\l{}\k{e}zienia:}
+Je\'sli pole \texttt{roastContext} jest obecne, wywo\l{}ywana jest \tsfunc{generateRoastImage()}. W~przeciwnym razie --- \tsfunc{generateAnalysisImage()}.
+
+\subsection{Response}
+
+\paragraph{Sukces (200):}
+\begin{lstlisting}[style=podcodeJSON, caption={Odpowied\'z sukcesu /api/analyze/image}, label={lst:image-response-ok}]
+{
+  "imageBase64": "iVBORw0KGgo...",
+  "mimeType": "image/png"
+}
+\end{lstlisting}
+
+\paragraph{B\l{}\k{a}d (500):}
+\begin{lstlisting}[style=podcodeJSON, caption={Odpowied\'z b\l{}\k{e}du /api/analyze/image}, label={lst:image-response-error}]
+{
+  "error": "Image generation failed: model rate limited"
+}
+\end{lstlisting}
+
+
+% ============================================================
+\section{POST /api/analyze/cps}
+\label{sec:api-analyze-cps}
+
+Osobny endpoint dla opcjonalnej analizy Communication Pattern Screening (CPS) --- Passu~5. Uruchamiany na \.z\k{a}danie u\.zytkownika po zako\'nczeniu g\l{}ównej analizy (4 passy).
+
+Plik: \filepath{src/app/api/analyze/cps/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.z\k{a}dania POST /api/analyze/cps}
+\label{tab:cps-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'s\'c} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Rate limit & 5 \.z\k{a}da\'n / 10 minut na IP \\
+Timeout & 120 sekund (63 pytania CPS) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Struktura body \.z\k{a}dania POST /api/analyze/cps}, label={lst:cps-request-body}]
+{
+  "samples": {
+    "overview": [...],
+    "dynamics": [...],
+    "perPerson": {...},
+    "quantitativeContext": "..."
+  },
+  "participantName": "Anna"
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Opis pól request body /api/analyze/cps}
+\label{tab:cps-request-fields}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wymagane} & \textbf{Opis} \\
+\midrule
+\texttt{samples}          & \tstype{AnalysisSamples} & Tak & Spróbkowane wiadomo\'sci (te same co w~g\l{}ównej analizie) \\
+\texttt{participantName}  & \tstype{string}          & Tak & Nazwa uczestnika do analizy CPS \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Response --- SSE Stream}
+
+Format odpowiedzi identyczny jak w~\texttt{/api/analyze}, z~t\k{a} ró\.znic\k{a}, \.ze zdarzenia \texttt{progress} nie maj\k{a} pola \texttt{pass}:
+
+\begin{lstlisting}[style=podcodeJSON, caption={Sekwencja zdarze\'n SSE dla CPS}, label={lst:cps-sse}]
+data: {"type":"progress","status":"Analiza wzorców komunikacji..."}
+
+data: {"type":"complete","result":{...CPSResult...}}
+\end{lstlisting}
+
+Endpoint stosuje ten sam mechanizm heartbeat (co 15s) i~sprawdzanie roz\l{}\k{a}czenia klienta (\texttt{signal.aborted}) co \texttt{/api/analyze}.
+
+
+% ============================================================
+\section{GET /api/health}
+\label{sec:api-health}
+
+Najprostszy endpoint --- health check do monitoringu i~load balancerów.
+
+Plik: \filepath{src/app/api/health/route.ts}
+
+\begin{lstlisting}[style=podcode, caption={Endpoint health check}, label={lst:health-endpoint}]
+import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
+export function GET() {
+  return NextResponse.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+}
+\end{lstlisting}
+
+\subsection{Response}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Odpowied\'z GET /api/health}, label={lst:health-response}]
+{
+  "status": "ok",
+  "timestamp": "2026-02-19T14:30:00.000Z"
+}
+\end{lstlisting}
+
+Brak rate limitingu, brak autentykacji. Zwraca zawsze 200 --- je\'sli serwer dzia\l{}a, endpoint odpowiada.
+
+
+% ============================================================
+\section{POST /api/analyze/subtext}
+\label{sec:api-analyze-subtext}
+
+Endpoint Dekodera Podtekst\'{o}w --- analizuje pe\l{}n\k{a} list\k{e} wiadomo\'{s}ci w~poszukiwaniu
+ukrytych znacze\'{n}. Wykorzystuje streaming SSE do raportowania post\k{e}pu przetwarzania
+wielu partii okien kontekstowych.
+
+Plik: \filepath{src/app/api/analyze/subtext/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.{z}\k{a}dania POST /api/analyze/subtext}
+\label{tab:subtext-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'{s}\'{c}} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Maks.\ rozmiar body & 10~MB (\texttt{10 * 1024 * 1024} bajt\'{o}w) \\
+Rate limit & 5 \.{z}\k{a}da\'{n} / 10 minut na IP \\
+Timeout & 120 sekund \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Schemat Zod:}
+
+\begin{lstlisting}[style=podcode, caption={Schemat walidacji \texttt{subtextRequestSchema} (Zod)}, label={lst:subtext-zod}]
+const simplifiedMessageSchema = z.object({
+  sender: z.string(),
+  content: z.string(),
+  timestamp: z.number(),
+  index: z.number(),
+});
+
+export const subtextRequestSchema = z.object({
+  messages: z.array(simplifiedMessageSchema)
+    .min(100, 'Minimum 100 messages required'),
+  participants: z.array(z.string().min(1))
+    .min(1, 'participants must contain at least one entry'),
+  relationshipContext: z.optional(z.object({}).passthrough()),
+  quantitativeContext: z.optional(z.string()),
+});
+\end{lstlisting}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Przyk\l{}adowe body \.{z}\k{a}dania POST /api/analyze/subtext}, label={lst:subtext-request-body}]
+{
+  "messages": [
+    { "sender": "Anna", "content": "ok", "timestamp": 1708000000000, "index": 1547 },
+    { "sender": "Jan", "content": "Wszystko dobrze?", "timestamp": 1708000060000, "index": 1548 }
+  ],
+  "participants": ["Anna", "Jan"],
+  "relationshipContext": { "type": "romantic" },
+  "quantitativeContext": "Anna: 5200 msg, Jan: 4800 msg..."
+}
+\end{lstlisting}
+
+\begin{infobox}[title=Dlaczego 10~MB?]
+W~przeciwie\'{n}stwie do pozosta\l{}ych endpoint\'{o}w, \texttt{/api/analyze/subtext} otrzymuje
+\textbf{pe\l{}n\k{a} list\k{e} wiadomo\'{s}ci} (jako \tstype{SimplifiedMsg[]}), poniewa\.{z} ekstrakcja
+okien wymian (\tsfunc{extractExchangeWindows()}) odbywa si\k{e} po stronie serwera.
+Konwersacje 50\,000+ wiadomo\'{s}ci mog\k{a} przekracza\'{c} 5~MB.
+\end{infobox}
+
+
+\subsection{Response --- SSE Stream}
+
+Endpoint odpowiada strumieniem SSE z~trzema typami zdarze\'{n}:
+
+\begin{lstlisting}[style=podcodeJSON, caption={Sekwencja zdarze\'{n} SSE dla Dekodera Podtekst\'{o}w}, label={lst:subtext-sse}]
+data: {"type":"progress","status":"Rozpoczynam analiz\k{e} podtekst\'{o}w..."}
+
+data: {"type":"progress","status":"Wyodr\k{e}bnianie wymian zda\'{n}..."}
+
+data: {"type":"progress","status":"Dekodowanie podtekst\'{o}w 1/4..."}
+
+data: {"type":"progress","status":"Dekodowanie podtekst\'{o}w 2/4..."}
+
+data: {"type":"progress","status":"Analiza wzorców ukrywania..."}
+
+data: {"type":"complete","result":{...SubtextResult...}}
+\end{lstlisting}
+
+Endpoint stosuje:
+\begin{itemize}
+  \item \textbf{Heartbeat} co 15s (komentarz SSE \texttt{:\textbackslash n\textbackslash n})
+  \item \textbf{Abort signal handling} --- sprawdzenie \texttt{signal.aborted} przed ka\.{z}dym wysy\l{}aniem post\k{e}pu i~przed/po g\l{}\'{o}wnej analizie
+  \item \textbf{Nag\l{}\'{o}wki}: \texttt{Content-Type: text/event-stream}, \texttt{Cache-Control: no-cache}, \texttt{Connection: keep-alive}
+\end{itemize}
+
+
+% ============================================================
+\section{POST /api/analyze/court}
+\label{sec:api-analyze-court}
+
+Endpoint generuj\k{a}cy satyryczny proces s\k{a}dowy. Wykorzystuje istniej\k{a}ce wyniki
+analizy AI (Pass 1, 2, 4) jako ,,dowody'' oraz dane ilo\'{s}ciowe.
+
+Plik: \filepath{src/app/api/analyze/court/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.{z}\k{a}dania POST /api/analyze/court}
+\label{tab:court-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'{s}\'{c}} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Maks.\ rozmiar body & 5~MB (\texttt{5 * 1024 * 1024} bajt\'{o}w) \\
+Rate limit & 5 \.{z}\k{a}da\'{n} / 10 minut na IP \\
+Timeout & 120 sekund \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Schemat Zod:}
+
+\begin{lstlisting}[style=podcode, caption={Schemat walidacji \texttt{courtRequestSchema} (Zod)}, label={lst:court-zod}]
+export const courtRequestSchema = z.object({
+  samples: z.object({}).passthrough(),
+  participants: z.array(z.string().min(1))
+    .min(1, 'participants must contain at least one entry'),
+  quantitativeContext: z.string(),
+  existingAnalysis: z.optional(z.object({
+    pass1: z.optional(z.object({}).passthrough()),
+    pass2: z.optional(z.object({}).passthrough()),
+    pass4: z.optional(z.object({}).passthrough()),
+  })),
+});
+\end{lstlisting}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Przyk\l{}adowe body \.{z}\k{a}dania POST /api/analyze/court}, label={lst:court-request-body}]
+{
+  "samples": {
+    "overview": [...],
+    "dynamics": [...],
+    "perPerson": {...}
+  },
+  "participants": ["Anna", "Jan"],
+  "quantitativeContext": "Anna: 5200 msg, mediana odpowiedzi 12min...",
+  "existingAnalysis": {
+    "pass1": { "relationship_type": {...}, "tone_per_person": {...} },
+    "pass2": { "power_dynamics": {...} },
+    "pass4": { "health_score": 65, "red_flags": [...] }
+  }
+}
+\end{lstlisting}
+
+
+\subsection{Response --- SSE Stream}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Sekwencja zdarze\'{n} SSE dla procesu s\k{a}dowego}, label={lst:court-sse}]
+data: {"type":"progress","status":"Przygotowuj\k{e} akt oskar\.{z}enia..."}
+
+data: {"type":"complete","result":{...CourtResult...}}
+\end{lstlisting}
+
+Mechanizm streamingu jest identyczny jak w~pozosta\l{}ych endpointach:
+heartbeat 15s, obs\l{}uga \texttt{signal.aborted}, zdarzenie \texttt{error} w~przypadku pora\.{z}ki.
+
+\begin{table}[H]
+\centering
+\caption{Por\'{o}wnanie endpoint\'{o}w SSE}
+\label{tab:new-endpoints-comparison}
+\begin{tabularx}{\textwidth}{l c c c c c c}
+\toprule
+\textbf{Cecha} & \textbf{/analyze} & \textbf{/analyze/cps} & \textbf{/analyze/subtext} & \textbf{/analyze/court} & \textbf{/analyze/dating-profile} & \textbf{/analyze/simulate} \\
+\midrule
+Body limit       & 5 MB    & 5 MB  & 10 MB & 5 MB  & 5 MB    & 5 MB \\
+Rate limit       & 5/10m   & 5/10m & 5/10m & 5/10m & 5/10m   & 5/10m \\
+Response         & SSE     & SSE   & SSE   & SSE   & SSE     & SSE \\
+Heartbeat        & 15s     & 15s   & 15s   & 15s   & 15s     & 15s \\
+Batching         & 4 passy & 1 pass & N$\times$8 okien & 1 call & 1 call & 1 call/wymian\k{e} \\
+Zod validation   & Tak     & Tak   & Tak   & Tak   & Tak     & Tak \\
+Abort handling   & Tak     & Tak   & Tak   & Tak   & Tak     & Tak \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{POST /api/analyze/dating-profile}
+\label{sec:api-dating-profile}
+
+Endpoint generuj\k{a}cy brutanie szczery profil randkowy na podstawie rzeczywistych
+wzorc\'{o}w komunikacyjnych uczestnika. Wykorzystuje pr\'{o}bki wiadomo\'{s}ci oraz
+opcjonalnie wyniki wcze\'{s}niejszej analizy AI (Pass~1 i~Pass~3), aby stworzy\'{c}
+satyryczny, ale trafny opis osoby jako potencjalnego partnera.
+
+Plik: \filepath{src/app/api/analyze/dating-profile/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.{z}\k{a}dania POST /api/analyze/dating-profile}
+\label{tab:dating-profile-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'{s}\'{c}} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Maks.\ rozmiar body & 5~MB (\texttt{5 * 1024 * 1024} bajt\'{o}w) \\
+Rate limit & 5 \.{z}\k{a}da\'{n} / 10 minut na IP \\
+Timeout & 120 sekund \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Schemat Zod:}
+Walidacja wej\'{s}cia odbywa si\k{e} za pomoc\k{a} schematu Zod o~nast\k{e}puj\k{a}cej strukturze:
+
+\begin{itemize}
+  \item \texttt{samples} (\tstype{AnalysisSamples}, wymagane) --- spr\'{o}bkowane wiadomo\'{s}ci podzielone na kategorie analityczne.
+  \item \texttt{participants} (\tstype{string[]}, wymagane) --- lista nazw uczestnik\'{o}w konwersacji.
+  \item \texttt{quantitativeContext} (\tstype{string}, wymagane) --- tekstowe podsumowanie metryk ilo\'{s}ciowych.
+  \item \texttt{existingAnalysis} (\tstype{object}, opcjonalne) --- wyniki wcze\'{s}niejszej analizy AI:
+    \begin{itemize}
+      \item \texttt{pass1} (\tstype{object}, opcjonalne) --- wynik Passu~1 (ton, styl, typ relacji).
+      \item \texttt{pass3} (\tstype{object}, opcjonalne) --- wynik Passu~3 (profile osobowo\'{s}ci, Big Five, MBTI).
+    \end{itemize}
+\end{itemize}
+
+\subsection{Response --- SSE Stream}
+
+Endpoint odpowiada strumieniem SSE z~dwoma typami zdarze\'{n}:
+
+\begin{lstlisting}[style=podcodeJSON, caption={Sekwencja zdarze\'{n} SSE dla profilu randkowego}, label={lst:dating-profile-sse}]
+data: {"type":"progress","pass":"dating-profile","status":"running"}
+
+data: {"type":"complete","pass":"dating-profile","result":{...DatingProfileResult...}}
+\end{lstlisting}
+
+Mechanizm streamingu jest identyczny jak w~pozosta\l{}ych endpointach:
+heartbeat 15s, obs\l{}uga \texttt{signal.aborted}, zdarzenie \texttt{error} w~przypadku pora\.{z}ki.
+
+\begin{infobox}[title=Formatowanie wiadomo\'{s}ci]
+Endpoint korzysta z~istniej\k{a}cej funkcji \tsfunc{formatMessagesForAnalysis()} zdefiniowanej
+w~\filepath{src/lib/analysis/prompts.ts}. Liczba wiadomo\'{s}ci per osoba jest ograniczona
+do maksymalnie 50, co zapewnia zr\'{o}wnowa\.{z}on\k{a} reprezentacj\k{e} ka\.{z}dego uczestnika
+bez przekraczania limit\'{o}w tokenu modelu \gemini.
+\end{infobox}
+
+
+% ============================================================
+\section{POST /api/analyze/simulate}
+\label{sec:api-simulate}
+
+Endpoint symulatora odpowiedzi --- przewiduje, jak dana osoba odpowiedzia\l{}aby
+na wiadomo\'{s}\'{c} u\.{z}ytkownika, opieraj\k{a}c si\k{e} na jej rzeczywistych wzorcach komunikacyjnych.
+W~przeciwie\'{n}stwie do pozosta\l{}ych endpoint\'{o}w, ten jest wywo\l{}ywany \textbf{per wymiana}
+(do \texttt{MAX\_EXCHANGES = 5} razy na sesj\k{e}) i~ma kr\'{o}tszy timeout.
+
+Plik: \filepath{src/app/api/analyze/simulate/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.{z}\k{a}dania POST /api/analyze/simulate}
+\label{tab:simulate-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'{s}\'{c}} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Maks.\ rozmiar body & 5~MB (\texttt{5 * 1024 * 1024} bajt\'{o}w) \\
+Rate limit & 5 \.{z}\k{a}da\'{n} / 10 minut na IP \\
+Timeout & 60 sekund \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title=Kr\'{o}tszy timeout]
+Endpoint \texttt{/api/analyze/simulate} ma timeout ustawiony na \textbf{60~sekund} zamiast
+standardowych 120s. Symulacja odpowiedzi to kr\'{o}tka, jednorazowa operacja z~ograniczonym
+\texttt{maxOutputTokens = 1024} (vs 8192 w~pozosta\l{}ych endpointach), wi\k{e}c nie wymaga
+d\l{}u\.{z}szego czasu przetwarzania.
+\end{infobox}
+
+\paragraph{Schemat Zod:}
+Endpoint przyjmuje bogaty zestaw danych kontekstowych, aby wiernie odwzorowa\'{c}
+styl komunikacji symulowanej osoby:
+
+\begin{itemize}
+  \item \texttt{userMessage} (\tstype{string}, wymagane, maks.\ 200 znak\'{o}w) --- wiadomo\'{s}\'{c} u\.{z}ytkownika, na kt\'{o}r\k{a} ma zosta\'{c} wygenerowana odpowied\'{z}.
+  \item \texttt{targetPerson} (\tstype{string}, wymagane) --- nazwa osoby, kt\'{o}rej odpowied\'{z} jest symulowana.
+  \item \texttt{participants} (\tstype{string[]}, wymagane) --- lista uczestnik\'{o}w konwersacji.
+  \item \texttt{quantitativeContext} (\tstype{string}, wymagane) --- podsumowanie metryk ilo\'{s}ciowych.
+  \item \texttt{topWords} (\tstype{string[]}) --- najcz\k{e}\'{s}ciej u\.{z}ywane s\l{}owa przez dan\k{a} osob\k{e}.
+  \item \texttt{topPhrases} (\tstype{string[]}) --- charakterystyczne frazy.
+  \item \texttt{topEmojis} (\tstype{string[]}) --- najcz\k{e}\'{s}ciej u\.{z}ywane emoji.
+  \item \texttt{medianResponseTimeMs} (\tstype{number}) --- mediana czasu odpowiedzi w~milisekundach.
+  \item \texttt{avgMessageLengthWords} (\tstype{number}) --- \'{s}rednia d\l{}ugo\'{s}\'{c} wiadomo\'{s}ci w~s\l{}owach.
+  \item \texttt{avgMessageLengthChars} (\tstype{number}) --- \'{s}rednia d\l{}ugo\'{s}\'{c} wiadomo\'{s}ci w~znakach.
+  \item \texttt{emojiFrequency} (\tstype{number}) --- cz\k{e}stotliwo\'{s}\'{c} u\.{z}ycia emoji.
+  \item \texttt{exampleMessages} (\tstype{string[]}) --- przyk\l{}adowe wiadomo\'{s}ci osoby docelowej.
+  \item \texttt{previousExchanges} (\tstype{Array<\{role, message\}>}) --- historia dotychczasowych wymian w~bie\.{z}\k{a}cej sesji.
+  \item \texttt{personalityProfile} (\tstype{object}, opcjonalne) --- profil osobowo\'{s}ci z~Passu~3.
+  \item \texttt{toneAnalysis} (\tstype{object}, opcjonalne) --- analiza tonu z~Passu~1.
+  \item \texttt{dynamicsAnalysis} (\tstype{object}, opcjonalne) --- analiza dynamiki z~Passu~2.
+\end{itemize}
+
+\subsection{Response --- SSE Stream}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Sekwencja zdarze\'{n} SSE dla symulatora odpowiedzi}, label={lst:simulate-sse}]
+data: {"type":"progress","pass":"simulate","status":"running"}
+
+data: {"type":"complete","pass":"simulate","result":{...SimulationResponse...}}
+\end{lstlisting}
+
+Endpoint jest wywo\l{}ywany per wymiana --- do \texttt{MAX\_EXCHANGES = 5} razy na sesj\k{e}.
+Ka\.{z}de wywo\l{}anie zawiera pe\l{}n\k{a} histori\k{e} dotychczasowych wymian w~polu
+\texttt{previousExchanges}, co pozwala modelowi na utrzymanie sp\'{o}jno\'{s}ci
+konwersacji. Kr\'{o}tszy \texttt{maxOutputTokens} (1024 vs 8192) odzwierciedla fakt,
+\.{z}e pojedyncza odpowied\'{z} to zazwyczaj 1--3 zdania.
+
+
+\begin{infobox}[Delusion Quiz --- brak endpointu API]
+\textbf{Stawiam Zak\l{}ad} (Delusion Quiz) jest jedyn\k{a} funkcj\k{a} rozrywkow\k{a} bez w\l{}asnego endpointu API.
+Quiz dzia\l{}a w~100\% po stronie klienta, wykorzystuj\k{a}c dane z~\tstype{QuantitativeAnalysis}
+obliczone podczas parsowania. Logika pyta\'{n} i~scoringu znajduje si\k{e} w~pliku
+\filepath{src/lib/analysis/delusion-quiz.ts} (568 LOC).
+\end{infobox}
+
+
+% ============================================================
+\section{Rate Limiting}
+\label{sec:rate-limiting}
+
+Wszystkie endpointy modyfikuj\k{a}ce (POST) s\k{a} chronione rate limiterem. Implementacja: \filepath{src/lib/rate-limit.ts}.
+
+\subsection{Algorytm}
+
+System u\.zywa algorytmu \textbf{okna sta\l{}ego} (fixed window) z~map\k{a} in-memory:
+
+\begin{lstlisting}[style=podcode, caption={Implementacja rate limitera}, label={lst:rate-limit}]
+const rateLimitMap = new Map<string, {
+  count: number;
+  resetTime: number;
+}>();
+
+// Czyszczenie wygas\l{}ych wpisów co 5 minut
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of rateLimitMap) {
+      if (now > value.resetTime) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }, 5 * 60 * 1000);
+}
+
+export function rateLimit(
+  limit: number,
+  windowMs: number,
+) {
+  return function checkRateLimit(ip: string): {
+    allowed: boolean;
+    retryAfter?: number;
+  } {
+    const now = Date.now();
+    const entry = rateLimitMap.get(ip);
+
+    if (!entry || now > entry.resetTime) {
+      // Nowe okno
+      rateLimitMap.set(ip, {
+        count: 1,
+        resetTime: now + windowMs,
+      });
+      return { allowed: true };
+    }
+
+    if (entry.count >= limit) {
+      // Limit przekroczony
+      const retryAfter = Math.ceil(
+        (entry.resetTime - now) / 1000
+      );
+      return { allowed: false, retryAfter };
+    }
+
+    // W limicie
+    entry.count++;
+    return { allowed: true };
+  };
+}
+\end{lstlisting}
+
+\subsection{Konfiguracja limitów}
+
+\begin{table}[H]
+\centering
+\caption{Limity rate limiting na endpoint}
+\label{tab:rate-limits}
+\begin{tabularx}{\textwidth}{l R{2.5cm} R{2.5cm} X}
+\toprule
+\textbf{Endpoint} & \textbf{Limit} & \textbf{Okno} & \textbf{Uzasadnienie} \\
+\midrule
+\texttt{/api/analyze}                & 5 \.z\k{a}da\'n  & 10 minut & Ka\.zde \.z\k{a}danie to 4 wywo\l{}ania Gemini API \\
+\texttt{/api/analyze/enhanced-roast} & 5 \.z\k{a}da\'n  & 10 minut & Rozszerzony roast z~pe\l{}nym kontekstem psychologicznym \\
+\texttt{/api/analyze/standup}        & 5 \.z\k{a}da\'n  & 10 minut & Stand-Up generuje 7 aktów --- d\l{}ugi prompt \\
+\texttt{/api/analyze/cps}            & 5 \.z\k{a}da\'n  & 10 minut & CPS wymaga d\l{}ugiego promptu (63 pytania) \\
+\texttt{/api/analyze/subtext}        & 5 \.z\k{a}da\'n  & 10 minut & Dekoder przetwarza wiele partii okien kontekstowych \\
+\texttt{/api/analyze/court}          & 5 \.z\k{a}da\'n  & 10 minut & Proces s\k{a}dowy wykorzystuje wyniki Pass 1, 2, 4 \\
+\texttt{/api/analyze/dating-profile} & 5 \.z\k{a}da\'n  & 10 minut & Generowanie profilu randkowego z~analizy zachowa\'n \\
+\texttt{/api/analyze/simulate}       & 5 \.z\k{a}da\'n  & 10 minut & Symulator odpowiedzi --- analiza wzorców komunikacji \\
+\texttt{/api/analyze/image}          & 10 \.z\k{a}da\'n & 10 minut & Generowanie obrazu jest l\.zejsze od pe\l{}nej analizy \\
+\texttt{/api/discord/fetch-messages} & 3 \.z\k{a}da\'n  & 10 minut & Pobieranie wiadomo\'sci z~Discorda --- paginacja API \\
+\texttt{/api/health}                 & brak            & ---      & Health check nie wymaga ochrony \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Identyfikacja klienta}
+
+Klucz rate limitingu to adres IP klienta, ekstrahowany z~nag\l{}ówka \texttt{x-forwarded-for} (ustawiany przez reverse proxy / load balancer) lub fallback na \texttt{'unknown'}:
+
+\begin{lstlisting}[style=podcode, caption={Ekstrakcja IP klienta}, label={lst:ip-extraction}]
+const forwarded = request.headers.get('x-forwarded-for');
+const ip = forwarded?.split(',')[0]?.trim() ?? 'unknown';
+\end{lstlisting}
+
+\begin{warningbox}[title=In-memory --- ograniczenia]
+Mapa rate limitingu jest \textbf{in-memory} --- nie jest wspó\l{}dzielona mi\k{e}dzy instancjami serwera. W~deploymencie wieloinstancyjnym (np. Vercel Serverless Functions z~wieloma cold startami) ka\.zda instancja ma w\l{}asn\k{a} map\k{e}, co mo\.ze prowadzi\'c do \textbf{mno\.znikowego limitu}. Dla produkcyjnego deploymentu nale\.zy rozwa\.zy\'c Redis lub Upstash Rate Limit.
+\end{warningbox}
+
+\subsection{Odpowied\'z 429}
+
+Gdy limit jest przekroczony, serwer zwraca status \texttt{429 Too Many Requests} z~nag\l{}ówkiem \texttt{Retry-After} (w~sekundach):
+
+\begin{lstlisting}[style=podcode, caption={Odpowied\'z 429 z~nag\l{}ówkiem Retry-After}, label={lst:rate-limit-response}]
+if (!allowed) {
+  return Response.json(
+    { error: 'Zbyt wiele żądań. Spróbuj ponownie za chwilę.' },
+    {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    },
+  );
+}
+\end{lstlisting}
+
+
+% ============================================================
+\section{Obs\l{}uga b\l{}\k{e}dów}
+\label{sec:api-errors}
+
+Wszystkie endpointy stosuj\k{a} spójny format odpowiedzi b\l{}\k{e}dów: obiekt JSON z~polem \texttt{error} zawieraj\k{a}cym komunikat w~j\k{e}zyku polskim.
+
+\subsection{Kody HTTP}
+
+\begin{table}[H]
+\centering
+\caption{Kody HTTP i~odpowiadaj\k{a}ce im b\l{}\k{e}dy}
+\label{tab:http-error-codes}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Kod} & \textbf{Nazwa} & \textbf{Kiedy} \\
+\midrule
+\texttt{200} & OK                  & Sukces (JSON lub SSE) \\
+\texttt{400} & Bad Request         & Brak wymaganych pól, nieprawid\l{}owy JSON, b\l{}\k{e}dne typy danych \\
+\texttt{413} & Payload Too Large   & Body przekracza limit rozmiaru (5~MB / 2~MB) \\
+\texttt{429} & Too Many Requests   & Przekroczony rate limit \\
+\texttt{500} & Internal Server Error & B\l{}\k{a}d Gemini API, b\l{}\k{a}d wewn\k{e}trzny \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Format odpowiedzi b\l{}\k{e}dów}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Format odpowiedzi b\l{}\k{e}du}, label={lst:error-format}]
+{
+  "error": "Komunikat b\l{}\k{e}du po polsku"
+}
+\end{lstlisting}
+
+\paragraph{Przyk\l{}ady komunikatów:}
+
+\begin{table}[H]
+\centering
+\caption{Przyk\l{}adowe komunikaty b\l{}\k{e}dów}
+\label{tab:error-messages}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Kod} & \textbf{Endpoint} & \textbf{Komunikat} \\
+\midrule
+400 & /analyze       & \texttt{Missing or invalid "samples" object in request body.} \\
+400 & /analyze       & \texttt{Missing or empty "participants" array in request body.} \\
+400 & /analyze       & \texttt{Invalid JSON in request body.} \\
+400 & /analyze/image & \texttt{Missing or empty "conversationExcerpt" array in request body.} \\
+400 & /analyze/cps   & \texttt{Missing samples} \\
+400 & /analyze/cps   & \texttt{Missing participantName} \\
+413 & /analyze       & \texttt{Request body too large. Maximum size is 5MB.} \\
+413 & /analyze/image & \texttt{Request body too large. Maximum size is 2MB.} \\
+429 & (wszystkie)    & \texttt{Zbyt wiele żądań. Spróbuj ponownie za chwilę.} \\
+500 & /analyze       & \texttt{B\l{}\k{a}d analizy AI --- spróbuj ponownie} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{B\l{}\k{e}dy w~strumieniu SSE}
+
+W~endpointach streamuj\k{a}cych (\texttt{/api/analyze} i~\texttt{/api/analyze/cps}) b\l{}\k{e}dy wyst\k{e}puj\k{a}ce \textbf{po} rozpocz\k{e}ciu strumienia s\k{a} wys\l{}ane jako zdarzenie SSE typu \texttt{error}:
+
+\begin{lstlisting}[style=podcodeJSON, caption={Zdarzenie b\l{}\k{e}du w~strumieniu SSE}, label={lst:sse-error}]
+data: {"type":"error","error":"B\l{}\k{a}d analizy AI --- spróbuj ponownie"}
+\end{lstlisting}
+
+Po wys\l{}aniu zdarzenia b\l{}\k{e}du strumie\'n jest zamykany (\texttt{controller.close()}).
+
+\subsection{Walidacja rozmiaru body}
+
+Rozmiar body jest sprawdzany przed parsowaniem JSON za pomoc\k{a} nag\l{}ówka \texttt{Content-Length}:
+
+\begin{lstlisting}[style=podcode, caption={Walidacja rozmiaru body}, label={lst:body-size-check}]
+const MAX_BODY_SIZE = 5 * 1024 * 1024; // 5MB
+
+const contentLength = request.headers.get('content-length');
+if (contentLength
+    && parseInt(contentLength, 10) > MAX_BODY_SIZE) {
+  return Response.json(
+    { error: 'Request body too large. Maximum size is 5MB.' },
+    { status: 413 },
+  );
+}
+\end{lstlisting}
+
+\begin{infobox}[title=Dwuetapowa walidacja]
+Walidacja odbywa si\k{e} w~dwóch etapach:
+\begin{enumerate}
+  \item \textbf{Rozmiar} --- sprawdzenie \texttt{Content-Length} (szybkie, przed parsowaniem).
+  \item \textbf{Struktura} --- po \texttt{request.json()} sprawdzane s\k{a} wymagane pola: \texttt{samples} (obiekt), \texttt{participants} (niepusta tablica).
+\end{enumerate}
+Nieprawid\l{}owy JSON (b\l{}\k{a}d parsowania) jest \l{}apany w~bloku \texttt{try/catch} i~zwraca 400.
+\end{infobox}
+
+\vfill
+
+\begin{center}
+\small\color{PodTextMuted}
+API \podtekst jest zaprojektowane zgodnie z~zasad\k{a} ,,fail fast, fail clear'' ---\\
+ka\.zdy b\l{}\k{a}d jest komunikowany natychmiast, z~czytelnym komunikatem i~odpowiednim kodem HTTP.
+\end{center}

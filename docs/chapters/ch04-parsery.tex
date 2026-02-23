@@ -1,0 +1,1262 @@
+% ============================================================
+% PodTeksT — Rozdzia\u0142 4: Parsery Platform
+% ============================================================
+
+\chapter{Parsery Platform}
+\label{ch:parsery}
+
+Fundamentem ca\l{}ego systemu analitycznego \podtekst jest warstwa parserów --- modu\l{}ów odpowiedzialnych za przekszta\l{}cenie surowych eksportów z~ró\.znych komunikatorów w~jednolity, znormalizowany format wiadomo\'sci. Ka\.zda platforma (Messenger, WhatsApp, Instagram, Telegram) eksportuje dane w~innym formacie, z~innymi polami, innymi konwencjami kodowania i~innymi pu\l{}apkami. Zadaniem parsera jest ukry\'c t\k{e} z\l{}o\.zono\'s\'c za wspólnym interfejsem \tstype{ParsedConversation}, dzi\k{e}ki czemu ca\l{}y dalszy pipeline --- od analizy ilo\'sciowej po analiz\k{e} AI --- operuje na identycznej strukturze danych, niezale\.znie od \'zród\l{}a.
+
+\begin{infobox}[title=Zasada projektowa]
+Parsery s\k{a} jedynym miejscem w~systemie, które ,,wie'', sk\k{a}d pochodz\k{a} dane. Po etapie parsowania ca\l{}y kod operuje wy\l{}\k{a}cznie na typach zunifikowanych. Ta izolacja pozwala dodawa\'c nowe platformy bez modyfikacji jakiegokolwiek kodu analitycznego.
+\end{infobox}
+
+Wszystkie parsery znajduj\k{a} si\k{e} w~katalogu \filepath{src/lib/parsers/} i~sk\l{}adaj\k{a} si\k{e} z~nast\k{e}puj\k{a}cych plików:
+
+\begin{table}[H]
+\centering
+\caption{Pliki w~module parserów}
+\label{tab:parser-files}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Plik} & \textbf{Opis} \\
+\midrule
+\filepath{types.ts}     & Zunifikowane typy danych: \tstype{UnifiedMessage}, \tstype{ParsedConversation}, \tstype{Participant}, \tstype{Reaction} \\
+\filepath{detect.ts}    & Auto-detekcja formatu pliku wej\'sciowego \\
+\filepath{messenger.ts} & Parser Facebook Messenger JSON (z~dekodowaniem Unicode) \\
+\filepath{whatsapp.ts}  & Parser WhatsApp \texttt{.txt} (obs\l{}uga wielu formatów daty) \\
+\filepath{instagram.ts} & Parser Instagram DM JSON (format Meta) \\
+\filepath{telegram.ts}  & Parser Telegram JSON \\
+\filepath{discord.ts}   & Parser Discord API (Bot token + Channel ID) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Zunifikowany format wiadomo\'sci}
+\label{sec:unified-message}
+
+Centralnym typem danych w~ca\l{}ym systemie jest interfejs \tstype{UnifiedMessage}. Ka\.zda wiadomo\'s\'c z~ka\.zdej platformy zostaje przekszta\l{}cona do tej struktury. Poni\.zej pe\l{}na definicja z~pliku \filepath{src/lib/parsers/types.ts}:
+
+\subsection{Interfejs UnifiedMessage}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs UnifiedMessage --- zunifikowana wiadomo\'s\'c}, label={lst:unified-message}]
+export interface UnifiedMessage {
+  /** Sekwencyjny indeks w konwersacji (0-based) */
+  index: number;
+  /** Kto wysla\l{} wiadomo\'s\'c --- zdekodowana nazwa uczestnika */
+  sender: string;
+  /** Tre\'s\'c tekstowa. Pusty string dla wiadomo\'sci z samymi mediami */
+  content: string;
+  /** Unix timestamp w milisekundach */
+  timestamp: number;
+  /** Typ wiadomo\'sci --- determinuje sposób przetwarzania */
+  type: 'text' | 'media' | 'sticker' | 'link'
+      | 'call' | 'system' | 'unsent';
+  /** Reakcje emoji na t\k{e} wiadomo\'s\'c */
+  reactions: Reaction[];
+  /** Czy wiadomo\'s\'c zawiera za\l{}\k{a}czone media (zdj\k{e}cia, wideo, audio) */
+  hasMedia: boolean;
+  /** Czy wiadomo\'s\'c zawiera link/udost\k{e}pnienie */
+  hasLink: boolean;
+  /** Czy wiadomo\'s\'c zosta\l{}a usuni\k{e}ta (unsent) */
+  isUnsent: boolean;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Opis pól interfejsu \tstype{UnifiedMessage}}
+\label{tab:unified-message-fields}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{index}     & \tstype{number}     & Sekwencyjny indeks wiadomo\'sci w~konwersacji, numerowany od~0. U\.zywany do odwo\l{}a\'n w~analizie AI. \\
+\texttt{sender}    & \tstype{string}     & Nazwa nadawcy po dekodowaniu Unicode (np. ,,Anna Nowak'' zamiast garbled bytes). \\
+\texttt{content}   & \tstype{string}     & Tre\'s\'c tekstowa wiadomo\'sci. Pusty string \texttt{""} je\'sli wiadomo\'s\'c zawiera wy\l{}\k{a}cznie media. \\
+\texttt{timestamp} & \tstype{number}     & Znacznik czasu w~formacie Unix milliseconds. U\.zywany do sortowania chronologicznego i~obliczania czasu odpowiedzi. \\
+\texttt{type}      & \tstype{string} union & Jedna z~7~warto\'sci. Patrz tabela~\ref{tab:message-types}. \\
+\texttt{reactions} & \tstype{Reaction[]} & Tablica reakcji emoji. Mo\.ze by\'c pusta. \\
+\texttt{hasMedia}  & \tstype{boolean}    & Flaga obecno\'sci mediów (zdj\k{e}cia, wideo, audio, GIF). \\
+\texttt{hasLink}   & \tstype{boolean}    & Flaga obecno\'sci linku HTTP/HTTPS. \\
+\texttt{isUnsent}  & \tstype{boolean}    & Flaga usuni\k{e}tej wiadomo\'sci (unsent/deleted). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Typy wiadomo\'sci (\texttt{type} union)}
+\label{tab:message-types}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Warto\'s\'c} & \textbf{Znaczenie} \\
+\midrule
+\texttt{'text'}    & Standardowa wiadomo\'s\'c tekstowa --- stanowi ok.~80--90\% wiadomo\'sci w~typowej konwersacji. \\
+\texttt{'media'}   & Wiadomo\'s\'c zawieraj\k{a}ca wy\l{}\k{a}cznie media (zdj\k{e}cie, wideo, audio, GIF) bez tekstu. \\
+\texttt{'sticker'} & Naklejka (sticker). Tre\'s\'c \texttt{content} mo\.ze by\'c pusta lub zawiera\'c emoji stickera. \\
+\texttt{'link'}    & Udost\k{e}pniony link (share). W~Messengerze pochodzi z~pola \texttt{share.link}. \\
+\texttt{'call'}    & Po\l{}\k{a}czenie g\l{}osowe lub wideo. Tre\'s\'c \texttt{content} zawiera informacje o~po\l{}\k{a}czeniu. \\
+\texttt{'system'}  & Wiadomo\'s\'c systemowa (np. ,,X do\l{}\k{a}czy\l{} do grupy'', ,,szyfrowanie end-to-end''). \\
+\texttt{'unsent'}  & Wiadomo\'s\'c usuni\k{e}ta/wycofana przez nadawc\k{e}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsection{Interfejs Participant}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Participant}, label={lst:participant}]
+export interface Participant {
+  /** Wy\'swietlana nazwa uczestnika (po dekodowaniu Unicode) */
+  name: string;
+  /** Oryginalny identyfikator platformy (je\'sli dost\k{e}pny) */
+  platformId?: string;
+}
+\end{lstlisting}
+
+Pole \texttt{name} jest g\l{}ównym identyfikatorem uczestnika w~ca\l{}ym systemie --- u\.zywane jako klucz w~mapach \texttt{Record<string, PersonMetrics>}, w~legendach wykresów, w~promptach AI. Pole \texttt{platformId} jest opcjonalne i~wype\l{}niane tylko przez parsery, które maj\k{a} dost\k{e}p do identyfikatora platformowego (np. Telegram \texttt{from\_id}).
+
+\subsection{Interfejs Reaction}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs Reaction}, label={lst:reaction}]
+export interface Reaction {
+  /** Emoji reakcji (po dekodowaniu) */
+  emoji: string;
+  /** Kto zareagowa\l{} */
+  actor: string;
+  /** Opcjonalny timestamp reakcji (dost\k{e}pny w Telegramie) */
+  timestamp?: number;
+}
+\end{lstlisting}
+
+Nie ka\.zda platforma eksportuje pe\l{}ne dane o~reakcjach:
+
+\begin{table}[H]
+\centering
+\caption{Dost\k{e}pno\'s\'c danych reakcji w~zale\.zno\'sci od platformy}
+\label{tab:reaction-availability}
+\begin{tabularx}{\textwidth}{l c c c}
+\toprule
+\textbf{Platforma} & \textbf{Emoji} & \textbf{Aktor} & \textbf{Timestamp} \\
+\midrule
+Messenger & \score{Tak} & \score{Tak} & \danger{Nie} \\
+Instagram & \score{Tak} & \score{Tak} & \danger{Nie} \\
+Telegram  & \score{Tak} & \score{Tak} & \score{Tak} \\
+WhatsApp  & \danger{Nie*} & \danger{Nie} & \danger{Nie} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{small}
+* WhatsApp nie eksportuje reakcji w~eksportach tekstowych \texttt{.txt}. Tablica \texttt{reactions} jest zawsze pusta.
+\end{small}
+
+
+% ============================================================
+\section{ParsedConversation}
+\label{sec:parsed-conversation}
+
+Interfejs \tstype{ParsedConversation} jest wyj\'sciowym typem ka\.zdego parsera --- pe\l{}na, znormalizowana konwersacja gotowa do analizy.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs ParsedConversation --- wyj\'scie parsera}, label={lst:parsed-conversation}]
+export interface ParsedConversation {
+  /** Platforma \'zród\l{}owa */
+  platform: 'messenger' | 'whatsapp' | 'instagram' | 'telegram';
+  /** Tytu\l{} konwersacji (zdekodowany) */
+  title: string;
+  /** Lista uczestników */
+  participants: Participant[];
+  /** Wszystkie wiadomo\'sci, posortowane chronologicznie (najstarsze
+      pierwsze) */
+  messages: UnifiedMessage[];
+  /** Metadane obliczone podczas parsowania */
+  metadata: {
+    /** \L{}\k{a}czna liczba wiadomo\'sci (bez systemowych w WhatsApp) */
+    totalMessages: number;
+    /** Zakres dat konwersacji */
+    dateRange: {
+      start: number; // Unix ms --- najstarsza wiadomo\'s\'c
+      end: number;   // Unix ms --- najnowsza wiadomo\'s\'c
+    };
+    /** Czy to czat grupowy (3+ uczestników) */
+    isGroup: boolean;
+    /** Czas trwania konwersacji w dniach (minimum 1) */
+    durationDays: number;
+  };
+}
+\end{lstlisting}
+
+\begin{warningbox}[title=Sortowanie chronologiczne]
+Ka\.zdy parser \textbf{musi} zwróci\'c wiadomo\'sci posortowane chronologicznie --- od najstarszej do najnowszej. Jest to krytyczne, poniewa\.z ca\l{}y silnik analizy ilo\'sciowej (czas odpowiedzi, inicjacja rozmów, sesje) zak\l{}ada ten porz\k{a}dek. Facebook i~Instagram eksportuj\k{a} w~odwrotnej kolejno\'sci (najnowsze pierwsze) --- parsery musz\k{a} to odwróci\'c.
+\end{warningbox}
+
+\begin{table}[H]
+\centering
+\caption{Opis pól metadanych \tstype{ParsedConversation.metadata}}
+\label{tab:metadata-fields}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{totalMessages} & \tstype{number} & Ca\l{}kowita liczba wiadomo\'sci. W~WhatsApp nie liczy wiadomo\'sci systemowych. \\
+\texttt{dateRange.start} & \tstype{number} & Timestamp najstarszej wiadomo\'sci (Unix ms). \\
+\texttt{dateRange.end} & \tstype{number} & Timestamp najnowszej wiadomo\'sci (Unix ms). \\
+\texttt{isGroup} & \tstype{boolean} & \texttt{true} je\'sli \texttt{participants.length > 2}. Wp\l{}ywa na analiz\k{e} dynamiki. \\
+\texttt{durationDays} & \tstype{number} & Obliczany jako $\lceil(\mathtt{end} - \mathtt{start}) / 86\,400\,000\rceil$, minimum~1. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Auto-detekcja formatu}
+\label{sec:auto-detect}
+
+Przed uruchomieniem w\l{}a\'sciwego parsera system musi okre\'sli\'c, z~jakiej platformy pochodzi eksport. Funkcja \tsfunc{detectFormat()} w~pliku \filepath{src/lib/parsers/detect.ts} implementuje logik\k{e} detekcji opart\k{a} na rozszerzeniu pliku i~strukturze JSON.
+
+\begin{lstlisting}[style=podcode, caption={Funkcja detectFormat()}, label={lst:detect-format}]
+export type ChatFormat =
+  | 'messenger' | 'instagram' | 'whatsapp'
+  | 'telegram' | 'unknown';
+
+export function detectFormat(
+  fileName: string,
+  jsonData?: unknown,
+): ChatFormat {
+  // WhatsApp: zawsze .txt
+  if (fileName.endsWith('.txt')) return 'whatsapp';
+
+  if (!jsonData || typeof jsonData !== 'object') return 'unknown';
+  const data = jsonData as Record<string, unknown>;
+
+  // Telegram: ma "name", "type", "id" (number)
+  if (
+    typeof data.name === 'string' &&
+    typeof data.type === 'string' &&
+    typeof data.id === 'number' &&
+    Array.isArray(data.messages)
+  ) {
+    const msgs = data.messages as Record<string, unknown>[];
+    const first = msgs.find((m) => m.type === 'message');
+    if (first && 'from' in first
+        && ('date_unixtime' in first || 'date' in first)) {
+      return 'telegram';
+    }
+  }
+
+  // Messenger / Instagram: participants[] + messages[]
+  if (Array.isArray(data.participants)
+      && Array.isArray(data.messages)) {
+    return 'messenger';
+  }
+
+  return 'unknown';
+}
+\end{lstlisting}
+
+\subsection{Diagram decyzyjny}
+
+Poni\.zszy diagram TikZ prezentuje pe\l{}ny przep\l{}yw logiki auto-detekcji formatu:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.4cm and 2.5cm,
+  every node/.style={font=\small},
+  >={Stealth[length=5pt]},
+]
+
+% Start
+\node[startstop] (start) {Plik wej\'sciowy};
+
+% Decision 1: .txt?
+\node[decision, below=1.5cm of start] (d1) {Rozszerzenie\\= .txt?};
+
+% WhatsApp result
+\node[podbox green, right=3cm of d1] (whatsapp) {WhatsApp\\Parser};
+
+% Decision 2: Valid JSON?
+\node[decision, below=1.5cm of d1] (d2) {Poprawny\\JSON?};
+
+% Error: not JSON
+\node[podbox red, right=3cm of d2] (err1) {B\l{}\k{a}d: nie JSON\\i nie .txt};
+
+% Decision 3: Telegram fields?
+\node[decision, below=1.5cm of d2] (d3) {Ma pola:\\name, type, id?};
+
+% Decision 3b: Telegram messages?
+\node[process, right=3cm of d3] (d3b) {Sprawdz: msg.from\\+ date\_unixtime};
+
+% Telegram result
+\node[podbox green, right=2.5cm of d3b] (telegram) {Telegram\\Parser};
+
+% Decision 4: Meta format?
+\node[decision, below=1.5cm of d3] (d4) {Ma pola:\\participants[],\\messages[]?};
+
+% Messenger result
+\node[podbox green, right=3cm of d4] (messenger) {Messenger\\Parser};
+
+% Unknown
+\node[podbox red, below=1.5cm of d4] (unknown) {Nieobs\l{}ugiwany\\format};
+
+% Arrows
+\draw[podarrow] (start) -- (d1);
+\draw[podarrow] (d1) -- node[left] {nie} (d2);
+\draw[podarrow] (d1) -- node[above] {tak} (whatsapp);
+\draw[podarrow] (d2) -- node[left] {tak} (d3);
+\draw[podarrow] (d2) -- node[above] {nie} (err1);
+\draw[podarrow] (d3) -- node[above] {tak} (d3b);
+\draw[podarrow] (d3) -- node[left] {nie} (d4);
+\draw[podarrow] (d3b) -- node[above] {tak} (telegram);
+\draw[podarrow] (d3b.south) -- ++(0,-0.5) -| node[near start, right, font=\scriptsize] {nie} (d4);
+\draw[podarrow] (d4) -- node[above] {tak} (messenger);
+\draw[podarrow] (d4) -- node[left] {nie} (unknown);
+
+\end{tikzpicture}
+\caption{Diagram decyzyjny auto-detekcji formatu eksportu}
+\label{fig:format-detection-flowchart}
+\end{figure}
+
+\begin{infobox}[title=Instagram = Messenger]
+Instagram DM i~Messenger to oba produkty Meta, eksportowane w~niemal identycznym formacie JSON. Funkcja \tsfunc{detectFormat()} zwraca \texttt{'messenger'} dla obu --- rozró\.znienie (je\'sli potrzebne) mo\.ze nast\k{a}pi\'c na podstawie pola \texttt{thread\_path}, które w~Instagramie zaczyna si\k{e} od \texttt{inbox/} z~innym prefiksem.
+\end{infobox}
+
+
+% ============================================================
+\section{Parser Facebook Messenger}
+\label{sec:messenger-parser}
+
+Parser Messengera jest najbardziej z\l{}o\.zonym parserem w~systemie ze wzgl\k{e}du na krytyczny problem kodowania Unicode w~eksportach Facebooka. Znajduje si\k{e} w~pliku \filepath{src/lib/parsers/messenger.ts}.
+
+
+\subsection{Problem kodowania Unicode}
+\label{sec:fb-unicode}
+
+\begin{warningbox}[title=KRYTYCZNY B\L{}\K{A}D FACEBOOKA]
+Facebook eksportuje \textbf{wszystkie} \'la\'ncuchy tekstowe w~formacie, który wygl\k{a}da jak latin-1, ale w~rzeczywisto\'sci zawiera bajty UTF-8 zinterpretowane jako znaki latin-1. To oznacza, \.ze \textbf{ka\.zdy} tekst zawieraj\k{a}cy znaki spoza ASCII (polskie znaki, emoji, znaki diakrytyczne) b\k{e}dzie zniekszta\l{}cony bez dekodowania.
+
+Jest to \textbf{najcz\k{e}stszy b\l{}\k{a}d} przy implementacji parserów eksportów Facebooka.
+\end{warningbox}
+
+\paragraph{Przyk\l{}ad problemu:}
+S\l{}owo ,,Cze\'s\'c'' w~eksporcie Facebooka wygl\k{a}da tak:
+\begin{center}
+\texttt{"Cze\textbackslash u00c5\textbackslash u009b\textbackslash u00c4\textbackslash u0087"}
+\end{center}
+
+Co si\k{e} dzieje: Facebook zapisuje bajty UTF-8 (\texttt{0xC5 0x9B} = \'s, \texttt{0xC4 0x87} = \'c) jako osobne znaki latin-1 (\texttt{\textbackslash u00C5}, \texttt{\textbackslash u009B}, itd.). JavaScript JSON.parse() traktuje je jako znaki Unicode, nie jako bajty --- i~efekt jest nieczytelny.
+
+\paragraph{Rozwi\k{a}zanie --- funkcja \tsfunc{decodeFBString()}:}
+
+\begin{lstlisting}[style=podcode, caption={Funkcja decodeFBString() --- dekodowanie Unicode Facebooka}, label={lst:decode-fb}]
+export function decodeFBString(
+  str: string | undefined | null,
+): string {
+  if (!str) return '';
+  try {
+    // Traktuj ka\.zdy znak jako bajt i z\l{}ó\.z z powrotem jako UTF-8
+    const bytes = new Uint8Array(
+      str.split('').map(c => c.charCodeAt(0))
+    );
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    // Je\'sli dekodowanie si\k{e} nie uda, zwró\'c orygina\l{}
+    // (mo\.ze ju\.z by\'c poprawny)
+    return str;
+  }
+}
+\end{lstlisting}
+
+\paragraph{Mechanizm dzia\l{}ania:}
+\begin{enumerate}
+  \item \tsfunc{str.split('')} --- rozdziela string na tablice znaków.
+  \item \tsfunc{.map(c => c.charCodeAt(0))} --- pobiera kod Unicode ka\.zdego znaku. Poniewa\.z Facebook zapisa\l{} bajty jako znaki latin-1, kody te s\k{a} w~zakresie 0--255, co odpowiada oryginalnym bajtom UTF-8.
+  \item \tsfunc{new Uint8Array(...)} --- tworzy tablic\k{e} bajtów.
+  \item \tsfunc{new TextDecoder('utf-8').decode(bytes)} --- interpretuje bajty jako UTF-8, odzyskuj\k{a}c prawid\l{}owe znaki.
+\end{enumerate}
+
+\begin{warningbox}[title=Stosowa\'c do WSZYSTKICH pól]
+Funkcj\k{e} \tsfunc{decodeFBString()} nale\.zy zastosowa\'c do \textbf{ka\.zdego} pola tekstowego z~eksportu Facebooka --- bez wyj\k{a}tków:
+\begin{itemize}
+  \item \texttt{sender\_name} --- nazwa nadawcy
+  \item \texttt{content} --- tre\'s\'c wiadomo\'sci
+  \item \texttt{participants[].name} --- nazwy uczestników
+  \item \texttt{reactions[].reaction} --- emoji reakcji
+  \item \texttt{reactions[].actor} --- kto zareagowa\l{}
+  \item \texttt{title} --- tytu\l{} konwersacji
+\end{itemize}
+Pomini\k{e}cie \textbf{jednego} pola skutkuje niesp\'{o}jno\'sci\k{a} danych --- np. klucze w~mapach \texttt{Record<string, PersonMetrics>} nie b\k{e}d\k{a} pasowa\'c do nazw nadawców w~wiadomo\'sciach.
+\end{warningbox}
+
+
+\subsection{Surowa struktura JSON Facebooka}
+\label{sec:fb-raw-json}
+
+Poni\.zej pe\l{}ny przyk\l{}ad surowego pliku \texttt{message\_1.json} z~eksportu Facebooka, z~adnotacjami opisuj\k{a}cymi ka\.zde pole:
+
+\begin{lstlisting}[style=podcodeJSON, caption={Przyk\l{}adowy eksport Facebook Messenger JSON}, label={lst:fb-raw-json}]
+{
+  "participants": [           // Lista uczestnikow
+    {"name": "Anna Kowalska"},
+    {"name": "Jan Nowak"}
+  ],
+  "messages": [               // UWAGA: najnowsze pierwsze!
+    {
+      "sender_name": "Jan Nowak",
+      "timestamp_ms": 1708000000000,  // Unix ms
+      "content": "Hej, co u Ciebie?",
+      "type": "Generic",             // Typ Facebook
+      "is_unsent": false,
+      "reactions": [
+        {
+          "reaction": "\u00f0\u009f\u0098\u008d",
+          "actor": "Anna Kowalska"
+        }
+      ]
+    },
+    {
+      "sender_name": "Anna Kowalska",
+      "timestamp_ms": 1707999000000,
+      "content": "Witaj!",
+      "type": "Generic",
+      "photos": [                      // Za\l{}aczone zdjecia
+        {
+          "uri": "photos/img_001.jpg",
+          "creation_timestamp": 1707999
+        }
+      ]
+    },
+    {
+      "sender_name": "Anna Kowalska",
+      "timestamp_ms": 1707998000000,
+      "type": "Generic",
+      "sticker": {                     // Naklejka
+        "uri": "stickers_used/39178_a.png"
+      }
+    },
+    {
+      "sender_name": "Jan Nowak",
+      "timestamp_ms": 1707997000000,
+      "type": "Generic",
+      "share": {                       // Udostepniony link
+        "link": "https://example.com/article",
+        "share_text": "Ciekawy artyku\l{}"
+      }
+    },
+    {
+      "sender_name": "Jan Nowak",
+      "timestamp_ms": 1707996000000,
+      "type": "Call",                  // Po\l{}\k{a}czenie
+      "content": "The call lasted 5 minutes.",
+      "call_duration": 300
+    },
+    {
+      "sender_name": "Anna Kowalska",
+      "timestamp_ms": 1707995000000,
+      "type": "Generic",
+      "is_unsent": true                // Usunieta wiadomo\'s\'c
+    }
+  ],
+  "title": "Anna Kowalska",
+  "is_still_participant": true,
+  "thread_path": "inbox/AnnaKowalska_abc123"
+}
+\end{lstlisting}
+
+Wewn\k{e}trzne typy TypeScript odwzorowuj\k{a}ce t\k{e} struktur\k{e}:
+
+\begin{lstlisting}[style=podcode, caption={Typy surowego formatu Facebook}, label={lst:fb-raw-types}]
+interface FBReaction {
+  reaction: string;  // Emoji (zakodowane!)
+  actor: string;     // Kto zareagowa\l{} (zakodowany!)
+}
+
+interface FBMessage {
+  sender_name: string;
+  timestamp_ms: number;
+  content?: string;          // Opcjonalne (media-only)
+  type: string;              // "Generic", "Call", "Subscribe"...
+  is_unsent?: boolean;
+  reactions?: FBReaction[];
+  photos?: Array<{ uri: string; creation_timestamp: number }>;
+  videos?: Array<{ uri: string; creation_timestamp: number }>;
+  audio_files?: Array<{ uri: string; creation_timestamp: number }>;
+  gifs?: Array<{ uri: string }>;
+  sticker?: { uri: string };
+  share?: { link?: string; share_text?: string };
+  call_duration?: number;    // Sekundy trwania po\l{}\k{a}czenia
+}
+
+interface FBConversation {
+  participants: Array<{ name: string }>;
+  messages: FBMessage[];
+  title: string;
+  is_still_participant: boolean;
+  thread_path: string;
+}
+\end{lstlisting}
+
+
+\subsection{Walidacja}
+\label{sec:fb-validation}
+
+Przed parsowaniem nale\.zy zweryfikowa\'c, czy dane wej\'sciowe maj\k{a} poprawn\k{a} struktur\k{e}. Funkcja \tsfunc{validateMessengerJSON()} sprawdza minimalne wymagania:
+
+\begin{lstlisting}[style=podcode, caption={Funkcja validateMessengerJSON()}, label={lst:validate-messenger}]
+export function validateMessengerJSON(
+  data: unknown,
+): data is FBConversation {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+
+  // Wymagane pola top-level
+  if (!Array.isArray(obj.participants)) return false;
+  if (!Array.isArray(obj.messages)) return false;
+  if (typeof obj.title !== 'string') return false;
+
+  // Sprawdz pierwszy message --- musi mie\'c sender_name + timestamp_ms
+  if (obj.messages.length > 0) {
+    const firstMsg = obj.messages[0] as Record<string, unknown>;
+    if (typeof firstMsg.sender_name !== 'string') return false;
+    if (typeof firstMsg.timestamp_ms !== 'number') return false;
+  }
+
+  return true;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Regu\l{}y walidacji formatu Messenger}
+\label{tab:messenger-validation}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Sprawdzenie} & \textbf{Warunek} \\
+\midrule
+Obiekt istnieje & \texttt{data} nie jest \texttt{null}/\texttt{undefined} i~jest obiektem \\
+Tablica uczestników & \texttt{participants} jest tablic\k{a} \\
+Tablica wiadomo\'sci & \texttt{messages} jest tablic\k{a} \\
+Tytu\l{} & \texttt{title} jest stringiem \\
+Struktura wiadomo\'sci & Pierwsza wiadomo\'s\'c ma \texttt{sender\_name} (string) i~\texttt{timestamp\_ms} (number) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Parser obs\l{}uguje równie\.z alternatywny format eksportu (np. z~narz\k{e}dzi zewn\k{e}trznych), gdzie pola nazywaj\k{a} si\k{e} \texttt{senderName}, \texttt{timestamp}, \texttt{threadName} zamiast \texttt{sender\_name}, \texttt{timestamp\_ms}, \texttt{title}. Walidacja tego formatu odbywa si\k{e} w~osobnej funkcji \tsfunc{validateAltFormat()}.
+
+
+\subsection{Klasyfikacja wiadomo\'sci}
+\label{sec:fb-classify}
+
+Funkcja \tsfunc{classifyMessage()} okre\'sla typ zunifikowany na podstawie pól surowej wiadomo\'sci Facebooka:
+
+\begin{lstlisting}[style=podcode, caption={Funkcja classifyMessage() --- klasyfikacja typu wiadomo\'sci}, label={lst:classify-message}]
+function classifyMessage(msg: FBMessage): UnifiedMessage['type'] {
+  if (msg.is_unsent) return 'unsent';
+  if (msg.type === 'Call') return 'call';
+  if (msg.type === 'Subscribe' || msg.type === 'Unsubscribe')
+    return 'system';
+  if (msg.sticker) return 'sticker';
+  if (msg.share?.link) return 'link';
+  if (msg.photos?.length || msg.videos?.length
+      || msg.audio_files?.length || msg.gifs?.length) {
+    return msg.content ? 'text' : 'media';
+  }
+  return 'text';
+}
+\end{lstlisting}
+
+\paragraph{Logika priorytetów:}
+Kolejno\'s\'c sprawdze\'n jest istotna --- wiadomo\'s\'c mo\.ze jednocze\'snie mie\'c tre\'s\'c tekstow\k{a} i~za\l{}\k{a}czone media. Regu\l{}y:
+
+\begin{enumerate}
+  \item \texttt{is\_unsent} ma najwy\.zszy priorytet --- usuni\k{e}ta wiadomo\'s\'c to \texttt{'unsent'} niezale\.znie od innych pól.
+  \item \texttt{type === 'Call'} --- Facebook oznacza po\l{}\k{a}czenia specjalnym typem.
+  \item \texttt{type === 'Subscribe'/'Unsubscribe'} --- wiadomo\'sci systemowe (do\l{}\k{a}czenie/opuszczenie grupy).
+  \item Naklejka (\texttt{sticker}) --- osobny typ, nie ,,media''.
+  \item Link (\texttt{share.link}) --- udost\k{e}pnienie.
+  \item Media bez tekstu --- \texttt{'media'}. Media z~tekstem --- \texttt{'text'} (tekst ma priorytet).
+  \item Domy\'slnie --- \texttt{'text'}.
+\end{enumerate}
+
+
+\subsection{\L{}\k{a}czenie wielu plików}
+\label{sec:fb-merge}
+
+Facebook dzieli d\l{}ugie konwersacje na wiele plików JSON: \texttt{message\_1.json}, \texttt{message\_2.json}, itd. Ka\.zdy plik zawiera fragment konwersacji, cz\k{e}sto w~odwrotnej kolejno\'sci chronologicznej. Funkcja \tsfunc{mergeMessengerFiles()} \l{}\k{a}czy je w~jedn\k{a} spójn\k{a} konwersacj\k{e}:
+
+\begin{lstlisting}[style=podcode, caption={Funkcja mergeMessengerFiles()}, label={lst:merge-messenger}]
+export function mergeMessengerFiles(
+  files: unknown[],
+): ParsedConversation {
+  if (files.length === 0) throw new Error('No files provided');
+  if (files.length === 1) return parseMessengerJSON(files[0]);
+
+  // Parsuj ka\.zdy plik osobno
+  const parsed = files.map(f => parseMessengerJSON(f));
+
+  // Scalaj + sortuj chronologicznie
+  const merged = parsed
+    .flatMap(p => p.messages)
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  // Deduplikacja po kluczu: timestamp + sender
+  const seen = new Set<string>();
+  const deduped = merged.filter(m => {
+    const key = `${m.timestamp}-${m.sender}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Re-indeksacja
+  const allMessages = deduped.map((msg, index) => ({
+    ...msg, index,
+  }));
+
+  // Metadane z po\l{}\k{a}czonego zbioru
+  const first = parsed[0];
+  const timestamps = allMessages.map(m => m.timestamp);
+  const start = Math.min(...timestamps);
+  const end = Math.max(...timestamps);
+  const durationDays = Math.max(
+    1, Math.round((end - start) / (1000 * 60 * 60 * 24))
+  );
+
+  return {
+    platform: 'messenger',
+    title: first.title,
+    participants: first.participants,
+    messages: allMessages,
+    metadata: {
+      totalMessages: allMessages.length,
+      dateRange: { start, end },
+      isGroup: first.metadata.isGroup,
+      durationDays,
+    },
+  };
+}
+\end{lstlisting}
+
+\paragraph{Strategia deduplikacji:}
+Klucz deduplikacji to konkatenacja \texttt{timestamp} + \texttt{sender}. Nie u\.zywamy \texttt{content}, poniewa\.z:
+\begin{itemize}
+  \item Ta sama osoba mo\.ze wys\l{}a\'c t\k{e} sam\k{a} tre\'s\'c o~ró\.znych porach (to nie duplikat).
+  \item Ró\.zne pliki mog\k{a} mie\'c nak\l{}adaj\k{a}ce si\k{e} zakresy czasowe (te same wiadomo\'sci --- to duplikat).
+  \item Timestamp + sender jest wystarczaj\k{a}co unikalny, poniewa\.z ta sama osoba rzadko wysy\l{}a dwie ró\.zne wiadomo\'sci w~tej samej milisekundzie.
+\end{itemize}
+
+
+% ============================================================
+\section{Parser WhatsApp}
+\label{sec:whatsapp-parser}
+
+WhatsApp eksportuje rozmowy jako pliki tekstowe \texttt{.txt}, a~nie JSON. Format zmienia si\k{e} w~zale\.zno\'sci od systemu operacyjnego (Android/iOS), j\k{e}zyka urz\k{a}dzenia i~wersji aplikacji. Parser musi obs\l{}u\.zy\'c wszystkie warianty. Plik: \filepath{src/lib/parsers/whatsapp.ts}.
+
+
+\subsection{Formaty daty}
+\label{sec:whatsapp-dates}
+
+Linia wiadomo\'sci WhatsApp zaczyna si\k{e} od daty i~godziny, po czym nast\k{e}puje separator (my\'slnik) i~tre\'s\'c. Poni\.zsza tabela przedstawia wszystkie obs\l{}ugiwane formaty:
+
+\begin{table}[H]
+\centering
+\caption{Obs\l{}ugiwane formaty daty/czasu WhatsApp}
+\label{tab:whatsapp-date-formats}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Format} & \textbf{Przyk\l{}ad} & \textbf{\'Zród\l{}o} \\
+\midrule
+DD.MM.YYYY, HH:MM    & \texttt{01.02.2024, 14:23} & Android PL \\
+DD/MM/YYYY, HH:MM:SS & \texttt{01/02/2024, 14:23:45} & Android EN \\
+MM/DD/YYYY, h:mm AM/PM & \texttt{02/01/2024, 2:23 PM} & iOS EN \\
+YYYY-MM-DD, HH:MM    & \texttt{2024-01-02, 14:23} & Format ISO \\
+DD.MM.YY, HH.MM      & \texttt{01.02.24, 14.23} & Starsze wersje \\
+{[DD/MM/YYYY, HH:MM:SS]} & \texttt{[01/02/2024, 14:23:45]} & iOS z~nawiasami \\
+DD/MM/YYYY, h:mm:ss am/pm & \texttt{01/02/2024, 2:23:45 pm} & Android EN 12h \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Regex dopasowuj\k{a}cy pocz\k{a}tek linii wiadomo\'sci:
+
+\begin{lstlisting}[style=podcode, caption={Regex LINE\_START\_REGEX dla WhatsApp}, label={lst:whatsapp-regex}]
+const LINE_START_REGEX =
+  /^\[?(\d{1,4}[.\/-]\d{1,2}[.\/-]\d{1,4}),?\s+
+   (\d{1,2}[:.]\d{2}(?:[:.]\d{2})?
+   (?:\s*[AaPp][Mm])?)\]?\s*[-\u2013\u2014]\s*/;
+\end{lstlisting}
+
+\paragraph{Struktura regex:}
+\begin{itemize}
+  \item \texttt{\textbackslash [?} --- opcjonalny nawias otwieraj\k{a}cy (iOS)
+  \item \texttt{(\textbackslash d\{1,4\}[.\textbackslash/-]\textbackslash d\{1,2\}[.\textbackslash/-]\textbackslash d\{1,4\})} --- grupa 1: data
+  \item \texttt{,?\textbackslash s+} --- opcjonalny przecinek + whitespace
+  \item \texttt{(\textbackslash d\{1,2\}[:.]...)} --- grupa 2: czas (z~opcjonalnym AM/PM)
+  \item \texttt{\textbackslash ]?\textbackslash s*[-\textbackslash u2013\textbackslash u2014]\textbackslash s*} --- opcjonalny nawias + my\'slnik (zwyk\l{}y, en-dash, em-dash)
+\end{itemize}
+
+
+\subsection{Heurystyka DD/MM vs MM/DD}
+\label{sec:whatsapp-date-heuristic}
+
+Krytycznym problemem przy parsowaniu dat WhatsApp jest rozró\.znienie formatu DD/MM/YYYY (europejski) od MM/DD/YYYY (ameryka\'nski). Funkcja \tsfunc{parseDateString()} implementuje nast\k{e}puj\k{a}c\k{a} heurystyk\k{e}:
+
+\begin{lstlisting}[style=podcode, caption={Funkcja parseDateString() --- heurystyka DD/MM vs MM/DD}, label={lst:parse-date-string}]
+function parseDateString(dateStr: string): DateParts {
+  const parts = dateStr.split(/[.\/-]/);
+  if (parts.length !== 3)
+    throw new Error(`Cannot parse date: "${dateStr}"`);
+
+  const nums = parts.map(Number);
+
+  // Format ISO: YYYY-MM-DD (separator '-', 4 cyfry na pocz\k{a}tku)
+  if (dateStr.includes('-') && parts[0].length === 4) {
+    return { year: nums[0], month: nums[1], day: nums[2] };
+  }
+
+  let day: number, month: number, year: number;
+
+  // Rok --- ostatni komponent
+  year = nums[2];
+  if (year < 100) {
+    year = year < 70 ? 2000 + year : 1900 + year;
+  }
+
+  // Heurystyka DD/MM vs MM/DD
+  if (nums[0] > 12) {
+    // Pierwszy > 12 --- to musi by\'c dzie\'n (DD/MM)
+    day = nums[0]; month = nums[1];
+  } else if (nums[1] > 12) {
+    // Drugi > 12 --- to musi by\'c dzie\'n (MM/DD)
+    month = nums[0]; day = nums[1];
+  } else {
+    // Niejednoznaczne --- domy\'slnie DD/MM (europejski)
+    day = nums[0]; month = nums[1];
+  }
+
+  return { year, month, day };
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Przyk\l{}ady dzia\l{}ania heurystyki DD/MM vs MM/DD}
+\label{tab:date-heuristic-examples}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Data wej\'sciowa} & \textbf{Wynik} & \textbf{Uzasadnienie} \\
+\midrule
+\texttt{25/01/2024} & 25 stycznia & 25 > 12, wi\k{e}c to dzie\'n \\
+\texttt{01/25/2024} & 25 stycznia & 25 > 12, wi\k{e}c to dzie\'n (format US) \\
+\texttt{05/06/2024} & 5 czerwca & Niejednoznaczne --- domy\'slnie DD/MM \\
+\texttt{2024-01-15} & 15 stycznia & Format ISO (separator \texttt{-}, 4 cyfry) \\
+\texttt{01.02.24}   & 1 lutego & DD/MM (domy\'slne) + rok 2-cyfrowy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsection{Wiadomo\'sci systemowe}
+\label{sec:whatsapp-system}
+
+WhatsApp wstawia wiadomo\'sci systemowe bez struktury ,,Nadawca: tre\'s\'c''. Parser rozpoznaje je na dwa sposoby:
+
+\begin{enumerate}
+  \item \textbf{Brak dwukropka:} Je\'sli reszta linii (po prefiksie daty) nie zawiera dwukropka, to wiadomo\'s\'c systemowa.
+  \item \textbf{Wska\'zniki wzorcowe:} Nawet je\'sli jest dwukropek, sprawdzane s\k{a} znane wzorce.
+\end{enumerate}
+
+\begin{lstlisting}[style=podcode, caption={Wzorce wiadomo\'sci systemowych WhatsApp}, label={lst:whatsapp-system-patterns}]
+const SYSTEM_MESSAGE_INDICATORS = [
+  // Angielskie
+  'messages and calls are end-to-end encrypted',
+  'created group',
+  'changed the subject',
+  'changed the group description',
+  'changed this group',
+  'added', 'removed', 'left',
+  'joined using',
+  'security code changed',
+  'you were added',
+  "you're now an admin",
+  'disappearing messages',
+  'missed voice call',
+  'missed video call',
+  'this message was deleted',
+  'you deleted this message',
+  // Polskie
+  'wiadomo\u015Bci oraz po\u0142\u0105czenia s\u0105 szyfrowane',
+  'utworzy\u0142', 'zmieni\u0142',
+  'doda\u0142', 'usun\u0105\u0142', 'opu\u015Bci\u0142',
+  'do\u0142\u0105czy\u0142',
+  'wiadomo\u015Bci znikaj\u0105ce',
+  'ta wiadomo\u015B\u0107 zosta\u0142a usuni\u0119ta',
+  'usun\u0105\u0142e\u015B t\u0119 wiadomo\u015B\u0107',
+];
+\end{lstlisting}
+
+
+\subsection{Detekcja mediów}
+\label{sec:whatsapp-media}
+
+WhatsApp nie eksportuje samych mediów w~plikach \texttt{.txt} --- zamiast tego wstawia zast\k{e}pcze komunikaty. Parser rozpoznaje nast\k{e}puj\k{a}ce wzorce:
+
+\begin{lstlisting}[style=podcode, caption={Wzorce mediów w eksporcie WhatsApp}, label={lst:whatsapp-media}]
+const MEDIA_OMITTED_PATTERNS = [
+  '<media omitted>',            // Angielski
+  '<multimedia omitido>',       // Hiszpa\'nski
+  '<archivo omitido>',          // Hiszpa\'nski alt.
+  '<medien ausgeschlossen>',    // Niemiecki
+  '<media weggelaten>',         // Holenderski
+  'image omitted',
+  'video omitted',
+  'audio omitted',
+  'sticker omitted',
+  'gif omitted',
+  'document omitted',
+  'contact card omitted',
+];
+
+// Regex dla za\l{}\k{a}czonych plików
+const FILE_ATTACHED_REGEX =
+  /\.(jpg|jpeg|png|gif|webp|mp4|mp3|opus|ogg|
+      pdf|docx?|xlsx?|pptx?|zip|rar)\s*
+   \(file attached\)/i;
+\end{lstlisting}
+
+Detekcja mediów porównuje \texttt{content.toLowerCase().trim()} z~wzorcami. Dla za\l{}\k{a}czonych plików sprawdzany jest regex dopasowuj\k{a}cy rozszerzenie + suffix \texttt{(file attached)}.
+
+
+\subsection{Wiadomo\'sci wieloliniowe}
+\label{sec:whatsapp-multiline}
+
+Wiadomo\'sci WhatsApp mog\k{a} rozci\k{a}ga\'c si\k{e} na wiele linii. Parser identyfikuje linie kontynuacji jako te, które \textbf{nie} zaczynaj\k{a} si\k{e} od wzorca daty. Tre\'s\'c linii kontynuacji jest dopisywana do bie\.z\k{a}cej wiadomo\'sci ze znakiem nowej linii:
+
+\begin{lstlisting}[style=podcode, caption={Obs\l{}uga wiadomo\'sci wieloliniowych w WhatsApp}, label={lst:whatsapp-multiline}]
+for (const line of lines) {
+  const dateMatch = LINE_START_REGEX.exec(line);
+
+  if (dateMatch) {
+    // Nowa wiadomo\'s\'c --- zapisz poprzedni\k{a}
+    if (currentMessage) rawMessages.push(currentMessage);
+    // ... parsuj now\k{a} wiadomo\'s\'c ...
+  } else {
+    // Linia kontynuacji --- dopisz do bie\.z\k{a}cej
+    if (currentMessage) {
+      currentMessage.content += '\n' + line;
+    }
+    // Linie-sieroty (bez bie\.z\k{a}cej wiadomo\'sci) s\k{a} ignorowane
+  }
+}
+// Zapisz ostatni\k{a} wiadomo\'s\'c
+if (currentMessage) rawMessages.push(currentMessage);
+\end{lstlisting}
+
+\begin{infobox}[title=BOM (Byte Order Mark)]
+Eksporty WhatsApp na iOS cz\k{e}sto zaczynaj\k{a} si\k{e} od znaku BOM (\texttt{U+FEFF}), który musi zosta\'c usuni\k{e}ty przed parsowaniem:
+\begin{center}
+\texttt{const cleaned = text.replace(/\^\textbackslash uFEFF/, '');}
+\end{center}
+\end{infobox}
+
+
+% ============================================================
+\section{Parser Instagram DM}
+\label{sec:instagram-parser}
+
+Instagram Direct Messages s\k{a} eksportowane w~formacie JSON niemal identycznym jak Messenger --- oba to produkty Meta. Parser Instagrama (\filepath{src/lib/parsers/instagram.ts}) korzysta z~tej samej funkcji \tsfunc{decodeFBString()} co parser Messengera i~stosuje analogiczn\k{a} logik\k{e}.
+
+\subsection{Ró\.znice wzgl\k{e}dem Messengera}
+
+\begin{table}[H]
+\centering
+\caption{Ró\.znice mi\k{e}dzy formatem Messenger a~Instagram DM}
+\label{tab:messenger-vs-instagram}
+\begin{tabularx}{\textwidth}{l X X}
+\toprule
+\textbf{Aspekt} & \textbf{Messenger} & \textbf{Instagram} \\
+\midrule
+Kodowanie & latin-1 escaped UTF-8 & To samo (Meta format) \\
+Tytu\l{} & pole \texttt{title} & Opcjonalne \texttt{title}; fallback: \texttt{participants.join(' \& ')} \\
+Pole \texttt{thread\_path} & \texttt{inbox/NazwaUsera\_abc123} & \texttt{inbox/userid\_abc123} \\
+Reakcje & \texttt{reactions[]} z~\texttt{reaction} + \texttt{actor} & Identyczne \\
+Po\l{}\k{a}czenia & \texttt{type: "Call"} & \texttt{call\_duration} (number) \\
+Platform output & \texttt{platform: 'messenger'} & \texttt{platform: 'instagram'} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Walidacja i~parsowanie}
+
+\begin{lstlisting}[style=podcode, caption={Walidacja formatu Instagram DM}, label={lst:validate-instagram}]
+export function validateInstagramJSON(data: unknown): boolean {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+
+  if (!Array.isArray(obj.participants)) return false;
+  if (!Array.isArray(obj.messages)) return false;
+  if (obj.messages.length === 0) return false;
+
+  const firstMsg =
+    (obj.messages as Record<string, unknown>[])[0];
+  if (!firstMsg) return false;
+
+  return (
+    typeof firstMsg.sender_name === 'string' &&
+    typeof firstMsg.timestamp_ms === 'number'
+  );
+}
+\end{lstlisting}
+
+\subsection{\L{}\k{a}czenie wielu plików Instagram}
+
+Funkcja \tsfunc{mergeInstagramFiles()} dzia\l{}a analogicznie do \tsfunc{mergeMessengerFiles()}, ale z~uproszczon\k{a} deduplikacj\k{a} --- pliki Instagram s\k{a} scalane, sortowane chronologicznie i~re-indeksowane:
+
+\begin{lstlisting}[style=podcode, caption={Funkcja mergeInstagramFiles()}, label={lst:merge-instagram}]
+export function mergeInstagramFiles(
+  files: unknown[],
+): ParsedConversation {
+  if (files.length === 0)
+    throw new Error('Brak plików do przetworzenia');
+  if (files.length === 1) return parseInstagramJSON(files[0]);
+
+  const conversations = files.map(f => parseInstagramJSON(f));
+  const allMessages = conversations.flatMap(c => c.messages);
+
+  // Sortowanie chronologiczne + re-indeksacja
+  allMessages.sort((a, b) => a.timestamp - b.timestamp);
+  allMessages.forEach((m, i) => { m.index = i; });
+
+  const base = conversations[0];
+  const nonSystem = allMessages.filter(
+    m => m.type !== 'system'
+  );
+  const timestamps = nonSystem.map(m => m.timestamp);
+  const start = Math.min(...timestamps);
+  const end = Math.max(...timestamps);
+
+  return {
+    ...base,
+    messages: allMessages,
+    metadata: {
+      totalMessages: nonSystem.length,
+      dateRange: { start, end },
+      isGroup: base.participants.length > 2,
+      durationDays: Math.max(
+        1, Math.round((end - start) / 86_400_000)
+      ),
+    },
+  };
+}
+\end{lstlisting}
+
+
+% ============================================================
+\section{Parser Telegram}
+\label{sec:telegram-parser}
+
+Telegram eksportuje konwersacje jako poprawnie zakodowany JSON (UTF-8 --- bez problemów Facebooka). G\l{}ówn\k{a} komplikacj\k{a} jest pole \texttt{text}, które mo\.ze by\'c albo prostym stringiem, albo tablic\k{a} mieszanych obiektów opisuj\k{a}cych formatowanie. Plik: \filepath{src/lib/parsers/telegram.ts}.
+
+
+\subsection{Struktura JSON Telegrama}
+\label{sec:telegram-structure}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Przyk\l{}adowa struktura eksportu Telegram}, label={lst:telegram-raw}]
+{
+  "name": "Anna i Jan",
+  "type": "personal_chat",
+  "id": 123456789,
+  "messages": [
+    {
+      "id": 1,
+      "type": "message",
+      "date": "2024-01-15T14:23:00",
+      "date_unixtime": "1705323780",
+      "from": "Anna",
+      "from_id": "user123",
+      "text": "Prosty string --- cz\k{e}sty przypadek"
+    },
+    {
+      "id": 2,
+      "type": "message",
+      "date": "2024-01-15T14:24:00",
+      "date_unixtime": "1705323840",
+      "from": "Jan",
+      "text": [
+        "Tekst z ",
+        {"type": "bold", "text": "formatowaniem"},
+        " i ",
+        {"type": "link", "text": "linkiem"}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "message",
+      "date": "2024-01-15T14:25:00",
+      "from": "Anna",
+      "text": "",
+      "photo": "photos/photo_1.jpg",
+      "reactions": [
+        {
+          "emoji": "\u2764",
+          "count": 1,
+          "recent": [
+            {"from": "Jan", "date": "2024-01-15T14:26:00"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "service",
+      "action": "phone_call",
+      "duration_seconds": 300
+    }
+  ]
+}
+\end{lstlisting}
+
+Wewn\k{e}trzne typy TypeScript:
+
+\begin{lstlisting}[style=podcode, caption={Typy surowego formatu Telegram}, label={lst:telegram-raw-types}]
+interface RawTelegramTextEntity {
+  type: string;  // 'bold', 'italic', 'link', 'code', ...
+  text: string;
+}
+
+type RawTelegramText =
+  | string
+  | Array<string | RawTelegramTextEntity>;
+
+interface RawTelegramReaction {
+  emoji: string;
+  count: number;
+  recent?: Array<{ from: string; date: string }>;
+}
+
+interface RawTelegramMessage {
+  id: number;
+  type: string;               // 'message' | 'service'
+  date: string;               // ISO string
+  date_unixtime?: string;     // Sekundy (jako string!)
+  from?: string;              // Nadawca
+  from_id?: string;           // ID nadawcy
+  text: RawTelegramText;      // String lub tablica mixed
+  text_entities?: RawTelegramTextEntity[];
+  reply_to_message_id?: number;
+  forwarded_from?: string | null;
+  photo?: string;
+  file?: string;
+  media_type?: string;        // 'video_file', 'voice_message'...
+  sticker_emoji?: string;
+  reactions?: RawTelegramReaction[];
+  duration_seconds?: number;  // Po\l{}\k{a}czenia
+  action?: string;            // Akcje serwisowe
+}
+
+interface RawTelegramExport {
+  name: string;      // Nazwa konwersacji
+  type: string;      // 'personal_chat', 'private_group'...
+  id: number;        // ID konwersacji
+  messages: RawTelegramMessage[];
+}
+\end{lstlisting}
+
+
+\subsection{Funkcja flattenText()}
+\label{sec:telegram-flatten}
+
+Pole \texttt{text} w~Telegramie mo\.ze by\'c prostym stringiem (najcz\k{e}stszy przypadek) lub tablic\k{a} obiektów opisuj\k{a}cych formatowanie (bold, italic, link, code, mention, itd.). Funkcja \tsfunc{flattenText()} sp\l{}aszcza t\k{e} struktur\k{e} do zwyk\l{}ego stringa, usuwaj\k{a}c informacje o~formatowaniu:
+
+\begin{lstlisting}[style=podcode, caption={Funkcja flattenText() --- sp\l{}aszczanie mieszanego tekstu Telegrama}, label={lst:flatten-text}]
+function flattenText(text: RawTelegramText): string {
+  if (typeof text === 'string') return text;
+  return text
+    .map(part =>
+      typeof part === 'string' ? part : part.text ?? ''
+    )
+    .join('');
+}
+\end{lstlisting}
+
+\paragraph{Przyk\l{}ad:}
+Wej\'scie:
+\begin{lstlisting}[style=podcodeJSON]
+["Tekst z ", {"type": "bold", "text": "formatowaniem"},
+ " i ", {"type": "link", "text": "linkiem"}]
+\end{lstlisting}
+Wyj\'scie: \texttt{"Tekst z formatowaniem i linkiem"}
+
+Informacje o~formatowaniu s\k{a} celowo pomijane --- analiza AI i~metryki ilo\'sciowe operuj\k{a} na tre\'sci tekstowej, nie na jej wizualnej prezentacji.
+
+
+\subsection{Reakcje w~Telegramie}
+\label{sec:telegram-reactions}
+
+Telegram ma najbogatszy model reakcji spo\'sród obs\l{}ugiwanych platform. Ka\.zda reakcja zawiera emoji, licznik (count) oraz opcjonaln\k{a} list\k{e} osób, które zareagowa\l{}y (z~timestampem):
+
+\begin{lstlisting}[style=podcode, caption={Przetwarzanie reakcji Telegram}, label={lst:telegram-reactions}]
+const reactions: Reaction[] = [];
+if (msg.reactions) {
+  for (const r of msg.reactions) {
+    if (r.recent) {
+      for (const person of r.recent) {
+        reactions.push({
+          emoji: r.emoji,
+          actor: person.from,
+          timestamp: new Date(person.date).getTime(),
+        });
+      }
+    }
+  }
+}
+\end{lstlisting}
+
+\begin{infobox}[title=Ograniczenie pola \texttt{recent}]
+Telegram eksportuje list\k{e} \texttt{recent} tylko dla reakcji dodanych po w\l{}\k{a}czeniu pe\l{}nego eksportu. Starsze reakcje maj\k{a} \texttt{count > 0}, ale puste \texttt{recent[]} --- w~takim przypadku parser pomija je (nie mo\.ze przypisac aktora).
+\end{infobox}
+
+
+\subsection{Klasyfikacja wiadomo\'sci Telegram}
+\label{sec:telegram-classify}
+
+\begin{lstlisting}[style=podcode, caption={Klasyfikacja typu wiadomo\'sci Telegram}, label={lst:telegram-classify}]
+function classifyType(
+  msg: RawTelegramMessage,
+): UnifiedMessage['type'] {
+  if (msg.type === 'service') return 'system';
+  if (msg.action) return 'system';
+  if (msg.sticker_emoji) return 'sticker';
+  if (msg.duration_seconds !== undefined) return 'call';
+  if (msg.photo
+      || msg.media_type === 'video_file'
+      || msg.media_type === 'voice_message'
+      || msg.media_type === 'video_message')
+    return 'media';
+  if (msg.file) return 'media';
+
+  const content = flattenText(msg.text);
+  if (/^https?:\/\/\S+$/i.test(content.trim()))
+    return 'link';
+
+  return 'text';
+}
+\end{lstlisting}
+
+\paragraph{Ró\.znice wzgl\k{e}dem klasyfikacji Messengera:}
+\begin{itemize}
+  \item Telegram u\.zywa \texttt{type: 'service'} i~\texttt{action} zamiast \texttt{type: 'Subscribe'/'Unsubscribe'}.
+  \item Stickery maj\k{a} pole \texttt{sticker\_emoji} (string z~emoji) zamiast obiektu \texttt{sticker}.
+  \item Po\l{}\k{a}czenia identyfikowane po \texttt{duration\_seconds} zamiast \texttt{type: 'Call'}.
+  \item Linki wykrywane heurystycznie (regex na tre\'sci) --- Telegram nie ma pola \texttt{share}.
+\end{itemize}
+
+
+\subsection{Walidacja formatu Telegram}
+
+\begin{lstlisting}[style=podcode, caption={Funkcja validateTelegramJSON()}, label={lst:validate-telegram}]
+export function validateTelegramJSON(data: unknown): boolean {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+
+  if (typeof obj.name !== 'string') return false;
+  if (typeof obj.type !== 'string') return false;
+  if (typeof obj.id !== 'number') return false;
+  if (!Array.isArray(obj.messages)) return false;
+
+  if (obj.messages.length === 0) return true;
+
+  const first =
+    (obj.messages as Record<string, unknown>[])[0];
+  return !!(
+    first && ('date' in first || 'date_unixtime' in first)
+  );
+}
+\end{lstlisting}
+
+% ============================================================
+\section{Parser Discord}
+\label{sec:parser-discord}
+
+Parser Discord różni się fundamentalnie od pozostałych parserów --- zamiast przetwarzać plik eksportu, pobiera wiadomości bezpośrednio z~Discord API za pomocą tokenu bota.
+
+\subsection{Architektura API-based}
+
+\begin{description}
+  \item[Plik] \filepath{src/lib/parsers/discord.ts}
+  \item[Format wejściowy] JSON z~Discord API (\texttt{GET /channels/\{id\}/messages})
+  \item[Metoda importu] Bot token + Channel ID (komponent \filepath{src/components/upload/DiscordImport.tsx})
+\end{description}
+
+W~przeciwieństwie do parserów plikowych, Discord parser operuje na surowych odpowiedziach API, które są paginowane (po 100 wiadomości). Endpoint \texttt{/api/discord/fetch-messages} zarządza paginacją i~rate limitingiem Discord API, streamując postęp przez SSE.
+
+\subsection{Normalizacja wiadomości}
+
+Discord messages zawierają pola specyficzne dla platformy:
+
+\begin{lstlisting}[style=podcode]
+interface DiscordMessage {
+  id: string;
+  content: string;
+  author: { id: string; username: string; global_name?: string };
+  timestamp: string;         // ISO 8601
+  referenced_message?: DiscordMessage;
+  mentions: Array<{ id: string; username: string }>;
+  reactions?: Array<{ emoji: { name: string }; count: number }>;
+  edited_timestamp?: string;
+  attachments: Array<{ url: string; content_type?: string }>;
+}
+\end{lstlisting}
+
+Normalizacja do \tstype{UnifiedMessage}:
+\begin{itemize}
+  \item \texttt{author.global\_name ?? author.username} $\to$ \texttt{sender}
+  \item \texttt{timestamp} (ISO 8601) $\to$ \texttt{timestamp} (Unix ms)
+  \item \texttt{referenced\_message} $\to$ \texttt{replyToIndex}
+  \item \texttt{mentions[]} $\to$ \texttt{mentions[]}
+  \item \texttt{edited\_timestamp} $\to$ \texttt{isEdited}
+  \item \texttt{reactions[]} $\to$ \tstype{Reaction[]} (z~mapowaniem custom emoji)
+  \item \texttt{attachments[]} $\to$ \texttt{mediaType}
+\end{itemize}
+
+\subsection{Filtrowanie}
+
+Parser filtruje wiadomości botów (\texttt{author.bot === true}) oraz wiadomości systemowe (join/leave/pin), zachowując wyłącznie wiadomości użytkowników z~treścią tekstową lub mediami.
+
+
+\begin{table}[H]
+\centering
+\caption{Porównanie parserów --- podsumowanie}
+\label{tab:parser-comparison}
+\begin{tabularx}{\textwidth}{l c c c c c}
+\toprule
+\textbf{Cecha} & \textbf{Messenger} & \textbf{WhatsApp} & \textbf{Instagram} & \textbf{Telegram} & \textbf{Discord} \\
+\midrule
+Format pliku     & JSON & TXT & JSON & JSON & API JSON \\
+Kodowanie        & \danger{latin-1*} & UTF-8 & \danger{latin-1*} & UTF-8 & UTF-8 \\
+Sortowanie       & Odwrotne & Chronol. & Odwrotne & Chronol. & Odwrotne \\
+Reakcje          & \score{Tak} & \danger{Nie} & \score{Tak} & \score{Tak+TS} & \score{Tak} \\
+Wiele plików     & \score{Tak} & \danger{Nie} & \score{Tak} & \danger{Nie} & N/A \\
+Media inline     & URI & Omitted & URI & Path & URL \\
+Wiad. systemowe  & type field & Heurystyka & type field & type field & type field \\
+Unicode decode   & \score{Wymagane} & Nie & \score{Wymagane} & Nie & Nie \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{small}
+* Wymaga dekodowania \tsfunc{decodeFBString()} na wszystkich polach tekstowych.\\
+Tak+TS = reakcje z~timestampem osoby reaguj\k{a}cej.
+\end{small}
+
+\vfill
+
+\begin{center}
+\small\color{PodTextMuted}
+Parsery s\k{a} ,,bramami'' systemu \podtekst --- od ich poprawno\'sci zale\.zy jako\'s\'c ca\l{}ej analizy.\\
+Ka\.zdy nowy parser musi przej\'s\'c pe\l{}en zestaw testów integracyjnych przed wdro\.zeniem.
+\end{center}

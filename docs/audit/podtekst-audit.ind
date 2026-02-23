@@ -1,0 +1,168 @@
+\begin{theindex}
+
+  \item analiza jakościowa, \hyperpage{23}
+  \item architektura
+    \subitem silnik ilościowy, \hyperpage{5}
+  \item ARIA, \hyperpage{51}
+  \item auto-detekcja, \hyperpage{46}
+    \subitem ograniczenia, \hyperpage{43}
+
+  \indexspace
+
+  \item bezpieczeństwo
+    \subitem filtry Gemini, \hyperpage{30}
+    \subitem prompt injection, \hyperpage{30}
+    \subitem rate limiting, \hyperpage{48}
+  \item Big Five, \hyperpage{30}
+  \item brakujące metryki, \hyperpage{21}
+  \item burst detection, \hyperpage{18}
+  \item błędy krytyczne
+    \subitem silnik ilościowy, \hyperpage{6}
+
+  \indexspace
+
+  \item centralność, \hyperpage{19}
+  \item centralność ważona, \hyperpage{22}
+  \item Communication Pattern Screening, \hyperpage{20}, \hyperpage{35}
+  \item Compatibility Score, \hyperpage{14}
+  \item Court Trial, \hyperpage{32}
+  \item CPS, \hyperpage{20}, \hyperpage{35}
+
+  \indexspace
+
+  \item Dating Profile, \hyperpage{32}
+  \item DD/MM
+    \subitem heurystyka, \hyperpage{41}
+  \item Delusion Quiz, \hyperpage{32}
+  \item Delusion Score, \hyperpage{16}
+  \item Discord
+    \subitem API, \hyperpage{44}
+    \subitem parser, \hyperpage{44}
+    \subitem reakcje, \hyperpage{45}
+  \item dostępność, \hyperpage{51}
+  \item dług techniczny, \hyperpage{55}
+
+  \indexspace
+
+  \item Gemini
+    \subitem integracja, \hyperpage{24}
+  \item Gemini API, \hyperpage{23}
+  \item Ghost Risk, \hyperpage{16}
+  \item Google Analytics, \hyperpage{50}
+  \item gotowość produkcyjna, \hyperpage{55}
+  \item graf interakcji, \hyperpage{19}
+
+  \indexspace
+
+  \item harmonogram, \hyperpage{62}
+
+  \indexspace
+
+  \item Instagram
+    \subitem parser, \hyperpage{43}
+  \item Interest Score, \hyperpage{15}
+  \item interfejs użytkownika, \hyperpage{47}
+
+  \indexspace
+
+  \item języki miłości, \hyperpage{30}
+
+  \indexspace
+
+  \item kontekst relacji, \hyperpage{27}
+
+  \indexspace
+
+  \item MBTI, \hyperpage{30}
+  \item Messenger
+    \subitem parser, \hyperpage{40}
+  \item metryki sukcesu, \hyperpage{63}
+  \item metryki wiralne, \hyperpage{14}
+
+  \indexspace
+
+  \item NetworkMetrics, \hyperpage{19}
+  \item normalizacja trendów, \hyperpage{22}
+
+  \indexspace
+
+  \item ocena ogólna, \hyperpage{1}
+  \item odznaki, \hyperpage{18}
+
+  \indexspace
+
+  \item ParsedConversation, \hyperpage{39}
+  \item parsery, \hyperpage{39}
+  \item pasy analizy, \hyperpage{28}
+  \item PDF
+    \subitem eksport, \hyperpage{49}
+  \item pipeline AI, \hyperpage{23}
+  \item priorytety, \hyperpage{2}
+  \item problemy drobne
+    \subitem silnik ilościowy, \hyperpage{13}
+  \item problemy istotne
+    \subitem silnik ilościowy, \hyperpage{10}
+  \item progresja intymności, \hyperpage{22}
+  \item prywatność
+    \subitem anonimizacja, \hyperpage{49}
+    \subitem separacja klient-serwer, \hyperpage{54}
+  \item przyszłe funkcje, \hyperpage{56}
+  \item próbkowanie wiadomości, \hyperpage{26}
+
+  \indexspace
+
+  \item rate limiting, \hyperpage{48}
+  \item ReciprocityIndex, \hyperpage{17}
+  \item rekomendacje
+    \subitem Tier 0, \hyperpage{59}
+    \subitem Tier 1, \hyperpage{59}
+    \subitem Tier 2, \hyperpage{60}
+    \subitem Tier 3, \hyperpage{61}
+    \subitem Tier 4, \hyperpage{62}
+  \item Reply Simulator, \hyperpage{32}
+  \item roast, \hyperpage{32}
+  \item rozrywka vs nauka, \hyperpage{37}, \hyperpage{54}
+
+  \indexspace
+
+  \item SectionNavigator, \hyperpage{47}
+  \item sentiment analysis, \hyperpage{21}
+  \item silnik ilościowy, \hyperpage{5}
+  \item sprzeczności, \hyperpage{55}
+  \item SSE, \hyperpage{36}
+  \item StatsGrid, \hyperpage{48}
+  \item streaming, \hyperpage{36}
+  \item strona wyników, \hyperpage{47}
+  \item Subtext Decoder, \hyperpage{32}
+  \item Szymkiewicz-Simpson, \hyperpage{14}
+
+  \indexspace
+
+  \item Telegram
+    \subitem parser, \hyperpage{43}
+  \item teoria przywiązania, \hyperpage{30}
+  \item topic modeling, \hyperpage{21}
+  \item trendy, \hyperpage{18}
+
+  \indexspace
+
+  \item udostępnianie
+    \subitem kodowanie URL, \hyperpage{49}
+  \item Unicode
+    \subitem dekodowanie, \hyperpage{40}
+  \item UnifiedMessage, \hyperpage{39}
+  \item upload, \hyperpage{47}
+
+  \indexspace
+
+  \item walidacja, \hyperpage{50}
+  \item WhatsApp
+    \subitem parser, \hyperpage{41}
+  \item wzorce konfliktowe, \hyperpage{22}
+  \item wzorce przekrojowe, \hyperpage{53}
+
+  \indexspace
+
+  \item Zod, \hyperpage{50}
+
+\end{theindex}

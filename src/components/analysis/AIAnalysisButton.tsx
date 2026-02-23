@@ -61,12 +61,13 @@ export default function AIAnalysisButton({
 
   const analysisControllerRef = useRef<AbortController | null>(null);
   const roastControllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
-  // Abort any in-flight requests when the component unmounts
+  // Track mount state — do NOT abort requests on unmount so analysis continues
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      analysisControllerRef.current?.abort();
-      roastControllerRef.current?.abort();
+      mountedRef.current = false;
     };
   }, []);
 
@@ -172,7 +173,7 @@ export default function AIAnalysisButton({
             };
 
             if (event.type === 'progress' && event.pass) {
-              setCurrentPass(event.pass);
+              if (mountedRef.current) setCurrentPass(event.pass);
             } else if (event.type === 'complete' && event.result) {
               finalResult = event.result;
             } else if (event.type === 'error') {
@@ -187,13 +188,15 @@ export default function AIAnalysisButton({
       }
 
       if (finalResult) {
-        setState('complete');
-        setCompletedAt(
-          new Date().toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-        );
+        if (mountedRef.current) {
+          setState('complete');
+          setCompletedAt(
+            new Date().toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          );
+        }
         trackEvent({ name: 'analysis_complete', params: { mode: 'standard', passCount: 4 } });
         onComplete(finalResult);
       } else {
@@ -203,8 +206,10 @@ export default function AIAnalysisButton({
       await reader?.cancel();
       // User cancelled — silently reset to idle
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setState('error');
-      setError(err instanceof Error ? err.message : String(err));
+      if (mountedRef.current) {
+        setState('error');
+        setError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
       analysisControllerRef.current = null;
     }
@@ -287,7 +292,7 @@ export default function AIAnalysisButton({
       }
 
       if (roastResult) {
-        setRoastState('complete');
+        if (mountedRef.current) setRoastState('complete');
         trackEvent({ name: 'analysis_complete', params: { mode: 'roast', passCount: 1 } });
         onRoastComplete?.(roastResult);
       } else {
@@ -297,8 +302,10 @@ export default function AIAnalysisButton({
       await reader?.cancel();
       // User cancelled — silently reset to idle
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setRoastState('error');
-      setRoastError(err instanceof Error ? err.message : String(err));
+      if (mountedRef.current) {
+        setRoastState('error');
+        setRoastError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
       roastControllerRef.current = null;
     }

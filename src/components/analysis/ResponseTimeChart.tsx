@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import {
   LineChart,
@@ -72,7 +72,7 @@ interface ChartDataPoint {
   [key: string]: string | number;
 }
 
-export default function ResponseTimeChart({
+function ResponseTimeChart({
   trendData,
   participants,
 }: ResponseTimeChartProps) {
@@ -250,3 +250,5 @@ export default function ResponseTimeChart({
     </motion.div>
   );
 }
+
+export default memo(ResponseTimeChart);

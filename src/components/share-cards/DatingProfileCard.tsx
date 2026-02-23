@@ -262,6 +262,10 @@ export default function DatingProfileCard({ profile, cardRef: externalRef }: Dat
                   lineHeight: 1.4,
                   paddingLeft: 8,
                   borderLeft: '2px solid #ccc',
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical' as const,
                 }}
               >
                 {featuredPrompt.answer}
@@ -274,7 +278,7 @@ export default function DatingProfileCard({ profile, cardRef: externalRef }: Dat
 
           {/* Red flags section */}
           {profile.red_flags.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 12, overflow: 'hidden' }}>
               <div
                 style={{
                   fontFamily: 'var(--font-syne)',
@@ -299,6 +303,9 @@ export default function DatingProfileCard({ profile, cardRef: externalRef }: Dat
                     paddingLeft: 8,
                     marginBottom: 1,
                     position: 'relative',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   <span style={{ position: 'absolute', left: 0, top: 0 }}>&mdash;</span>
@@ -315,7 +322,7 @@ export default function DatingProfileCard({ profile, cardRef: externalRef }: Dat
 
           {/* Green flags section */}
           {profile.green_flags.length > 0 && (
-            <div style={{ marginBottom: 4 }}>
+            <div style={{ marginBottom: 4, overflow: 'hidden' }}>
               <div
                 style={{
                   fontFamily: 'var(--font-syne)',
@@ -340,6 +347,9 @@ export default function DatingProfileCard({ profile, cardRef: externalRef }: Dat
                     paddingLeft: 8,
                     marginBottom: 1,
                     position: 'relative',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   <span style={{ position: 'absolute', left: 0, top: 0 }}>&mdash;</span>

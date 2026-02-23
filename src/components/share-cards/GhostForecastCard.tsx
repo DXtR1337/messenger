@@ -164,6 +164,10 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
             padding: '0 10px',
             position: 'relative',
             zIndex: 1,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical' as const,
           }}
         >
           {forecast.description}
@@ -253,6 +257,9 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
                           fontSize: '0.63rem',
                           color: '#555',
                           lineHeight: 1.6,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         • {f}

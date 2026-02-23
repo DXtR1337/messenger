@@ -1,0 +1,53 @@
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kolory podstawowe --- dualność uczestników rozmowy}}{6}{figure.caption.8}%
+\contentsline {figure}{\numberline {1.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Hierarchia ciemnych tło}}{6}{figure.caption.9}%
+\contentsline {figure}{\numberline {1.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kolory tekstu na ciemnym tle}}{6}{figure.caption.10}%
+\contentsline {figure}{\numberline {1.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kolory semantyczne --- stan pozytywny, ostrzegawczy i~negatywny}}{7}{figure.caption.11}%
+\contentsline {figure}{\numberline {1.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kolor dodatkowy --- akcenty informacyjne i~wyróżnienia}}{7}{figure.caption.13}%
+\contentsline {figure}{\numberline {1.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Paleta pięciu kolorów do wykresów wieloosobowych}}{7}{figure.caption.14}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Ścieżka użytkownika w~\textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace --- od uploadu do raportu}}{24}{figure.caption.27}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Diagram wysokopoziomowy architektury \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace --- przepływ danych od uploadu do raportu.}}{30}{figure.caption.36}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Drzewo routingu App Router --- route groups \texttt {(dashboard)} i~\texttt {(story)} dzielą wspólne layouty, ale nie wpływają na URL.}}{32}{figure.caption.38}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Cztery etapy pipeline'u analizy \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace z~podziałem na środowiska wykonania.}}{35}{figure.caption.41}%
+\contentsline {figure}{\numberline {3.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Diagram sekwencji SSE --- strumieniowanie postępu analizy AI w~czasie rzeczywistym.}}{36}{figure.caption.42}%
+\contentsline {figure}{\numberline {3.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Mechanizm rate limitingu --- decyzja per adres IP.}}{42}{figure.caption.48}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Diagram decyzyjny auto-detekcji formatu eksportu}}{50}{figure.caption.56}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Trójfazowa architektura silnika analizy ilościowej z~modułami przetwarzania końcowego.}}{70}{figure.caption.70}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wizualizacja podziału na sesje konwersacyjne z~progiem 6~godzin.}}{81}{figure.caption.72}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przykładowa mapa cieplna aktywności wiadomości (7 dni $\times $ 24~godziny). Intensywność koloru odpowiada liczbie wiadomości w~danym przedziale.}}{84}{figure.caption.73}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przykładowy graf sieci dla czatu 4-osobowego. Grubość krawędzi odpowiada wadze (liczbie interakcji). Liczby na krawędziach = łączna liczba sekwencyjnych wymian.}}{94}{figure.caption.78}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kompletny schemat przepływu danych w~silniku analizy ilościowej. Kolory: \textcolor {PodBlue}{niebieski} = metryki fazy 2, \textcolor {PodPurple}{fioletowy} = metryki fazy 3, \textcolor {PodSuccess}{zielony} = metryki kompozytowe, \textcolor {PodWarning}{pomarańczowy} = moduły specjalistyczne.}}{95}{figure.caption.80}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Architektura multi-pass pipeline silnika AI. Linia ciągła --- przepływ obowiązkowy; linia przerywana --- przepływ opcjonalny.}}{98}{figure.caption.81}%
+\contentsline {figure}{\numberline {6.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wizualizacja stratyfikowanego próbkowania. Ostatnie 25\% osi czasu otrzymuje 60\% budżetu próbek.}}{102}{figure.caption.85}%
+\contentsline {figure}{\numberline {6.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Próbkowanie infleksyjne --- kolorowe regiony oznaczają okna, z~których pobierane są wiadomości dla Pass~2 (Dynamika).}}{103}{figure.caption.86}%
+\contentsline {figure}{\numberline {6.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Hierarchia degradacji --- system zawsze dąży do zachowania jak największej ilości wyników.}}{117}{figure.caption.117}%
+\contentsline {figure}{\numberline {6.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pipeline Dekodera Podtekst\'{o}w --- od pe\l {}nej listy wiadomo\'{s}ci do wynik\'{o}w analizy.}}{119}{figure.caption.119}%
+\contentsline {figure}{\numberline {6.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Dane wej\'{s}ciowe procesu s\k {a}dowego --- \l {}\k {a}czy wyniki wcze\'{s}niejszych pass\'{o}w z~danymi pierwotnymi.}}{126}{figure.caption.130}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {7.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Diagram komponentów Health Score z~wagami. Przykład: wynik 73 (,,Stabilna'') z~rozkładem komponentów.}}{138}{figure.caption.146}%
+\contentsline {figure}{\numberline {7.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wizualizacja skali Health Score z~przedziałami etykiet. Przykład: wynik 73 w~strefie ,,Stabilna''.}}{143}{figure.caption.148}%
+\contentsline {figure}{\numberline {7.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Schemat walidacji krzyżowej Health Score. Dwa niezależne wyniki są porównywane i~łączone w~wynik końcowy.}}{144}{figure.caption.150}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {8.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Próbki kolorów systemu projektowego \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{148}{figure.caption.153}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {9.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Architektura API \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace {} --- 11 endpointów w~5 grupach funkcjonalnych}}{169}{figure.caption.170}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {10.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Cztery etapy multi-stage Dockerfile --- od bazy Alpine po minimalny runner.}}{193}{figure.caption.199}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {11.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przepływ danych --- mniej niż 1\% wiadomości trafia na serwer, żadne dane nie są trwale przechowywane po stronie serwera.}}{199}{figure.caption.204}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {12.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Diagram kompozycji \texttt {\textcolor {CodeType}{StoredAnalysis}} --- główny kontener danych. Linie ciągłe oznaczają wymagane składniki, przerywane --- opcjonalne.}}{239}{figure.caption.282}%
+\contentsline {figure}{\numberline {12.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Szczegółowy diagram \texttt {\textcolor {CodeType}{QuantitativeAnalysis}}. Pola wymagane (linia ciągła) i~opcjonalne (linia przerywana, oznaczone \texttt {?}).}}{240}{figure.caption.283}%
+\contentsline {figure}{\numberline {12.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Szczegółowy diagram \texttt {\textcolor {CodeType}{QualitativeAnalysis}} z~kluczowymi pod-typami Pass~2 i~Pass~3. Wszystkie pola opcjonalne (przerywane strzałki).}}{240}{figure.caption.284}%
+\contentsline {figure}{\numberline {12.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Drzewo kompozycji \texttt {\textcolor {CodeType}{PersonProfile}} --- 10~sekcji tematycznych. \texttt {MBTIResult} i~\texttt {LoveLanguageResult} są opcjonalne.}}{241}{figure.caption.285}%
+\contentsline {figure}{\numberline {12.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Drzewo pól \texttt {\textcolor {CodeType}{SubtextItem}} --- 11~pól, z~czego \texttt {category} jest typem unii (\texttt {\textcolor {CodeType}{SubtextCategory}}), a~\texttt {surroundingMessages} zawiera tablicę wiadomości kontekstowych.}}{244}{figure.caption.289}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {13.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Mapa rozwoju \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace --- fazy i~zależności}}{266}{figure.caption.310}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {14.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Architektura tabowa --- przykładowy widok zakładki ,,AI Insights''}}{274}{figure.caption.321}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

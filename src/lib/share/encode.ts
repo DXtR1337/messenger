@@ -51,6 +51,7 @@ export function encodeShareData(analysis: StoredAnalysis): string {
     id: badge.id,
     name: badge.name,
     emoji: badge.emoji,
+    ...(badge.icon ? { icon: badge.icon } : {}),
     description: badge.description,
     holder: nameMap.get(badge.holder) ?? badge.holder,
     evidence: anonymizeString(badge.evidence, nameMap),

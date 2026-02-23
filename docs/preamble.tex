@@ -1,0 +1,480 @@
+% ============================================================
+% PodTeksT — Preamble
+% ============================================================
+
+% --- Document class ---
+\documentclass[
+  a4paper,
+  11pt,
+  twoside,
+  openright,
+  chapterprefix=true,
+  numbers=noenddot
+]{scrbook}
+
+% --- Encoding & Language ---
+\usepackage{polyglossia}
+\setdefaultlanguage{polish}
+\setotherlanguage{english}
+
+% --- Fonts (XeLaTeX) ---
+\usepackage{fontspec}
+\setmainfont{Segoe UI}[
+  BoldFont=Segoe UI Bold,
+  ItalicFont=Segoe UI Italic,
+  BoldItalicFont=Segoe UI Bold Italic,
+]
+\setsansfont{Segoe UI}[
+  BoldFont=Segoe UI Bold,
+  ItalicFont=Segoe UI Italic,
+]
+\setmonofont{Consolas}[
+  Scale=0.88,
+]
+% Display font for chapter titles
+\newfontfamily\displayfont{Segoe UI}[
+  BoldFont=Segoe UI Bold,
+]
+
+% --- Page geometry ---
+\usepackage[
+  top=2.5cm,
+  bottom=2.5cm,
+  inner=3cm,
+  outer=2.5cm,
+  headheight=14pt,
+]{geometry}
+
+% --- Micro-typography ---
+\usepackage{microtype}
+
+% --- Colors ---
+\usepackage[dvipsnames,svgnames,x11names]{xcolor}
+
+% PodTeksT Brand Colors
+\definecolor{PodBlue}{HTML}{3B82F6}
+\definecolor{PodPurple}{HTML}{A855F7}
+\definecolor{PodBg}{HTML}{050505}
+\definecolor{PodBgSecondary}{HTML}{0A0A0A}
+\definecolor{PodCard}{HTML}{111111}
+\definecolor{PodCardHover}{HTML}{161616}
+\definecolor{PodBorder}{HTML}{1A1A1A}
+\definecolor{PodText}{HTML}{FAFAFA}
+\definecolor{PodTextSecondary}{HTML}{888888}
+\definecolor{PodTextMuted}{HTML}{555555}
+\definecolor{PodSuccess}{HTML}{10B981}
+\definecolor{PodWarning}{HTML}{F59E0B}
+\definecolor{PodDanger}{HTML}{EF4444}
+\definecolor{PodAccentHover}{HTML}{2563EB}
+\definecolor{PodCyan}{HTML}{06B6D4}
+
+% Gradient helpers
+\definecolor{PodBlueDark}{HTML}{1D4ED8}
+\definecolor{PodPurpleDark}{HTML}{7C3AED}
+\definecolor{PodBlueLight}{HTML}{93C5FD}
+\definecolor{PodPurpleLight}{HTML}{C4B5FD}
+
+% Code block colors
+\definecolor{CodeBg}{HTML}{0D1117}
+\definecolor{CodeBorder}{HTML}{21262D}
+\definecolor{CodeComment}{HTML}{8B949E}
+\definecolor{CodeKeyword}{HTML}{FF7B72}
+\definecolor{CodeString}{HTML}{A5D6FF}
+\definecolor{CodeType}{HTML}{79C0FF}
+\definecolor{CodeFunction}{HTML}{D2A8FF}
+\definecolor{CodeNumber}{HTML}{79C0FF}
+\definecolor{CodeText}{HTML}{E6EDF3}
+
+% --- Graphics & Diagrams ---
+\usepackage{tikz}
+\usetikzlibrary{
+  shapes.geometric,
+  shapes.misc,
+  arrows.meta,
+  positioning,
+  calc,
+  backgrounds,
+  fit,
+  decorations.markings,
+  patterns,
+  shadows,
+  chains,
+  matrix,
+  intersections,
+  fadings,
+}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% --- Code Listings ---
+\usepackage{listings}
+
+% TypeScript language definition
+\lstdefinelanguage{TypeScript}{
+  keywords=[1]{export,interface,type,function,const,let,var,if,else,for,while,return,
+    import,from,async,await,new,typeof,extends,implements,class,enum,switch,case,
+    default,break,continue,try,catch,finally,throw,true,false,null,undefined,
+    void,this,super,of,in,as,is,keyof,readonly,static,abstract,private,public,
+    protected,declare,namespace,module,require},
+  keywords=[2]{string,number,boolean,any,never,unknown,Record,Array,Map,Set,
+    Promise,Partial,Required,Pick,Omit,Readonly,Date,Error,RegExp,
+    React,ReactNode,JSX,Element,FC,CSSProperties},
+  keywords=[3]{console,Math,JSON,Object,document,window,process,Buffer,
+    TextDecoder,Uint8Array,crypto,fetch,Response,Request,Headers,URL,
+    ReadableStream,TextEncoder,AbortController},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]`,
+}
+
+% Dark code style
+\lstdefinestyle{podcode}{
+  language=TypeScript,
+  basicstyle=\ttfamily\small\color{CodeText},
+  backgroundcolor=\color{CodeBg},
+  rulecolor=\color{CodeBorder},
+  keywordstyle=[1]\color{CodeKeyword}\bfseries,
+  keywordstyle=[2]\color{CodeType},
+  keywordstyle=[3]\color{CodeFunction},
+  commentstyle=\color{CodeComment}\itshape,
+  stringstyle=\color{CodeString},
+  numberstyle=\tiny\color{CodeComment},
+  numbers=left,
+  numbersep=8pt,
+  frame=single,
+  framesep=6pt,
+  xleftmargin=16pt,
+  xrightmargin=4pt,
+  aboveskip=12pt,
+  belowskip=8pt,
+  breaklines=true,
+  breakatwhitespace=true,
+  showstringspaces=false,
+  tabsize=2,
+  captionpos=b,
+  literate=
+    {ą}{{\k{a}}}1 {ć}{{\'c}}1 {ę}{{\k{e}}}1 {ł}{{\l{}}}1
+    {ń}{{\'n}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ź}{{\'z}}1 {ż}{{\.z}}1
+    {Ą}{{\k{A}}}1 {Ć}{{\'C}}1 {Ę}{{\k{E}}}1 {Ł}{{\L{}}}1
+    {Ń}{{\'N}}1 {Ó}{{\'O}}1 {Ś}{{\'S}}1 {Ź}{{\'Z}}1 {Ż}{{\.Z}}1
+    {→}{{$\rightarrow$}}1 {←}{{$\leftarrow$}}1 {≥}{{$\geq$}}1 {≤}{{$\leq$}}1,
+}
+
+\lstdefinestyle{podcodeJSON}{
+  basicstyle=\ttfamily\small\color{CodeText},
+  backgroundcolor=\color{CodeBg},
+  rulecolor=\color{CodeBorder},
+  keywordstyle=\color{CodeKeyword},
+  stringstyle=\color{CodeString},
+  numberstyle=\tiny\color{CodeComment},
+  numbers=left,
+  numbersep=8pt,
+  frame=single,
+  framesep=6pt,
+  xleftmargin=16pt,
+  xrightmargin=4pt,
+  aboveskip=12pt,
+  belowskip=8pt,
+  breaklines=true,
+  showstringspaces=false,
+  tabsize=2,
+  captionpos=b,
+  literate=
+    {ą}{{\k{a}}}1 {ć}{{\'c}}1 {ę}{{\k{e}}}1 {ł}{{\l{}}}1
+    {ń}{{\'n}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ź}{{\'z}}1 {ż}{{\.z}}1,
+}
+
+\lstdefinestyle{podcodeBash}{
+  language=bash,
+  basicstyle=\ttfamily\small\color{CodeText},
+  backgroundcolor=\color{CodeBg},
+  rulecolor=\color{CodeBorder},
+  keywordstyle=\color{CodeKeyword}\bfseries,
+  commentstyle=\color{CodeComment}\itshape,
+  stringstyle=\color{CodeString},
+  numbers=none,
+  frame=single,
+  framesep=6pt,
+  xleftmargin=16pt,
+  xrightmargin=4pt,
+  aboveskip=12pt,
+  belowskip=8pt,
+  breaklines=true,
+  showstringspaces=false,
+  tabsize=2,
+}
+
+\lstdefinestyle{podcodeCSS}{
+  basicstyle=\ttfamily\small\color{CodeText},
+  backgroundcolor=\color{CodeBg},
+  rulecolor=\color{CodeBorder},
+  keywordstyle=\color{CodeKeyword},
+  stringstyle=\color{CodeString},
+  commentstyle=\color{CodeComment}\itshape,
+  numbers=left,
+  numbersep=8pt,
+  frame=single,
+  framesep=6pt,
+  xleftmargin=16pt,
+  xrightmargin=4pt,
+  aboveskip=12pt,
+  belowskip=8pt,
+  breaklines=true,
+  showstringspaces=false,
+  tabsize=2,
+  captionpos=b,
+}
+
+\lstset{style=podcode}
+
+% --- Tables ---
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{colortbl}
+\usepackage{multirow}
+\usepackage{array}
+
+% Custom column types
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+% --- Colored Boxes ---
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{skins,breakable,listings}
+
+% Info box
+\newtcolorbox{infobox}[1][]{
+  enhanced,
+  colback=PodBlue!5,
+  colframe=PodBlue!60,
+  coltitle=white,
+  fonttitle=\bfseries,
+  left=8pt,
+  right=8pt,
+  top=6pt,
+  bottom=6pt,
+  arc=3pt,
+  boxrule=0.8pt,
+  breakable,
+  #1
+}
+
+% Warning box
+\newtcolorbox{warningbox}[1][]{
+  enhanced,
+  colback=PodWarning!5,
+  colframe=PodWarning!60,
+  coltitle=white,
+  fonttitle=\bfseries,
+  left=8pt,
+  right=8pt,
+  top=6pt,
+  bottom=6pt,
+  arc=3pt,
+  boxrule=0.8pt,
+  breakable,
+  #1
+}
+
+% Code card (dark themed card around code)
+\newtcolorbox{codecard}[1][]{
+  enhanced,
+  colback=CodeBg,
+  colframe=CodeBorder,
+  coltitle=CodeText,
+  fonttitle=\ttfamily\bfseries\small,
+  left=0pt,
+  right=0pt,
+  top=0pt,
+  bottom=0pt,
+  arc=4pt,
+  boxrule=0.6pt,
+  breakable,
+  #1
+}
+
+% Feature card
+\newtcolorbox{featurebox}[1][]{
+  enhanced,
+  colback=PodPurple!3,
+  colframe=PodPurple!40,
+  left=8pt,
+  right=8pt,
+  top=6pt,
+  bottom=6pt,
+  arc=3pt,
+  boxrule=0.6pt,
+  breakable,
+  #1
+}
+
+% Metric card
+\newtcolorbox{metricbox}[1][]{
+  enhanced,
+  colback=PodBlue!3,
+  colframe=PodBlue!30,
+  left=8pt,
+  right=8pt,
+  top=6pt,
+  bottom=6pt,
+  arc=2pt,
+  boxrule=0.5pt,
+  #1
+}
+
+% --- Headers & Footers ---
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\fancypagestyle{podstyle}{
+  \fancyhf{}
+  \fancyhead[LE]{\small\color{PodTextMuted}\leftmark}
+  \fancyhead[RO]{\small\color{PodTextMuted}\rightmark}
+  \fancyfoot[LE,RO]{\small\color{PodBlue}\thepage\color{PodTextMuted}\ /\ \pageref{LastPage}}
+  \fancyfoot[RE,LO]{\small\color{PodTextMuted}PodTeksT — Dokumentacja}
+  \renewcommand{\headrulewidth}{0.4pt}
+  \renewcommand{\footrulewidth}{0.2pt}
+  \renewcommand{\headrule}{\hbox to\headwidth{\color{PodBorder}\leaders\hrule height \headrulewidth\hfill}}
+  \renewcommand{\footrule}{\hbox to\headwidth{\color{PodBorder}\leaders\hrule height \footrulewidth\hfill}}
+}
+\pagestyle{podstyle}
+
+% Chapter pages
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\small\color{PodBlue}\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0pt}
+}
+
+% --- Section Styling (with KOMA-Script compatibility) ---
+\usepackage{scrhack}
+\usepackage[explicit]{titlesec}
+
+% Chapter format with blue accent
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries}
+  {\textcolor{PodBlue}{\chaptertitlename\ \thechapter}}
+  {20pt}
+  {\Huge\color{PodBlueDark}#1}
+\titlespacing*{\chapter}{0pt}{-20pt}{30pt}
+
+% Section with blue line
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{PodBlueDark}}
+  {\thesection}{1em}{#1}
+  [{\vspace{2pt}\color{PodBlue}\titlerule[1pt]}]
+
+% Subsection with purple accent
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{PodPurpleDark}}
+  {\thesubsection}{1em}{#1}
+
+% Subsubsection
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\color{PodBlue!80!black}}
+  {\thesubsubsection}{1em}{#1}
+
+% --- Lists ---
+\usepackage{enumitem}
+\setlist[itemize]{
+  leftmargin=*,
+  label={\textcolor{PodBlue}{\textbullet}},
+  itemsep=2pt,
+  parsep=0pt,
+}
+\setlist[enumerate]{
+  leftmargin=*,
+  itemsep=2pt,
+  parsep=0pt,
+}
+\setlist[description]{
+  leftmargin=0pt,
+  itemsep=4pt,
+  font=\bfseries\color{PodBlue},
+}
+
+% --- Spacing ---
+\usepackage{parskip}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+
+% --- Floats ---
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+
+% Caption styling
+\usepackage[
+  font=small,
+  labelfont={bf,color=PodBlue},
+  textfont={color=PodTextMuted},
+  format=hang,
+]{caption}
+
+% --- Hyperlinks ---
+\usepackage[
+  colorlinks=true,
+  linkcolor=PodBlue,
+  urlcolor=PodPurple,
+  citecolor=PodBlue,
+  bookmarks=true,
+  bookmarksnumbered=true,
+  pdfauthor={PodTeksT},
+  pdftitle={PodTeksT — Dokumentacja Techniczna i Brandowa},
+  pdfsubject={Analiza rozmów z komunikatorów},
+  pdfkeywords={PodTeksT, analiza, Messenger, WhatsApp, AI, NLP},
+]{hyperref}
+\usepackage{bookmark}
+
+% --- Index ---
+\usepackage{makeidx}
+\makeindex
+
+% --- Math (for formulas) ---
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% --- Emoji fallback (renders as text label) ---
+\providecommand{\emoji}[1]{\texttt{[#1]}}
+
+% --- Missing TikZ arrow tips ---
+\tikzset{
+  open diamond/.tip={Diamond[open]},
+}
+
+% --- Misc ---
+\usepackage{xspace}
+\usepackage{needspace}
+
+% --- Custom commands ---
+\newcommand{\podtekst}{\textbf{\textcolor{PodBlue}{Pod}\textcolor{PodPurple}{TeksT}}\xspace}
+\newcommand{\tstype}[1]{\texttt{\textcolor{CodeType}{#1}}}
+\newcommand{\tsfunc}[1]{\texttt{\textcolor{CodeFunction}{#1}}}
+\newcommand{\tskey}[1]{\texttt{\textcolor{CodeKeyword}{#1}}}
+\newcommand{\tsstr}[1]{\texttt{\textcolor{CodeString}{#1}}}
+\newcommand{\filepath}[1]{\texttt{\small\color{PodTextSecondary}#1}}
+\newcommand{\metric}[1]{\textbf{\textcolor{PodBlue}{#1}}}
+\newcommand{\personA}[1]{\textcolor{PodBlue}{#1}}
+\newcommand{\personB}[1]{\textcolor{PodPurple}{#1}}
+\newcommand{\score}[1]{\textbf{\textcolor{PodSuccess}{#1}}}
+\newcommand{\warn}[1]{\textbf{\textcolor{PodWarning}{#1}}}
+\newcommand{\danger}[1]{\textbf{\textcolor{PodDanger}{#1}}}
+
+% Colored section ref
+\newcommand{\secref}[1]{\textcolor{PodBlue}{\S\ref{#1}}}
+
+% Brand keywords
+\newcommand{\messenger}{\textsc{Messenger}\xspace}
+\newcommand{\whatsapp}{\textsc{WhatsApp}\xspace}
+\newcommand{\gemini}{\textsc{Gemini}\xspace}
+\newcommand{\nextjs}{\textsc{Next.js}\xspace}
+\newcommand{\reactjs}{\textsc{React}\xspace}
+\newcommand{\typescript}{\textsc{TypeScript}\xspace}
+
+% --- Load TikZ styles ---
+\input{tikz-styles}

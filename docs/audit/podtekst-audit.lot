@@ -1,0 +1,32 @@
+\contentsline {table}{\numberline {1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zakres audytu --- pliki i~moduły}}{xii}{table.caption.4}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {1.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Karta wynikowa audytu --- oceny per obszar}}{1}{table.caption.5}%
+\contentsline {table}{\numberline {1.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Macierz problemów --- liczba per kategoria i~waga}}{2}{table.caption.6}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {2.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komponenty Interest Score z~wagami}}{15}{table.caption.10}%
+\contentsline {table}{\numberline {2.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Czynniki Ghost Risk}}{16}{table.caption.12}%
+\contentsline {table}{\numberline {2.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces System 15~odznak behawioralnych}}{18}{table.caption.15}%
+\contentsline {table}{\numberline {2.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Trendy miesięczne~--- miary statystyczne}}{19}{table.caption.16}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Oceny komponentów pipeline AI}}{24}{table.caption.18}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Ustawienia temperatury \textsc {Gemini}\xspace wg modułu}}{25}{table.caption.19}%
+\contentsline {table}{\numberline {3.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Budżety próbkowania wiadomości wg pasu}}{26}{table.caption.20}%
+\contentsline {table}{\numberline {3.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kalibracje wg typu relacji}}{27}{table.caption.21}%
+\contentsline {table}{\numberline {3.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces 12~kategorii podtekstu w~Dekoder Podtekstów}}{34}{table.caption.26}%
+\contentsline {table}{\numberline {3.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Czynniki scoringowe Dekodera Podtekstów}}{34}{table.caption.28}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Oceny parserów --- podsumowanie Agent~3 \emph {(Parsery i~UI)}\xspace }}{40}{table.caption.29}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Macierz funkcjonalności parserów}}{46}{table.caption.30}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Schematy walidacji Zod}}{50}{table.caption.31}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kategorie zdarzeń GA4}}{50}{table.caption.32}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {5.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Brak walidacji --- manifestacja per warstwa}}{53}{table.caption.33}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kontrast dojrzałości: architektura vs infrastruktura}}{54}{table.caption.34}%
+\contentsline {table}{\numberline {5.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Traffic light --- gotowość per obszar}}{55}{table.caption.35}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {6.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Tier 1 --- naprawy krytyczne}}{59}{table.caption.36}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Tier 2b --- naprawy inżynieryjne}}{61}{table.caption.37}%
+\contentsline {table}{\numberline {6.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Proponowany harmonogram --- 12~tygodni}}{62}{table.caption.38}%
+\contentsline {table}{\numberline {6.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces KPI per tier}}{63}{table.caption.39}%
+\contentsline {table}{\numberline {5}{\ignorespaces Pełna lista problemów --- wszystkie agenty}}{65}{table.6.5}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

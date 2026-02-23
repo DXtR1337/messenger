@@ -1,0 +1,121 @@
+[debug] [2026-02-18T18:20:42.874Z] ----------------------------------------------------------------------
+[debug] [2026-02-18T18:20:42.875Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\micha\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --project chatscope-2026
+[debug] [2026-02-18T18:20:42.875Z] CLI Version:   15.2.1
+[debug] [2026-02-18T18:20:42.875Z] Platform:      win32
+[debug] [2026-02-18T18:20:42.875Z] Node Version:  v24.12.0
+[debug] [2026-02-18T18:20:42.875Z] Time:          Wed Feb 18 2026 19:20:42 GMT+0100 (czas środkowoeuropejski standardowy)
+[debug] [2026-02-18T18:20:42.876Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-02-18T18:20:44.151Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-18T18:20:44.151Z] > authorizing via signed-in user (seido1337@gmail.com)
+[debug] [2026-02-18T18:20:44.151Z] [iam] checking project chatscope-2026 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-02-18T18:20:44.151Z] Checked if tokens are valid: true, expires at: 1771442357925
+[debug] [2026-02-18T18:20:44.151Z] Checked if tokens are valid: true, expires at: 1771442357925
+[debug] [2026-02-18T18:20:44.152Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/chatscope-2026:testIamPermissions [none]
+[debug] [2026-02-18T18:20:44.152Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/chatscope-2026:testIamPermissions x-goog-quota-user=projects/chatscope-2026
+[debug] [2026-02-18T18:20:44.152Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/chatscope-2026:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-02-18T18:20:44.919Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/chatscope-2026:testIamPermissions 200
+[debug] [2026-02-18T18:20:44.919Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/chatscope-2026:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-02-18T18:20:44.919Z] Checked if tokens are valid: true, expires at: 1771442357925
+[debug] [2026-02-18T18:20:44.919Z] Checked if tokens are valid: true, expires at: 1771442357925
+[debug] [2026-02-18T18:20:44.919Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/chatscope-2026 [none]
+[debug] [2026-02-18T18:20:45.235Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/chatscope-2026 200
+[debug] [2026-02-18T18:20:45.235Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/chatscope-2026 {"projectId":"chatscope-2026","projectNumber":"1024603845192","displayName":"ChatScope","name":"projects/chatscope-2026","resources":{"hostingSite":"chatscope-2026"},"state":"ACTIVE","etag":"1_fbb90510-91a2-4254-96df-f99aa19aa659"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-02-18T18:20:54.977Z] Checked if tokens are valid: true, expires at: 1771442357925
+[debug] [2026-02-18T18:20:54.977Z] Checked if tokens are valid: true, expires at: 1771442357925
+[debug] [2026-02-18T18:20:54.977Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/chatscope-2026/sites/chatscope-2026 [none]
+[debug] [2026-02-18T18:20:56.510Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/chatscope-2026/sites/chatscope-2026 200
+[debug] [2026-02-18T18:20:56.510Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/chatscope-2026/sites/chatscope-2026 {"name":"projects/chatscope-2026/sites/chatscope-2026","defaultUrl":"https://chatscope-2026.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.6 (Turbopack)
+
+[info] - Environments: .env.local
+- Experiments (use with caution):
+  · staticGenerationRetryCount: 0
+
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 3.3s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 7 workers ...
+
+[info]   Generating static pages using 7 workers (0/5) ...
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /analysis/[id]
+├ ƒ /analysis/[id]/story
+├ ƒ /analysis/compare
+├ ƒ /analysis/new
+├ ƒ /api/analyze
+├ ƒ /api/analyze/image
+├ ƒ /api/analyze/scid
+├ ƒ /dashboard
+└ ○ /roast
+
+
+[info] 
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /(dashboard)/analysis/[id]/page
+[info]  • non-static component /(dashboard)/analysis/compare/page
+[info]  • non-static component /(dashboard)/analysis/new/page
+[info]  • non-static component /(dashboard)/dashboard/page
+[info]  • non-static component /(story)/analysis/[id]/story/page
+[debug] [2026-02-18T18:21:05.540Z]  • non-static component /api/analyze/image/route
+[debug] [2026-02-18T18:21:05.540Z]  • non-static component /api/analyze/route
+[debug] [2026-02-18T18:21:05.540Z]  • non-static component /api/analyze/scid/route
+[info]  • and 3 other reasons, use --debug to see more
+[info] 
+[debug] [2026-02-18T18:21:05.595Z] Error: EPERM: operation not permitted, copyfile 'C:\Users\micha\.gemini\antigravity\mess1\.next\server\app\_global-error' -> 'C:\Users\micha\.gemini\antigravity\mess1\.firebase\chatscope-2026\hosting\_global-error'
+    at async copyFile (node:internal/fs/promises:624:10)
+    at async C:\Users\micha\AppData\Roaming\npm\node_modules\firebase-tools\lib\frameworks\next\index.js:368:13
+    at async Promise.all (index 0)
+    at async ɵcodegenPublicDirectory (C:\Users\micha\AppData\Roaming\npm\node_modules\firebase-tools\lib\frameworks\next\index.js:307:5)
+    at async prepareFrameworks (C:\Users\micha\AppData\Roaming\npm\node_modules\firebase-tools\lib\frameworks\index.js:243:13)
+    at async deploy (C:\Users\micha\AppData\Roaming\npm\node_modules\firebase-tools\lib\deploy\index.js:78:9)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-02-18T18:22:26.944Z] ----------------------------------------------------------------------
+[debug] [2026-02-18T18:22:26.945Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\micha\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js projects:addfirebase chatscope-2026
+[debug] [2026-02-18T18:22:26.945Z] CLI Version:   15.2.1
+[debug] [2026-02-18T18:22:26.945Z] Platform:      win32
+[debug] [2026-02-18T18:22:26.945Z] Node Version:  v24.12.0
+[debug] [2026-02-18T18:22:26.945Z] Time:          Wed Feb 18 2026 19:22:26 GMT+0100 (czas środkowoeuropejski standardowy)
+[debug] [2026-02-18T18:22:26.945Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-02-18T18:22:27.017Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-18T18:22:27.018Z] > authorizing via signed-in user (seido1337@gmail.com)
+[debug] [2026-02-18T18:22:27.019Z] Checked if tokens are valid: true, expires at: 1771442357925
+[debug] [2026-02-18T18:22:27.019Z] Checked if tokens are valid: true, expires at: 1771442357925
+[debug] [2026-02-18T18:22:27.020Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1beta1/projects/chatscope-2026:addFirebase [none]
+[debug] [2026-02-18T18:22:28.373Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1beta1/projects/chatscope-2026:addFirebase 409
+[debug] [2026-02-18T18:22:28.373Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1beta1/projects/chatscope-2026:addFirebase {"error":{"code":409,"message":"Requested entity already exists","status":"ALREADY_EXISTS"}}
+[debug] [2026-02-18T18:22:28.374Z] Request to https://firebase.googleapis.com/v1beta1/projects/chatscope-2026:addFirebase had HTTP Error: 409, Requested entity already exists
+[debug] [2026-02-18T18:22:28.374Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/chatscope-2026:addFirebase had HTTP Error: 409, Requested entity already exists
+    at responseToError (C:\Users\micha\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:53:12)
+    at RetryOperation._fn (C:\Users\micha\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:320:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[error] 
+[error] Error: Failed to add Firebase to Google Cloud Platform project. See firebase-debug.log for more info.

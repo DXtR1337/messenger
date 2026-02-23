@@ -1,9 +1,26 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, createContext, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Download, X, Link2, Check } from 'lucide-react';
+import Image from 'next/image';
 import type { StoredAnalysis } from '@/lib/analysis/types';
+import { useTier } from '@/lib/tiers/tier-context';
+
+// -------------------------------------------------------------------
+// Share-card download guard context
+// Allows useCardDownload to check tier limits before downloading.
+// -------------------------------------------------------------------
+
+type DownloadGuard = () => boolean;
+
+const DownloadGuardContext = createContext<DownloadGuard | null>(null);
+
+/** Used by useCardDownload to check if the download is allowed. */
+export function useDownloadGuard(): DownloadGuard | null {
+  return useContext(DownloadGuardContext);
+}
 import HealthScoreCard from './HealthScoreCard';
 import VersusCard from './VersusCard';
 import StatsCard from './StatsCard';
@@ -26,7 +43,24 @@ import MugshotCard from './MugshotCard';
 import DatingProfileCard from './DatingProfileCard';
 import SimulatorCard from './SimulatorCard';
 import CoupleQuizCard from './CoupleQuizCard';
+import CwelTygodniaCard from './CwelTygodniaCard';
 import { buildShareUrl } from '@/lib/share/encode';
+
+/** Detect mobile viewport via matchMedia (SSR-safe) */
+function useIsMobile(breakpoint = 767): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    setIsMobile(mql.matches);
+
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, [breakpoint]);
+
+  return isMobile;
+}
 
 
 interface ShareCardGalleryProps {
@@ -38,41 +72,55 @@ interface CardConfig {
   id: string;
   title: string;
   emoji: string;
+  icon?: string;
   requiresQualitative: boolean;
   size?: string;
 }
 
 const CARD_CONFIGS: CardConfig[] = [
   // V2 cards — anti-slop (highlighted first)
-  { id: 'receipt', title: 'Paragon', emoji: '\u{1F9FE}', requiresQualitative: false },
-  { id: 'versus-v2', title: 'Versus V2', emoji: '\u26A1', requiresQualitative: false },
-  { id: 'redflag', title: 'Czerwona flaga', emoji: '\u{1F6A9}', requiresQualitative: false },
-  { id: 'ghost-forecast', title: 'Prognoza ghostingu', emoji: '\u{1F47B}', requiresQualitative: false },
-  { id: 'compatibility-v2', title: 'Match', emoji: '\u{1F495}', requiresQualitative: false },
-  { id: 'label', title: 'Etykietka', emoji: '\u{1F3F7}\uFE0F', requiresQualitative: true },
-  { id: 'passport', title: 'Paszport', emoji: '\u{1F6C2}', requiresQualitative: true },
+  { id: 'receipt', title: 'Paragon', emoji: '\u{1F9FE}', icon: '/icons/cards/card-receipt.png', requiresQualitative: false },
+  { id: 'versus-v2', title: 'Versus V2', emoji: '\u26A1', icon: '/icons/cards/card-versus-v2.png', requiresQualitative: false },
+  { id: 'redflag', title: 'Czerwona flaga', emoji: '\u{1F6A9}', icon: '/icons/cards/card-redflag.png', requiresQualitative: false },
+  { id: 'ghost-forecast', title: 'Prognoza ghostingu', emoji: '\u{1F47B}', icon: '/icons/cards/card-ghost-forecast.png', requiresQualitative: false },
+  { id: 'compatibility-v2', title: 'Match', emoji: '\u{1F495}', icon: '/icons/cards/card-compatibility-v2.png', requiresQualitative: false },
+  { id: 'label', title: 'Etykietka', emoji: '\u{1F3F7}\uFE0F', icon: '/icons/cards/card-label.png', requiresQualitative: true },
+  { id: 'passport', title: 'Paszport', emoji: '\u{1F6C2}', icon: '/icons/cards/card-passport.png', requiresQualitative: true },
   // Classic cards
-  { id: 'stats', title: 'Statystyki', emoji: '\u{1F4CA}', requiresQualitative: false },
-  { id: 'versus', title: 'Versus', emoji: '\u2694\uFE0F', requiresQualitative: false },
-  { id: 'health', title: 'Wynik zdrowia', emoji: '\u{1F49A}', requiresQualitative: true },
-  { id: 'flags', title: 'Flagi', emoji: '\u{1F6A9}', requiresQualitative: true },
-  { id: 'personality', title: 'Osobowość', emoji: '\u{1F9E0}', requiresQualitative: true },
-  { id: 'scores', title: 'Wyniki viralowe', emoji: '\u{1F525}', requiresQualitative: false },
-  { id: 'badges', title: 'Osiągnięcia', emoji: '\u{1F3C6}', requiresQualitative: false },
-  { id: 'mbti', title: 'MBTI', emoji: '\u{1F9EC}', requiresQualitative: true },
-  { id: 'cps', title: 'Wzorce', emoji: '\u{1F9E0}', requiresQualitative: true },
-  { id: 'subtext', title: 'Podtekst', emoji: '\u{1F50D}', requiresQualitative: true },
+  { id: 'stats', title: 'Statystyki', emoji: '\u{1F4CA}', icon: '/icons/cards/card-stats.png', requiresQualitative: false },
+  { id: 'versus', title: 'Versus', emoji: '\u2694\uFE0F', icon: '/icons/cards/card-versus.png', requiresQualitative: false },
+  { id: 'health', title: 'Wynik zdrowia', emoji: '\u{1F49A}', icon: '/icons/cards/card-health.png', requiresQualitative: true },
+  { id: 'flags', title: 'Flagi', emoji: '\u{1F6A9}', icon: '/icons/cards/card-flags.png', requiresQualitative: true },
+  { id: 'personality', title: 'Osobowość', emoji: '\u{1F9E0}', icon: '/icons/cards/card-personality.png', requiresQualitative: true },
+  { id: 'scores', title: 'Wyniki viralowe', emoji: '\u{1F525}', icon: '/icons/cards/card-scores.png', requiresQualitative: false },
+  { id: 'badges', title: 'Osiągnięcia', emoji: '\u{1F3C6}', icon: '/icons/cards/card-badges.png', requiresQualitative: false },
+  { id: 'mbti', title: 'MBTI', emoji: '\u{1F9EC}', icon: '/icons/cards/card-mbti.png', requiresQualitative: true },
+  { id: 'cps', title: 'Wzorce', emoji: '\u{1F9E0}', icon: '/icons/cards/card-cps.png', requiresQualitative: true },
+  { id: 'subtext', title: 'Podtekst', emoji: '\u{1F50D}', icon: '/icons/cards/card-subtext.png', requiresQualitative: true },
   // Faza 20 — Viral Features
-  { id: 'delusion', title: 'Deluzja', emoji: '\u{1F921}', requiresQualitative: false },
-  { id: 'mugshot', title: 'Mugshot', emoji: '\u2696\uFE0F', requiresQualitative: false },
-  { id: 'dating-profile', title: 'Profil randkowy', emoji: '\u{1F498}', requiresQualitative: false },
-  { id: 'simulator', title: 'Symulacja', emoji: '\u{1F916}', requiresQualitative: false },
-  { id: 'couple-quiz', title: 'Quiz parowy', emoji: '\u{1F491}', requiresQualitative: false },
+  { id: 'delusion', title: 'Deluzja', emoji: '\u{1F921}', icon: '/icons/cards/card-delusion.png', requiresQualitative: false },
+  { id: 'mugshot', title: 'Mugshot', emoji: '\u2696\uFE0F', icon: '/icons/cards/card-mugshot.png', requiresQualitative: false },
+  { id: 'dating-profile', title: 'Profil randkowy', emoji: '\u{1F498}', icon: '/icons/cards/card-dating-profile.png', requiresQualitative: false },
+  { id: 'simulator', title: 'Symulacja', emoji: '\u{1F916}', icon: '/icons/cards/card-simulator.png', requiresQualitative: false },
+  { id: 'couple-quiz', title: 'Quiz parowy', emoji: '\u{1F491}', icon: '/icons/cards/card-couple-quiz.png', requiresQualitative: false },
+  { id: 'cwel-tygodnia', title: 'Cwel Tygodnia', emoji: '\u{1F480}', requiresQualitative: false },
 ];
 
-export default function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
+function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showLimitOverlay, setShowLimitOverlay] = useState(false);
+  const isMobile = useIsMobile();
+  const { tier, remainingShareCards } = useTier();
+
+  // Guard callback: returns true if download is allowed, false if blocked
+  const downloadGuard = useCallback<DownloadGuard>(() => {
+    if (tier === 'free' && remainingShareCards <= 0) {
+      setShowLimitOverlay(true);
+      return false;
+    }
+    return true;
+  }, [tier, remainingShareCards]);
 
   const { conversation, quantitative, qualitative } = analysis;
   const allParticipants = conversation.participants.map((p) => p.name);
@@ -83,6 +131,25 @@ export default function ShareCardGallery({ analysis, selectedPair }: ShareCardGa
   const availableCards = CARD_CONFIGS.filter(
     (c) => !c.requiresQualitative || hasQualitative,
   );
+
+  // Body scroll lock when mobile overlay is open
+  useEffect(() => {
+    if (!isMobile || !activeCard) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobile, activeCard]);
+
+  // Escape key closes active card
+  useEffect(() => {
+    if (!activeCard) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveCard(null);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [activeCard]);
 
   const copyShareLink = useCallback(async () => {
     try {
@@ -225,12 +292,67 @@ export default function ShareCardGallery({ analysis, selectedPair }: ShareCardGa
       case 'couple-quiz':
         if (!qualitative?.coupleQuiz) return null;
         return <CoupleQuizCard comparison={qualitative.coupleQuiz} />;
+      case 'cwel-tygodnia':
+        if (!qualitative?.cwelTygodnia) return null;
+        return <CwelTygodniaCard result={qualitative.cwelTygodnia} />;
       default:
         return null;
     }
   };
 
+  // Mobile fullscreen overlay — rendered via portal to document.body
+  const mobileOverlay =
+    isMobile && activeCard
+      ? createPortal(
+          <AnimatePresence>
+            <motion.div
+              key="mobile-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 overflow-y-auto bg-black/95"
+              onClick={(e) => {
+                // Close when tapping dark overlay area (not the card itself)
+                if (e.target === e.currentTarget) setActiveCard(null);
+              }}
+            >
+              {/* Close button — fixed position for constant visibility */}
+              <button
+                onClick={() => setActiveCard(null)}
+                className="fixed top-4 right-4 z-[60] flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-card-hover hover:text-foreground"
+                aria-label="Zamknij"
+              >
+                <X className="size-5" />
+              </button>
+
+              {/* Card centered — minimal padding so card renders at full 360px */}
+              <div
+                className="flex min-h-full items-start justify-center px-1 py-12"
+                onClick={(e) => {
+                  // Close when tapping padding area around the card
+                  if (e.target === e.currentTarget) setActiveCard(null);
+                }}
+              >
+                <motion.div
+                  key={activeCard}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ minWidth: 'min(396px, 100%)' }}
+                >
+                  {renderFullCard(activeCard)}
+                </motion.div>
+              </div>
+            </motion.div>
+          </AnimatePresence>,
+          document.body,
+        )
+      : null;
+
   return (
+    <DownloadGuardContext.Provider value={downloadGuard}>
     <div className="space-y-4">
       {/* Share link button */}
       <div className="flex justify-end">
@@ -257,7 +379,11 @@ export default function ShareCardGallery({ analysis, selectedPair }: ShareCardGa
               borderColor: activeCard === card.id ? '#3b82f6' : undefined,
             }}
           >
-            <span className="text-lg sm:text-2xl">{card.emoji}</span>
+            {card.icon ? (
+              <Image src={card.icon} alt={card.title} width={96} height={96} className="size-8 sm:size-10" unoptimized />
+            ) : (
+              <span className="text-lg sm:text-2xl">{card.emoji}</span>
+            )}
             <span className="text-xs font-medium text-foreground">{card.title}</span>
             <span className="hidden sm:flex items-center gap-1 text-[10px] text-text-muted">
               <Download className="size-3" />
@@ -267,32 +393,62 @@ export default function ShareCardGallery({ analysis, selectedPair }: ShareCardGa
         ))}
       </div>
 
-      {/* Active card preview */}
-      <AnimatePresence mode="wait">
-        {activeCard && (
-          <motion.div
-            key={activeCard}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="relative"
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setActiveCard(null)}
-              className="absolute -top-2 right-0 z-10 flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-card-hover hover:text-foreground"
+      {/* Desktop: inline card preview (unchanged) */}
+      {!isMobile && (
+        <AnimatePresence mode="wait">
+          {activeCard && (
+            <motion.div
+              key={activeCard}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="relative"
             >
-              <X className="size-3" />
-            </button>
+              {/* Close button */}
+              <button
+                onClick={() => setActiveCard(null)}
+                className="absolute -top-2 right-0 z-10 flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-card-hover hover:text-foreground"
+              >
+                <X className="size-3" />
+              </button>
 
-            {/* Card render */}
-            <div className="flex justify-center overflow-x-auto py-4">
-              {renderFullCard(activeCard)}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              {/* Card render */}
+              <div className="flex justify-center overflow-x-auto py-4">
+                {renderFullCard(activeCard)}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+
+      {/* Mobile: fullscreen overlay portal */}
+      {mobileOverlay}
+
+      {/* Share card limit overlay for free tier */}
+      {showLimitOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowLimitOverlay(false)}>
+          <div className="mx-4 max-w-sm rounded-xl border border-border bg-[#111111] p-6 text-center" onClick={e => e.stopPropagation()}>
+            <div className="mb-3 text-3xl">{'\u{1F0CF}'}</div>
+            <h3 className="mb-1 text-sm font-bold text-foreground">Wykorzystano 3/3 kart</h3>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Limit kart w darmowym planie wyczerpany na ten miesi\u0105c. Odblokuj unlimited w Pro.
+            </p>
+            <a
+              href="/pricing"
+              className="inline-block rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 px-5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Odblokuj unlimited {'\u2192'}
+            </a>
+            <button onClick={() => setShowLimitOverlay(false)} className="mt-3 block w-full text-[11px] text-muted-foreground/60 hover:text-muted-foreground">
+              Mo\u017Ce p\u00F3\u017Aniej
+            </button>
+          </div>
+        </div>
+      )}
     </div>
+    </DownloadGuardContext.Provider>
   );
 }
+
+export default React.memo(ShareCardGallery);

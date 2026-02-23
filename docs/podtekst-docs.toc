@@ -1,0 +1,711 @@
+\xpg@aux {}{polish}
+\contentsline {chapter}{Wstęp}{xxiii}{chapter*.4}%
+\contentsline {chapter}{\numberline {1}Marka PodTeksT}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Geneza nazwy}{1}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}Poziom pierwszy: ,,Pod tekstem''}{1}{subsection.1.1.1}%
+\contentsline {subsection}{\numberline {1.1.2}Poziom drugi: ,,eks-t'' --- rozmowy z~byłymi}{1}{subsection.1.1.2}%
+\contentsline {subsection}{\numberline {1.1.3}Poziom trzeci: podtekst konwersacji}{2}{subsection.1.1.3}%
+\contentsline {subsection}{\numberline {1.1.4}Tagline}{2}{subsection.1.1.4}%
+\contentsline {section}{\numberline {1.2}Misja i~wizja}{2}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Misja}{2}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Wizja}{3}{subsection.1.2.2}%
+\contentsline {section}{\numberline {1.3}Grupa docelowa}{3}{section.1.3}%
+\contentsline {subsection}{\numberline {1.3.1}Profil demograficzny}{3}{subsection.1.3.1}%
+\contentsline {subsection}{\numberline {1.3.2}Profil psychograficzny}{3}{subsection.1.3.2}%
+\contentsline {subsection}{\numberline {1.3.3}Scenariusze użycia}{4}{subsection.1.3.3}%
+\contentsline {section}{\numberline {1.4}Propozycja wartości}{4}{section.1.4}%
+\contentsline {subsection}{\numberline {1.4.1}Co odróżnia PodTeksT od konkurencji}{4}{subsection.1.4.1}%
+\contentsline {section}{\numberline {1.5}Identyfikacja wizualna}{5}{section.1.5}%
+\contentsline {subsection}{\numberline {1.5.1}Logo}{5}{subsection.1.5.1}%
+\contentsline {subsection}{\numberline {1.5.2}Zasady użycia logo}{5}{subsection.1.5.2}%
+\contentsline {subsection}{\numberline {1.5.3}Warianty logo}{5}{subsection.1.5.3}%
+\contentsline {section}{\numberline {1.6}Paleta kolorów}{6}{section.1.6}%
+\contentsline {subsection}{\numberline {1.6.1}Kolory podstawowe}{6}{subsection.1.6.1}%
+\contentsline {subsection}{\numberline {1.6.2}Tła i~powierzchnie}{6}{subsection.1.6.2}%
+\contentsline {subsection}{\numberline {1.6.3}Typografia kolorowa}{6}{subsection.1.6.3}%
+\contentsline {subsection}{\numberline {1.6.4}Kolory semantyczne}{6}{subsection.1.6.4}%
+\contentsline {subsection}{\numberline {1.6.5}Kolor dodatkowy}{7}{subsection.1.6.5}%
+\contentsline {subsection}{\numberline {1.6.6}Paleta wykresów}{7}{subsection.1.6.6}%
+\contentsline {subsection}{\numberline {1.6.7}Kompletna tabela kolorów}{8}{subsection.1.6.7}%
+\contentsline {section}{\numberline {1.7}Typografia}{8}{section.1.7}%
+\contentsline {subsection}{\numberline {1.7.1}Geist Sans --- treść główna}{8}{subsection.1.7.1}%
+\contentsline {subsection}{\numberline {1.7.2}Geist Mono --- dane liczbowe}{8}{subsection.1.7.2}%
+\contentsline {subsection}{\numberline {1.7.3}JetBrains Mono --- nagłówki i~display}{9}{subsection.1.7.3}%
+\contentsline {subsection}{\numberline {1.7.4}Syne --- tryb Story}{9}{subsection.1.7.4}%
+\contentsline {subsection}{\numberline {1.7.5}Space Grotesk --- treść Story}{9}{subsection.1.7.5}%
+\contentsline {subsection}{\numberline {1.7.6}Hierarchia typograficzna --- podsumowanie}{10}{subsection.1.7.6}%
+\contentsline {section}{\numberline {1.8}Ton komunikacji}{10}{section.1.8}%
+\contentsline {subsection}{\numberline {1.8.1}Ciemny i~pewny siebie}{10}{subsection.1.8.1}%
+\contentsline {subsection}{\numberline {1.8.2}Oparty na danych}{10}{subsection.1.8.2}%
+\contentsline {subsection}{\numberline {1.8.3}Lekko prowokujący}{10}{subsection.1.8.3}%
+\contentsline {subsection}{\numberline {1.8.4}Nie słodki, nie pastelowy}{11}{subsection.1.8.4}%
+\contentsline {subsection}{\numberline {1.8.5}Estetyka referencyjna}{11}{subsection.1.8.5}%
+\contentsline {section}{\numberline {1.9}Elementy wizualne}{11}{section.1.9}%
+\contentsline {subsection}{\numberline {1.9.1}Tekstura ziarnista (grain overlay)}{11}{subsection.1.9.1}%
+\contentsline {subsection}{\numberline {1.9.2}Ciemne tła i~kontrast}{11}{subsection.1.9.2}%
+\contentsline {subsection}{\numberline {1.9.3}Layouty gęste w~dane}{12}{subsection.1.9.3}%
+\contentsline {subsection}{\numberline {1.9.4}Animacje i~mikro-interakcje}{12}{subsection.1.9.4}%
+\contentsline {subsection}{\numberline {1.9.5}Ikonografia}{12}{subsection.1.9.5}%
+\contentsline {chapter}{\numberline {2}Przegląd Produktu}{15}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Czym jest PodTeksT}{15}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Propozycja wartości}{15}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Architektura przetwarzania danych}{16}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}Grupy docelowe}{16}{subsection.2.1.3}%
+\contentsline {section}{\numberline {2.2}Kluczowe funkcje}{17}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Metryki ilościowe}{17}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Analiza AI}{18}{subsection.2.2.2}%
+\contentsline {subsubsection}{Szczegółowa matryca funkcji AI}{19}{subsubsection*.20}%
+\contentsline {subsection}{\numberline {2.2.3}Funkcje rozrywkowe}{19}{subsection.2.2.3}%
+\contentsline {subsubsection}{Odznaki osiągnięć (Achievement Badges)}{20}{subsubsection*.23}%
+\contentsline {subsection}{\numberline {2.2.4}Share Cards}{21}{subsection.2.2.4}%
+\contentsline {subsection}{\numberline {2.2.5}Narzędzia eksportu i~udostępniania}{21}{subsection.2.2.5}%
+\contentsline {section}{\numberline {2.3}Obsługiwane platformy}{22}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Messenger --- proces eksportu}{22}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}WhatsApp --- proces eksportu}{23}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Instagram DM --- proces eksportu}{23}{subsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.3.4}Telegram --- proces eksportu}{23}{subsection.2.3.4}%
+\contentsline {section}{\numberline {2.4}Ścieżka użytkownika}{23}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}Diagram przepływu}{24}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}Opis poszczególnych etapów}{24}{subsection.2.4.2}%
+\contentsline {subsubsection}{Etap 1: Strona lądowania}{24}{subsubsection*.28}%
+\contentsline {subsubsection}{Etap 2: Upload pliku}{24}{subsubsection*.29}%
+\contentsline {subsubsection}{Etap 3: Wybór typu relacji}{24}{subsubsection*.30}%
+\contentsline {subsubsection}{Etap 4: Parsowanie i~walidacja}{25}{subsubsection*.31}%
+\contentsline {subsubsection}{Etap 5: Wyświetlenie metryk}{25}{subsubsection*.32}%
+\contentsline {subsubsection}{Etap 6: Analiza AI (opcjonalna)}{25}{subsubsection*.33}%
+\contentsline {subsubsection}{Etap 7: Eksport i~udostępnianie}{25}{subsubsection*.34}%
+\contentsline {section}{\numberline {2.5}Model cenowy}{25}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Uzasadnienie cenowe}{26}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}Struktura kosztów}{26}{subsection.2.5.2}%
+\contentsline {subsection}{\numberline {2.5.3}Przyszłe rozszerzenia modelu cenowego}{27}{subsection.2.5.3}%
+\contentsline {chapter}{\numberline {3}Architektura Systemu}{29}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Przegląd architektury}{29}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Stos technologiczny}{30}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Architektura App Router}{32}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Route groups i~layouty}{32}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Endpointy API}{33}{subsection.3.3.2}%
+\contentsline {section}{\numberline {3.4}Rozdzielenie klient/serwer}{33}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Operacje po stronie klienta}{33}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Operacje po stronie serwera}{33}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Uzasadnienie podziału}{34}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}Pipeline analizy}{34}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Strategia samplingu}{35}{subsection.3.5.1}%
+\contentsline {section}{\numberline {3.6}Streaming SSE}{35}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}Implementacja SSE}{36}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}Mechanizm heartbeat}{37}{subsection.3.6.2}%
+\contentsline {subsection}{\numberline {3.6.3}Obsługa rozłączenia klienta}{37}{subsection.3.6.3}%
+\contentsline {subsection}{\numberline {3.6.4}Typy zdarzeń SSE}{37}{subsection.3.6.4}%
+\contentsline {subsection}{\numberline {3.6.5}Ograniczenia czasowe}{37}{subsection.3.6.5}%
+\contentsline {section}{\numberline {3.7}Przechowywanie danych}{38}{section.3.7}%
+\contentsline {subsection}{\numberline {3.7.1}Schemat bazy danych}{38}{subsection.3.7.1}%
+\contentsline {subsection}{\numberline {3.7.2}Struktura StoredAnalysis}{38}{subsection.3.7.2}%
+\contentsline {subsection}{\numberline {3.7.3}Struktura AnalysisIndexEntry}{38}{subsection.3.7.3}%
+\contentsline {subsection}{\numberline {3.7.4}Operacje CRUD}{39}{subsection.3.7.4}%
+\contentsline {subsection}{\numberline {3.7.5}Kompresja lz-string}{39}{subsection.3.7.5}%
+\contentsline {subsection}{\numberline {3.7.6}Migracja z~legacy}{39}{subsection.3.7.6}%
+\contentsline {section}{\numberline {3.8}Integracja Gemini API}{39}{section.3.8}%
+\contentsline {subsection}{\numberline {3.8.1}Konfiguracja modelu}{40}{subsection.3.8.1}%
+\contentsline {subsection}{\numberline {3.8.2}Mechanizm retry}{40}{subsection.3.8.2}%
+\contentsline {subsection}{\numberline {3.8.3}Parsowanie odpowiedzi JSON}{40}{subsection.3.8.3}%
+\contentsline {subsection}{\numberline {3.8.4}Pasy analizy}{41}{subsection.3.8.4}%
+\contentsline {subsection}{\numberline {3.8.5}Kontekst relacji}{41}{subsection.3.8.5}%
+\contentsline {subsection}{\numberline {3.8.6}Generowanie obrazów}{41}{subsection.3.8.6}%
+\contentsline {section}{\numberline {3.9}Rate limiting}{42}{section.3.9}%
+\contentsline {subsection}{\numberline {3.9.1}Architektura}{42}{subsection.3.9.1}%
+\contentsline {subsection}{\numberline {3.9.2}Konfiguracja limitów}{42}{subsection.3.9.2}%
+\contentsline {subsection}{\numberline {3.9.3}Implementacja}{42}{subsection.3.9.3}%
+\contentsline {subsection}{\numberline {3.9.4}Identyfikacja klienta}{43}{subsection.3.9.4}%
+\contentsline {section}{\numberline {3.10}Architektura Discord Bot}{43}{section.3.10}%
+\contentsline {subsection}{\numberline {3.10.1}Import wiadomości (Discord Fetch)}{43}{subsection.3.10.1}%
+\contentsline {subsection}{\numberline {3.10.2}Bot interaktywny (Slash Commands)}{43}{subsection.3.10.2}%
+\contentsline {chapter}{\numberline {4}Parsery Platform}{45}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Zunifikowany format wiadomo\'sci}{45}{section.4.1}%
+\contentsline {subsection}{\numberline {4.1.1}Interfejs UnifiedMessage}{45}{subsection.4.1.1}%
+\contentsline {subsection}{\numberline {4.1.2}Interfejs Participant}{47}{subsection.4.1.2}%
+\contentsline {subsection}{\numberline {4.1.3}Interfejs Reaction}{47}{subsection.4.1.3}%
+\contentsline {section}{\numberline {4.2}ParsedConversation}{47}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Auto-detekcja formatu}{48}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Diagram decyzyjny}{49}{subsection.4.3.1}%
+\contentsline {section}{\numberline {4.4}Parser Facebook Messenger}{50}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Problem kodowania Unicode}{51}{subsection.4.4.1}%
+\contentsline {paragraph}{Przyk\l {}ad problemu:}{51}{paragraph*.57}%
+\contentsline {paragraph}{Rozwi\k {a}zanie --- funkcja \texttt {\textcolor {CodeFunction}{decodeFBString()}}:}{51}{paragraph*.58}%
+\contentsline {paragraph}{Mechanizm dzia\l {}ania:}{51}{paragraph*.59}%
+\contentsline {subsection}{\numberline {4.4.2}Surowa struktura JSON Facebooka}{52}{subsection.4.4.2}%
+\contentsline {subsection}{\numberline {4.4.3}Walidacja}{54}{subsection.4.4.3}%
+\contentsline {subsection}{\numberline {4.4.4}Klasyfikacja wiadomo\'sci}{55}{subsection.4.4.4}%
+\contentsline {paragraph}{Logika priorytetów:}{55}{paragraph*.61}%
+\contentsline {subsection}{\numberline {4.4.5}\L {}\k {a}czenie wielu plików}{55}{subsection.4.4.5}%
+\contentsline {paragraph}{Strategia deduplikacji:}{56}{paragraph*.62}%
+\contentsline {section}{\numberline {4.5}Parser WhatsApp}{56}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}Formaty daty}{57}{subsection.4.5.1}%
+\contentsline {paragraph}{Struktura regex:}{57}{paragraph*.64}%
+\contentsline {subsection}{\numberline {4.5.2}Heurystyka DD/MM vs MM/DD}{57}{subsection.4.5.2}%
+\contentsline {subsection}{\numberline {4.5.3}Wiadomo\'sci systemowe}{58}{subsection.4.5.3}%
+\contentsline {subsection}{\numberline {4.5.4}Detekcja mediów}{59}{subsection.4.5.4}%
+\contentsline {subsection}{\numberline {4.5.5}Wiadomo\'sci wieloliniowe}{59}{subsection.4.5.5}%
+\contentsline {section}{\numberline {4.6}Parser Instagram DM}{60}{section.4.6}%
+\contentsline {subsection}{\numberline {4.6.1}Ró\.znice wzgl\k {e}dem Messengera}{60}{subsection.4.6.1}%
+\contentsline {subsection}{\numberline {4.6.2}Walidacja i~parsowanie}{60}{subsection.4.6.2}%
+\contentsline {subsection}{\numberline {4.6.3}\L {}\k {a}czenie wielu plików Instagram}{61}{subsection.4.6.3}%
+\contentsline {section}{\numberline {4.7}Parser Telegram}{62}{section.4.7}%
+\contentsline {subsection}{\numberline {4.7.1}Struktura JSON Telegrama}{62}{subsection.4.7.1}%
+\contentsline {subsection}{\numberline {4.7.2}Funkcja flattenText()}{64}{subsection.4.7.2}%
+\contentsline {paragraph}{Przyk\l {}ad:}{64}{paragraph*.67}%
+\contentsline {subsection}{\numberline {4.7.3}Reakcje w~Telegramie}{64}{subsection.4.7.3}%
+\contentsline {subsection}{\numberline {4.7.4}Klasyfikacja wiadomo\'sci Telegram}{65}{subsection.4.7.4}%
+\contentsline {paragraph}{Ró\.znice wzgl\k {e}dem klasyfikacji Messengera:}{65}{paragraph*.68}%
+\contentsline {subsection}{\numberline {4.7.5}Walidacja formatu Telegram}{65}{subsection.4.7.5}%
+\contentsline {section}{\numberline {4.8}Parser Discord}{66}{section.4.8}%
+\contentsline {subsection}{\numberline {4.8.1}Architektura API-based}{66}{subsection.4.8.1}%
+\contentsline {subsection}{\numberline {4.8.2}Normalizacja wiadomości}{66}{subsection.4.8.2}%
+\contentsline {subsection}{\numberline {4.8.3}Filtrowanie}{67}{subsection.4.8.3}%
+\contentsline {chapter}{\numberline {5}Silnik Analizy Ilościowej}{69}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Przegląd architektury silnika}{69}{section.5.1}%
+\contentsline {subsection}{\numberline {5.1.1}Projekt jednoprzebiegowy --- O(n)}{70}{subsection.5.1.1}%
+\contentsline {subsection}{\numberline {5.1.2}Akumulatory per-osoba}{70}{subsection.5.1.2}%
+\contentsline {section}{\numberline {5.2}Stałe i~konfiguracja}{71}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}SESSION\_GAP\_MS}{71}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}STOPWORDS}{72}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}linearRegressionSlope()}{72}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}Funkcje pomocnicze}{73}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}extractEmojis(text)}{73}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}countWords(text)}{73}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}median(arr)}{73}{subsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.3.4}tokenizeWords(text)}{74}{subsection.5.3.4}%
+\contentsline {subsection}{\numberline {5.3.5}topN(map, n) / topNWords(map, n) / topNPhrases(map, n)}{74}{subsection.5.3.5}%
+\contentsline {subsection}{\numberline {5.3.6}isLateNight(hour) / isWeekend(day)}{75}{subsection.5.3.6}%
+\contentsline {subsection}{\numberline {5.3.7}getMonthKey(timestamp) / getDayKey(timestamp)}{75}{subsection.5.3.7}%
+\contentsline {section}{\numberline {5.4}Metryki per osoba (PersonMetrics)}{75}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}Metryki wolumenu}{76}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}Metryki skrajne}{76}{subsection.5.4.2}%
+\contentsline {subsection}{\numberline {5.4.3}Metryki emoji}{77}{subsection.5.4.3}%
+\contentsline {subsection}{\numberline {5.4.4}Metryki treści}{77}{subsection.5.4.4}%
+\contentsline {subsection}{\numberline {5.4.5}Metryki reakcji}{78}{subsection.5.4.5}%
+\contentsline {subsection}{\numberline {5.4.6}Metryki wycofanych wiadomości}{78}{subsection.5.4.6}%
+\contentsline {subsection}{\numberline {5.4.7}Metryki słownictwa}{78}{subsection.5.4.7}%
+\contentsline {section}{\numberline {5.5}Metryki czasowe (TimingMetrics)}{79}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}Metryki czasu odpowiedzi (per osoba)}{80}{subsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.5.2}Metryki sesji (globalne)}{80}{subsection.5.5.2}%
+\contentsline {subsection}{\numberline {5.5.3}Próg 6 godzin --- uzasadnienie}{81}{subsection.5.5.3}%
+\contentsline {section}{\numberline {5.6}Metryki zaangażowania (EngagementMetrics)}{81}{section.5.6}%
+\contentsline {section}{\numberline {5.7}Metryki wzorców (PatternMetrics)}{82}{section.5.7}%
+\contentsline {subsection}{\numberline {5.7.1}monthlyVolume}{83}{subsection.5.7.1}%
+\contentsline {subsection}{\numberline {5.7.2}weekdayWeekend}{83}{subsection.5.7.2}%
+\contentsline {subsection}{\numberline {5.7.3}volumeTrend}{83}{subsection.5.7.3}%
+\contentsline {subsection}{\numberline {5.7.4}Wykrywanie burstów}{83}{subsection.5.7.4}%
+\contentsline {section}{\numberline {5.8}Mapa cieplna (HeatmapData)}{84}{section.5.8}%
+\contentsline {section}{\numberline {5.9}Dane trendów (TrendData)}{85}{section.5.9}%
+\contentsline {section}{\numberline {5.10}Indeks wzajemności (ReciprocityIndex)}{85}{section.5.10}%
+\contentsline {subsection}{\numberline {5.10.1}Komponenty}{86}{subsection.5.10.1}%
+\contentsline {subsection}{\numberline {5.10.2}Wynik ogólny}{86}{subsection.5.10.2}%
+\contentsline {section}{\numberline {5.11}Wyniki wiralne (ViralScores)}{86}{section.5.11}%
+\contentsline {subsection}{\numberline {5.11.1}compatibilityScore (0--100)}{87}{subsection.5.11.1}%
+\contentsline {subsection}{\numberline {5.11.2}interestScores (0--100, per osoba)}{87}{subsection.5.11.2}%
+\contentsline {subsection}{\numberline {5.11.3}ghostRisk (0--100, per osoba)}{88}{subsection.5.11.3}%
+\contentsline {subsection}{\numberline {5.11.4}delusionScore (0--100) i delusionHolder}{88}{subsection.5.11.4}%
+\contentsline {section}{\numberline {5.12}System odznak (Badges)}{89}{section.5.12}%
+\contentsline {subsection}{\numberline {5.12.1}Algorytm computeStreaks()}{90}{subsection.5.12.1}%
+\contentsline {subsection}{\numberline {5.12.2}Mechanizm Heart Bomber}{90}{subsection.5.12.2}%
+\contentsline {section}{\numberline {5.13}Najlepszy czas na wiadomość (BestTimeToText)}{91}{section.5.13}%
+\contentsline {section}{\numberline {5.14}Frazy charakterystyczne (Catchphrases)}{92}{section.5.14}%
+\contentsline {subsection}{\numberline {5.14.1}Algorytm}{92}{subsection.5.14.1}%
+\contentsline {section}{\numberline {5.15}Metryki sieci (NetworkMetrics)}{92}{section.5.15}%
+\contentsline {subsection}{\numberline {5.15.1}Budowa grafu interakcji}{93}{subsection.5.15.1}%
+\contentsline {subsection}{\numberline {5.15.2}Centralność stopniowa (Degree Centrality)}{93}{subsection.5.15.2}%
+\contentsline {subsection}{\numberline {5.15.3}Gęstość grafu}{93}{subsection.5.15.3}%
+\contentsline {subsection}{\numberline {5.15.4}Refaktoryzacja modularna (TIER 3.3)}{94}{subsection.5.15.4}%
+\contentsline {section}{\numberline {5.16}Kompletny przepływ danych}{95}{section.5.16}%
+\contentsline {chapter}{\numberline {6}Silnik Analizy AI}{97}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Przegląd architektury AI}{97}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}Zasady projektowe pipeline}{98}{subsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.1.2}Przepływ danych w~kodzie}{99}{subsection.6.1.2}%
+\contentsline {section}{\numberline {6.2}Integracja Google Gemini}{99}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}Konfiguracja modelu}{99}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}Inicjalizacja klienta}{99}{subsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.2.3}Wywołanie z~powtórzeniami: \texttt {\textcolor {CodeFunction}{callGeminiWithRetry()}}}{100}{subsection.6.2.3}%
+\contentsline {subsection}{\numberline {6.2.4}Parsowanie odpowiedzi JSON: \texttt {\textcolor {CodeFunction}{parseGeminiJSON()}}}{101}{subsection.6.2.4}%
+\contentsline {section}{\numberline {6.3}Strategia próbkowania wiadomości}{102}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Trzy typy próbek}{102}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Próbkowanie stratyfikowane: \texttt {\textcolor {CodeFunction}{stratifiedSample()}}}{102}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}Próbkowanie infleksyjne: \texttt {\textcolor {CodeFunction}{inflectionSample()}}}{103}{subsection.6.3.3}%
+\contentsline {subsection}{\numberline {6.3.4}Kontekst ilościowy: \texttt {\textcolor {CodeFunction}{buildQuantitativeContext()}}}{103}{subsection.6.3.4}%
+\contentsline {section}{\numberline {6.4}Kalibracja kontekstu relacji}{104}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Pass 1: Przegląd}{104}{section.6.5}%
+\contentsline {subsection}{\numberline {6.5.1}Dane wejściowe}{105}{subsection.6.5.1}%
+\contentsline {subsection}{\numberline {6.5.2}Prompt systemowy}{105}{subsection.6.5.2}%
+\contentsline {subsection}{\numberline {6.5.3}Schemat wyjściowy: \texttt {\textcolor {CodeType}{Pass1Result}}}{105}{subsection.6.5.3}%
+\contentsline {section}{\numberline {6.6}Pass 2: Dynamika}{106}{section.6.6}%
+\contentsline {subsection}{\numberline {6.6.1}Dane wejściowe}{106}{subsection.6.6.1}%
+\contentsline {subsection}{\numberline {6.6.2}Schemat wyjściowy: \texttt {\textcolor {CodeType}{Pass2Result}}}{106}{subsection.6.6.2}%
+\contentsline {subsubsection}{Dynamika władzy (\texttt {\textcolor {CodeType}{PowerDynamics}})}{106}{subsubsection*.89}%
+\contentsline {subsubsection}{Praca emocjonalna (\texttt {\textcolor {CodeType}{EmotionalLabor}})}{106}{subsubsection*.91}%
+\contentsline {subsubsection}{Wzorce konfliktowe (\texttt {\textcolor {CodeType}{ConflictPatterns}})}{107}{subsubsection*.92}%
+\contentsline {subsubsection}{Markery bliskości (\texttt {\textcolor {CodeType}{IntimacyMarkers}})}{107}{subsubsection*.93}%
+\contentsline {subsubsection}{Red Flags i~Green Flags}{107}{subsubsection*.94}%
+\contentsline {section}{\numberline {6.7}Pass 3: Profile osobowości}{107}{section.6.7}%
+\contentsline {subsection}{\numberline {6.7.1}Dane wejściowe}{108}{subsection.6.7.1}%
+\contentsline {subsection}{\numberline {6.7.2}Schemat wyjściowy: \texttt {\textcolor {CodeType}{PersonProfile}}}{108}{subsection.6.7.2}%
+\contentsline {subsubsection}{Wielka Piątka (\texttt {\textcolor {CodeType}{BigFiveApproximation}})}{108}{subsubsection*.95}%
+\contentsline {subsubsection}{Wskaźniki przywiązania (\texttt {\textcolor {CodeType}{AttachmentIndicators}})}{108}{subsubsection*.97}%
+\contentsline {subsubsection}{Profil komunikacyjny (\texttt {\textcolor {CodeType}{CommunicationProfile}})}{108}{subsubsection*.98}%
+\contentsline {subsubsection}{Potrzeby komunikacyjne (\texttt {\textcolor {CodeType}{CommunicationNeeds}})}{109}{subsubsection*.99}%
+\contentsline {subsubsection}{Wzorce emocjonalne (\texttt {\textcolor {CodeType}{EmotionalPatterns}})}{109}{subsubsection*.100}%
+\contentsline {subsubsection}{Obserwacje kliniczne (\texttt {\textcolor {CodeType}{ClinicalObservations}})}{109}{subsubsection*.101}%
+\contentsline {subsubsection}{Rozwiązywanie konfliktów (\texttt {\textcolor {CodeType}{ConflictResolution}})}{109}{subsubsection*.103}%
+\contentsline {subsubsection}{Inteligencja emocjonalna (\texttt {\textcolor {CodeType}{EmotionalIntelligence}})}{109}{subsubsection*.104}%
+\contentsline {subsubsection}{Typ MBTI (\texttt {\textcolor {CodeType}{MBTIResult}})}{110}{subsubsection*.105}%
+\contentsline {subsubsection}{Języki miłości (\texttt {\textcolor {CodeType}{LoveLanguageResult}})}{110}{subsubsection*.107}%
+\contentsline {section}{\numberline {6.8}Pass 4: Synteza}{110}{section.6.8}%
+\contentsline {subsection}{\numberline {6.8.1}Dane wejściowe}{110}{subsection.6.8.1}%
+\contentsline {subsection}{\numberline {6.8.2}Schemat wyjściowy: \texttt {\textcolor {CodeType}{Pass4Result}}}{111}{subsection.6.8.2}%
+\contentsline {subsubsection}{Podsumowanie egzekutywne (\texttt {executive\_summary})}{111}{subsubsection*.108}%
+\contentsline {subsubsection}{Health Score}{111}{subsubsection*.109}%
+\contentsline {subsubsection}{Key Findings}{111}{subsubsection*.111}%
+\contentsline {subsubsection}{Trajektoria relacji (\texttt {\textcolor {CodeType}{RelationshipTrajectory}})}{111}{subsubsection*.112}%
+\contentsline {subsubsection}{Insights}{111}{subsubsection*.113}%
+\contentsline {subsubsection}{Osobowość rozmowy (\texttt {\textcolor {CodeType}{ConversationPersonality}})}{111}{subsubsection*.114}%
+\contentsline {section}{\numberline {6.9}Tryb Roast}{112}{section.6.9}%
+\contentsline {subsection}{\numberline {6.9.1}Reguły roastu}{112}{subsection.6.9.1}%
+\contentsline {subsection}{\numberline {6.9.2}Schemat wyjściowy: \texttt {\textcolor {CodeType}{RoastResult}}}{112}{subsection.6.9.2}%
+\contentsline {subsection}{\numberline {6.9.3}Dane wejściowe}{112}{subsection.6.9.3}%
+\contentsline {section}{\numberline {6.10}Pass 5: CPS (Communication Pattern Screening)}{113}{section.6.10}%
+\contentsline {subsection}{\numberline {6.10.1}Wymagania uruchomienia}{113}{subsection.6.10.1}%
+\contentsline {subsection}{\numberline {6.10.2}10 wzorców komunikacyjnych}{113}{subsection.6.10.2}%
+\contentsline {subsection}{\numberline {6.10.3}63 pytania screeningowe}{114}{subsection.6.10.3}%
+\contentsline {subsection}{\numberline {6.10.4}Format odpowiedzi AI}{114}{subsection.6.10.4}%
+\contentsline {subsection}{\numberline {6.10.5}Obliczanie wyników wzorców}{115}{subsection.6.10.5}%
+\contentsline {subsection}{\numberline {6.10.6}Poziomy ryzyka}{115}{subsection.6.10.6}%
+\contentsline {section}{\numberline {6.11}Generowanie obrazów}{115}{section.6.11}%
+\contentsline {subsection}{\numberline {6.11.1}Analityczny komiks: \texttt {\textcolor {CodeFunction}{generateAnalysisImage()}}}{115}{subsection.6.11.1}%
+\contentsline {subsection}{\numberline {6.11.2}Komiks roastowy: \texttt {\textcolor {CodeFunction}{generateRoastImage()}}}{116}{subsection.6.11.2}%
+\contentsline {section}{\numberline {6.12}Obsługa błędów}{116}{section.6.12}%
+\contentsline {subsection}{\numberline {6.12.1}Strategia powtórzeń}{116}{subsection.6.12.1}%
+\contentsline {subsection}{\numberline {6.12.2}Naprawa JSON}{116}{subsection.6.12.2}%
+\contentsline {subsection}{\numberline {6.12.3}Wyniki częściowe}{116}{subsection.6.12.3}%
+\contentsline {subsection}{\numberline {6.12.4}Hierarchia degradacji}{117}{subsection.6.12.4}%
+\contentsline {subsection}{\numberline {6.12.5}Obrona przed Prompt Injection}{117}{subsection.6.12.5}%
+\contentsline {subsection}{\numberline {6.12.6}Podsumowanie modułów obsługi błędów}{118}{subsection.6.12.6}%
+\contentsline {section}{\numberline {6.13}Dekoder Podtekst\'{o}w}{118}{section.6.13}%
+\contentsline {subsection}{\numberline {6.13.1}Architektura modu\l {}u}{119}{subsection.6.13.1}%
+\contentsline {subsection}{\numberline {6.13.2}Typy danych}{119}{subsection.6.13.2}%
+\contentsline {subsubsection}{Typ \texttt {\textcolor {CodeType}{SubtextCategory}} --- 12~kategorii podtekst\'{o}w}{119}{subsubsection*.120}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{SubtextItem}}}{120}{subsubsection*.122}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{SubtextResult}}}{120}{subsubsection*.123}%
+\contentsline {subsection}{\numberline {6.13.3}Markery pasywne: \texttt {PASSIVE\_MARKERS}}{121}{subsection.6.13.3}%
+\contentsline {subsection}{\numberline {6.13.4}Algorytm scoringu: \texttt {\textcolor {CodeFunction}{subtextScore()}}}{121}{subsection.6.13.4}%
+\contentsline {subsection}{\numberline {6.13.5}Ekstrakcja okien wymian: \texttt {\textcolor {CodeFunction}{extractExchangeWindows()}}}{122}{subsection.6.13.5}%
+\contentsline {subsection}{\numberline {6.13.6}Integracja z~\textsc {Gemini}\xspace : \texttt {\textcolor {CodeFunction}{runSubtextAnalysis()}}}{123}{subsection.6.13.6}%
+\contentsline {subsection}{\numberline {6.13.7}Prompt systemowy: \texttt {SUBTEXT\_SYSTEM}}{123}{subsection.6.13.7}%
+\contentsline {subsection}{\numberline {6.13.8}Disclaimer}{124}{subsection.6.13.8}%
+\contentsline {section}{\numberline {6.14}Tw\'{o}j Chat w~S\k {a}dzie}{124}{section.6.14}%
+\contentsline {subsection}{\numberline {6.14.1}Typy danych}{124}{subsection.6.14.1}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{CourtCharge}} --- zarzut}{124}{subsubsection*.126}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{PersonVerdict}} --- wyrok indywidualny}{125}{subsubsection*.128}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{CourtResult}} --- pe\l {}ny wynik procesu}{125}{subsubsection*.129}%
+\contentsline {subsection}{\numberline {6.14.2}Dane wej\'{s}ciowe}{125}{subsection.6.14.2}%
+\contentsline {subsection}{\numberline {6.14.3}Prompt systemowy: \texttt {COURT\_TRIAL\_SYSTEM}}{126}{subsection.6.14.3}%
+\contentsline {subsection}{\numberline {6.14.4}Walidacja wyniku}{127}{subsection.6.14.4}%
+\contentsline {section}{\numberline {6.15}Szczery Profil Randkowy}{128}{section.6.15}%
+\contentsline {subsection}{\numberline {6.15.1}Typy danych}{128}{subsection.6.15.1}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{DatingProfileStat}}}{128}{subsubsection*.132}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{DatingProfilePrompt}}}{128}{subsubsection*.133}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{PersonDatingProfile}}}{128}{subsubsection*.134}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{DatingProfileResult}}}{129}{subsubsection*.135}%
+\contentsline {subsection}{\numberline {6.15.2}Dane wej\'{s}ciowe}{129}{subsection.6.15.2}%
+\contentsline {subsection}{\numberline {6.15.3}Prompt systemowy}{129}{subsection.6.15.3}%
+\contentsline {subsection}{\numberline {6.15.4}Konfiguracja modelu}{130}{subsection.6.15.4}%
+\contentsline {subsection}{\numberline {6.15.5}Walidacja wyniku}{130}{subsection.6.15.5}%
+\contentsline {section}{\numberline {6.16}Stawiam Zak\l {}ad (Delusion Quiz)}{130}{section.6.16}%
+\contentsline {subsection}{\numberline {6.16.1}Typy danych}{130}{subsection.6.16.1}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{DelusionQuestion}}}{130}{subsubsection*.137}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{DelusionAnswer}}}{131}{subsubsection*.138}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{DelusionQuizResult}}}{131}{subsubsection*.139}%
+\contentsline {subsection}{\numberline {6.16.2}15~pyta\'{n} quizu}{132}{subsection.6.16.2}%
+\contentsline {subsection}{\numberline {6.16.3}Dynamiczne opcje: \texttt {\textcolor {CodeFunction}{buildQuestions()}}}{132}{subsection.6.16.3}%
+\contentsline {subsection}{\numberline {6.16.4}Algorytm scoringu}{133}{subsection.6.16.4}%
+\contentsline {section}{\numberline {6.17}Symulator Odpowiedzi}{133}{section.6.17}%
+\contentsline {subsection}{\numberline {6.17.1}Typy danych}{133}{subsection.6.17.1}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{SimulationParams}} (14~p\'{o}l)}{133}{subsubsection*.142}%
+\contentsline {subsubsection}{Interfejs \texttt {\textcolor {CodeType}{SimulationResponse}}}{134}{subsubsection*.143}%
+\contentsline {subsection}{\numberline {6.17.2}Budowanie kontekstu psychologicznego}{134}{subsection.6.17.2}%
+\contentsline {subsection}{\numberline {6.17.3}Prompt systemowy}{135}{subsection.6.17.3}%
+\contentsline {subsection}{\numberline {6.17.4}Sesja konwersacyjna}{135}{subsection.6.17.4}%
+\contentsline {subsection}{\numberline {6.17.5}Konfiguracja modelu}{136}{subsection.6.17.5}%
+\contentsline {chapter}{\numberline {7}Wynik Zdrowia Relacji}{137}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Przegląd}{137}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Komponenty wyniku}{138}{section.7.2}%
+\contentsline {subsection}{\numberline {7.2.1}Balance --- Równowaga sił (25\%)}{138}{subsection.7.2.1}%
+\contentsline {subsection}{\numberline {7.2.2}Reciprocity --- Wzajemność (20\%)}{139}{subsection.7.2.2}%
+\contentsline {subsection}{\numberline {7.2.3}Response Pattern --- Wzorce odpowiedzi (20\%)}{139}{subsection.7.2.3}%
+\contentsline {subsection}{\numberline {7.2.4}Emotional Safety --- Bezpieczeństwo emocjonalne (20\%)}{139}{subsection.7.2.4}%
+\contentsline {subsection}{\numberline {7.2.5}Growth Trajectory --- Trajektoria rozwoju (15\%)}{140}{subsection.7.2.5}%
+\contentsline {section}{\numberline {7.3}Formuła obliczeniowa}{140}{section.7.3}%
+\contentsline {subsection}{\numberline {7.3.1}Implementacja}{140}{subsection.7.3.1}%
+\contentsline {subsection}{\numberline {7.3.2}Automatyczne wyjaśnienie}{141}{subsection.7.3.2}%
+\contentsline {section}{\numberline {7.4}Etykiety i~interpretacja}{142}{section.7.4}%
+\contentsline {section}{\numberline {7.5}Normalizacja wolumenu}{143}{section.7.5}%
+\contentsline {subsection}{\numberline {7.5.1}Problem}{143}{subsection.7.5.1}%
+\contentsline {subsection}{\numberline {7.5.2}Rozwiązanie --- skalowanie logarytmiczne}{143}{subsection.7.5.2}%
+\contentsline {section}{\numberline {7.6}Walidacja krzyżowa}{144}{section.7.6}%
+\contentsline {subsection}{\numberline {7.6.1}Dwa niezależne źródła}{144}{subsection.7.6.1}%
+\contentsline {subsection}{\numberline {7.6.2}Procedura walidacji}{145}{subsection.7.6.2}%
+\contentsline {subsection}{\numberline {7.6.3}Przykłady rozbieżności}{145}{subsection.7.6.3}%
+\contentsline {chapter}{\numberline {8}Interfejs Użytkownika}{147}{chapter.8}%
+\contentsline {section}{\numberline {8.1}System projektowy}{147}{section.8.1}%
+\contentsline {subsection}{\numberline {8.1.1}Filozofia wizualna}{147}{subsection.8.1.1}%
+\contentsline {subsection}{\numberline {8.1.2}Paleta kolorów}{147}{subsection.8.1.2}%
+\contentsline {subsection}{\numberline {8.1.3}Typografia}{148}{subsection.8.1.3}%
+\contentsline {subsection}{\numberline {8.1.4}Breakpointy responsywne}{149}{subsection.8.1.4}%
+\contentsline {subsection}{\numberline {8.1.5}Karty (Card System)}{149}{subsection.8.1.5}%
+\contentsline {subsection}{\numberline {8.1.6}Tekstura Grain}{149}{subsection.8.1.6}%
+\contentsline {section}{\numberline {8.2}Strona lądowania}{149}{section.8.2}%
+\contentsline {subsection}{\numberline {8.2.1}Architektura komponentów}{150}{subsection.8.2.1}%
+\contentsline {subsection}{\numberline {8.2.2}Hero Section}{150}{subsection.8.2.2}%
+\contentsline {subsection}{\numberline {8.2.3}Social Proof}{151}{subsection.8.2.3}%
+\contentsline {subsection}{\numberline {8.2.4}How It Works}{151}{subsection.8.2.4}%
+\contentsline {subsection}{\numberline {8.2.5}Feature Showcase}{151}{subsection.8.2.5}%
+\contentsline {subsection}{\numberline {8.2.6}Spline Interlude}{151}{subsection.8.2.6}%
+\contentsline {subsection}{\numberline {8.2.7}Demo Section}{151}{subsection.8.2.7}%
+\contentsline {subsection}{\numberline {8.2.8}FAQ}{151}{subsection.8.2.8}%
+\contentsline {section}{\numberline {8.3}Dashboard}{151}{section.8.3}%
+\contentsline {subsection}{\numberline {8.3.1}Siatka analiz}{152}{subsection.8.3.1}%
+\contentsline {subsection}{\numberline {8.3.2}Empty state}{152}{subsection.8.3.2}%
+\contentsline {subsection}{\numberline {8.3.3}Porównanie rozmów}{152}{subsection.8.3.3}%
+\contentsline {section}{\numberline {8.4}Upload i~przetwarzanie}{152}{section.8.4}%
+\contentsline {subsection}{\numberline {8.4.1}DropZone}{152}{subsection.8.4.1}%
+\contentsline {subsection}{\numberline {8.4.2}Selektor typu relacji}{152}{subsection.8.4.2}%
+\contentsline {subsection}{\numberline {8.4.3}ProcessingState}{153}{subsection.8.4.3}%
+\contentsline {section}{\numberline {8.5}Strona analizy}{153}{section.8.5}%
+\contentsline {subsection}{\numberline {8.5.1}Inwentarz komponentów}{153}{subsection.8.5.1}%
+\contentsline {subsection}{\numberline {8.5.2}AnalysisHeader}{156}{subsection.8.5.2}%
+\contentsline {subsection}{\numberline {8.5.3}KPICards}{156}{subsection.8.5.3}%
+\contentsline {subsection}{\numberline {8.5.4}HeatmapChart}{157}{subsection.8.5.4}%
+\contentsline {subsection}{\numberline {8.5.5}ToneRadarChart}{157}{subsection.8.5.5}%
+\contentsline {subsection}{\numberline {8.5.6}PersonalityDeepDive}{157}{subsection.8.5.6}%
+\contentsline {subsection}{\numberline {8.5.7}ViralScoresSection}{158}{subsection.8.5.7}%
+\contentsline {subsection}{\numberline {8.5.8}GhostForecast}{158}{subsection.8.5.8}%
+\contentsline {subsection}{\numberline {8.5.9}FinalReport}{158}{subsection.8.5.9}%
+\contentsline {subsection}{\numberline {8.5.10}BadgesGrid}{158}{subsection.8.5.10}%
+\contentsline {subsection}{\numberline {8.5.11}NetworkGraph}{159}{subsection.8.5.11}%
+\contentsline {subsection}{\numberline {8.5.12}ShareCardGallery}{159}{subsection.8.5.12}%
+\contentsline {section}{\numberline {8.6}Tryb Story}{159}{section.8.6}%
+\contentsline {subsection}{\numberline {8.6.1}Architektura}{159}{subsection.8.6.1}%
+\contentsline {subsection}{\numberline {8.6.2}Sceny}{160}{subsection.8.6.2}%
+\contentsline {subsection}{\numberline {8.6.3}Animacje scen}{160}{subsection.8.6.3}%
+\contentsline {section}{\numberline {8.7}System animacji}{160}{section.8.7}%
+\contentsline {subsection}{\numberline {8.7.1}Biblioteka i~podejście}{160}{subsection.8.7.1}%
+\contentsline {subsection}{\numberline {8.7.2}Katalog animacji}{161}{subsection.8.7.2}%
+\contentsline {subsection}{\numberline {8.7.3}Scroll-triggered reveals}{161}{subsection.8.7.3}%
+\contentsline {subsection}{\numberline {8.7.4}KPI Count-Up --- easeOutCubic}{162}{subsection.8.7.4}%
+\contentsline {subsection}{\numberline {8.7.5}Confetti Burst}{162}{subsection.8.7.5}%
+\contentsline {subsection}{\numberline {8.7.6}prefers-reduced-motion}{162}{subsection.8.7.6}%
+\contentsline {section}{\numberline {8.8}Dostępność}{162}{section.8.8}%
+\contentsline {subsection}{\numberline {8.8.1}Semantyczny HTML}{163}{subsection.8.8.1}%
+\contentsline {subsection}{\numberline {8.8.2}ARIA Labels}{163}{subsection.8.8.2}%
+\contentsline {subsection}{\numberline {8.8.3}Nawigacja klawiaturą}{163}{subsection.8.8.3}%
+\contentsline {subsection}{\numberline {8.8.4}Skip-to-content}{163}{subsection.8.8.4}%
+\contentsline {subsection}{\numberline {8.8.5}Kontrasty}{163}{subsection.8.8.5}%
+\contentsline {subsection}{\numberline {8.8.6}Responsywność i~dotyk}{163}{subsection.8.8.6}%
+\contentsline {section}{\numberline {8.9}Nowe komponenty: Translator Podtekstów}{164}{section.8.9}%
+\contentsline {subsection}{\numberline {8.9.1}SubtextDecoder.tsx}{164}{subsection.8.9.1}%
+\contentsline {subsubsection}{Sub-komponenty}{164}{subsubsection*.162}%
+\contentsline {subsection}{\numberline {8.9.2}SubtextCard.tsx}{165}{subsection.8.9.2}%
+\contentsline {subsection}{\numberline {8.9.3}Nowe komponenty: Szczery Profil Randkowy}{165}{subsection.8.9.3}%
+\contentsline {subsubsection}{DatingProfileButton.tsx}{165}{subsubsection*.163}%
+\contentsline {subsubsection}{DatingProfileResult.tsx}{166}{subsubsection*.164}%
+\contentsline {subsubsection}{DatingProfileCard.tsx}{166}{subsubsection*.165}%
+\contentsline {subsection}{\numberline {8.9.4}Nowe komponenty: Stawiam Zakład}{166}{subsection.8.9.4}%
+\contentsline {subsubsection}{DelusionQuiz.tsx}{166}{subsubsection*.166}%
+\contentsline {subsubsection}{DelusionCard.tsx}{167}{subsubsection*.167}%
+\contentsline {subsection}{\numberline {8.9.5}Nowe komponenty: Symulator Odpowiedzi}{167}{subsection.8.9.5}%
+\contentsline {subsubsection}{ReplySimulator.tsx}{167}{subsubsection*.168}%
+\contentsline {subsubsection}{SimulatorCard.tsx}{168}{subsubsection*.169}%
+\contentsline {chapter}{\numberline {9}API i Endpointy}{169}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Architektura API}{169}{section.9.1}%
+\contentsline {section}{\numberline {9.2}POST /api/analyze}{170}{section.9.2}%
+\contentsline {subsection}{\numberline {9.2.1}Request}{170}{subsection.9.2.1}%
+\contentsline {subsection}{\numberline {9.2.2}Response --- SSE Stream}{171}{subsection.9.2.2}%
+\contentsline {paragraph}{Format zdarze\'n SSE:}{172}{paragraph*.174}%
+\contentsline {paragraph}{Sekwencja zdarze\'n --- tryb standard:}{172}{paragraph*.176}%
+\contentsline {paragraph}{Sekwencja zdarze\'n --- tryb roast:}{172}{paragraph*.177}%
+\contentsline {subsection}{\numberline {9.2.3}Heartbeat}{172}{subsection.9.2.3}%
+\contentsline {subsection}{\numberline {9.2.4}Obs\l {}uga roz\l {}\k {a}czenia klienta}{173}{subsection.9.2.4}%
+\contentsline {section}{\numberline {9.3}POST /api/analyze/image}{173}{section.9.3}%
+\contentsline {subsection}{\numberline {9.3.1}Request}{173}{subsection.9.3.1}%
+\contentsline {paragraph}{Logika rozga\l {}\k {e}zienia:}{174}{paragraph*.180}%
+\contentsline {subsection}{\numberline {9.3.2}Response}{174}{subsection.9.3.2}%
+\contentsline {paragraph}{Sukces (200):}{174}{paragraph*.181}%
+\contentsline {paragraph}{B\l {}\k {a}d (500):}{174}{paragraph*.182}%
+\contentsline {section}{\numberline {9.4}POST /api/analyze/cps}{174}{section.9.4}%
+\contentsline {subsection}{\numberline {9.4.1}Request}{175}{subsection.9.4.1}%
+\contentsline {subsection}{\numberline {9.4.2}Response --- SSE Stream}{175}{subsection.9.4.2}%
+\contentsline {section}{\numberline {9.5}GET /api/health}{175}{section.9.5}%
+\contentsline {subsection}{\numberline {9.5.1}Response}{176}{subsection.9.5.1}%
+\contentsline {section}{\numberline {9.6}POST /api/analyze/subtext}{176}{section.9.6}%
+\contentsline {subsection}{\numberline {9.6.1}Request}{176}{subsection.9.6.1}%
+\contentsline {paragraph}{Schemat Zod:}{176}{paragraph*.186}%
+\contentsline {subsection}{\numberline {9.6.2}Response --- SSE Stream}{177}{subsection.9.6.2}%
+\contentsline {section}{\numberline {9.7}POST /api/analyze/court}{178}{section.9.7}%
+\contentsline {subsection}{\numberline {9.7.1}Request}{178}{subsection.9.7.1}%
+\contentsline {paragraph}{Schemat Zod:}{178}{paragraph*.188}%
+\contentsline {subsection}{\numberline {9.7.2}Response --- SSE Stream}{179}{subsection.9.7.2}%
+\contentsline {section}{\numberline {9.8}POST /api/analyze/dating-profile}{179}{section.9.8}%
+\contentsline {subsection}{\numberline {9.8.1}Request}{179}{subsection.9.8.1}%
+\contentsline {paragraph}{Schemat Zod:}{180}{paragraph*.191}%
+\contentsline {subsection}{\numberline {9.8.2}Response --- SSE Stream}{180}{subsection.9.8.2}%
+\contentsline {section}{\numberline {9.9}POST /api/analyze/simulate}{180}{section.9.9}%
+\contentsline {subsection}{\numberline {9.9.1}Request}{181}{subsection.9.9.1}%
+\contentsline {paragraph}{Schemat Zod:}{181}{paragraph*.193}%
+\contentsline {subsection}{\numberline {9.9.2}Response --- SSE Stream}{181}{subsection.9.9.2}%
+\contentsline {section}{\numberline {9.10}Rate Limiting}{182}{section.9.10}%
+\contentsline {subsection}{\numberline {9.10.1}Algorytm}{182}{subsection.9.10.1}%
+\contentsline {subsection}{\numberline {9.10.2}Konfiguracja limitów}{184}{subsection.9.10.2}%
+\contentsline {subsection}{\numberline {9.10.3}Identyfikacja klienta}{184}{subsection.9.10.3}%
+\contentsline {subsection}{\numberline {9.10.4}Odpowied\'z 429}{185}{subsection.9.10.4}%
+\contentsline {section}{\numberline {9.11}Obs\l {}uga b\l {}\k {e}dów}{185}{section.9.11}%
+\contentsline {subsection}{\numberline {9.11.1}Kody HTTP}{185}{subsection.9.11.1}%
+\contentsline {subsection}{\numberline {9.11.2}Format odpowiedzi b\l {}\k {e}dów}{185}{subsection.9.11.2}%
+\contentsline {paragraph}{Przyk\l {}ady komunikatów:}{186}{paragraph*.196}%
+\contentsline {subsection}{\numberline {9.11.3}B\l {}\k {e}dy w~strumieniu SSE}{186}{subsection.9.11.3}%
+\contentsline {subsection}{\numberline {9.11.4}Walidacja rozmiaru body}{186}{subsection.9.11.4}%
+\contentsline {chapter}{\numberline {10}Infrastruktura i~Deployment}{189}{chapter.10}%
+\contentsline {section}{\numberline {10.1}Konfiguracja Next.js}{189}{section.10.1}%
+\contentsline {subsection}{\numberline {10.1.1}Tryb standalone}{189}{subsection.10.1.1}%
+\contentsline {subsection}{\numberline {10.1.2}Nagłówki bezpieczeństwa}{189}{subsection.10.1.2}%
+\contentsline {subsection}{\numberline {10.1.3}Optymalizacje eksperymentalne}{190}{subsection.10.1.3}%
+\contentsline {section}{\numberline {10.2}Konfiguracja Tailwind CSS v4}{190}{section.10.2}%
+\contentsline {subsection}{\numberline {10.2.1}PostCSS}{190}{subsection.10.2.1}%
+\contentsline {subsection}{\numberline {10.2.2}Dyrektywa @theme inline}{191}{subsection.10.2.2}%
+\contentsline {subsection}{\numberline {10.2.3}Niestandardowe rodziny fontów}{191}{subsection.10.2.3}%
+\contentsline {subsection}{\numberline {10.2.4}Skala border-radius}{192}{subsection.10.2.4}%
+\contentsline {subsection}{\numberline {10.2.5}Dark mode}{192}{subsection.10.2.5}%
+\contentsline {section}{\numberline {10.3}Docker}{192}{section.10.3}%
+\contentsline {subsection}{\numberline {10.3.1}Kompletny Dockerfile}{193}{subsection.10.3.1}%
+\contentsline {subsection}{\numberline {10.3.2}Szczegóły poszczególnych etapów}{194}{subsection.10.3.2}%
+\contentsline {section}{\numberline {10.4}Firebase Hosting}{194}{section.10.4}%
+\contentsline {subsection}{\numberline {10.4.1}Konfiguracja projektu}{194}{subsection.10.4.1}%
+\contentsline {subsection}{\numberline {10.4.2}firebase.json}{194}{subsection.10.4.2}%
+\contentsline {subsection}{\numberline {10.4.3}.firebaserc}{195}{subsection.10.4.3}%
+\contentsline {section}{\numberline {10.5}Zmienne środowiskowe}{196}{section.10.5}%
+\contentsline {subsection}{\numberline {10.5.1}Plik .env.local}{196}{subsection.10.5.1}%
+\contentsline {section}{\numberline {10.6}Polecenia deweloperskie}{197}{section.10.6}%
+\contentsline {section}{\numberline {10.7}Zarządzanie zależnościami}{197}{section.10.7}%
+\contentsline {subsection}{\numberline {10.7.1}Statystyki zależności}{197}{subsection.10.7.1}%
+\contentsline {subsection}{\numberline {10.7.2}Aktualizacja zależności}{198}{subsection.10.7.2}%
+\contentsline {chapter}{\numberline {11}Prywatność i~Bezpieczeństwo}{199}{chapter.11}%
+\contentsline {section}{\numberline {11.1}Zasady przetwarzania danych}{199}{section.11.1}%
+\contentsline {subsection}{\numberline {11.1.1}Minimalizacja danych przesyłanych na serwer}{199}{subsection.11.1.1}%
+\contentsline {subsection}{\numberline {11.1.2}Co trafia na serwer}{199}{subsection.11.1.2}%
+\contentsline {subsection}{\numberline {11.1.3}Co NIE trafia na serwer}{200}{subsection.11.1.3}%
+\contentsline {section}{\numberline {11.2}IndexedDB --- lokalne przechowywanie danych}{200}{section.11.2}%
+\contentsline {subsection}{\numberline {11.2.1}Implikacje prywatności}{200}{subsection.11.2.1}%
+\contentsline {subsection}{\numberline {11.2.2}Operacja usuwania}{200}{subsection.11.2.2}%
+\contentsline {section}{\numberline {11.3}Obrona przed prompt injection}{201}{section.11.3}%
+\contentsline {subsection}{\numberline {11.3.1}Prefiks obrony}{201}{subsection.11.3.1}%
+\contentsline {subsection}{\numberline {11.3.2}Sanityzacja wiadomości}{201}{subsection.11.3.2}%
+\contentsline {subsection}{\numberline {11.3.3}Formatowanie strukturalne}{202}{subsection.11.3.3}%
+\contentsline {subsection}{\numberline {11.3.4}System prompt jako bariera}{202}{subsection.11.3.4}%
+\contentsline {section}{\numberline {11.4}Nagłówki bezpieczeństwa}{202}{section.11.4}%
+\contentsline {section}{\numberline {11.5}Rate limiting}{204}{section.11.5}%
+\contentsline {subsection}{\numberline {11.5.1}Ochrona DDoS}{204}{subsection.11.5.1}%
+\contentsline {subsection}{\numberline {11.5.2}Odpowiedź przy przekroczeniu limitu}{204}{subsection.11.5.2}%
+\contentsline {subsection}{\numberline {11.5.3}Walidacja rozmiaru payloadu}{204}{subsection.11.5.3}%
+\contentsline {section}{\numberline {11.6}Zgodność z~RODO}{204}{section.11.6}%
+\contentsline {subsection}{\numberline {11.6.1}Brak danych osobowych na serwerze}{205}{subsection.11.6.1}%
+\contentsline {subsection}{\numberline {11.6.2}Przetwarzanie wyłącznie po stronie klienta}{205}{subsection.11.6.2}%
+\contentsline {subsection}{\numberline {11.6.3}Zgoda na cookies (Cookie Consent)}{205}{subsection.11.6.3}%
+\contentsline {subsection}{\numberline {11.6.4}Prawo do usunięcia danych (Art.~17 RODO)}{205}{subsection.11.6.4}%
+\contentsline {subsection}{\numberline {11.6.5}Prawo do przenoszenia danych (Art.~20 RODO)}{205}{subsection.11.6.5}%
+\contentsline {section}{\numberline {11.7}Anonimizacja}{205}{section.11.7}%
+\contentsline {subsection}{\numberline {11.7.1}Mechanizm anonimizacji}{206}{subsection.11.7.1}%
+\contentsline {subsection}{\numberline {11.7.2}Dane niepodlegające anonimizacji}{206}{subsection.11.7.2}%
+\contentsline {section}{\numberline {11.8}Logowanie}{206}{section.11.8}%
+\contentsline {subsection}{\numberline {11.8.1}Co jest logowane}{206}{subsection.11.8.1}%
+\contentsline {subsection}{\numberline {11.8.2}Co NIE jest logowane}{206}{subsection.11.8.2}%
+\contentsline {subsection}{\numberline {11.8.3}Implementacja}{206}{subsection.11.8.3}%
+\contentsline {subsection}{\numberline {11.8.4}Rekomendacje dla produkcji}{207}{subsection.11.8.4}%
+\contentsline {section}{Podsumowanie zabezpieczeń}{207}{Item.214}%
+\contentsline {section}{\numberline {11.9}Walidacja danych wejściowych (Zod)}{208}{section.11.9}%
+\contentsline {subsection}{\numberline {11.9.1}Architektura schematów}{208}{subsection.11.9.1}%
+\contentsline {subsubsection}{Bloki wspólne}{208}{subsubsection*.208}%
+\contentsline {subsubsection}{Inwentarz schematów}{209}{subsubsection*.209}%
+\contentsline {subsubsection}{Kluczowy schemat: analyzeRequestSchema}{209}{subsubsection*.211}%
+\contentsline {subsubsection}{Helper formatZodError()}{209}{subsubsection*.212}%
+\contentsline {subsection}{\numberline {11.9.2}Zamknięcie wektora prompt injection: relationshipContext}{209}{subsection.11.9.2}%
+\contentsline {subsubsection}{Kod przed poprawką (\textbf {\textcolor {PodDanger}{podatny}})}{210}{subsubsection*.213}%
+\contentsline {subsubsection}{Kod po poprawce (\textbf {\textcolor {PodSuccess}{bezpieczny}})}{210}{subsubsection*.214}%
+\contentsline {chapter}{\numberline {12}Struktura Danych --- Kompletna Referencja}{211}{chapter.12}%
+\contentsline {section}{\numberline {12.1}Typy parserowe}{211}{section.12.1}%
+\contentsline {subsection}{\numberline {12.1.1}Participant}{211}{subsection.12.1.1}%
+\contentsline {subsection}{\numberline {12.1.2}Reaction}{212}{subsection.12.1.2}%
+\contentsline {subsection}{\numberline {12.1.3}UnifiedMessage}{212}{subsection.12.1.3}%
+\contentsline {subsection}{\numberline {12.1.4}ParsedConversation}{213}{subsection.12.1.4}%
+\contentsline {subsection}{\numberline {12.1.5}PersonMetrics}{214}{subsection.12.1.5}%
+\contentsline {subsection}{\numberline {12.1.6}TimingMetrics}{215}{subsection.12.1.6}%
+\contentsline {subsection}{\numberline {12.1.7}EngagementMetrics}{216}{subsection.12.1.7}%
+\contentsline {subsection}{\numberline {12.1.8}PatternMetrics}{217}{subsection.12.1.8}%
+\contentsline {subsection}{\numberline {12.1.9}HeatmapData}{218}{subsection.12.1.9}%
+\contentsline {subsection}{\numberline {12.1.10}TrendData}{218}{subsection.12.1.10}%
+\contentsline {subsection}{\numberline {12.1.11}ViralScores}{219}{subsection.12.1.11}%
+\contentsline {subsection}{\numberline {12.1.12}Badge}{219}{subsection.12.1.12}%
+\contentsline {subsection}{\numberline {12.1.13}BestTimeToText}{220}{subsection.12.1.13}%
+\contentsline {subsection}{\numberline {12.1.14}CatchphraseEntry i~CatchphraseResult}{220}{subsection.12.1.14}%
+\contentsline {subsection}{\numberline {12.1.15}NetworkNode, NetworkEdge, NetworkMetrics}{221}{subsection.12.1.15}%
+\contentsline {subsection}{\numberline {12.1.16}ReciprocityIndex}{222}{subsection.12.1.16}%
+\contentsline {subsection}{\numberline {12.1.17}QuantitativeAnalysis}{222}{subsection.12.1.17}%
+\contentsline {section}{\numberline {12.2}Typy analizy AI}{223}{section.12.2}%
+\contentsline {subsection}{\numberline {12.2.1}Pass 1: RelationshipType, PersonTone, OverallDynamic}{223}{subsection.12.2.1}%
+\contentsline {subsection}{\numberline {12.2.2}Pass 2: Dynamika relacyjna}{224}{subsection.12.2.2}%
+\contentsline {subsubsection}{PowerDynamics}{224}{subsubsection*.230}%
+\contentsline {subsubsection}{EmotionalLaborPattern i~EmotionalLabor}{225}{subsubsection*.232}%
+\contentsline {subsubsection}{ConflictPatterns}{225}{subsubsection*.235}%
+\contentsline {subsubsection}{VulnerabilityProfile i~SharedLanguage}{226}{subsubsection*.237}%
+\contentsline {subsubsection}{IntimacyMarkers}{226}{subsubsection*.239}%
+\contentsline {subsubsection}{RedFlag i~GreenFlag}{226}{subsubsection*.241}%
+\contentsline {subsubsection}{Pass2Result (kontener)}{226}{subsubsection*.243}%
+\contentsline {subsection}{\numberline {12.2.3}Pass 3: Profile indywidualne}{227}{subsection.12.2.3}%
+\contentsline {subsubsection}{BigFiveTrait i~BigFiveApproximation}{227}{subsubsection*.244}%
+\contentsline {subsubsection}{AttachmentIndicator i~AttachmentIndicators}{228}{subsubsection*.246}%
+\contentsline {subsubsection}{CommunicationProfile}{228}{subsubsection*.248}%
+\contentsline {subsubsection}{CommunicationNeeds}{229}{subsubsection*.250}%
+\contentsline {subsubsection}{EmotionalPatterns}{229}{subsubsection*.252}%
+\contentsline {subsubsection}{ClinicalObservations}{229}{subsubsection*.254}%
+\contentsline {subsubsection}{ConflictResolution}{230}{subsubsection*.255}%
+\contentsline {subsubsection}{EmotionalIntelligence}{230}{subsubsection*.257}%
+\contentsline {subsubsection}{MBTIResult}{231}{subsubsection*.259}%
+\contentsline {subsubsection}{LoveLanguageResult}{231}{subsubsection*.261}%
+\contentsline {subsubsection}{PersonProfile (kontener Pass 3)}{231}{subsubsection*.263}%
+\contentsline {subsection}{\numberline {12.2.4}Pass 4: Synteza}{232}{subsection.12.2.4}%
+\contentsline {subsubsection}{HealthScoreComponents i~HealthScore}{232}{subsubsection*.264}%
+\contentsline {subsubsection}{KeyFinding, InflectionPoint, RelationshipTrajectory}{233}{subsubsection*.267}%
+\contentsline {subsubsection}{Insight}{233}{subsubsection*.269}%
+\contentsline {subsubsection}{ConversationPersonality}{233}{subsubsection*.271}%
+\contentsline {subsubsection}{Pass4Result (kontener)}{233}{subsubsection*.273}%
+\contentsline {subsection}{\numberline {12.2.5}RoastResult}{234}{subsection.12.2.5}%
+\contentsline {subsection}{\numberline {12.2.6}StandUpAct i~StandUpRoastResult}{234}{subsection.12.2.6}%
+\contentsline {subsection}{\numberline {12.2.7}Typy CPS (Communication Pattern Screening)}{235}{subsection.12.2.7}%
+\contentsline {subsubsection}{CPSQuestion i~CPSPattern}{235}{subsubsection*.276}%
+\contentsline {subsubsection}{CPSAnswer, CPSPatternResult, CPSResult}{236}{subsubsection*.278}%
+\contentsline {section}{\numberline {12.3}Typy magazynowania}{237}{section.12.3}%
+\contentsline {subsection}{\numberline {12.3.1}QualitativeAnalysis}{237}{subsection.12.3.1}%
+\contentsline {subsection}{\numberline {12.3.2}StoredAnalysis}{238}{subsection.12.3.2}%
+\contentsline {subsection}{\numberline {12.3.3}AnalysisIndexEntry}{238}{subsection.12.3.3}%
+\contentsline {section}{\numberline {12.4}Diagramy relacji typów}{239}{section.12.4}%
+\contentsline {subsection}{\numberline {12.4.1}Diagram główny: StoredAnalysis}{239}{subsection.12.4.1}%
+\contentsline {subsection}{\numberline {12.4.2}Diagram: QuantitativeAnalysis --- szczegóły}{240}{subsection.12.4.2}%
+\contentsline {subsection}{\numberline {12.4.3}Diagram: QualitativeAnalysis --- szczegóły}{240}{subsection.12.4.3}%
+\contentsline {subsection}{\numberline {12.4.4}Diagram: PersonProfile --- pełne drzewo}{241}{subsection.12.4.4}%
+\contentsline {subsection}{\numberline {12.4.5}Podsumowanie zależności}{241}{subsection.12.4.5}%
+\contentsline {section}{\numberline {12.5}Typy Dekodera Podtekstów}{242}{section.12.5}%
+\contentsline {subsection}{\numberline {12.5.1}SubtextCategory}{242}{subsection.12.5.1}%
+\contentsline {subsection}{\numberline {12.5.2}SubtextItem}{243}{subsection.12.5.2}%
+\contentsline {subsection}{\numberline {12.5.3}SubtextSummary}{244}{subsection.12.5.3}%
+\contentsline {subsection}{\numberline {12.5.4}SubtextResult}{245}{subsection.12.5.4}%
+\contentsline {subsection}{\numberline {12.5.5}Typy pomocnicze: SimplifiedMsg i~ExchangeWindow}{245}{subsection.12.5.5}%
+\contentsline {section}{\numberline {12.6}Typy Procesu Sądowego (Chat Court)}{246}{section.12.6}%
+\contentsline {subsection}{\numberline {12.6.1}CourtCharge}{246}{subsection.12.6.1}%
+\contentsline {subsection}{\numberline {12.6.2}PersonVerdict}{247}{subsection.12.6.2}%
+\contentsline {subsection}{\numberline {12.6.3}CourtResult}{247}{subsection.12.6.3}%
+\contentsline {section}{\numberline {12.7}Typy Profilu Randkowego}{248}{section.12.7}%
+\contentsline {subsection}{\numberline {12.7.1}DatingProfileStat}{248}{subsection.12.7.1}%
+\contentsline {subsection}{\numberline {12.7.2}DatingProfilePrompt}{249}{subsection.12.7.2}%
+\contentsline {subsection}{\numberline {12.7.3}PersonDatingProfile}{249}{subsection.12.7.3}%
+\contentsline {subsection}{\numberline {12.7.4}DatingProfileResult}{250}{subsection.12.7.4}%
+\contentsline {section}{\numberline {12.8}Typy Quizu Samo\'{s}wiadomo\'{s}ci (Delusion Quiz)}{250}{section.12.8}%
+\contentsline {subsection}{\numberline {12.8.1}DelusionQuestion}{251}{subsection.12.8.1}%
+\contentsline {subsection}{\numberline {12.8.2}DelusionAnswer}{252}{subsection.12.8.2}%
+\contentsline {subsection}{\numberline {12.8.3}DelusionQuizResult}{253}{subsection.12.8.3}%
+\contentsline {section}{\numberline {12.9}Typy Symulatora Odpowiedzi}{253}{section.12.9}%
+\contentsline {subsection}{\numberline {12.9.1}SimulationParams}{253}{subsection.12.9.1}%
+\contentsline {subsection}{\numberline {12.9.2}SimulationResponse}{254}{subsection.12.9.2}%
+\contentsline {section}{\numberline {12.10}Typy walidacji Zod}{255}{section.12.10}%
+\contentsline {subsection}{\numberline {12.10.1}Zaktualizowane podsumowanie zależności}{257}{subsection.12.10.1}%
+\contentsline {chapter}{\numberline {13}Mapa rozwoju}{259}{chapter.13}%
+\contentsline {section}{\numberline {13.1}Stan aktualny --- MVP}{259}{section.13.1}%
+\contentsline {subsection}{\numberline {13.1.1}Parsery wiadomości}{259}{subsection.13.1.1}%
+\contentsline {subsection}{\numberline {13.1.2}Silnik analizy ilościowej}{259}{subsection.13.1.2}%
+\contentsline {subsection}{\numberline {13.1.3}Silnik analizy AI}{260}{subsection.13.1.3}%
+\contentsline {subsection}{\numberline {13.1.4}Tryby prezentacji}{260}{subsection.13.1.4}%
+\contentsline {subsection}{\numberline {13.1.5}Mechaniki viralowe i~społecznościowe}{260}{subsection.13.1.5}%
+\contentsline {subsection}{\numberline {13.1.6}Stack technologiczny MVP}{261}{subsection.13.1.6}%
+\contentsline {section}{\numberline {13.2}Faza 2: Autoryzacja i~płatności}{261}{section.13.2}%
+\contentsline {subsection}{\numberline {13.2.1}Autoryzacja --- Supabase Auth}{261}{subsection.13.2.1}%
+\contentsline {subsection}{\numberline {13.2.2}Baza danych --- Supabase PostgreSQL}{261}{subsection.13.2.2}%
+\contentsline {subsection}{\numberline {13.2.3}Płatności --- Stripe}{262}{subsection.13.2.3}%
+\contentsline {subsection}{\numberline {13.2.4}Limity i~rate limiting}{262}{subsection.13.2.4}%
+\contentsline {section}{\numberline {13.3}Faza 3: Nowe platformy}{262}{section.13.3}%
+\contentsline {subsection}{\numberline {13.3.1}Instagram DM}{263}{subsection.13.3.1}%
+\contentsline {subsection}{\numberline {13.3.2}Telegram}{263}{subsection.13.3.2}%
+\contentsline {subsection}{\numberline {13.3.3}Discord}{263}{subsection.13.3.3}%
+\contentsline {subsection}{\numberline {13.3.4}Microsoft Teams}{263}{subsection.13.3.4}%
+\contentsline {section}{\numberline {13.4}Faza 4: Funkcje społeczności}{263}{section.13.4}%
+\contentsline {subsection}{\numberline {13.4.1}Couple Mode --- tryb pary}{263}{subsection.13.4.1}%
+\contentsline {subsection}{\numberline {13.4.2}Team Features --- funkcje zespołowe}{264}{subsection.13.4.2}%
+\contentsline {subsection}{\numberline {13.4.3}Shared Analyses --- współdzielone analizy}{264}{subsection.13.4.3}%
+\contentsline {section}{\numberline {13.5}Faza 5: API i~enterprise}{264}{section.13.5}%
+\contentsline {subsection}{\numberline {13.5.1}Public Developer API}{264}{subsection.13.5.1}%
+\contentsline {subsection}{\numberline {13.5.2}Bulk Analysis}{265}{subsection.13.5.2}%
+\contentsline {subsection}{\numberline {13.5.3}White-label}{265}{subsection.13.5.3}%
+\contentsline {section}{\numberline {13.6}Internacjonalizacja}{265}{section.13.6}%
+\contentsline {subsection}{\numberline {13.6.1}Języki interfejsu}{265}{subsection.13.6.1}%
+\contentsline {subsection}{\numberline {13.6.2}Implementacja techniczna i18n}{265}{subsection.13.6.2}%
+\contentsline {subsection}{\numberline {13.6.3}Lokalizacja promptów AI}{265}{subsection.13.6.3}%
+\contentsline {subsection}{\numberline {13.6.4}Wyzwania lokalizacyjne}{266}{subsection.13.6.4}%
+\contentsline {subsection}{\numberline {13.6.5}Mapa rozwoju --- podsumowanie wizualne}{266}{subsection.13.6.5}%
+\contentsline {section}{\numberline {13.7}Zrealizowane funkcje (Faza 19--20)}{266}{section.13.7}%
+\contentsline {subsection}{\numberline {13.7.1}Dekoder Podtekstów (Subtext Decoder)}{267}{subsection.13.7.1}%
+\contentsline {subsection}{\numberline {13.7.2}Twój Chat w~Sądzie (Chat Court)}{267}{subsection.13.7.2}%
+\contentsline {subsection}{\numberline {13.7.3}Walidacja Zod}{267}{subsection.13.7.3}%
+\contentsline {subsection}{\numberline {13.7.4}Security Hardening}{267}{subsection.13.7.4}%
+\contentsline {section}{\numberline {13.8}Zrealizowane funkcje rozrywkowe (Faza 20)}{268}{section.13.8}%
+\contentsline {subsection}{\numberline {13.8.1}Stawiam Zakład (Delusion Quiz)}{268}{subsection.13.8.1}%
+\contentsline {subsection}{\numberline {13.8.2}Symulator Odpowiedzi (Reply Simulator)}{268}{subsection.13.8.2}%
+\contentsline {subsection}{\numberline {13.8.3}Szczery Profil Randkowy (Honest Dating Profile)}{269}{subsection.13.8.3}%
+\contentsline {section}{\numberline {13.9}Faza 21: Polish \& Deploy}{269}{section.13.9}%
+\contentsline {section}{\numberline {13.10}Faza 22--23: Discord Bot}{269}{section.13.10}%
+\contentsline {section}{\numberline {13.11}TIER Improvements}{270}{section.13.11}%
+\contentsline {chapter}{\numberline {14}Audyt wieloagentowy}{271}{chapter.14}%
+\contentsline {section}{\numberline {14.1}Audyt UX/designu strony analizy}{271}{section.14.1}%
+\contentsline {subsection}{\numberline {14.1.1}Diagnoza: monolit na jednej stronie}{271}{subsection.14.1.1}%
+\contentsline {subsubsection}{Mapa sekcji strony}{272}{subsubsection*.315}%
+\contentsline {subsection}{\numberline {14.1.2}Nawigacja: SectionNavigator}{272}{subsection.14.1.2}%
+\contentsline {subsection}{\numberline {14.1.3}Proponowane rozwiązanie: architektura tabowa}{273}{subsection.14.1.3}%
+\contentsline {subsubsection}{Korzyści architekturalne}{273}{subsubsection*.317}%
+\contentsline {subsubsection}{Proponowana struktura plików}{273}{subsubsection*.318}%
+\contentsline {subsubsection}{Server View (5+ uczestników)}{273}{subsubsection*.319}%
+\contentsline {subsubsection}{Diagram architektury tabowej}{274}{subsubsection*.320}%
+\contentsline {section}{\numberline {14.2}Audyt monetyzacji}{274}{section.14.2}%
+\contentsline {subsection}{\numberline {14.2.1}Stan obecny: 100\% za darmo}{274}{subsection.14.2.1}%
+\contentsline {subsection}{\numberline {14.2.2}Proponowany model: Freemium 3-Tier}{274}{subsection.14.2.2}%
+\contentsline {subsubsection}{Logika Free Tier}{275}{subsubsection*.323}%
+\contentsline {subsubsection}{Logika paywall}{275}{subsubsection*.324}%
+\contentsline {subsection}{\numberline {14.2.3}Implementacja techniczna}{275}{subsection.14.2.3}%
+\contentsline {subsubsection}{Faza 1 --- lokalna (bez Stripe)}{275}{subsubsection*.325}%
+\contentsline {paragraph}{TierContext}{275}{paragraph*.326}%
+\contentsline {paragraph}{PaywallGate}{276}{paragraph*.327}%
+\contentsline {subsubsection}{Faza 2 --- produkcyjna (Stripe + Supabase)}{276}{subsubsection*.328}%
+\contentsline {subsection}{\numberline {14.2.4}Share Cards jako viral loop}{276}{subsection.14.2.4}%
+\contentsline {subsection}{\numberline {14.2.5}Projekcja przychodów}{277}{subsection.14.2.5}%
+\contentsline {section}{\numberline {14.3}Audyt optymalizacji wydajności}{277}{section.14.3}%
+\contentsline {subsection}{\numberline {14.3.1}Problemy krytyczne (P0)}{277}{subsection.14.3.1}%
+\contentsline {subsubsection}{Rate Limiting wyłączony}{277}{subsubsection*.331}%
+\contentsline {paragraph}{Naprawa:}{278}{paragraph*.332}%
+\contentsline {subsubsection}{Nadmiar IntersectionObserver (37 instancji)}{278}{subsubsection*.333}%
+\contentsline {paragraph}{Wpływ na wydajność:}{278}{paragraph*.335}%
+\contentsline {paragraph}{Naprawa:}{278}{paragraph*.336}%
+\contentsline {subsection}{\numberline {14.3.2}Problemy ważne (P1)}{278}{subsection.14.3.2}%
+\contentsline {subsubsection}{Brak lazy-loadingu treści tabów}{278}{subsubsection*.337}%
+\contentsline {subsubsection}{Brakujące React.memo na ciężkich komponentach}{278}{subsubsection*.338}%
+\contentsline {paragraph}{Naprawa:}{279}{paragraph*.340}%
+\contentsline {subsubsection}{Stabilizacja callbacków}{279}{subsubsection*.341}%
+\contentsline {paragraph}{Naprawa:}{279}{paragraph*.342}%
+\contentsline {subsection}{\numberline {14.3.3}Problemy dodatkowe (P2)}{279}{subsection.14.3.3}%
+\contentsline {subsubsection}{Web Worker dla parsowania}{279}{subsubsection*.343}%
+\contentsline {subsubsection}{IndexedDB quota management}{280}{subsubsection*.344}%
+\contentsline {subsubsection}{Wirtualizacja ShareCardGallery}{280}{subsubsection*.345}%
+\contentsline {section}{\numberline {14.4}Metryki docelowe}{280}{section.14.4}%
+\contentsline {section}{\numberline {14.5}Kolejność realizacji}{281}{section.14.5}%
+\contentsline {section}{\numberline {14.6}Podsumowanie}{281}{section.14.6}%
+\contentsline {chapter}{Słownik pojęć}{283}{chapter*.348}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

@@ -1,0 +1,499 @@
+% ============================================================
+% Rozdział 10 — Infrastruktura i Deployment
+% ============================================================
+
+\chapter{Infrastruktura i~Deployment}
+\label{ch:infrastruktura}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Works on my machine'' to nie strategia deploymentu.
+\end{center}
+
+\vspace{12pt}
+
+\podtekst jest wdrażany jako konteneryzowana aplikacja Next.js w~trybie standalone, hostowana na Firebase Hosting z~backendem w~regionie \texttt{europe-west1}. Niniejszy rozdział dokumentuje kompletną konfigurację infrastrukturalną --- od pliku \filepath{next.config.ts}, przez Dockerfile wieloetapowy, po zmienne środowiskowe i~polecenia deweloperskie.
+
+
+% ============================================================
+\section{Konfiguracja Next.js}
+\label{sec:nextjs-config}
+
+Plik \filepath{next.config.ts} jest centralnym punktem konfiguracji frameworka. W~projekcie \podtekst zawiera trzy kluczowe sekcje: tryb wyjścia, nagłówki bezpieczeństwa i~optymalizacje eksperymentalne.
+
+\subsection{Tryb standalone}
+
+\begin{lstlisting}[style=podcode, caption={next.config.ts --- konfiguracja standalone}]
+const nextConfig: NextConfig = {
+  output: 'standalone',
+  // ...
+};
+\end{lstlisting}
+
+Tryb \tskey{output: 'standalone'} powoduje, że \tskey{next build} generuje samodzielny serwer Node.js w~katalogu \filepath{.next/standalone/}. Wynikowy artefakt zawiera:
+\begin{itemize}
+  \item \filepath{server.js} --- minimalny serwer HTTP (bez zależności od \tskey{node\_modules})
+  \item \filepath{.next/static/} --- statyczne zasoby (JS, CSS, obrazy)
+  \item Tylko te moduły z~\tskey{node\_modules}, które są faktycznie używane (tree-shaking na poziomie zależności)
+\end{itemize}
+
+Rezultat: obraz Docker jest znacząco mniejszy niż w~przypadku kopiowania pełnego \filepath{node\_modules}.
+
+\subsection{Nagłówki bezpieczeństwa}
+
+\begin{lstlisting}[style=podcode, caption={next.config.ts --- nagłówki bezpieczeństwa HTTP}]
+async headers() {
+  return [
+    {
+      source: '/(.*)',
+      headers: [
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy',
+          value: 'strict-origin-when-cross-origin' },
+        { key: 'Permissions-Policy',
+          value: 'camera=(), microphone=(), geolocation=()' },
+      ],
+    },
+  ];
+},
+\end{lstlisting}
+
+Nagłówki są stosowane do wszystkich ścieżek (pattern \texttt{/(.*)}). Szczegółowy opis każdego nagłówka znajduje się w~Rozdziale~\ref{sec:security-headers}.
+
+\subsection{Optymalizacje eksperymentalne}
+
+\begin{lstlisting}[style=podcode, caption={next.config.ts --- optymalizacje pakietów}]
+experimental: {
+  staticGenerationRetryCount: 0,
+  optimizePackageImports: [
+    'framer-motion',
+    'lucide-react',
+    'recharts',
+  ],
+},
+\end{lstlisting}
+
+\begin{description}
+  \item[staticGenerationRetryCount: 0] Obejście buga w~Next.js 16 + Turbopack --- błąd \texttt{``Expected workUnitAsyncStorage to have a store''} podczas prerenderowania \filepath{/\_global-error}. Wyłączenie ponownych prób pozwala buildowi przejść mimo failures w~statycznym prerenderowaniu.
+
+  \item[optimizePackageImports] Instruuje Next.js, by traktował te pakiety jak barrel exports i~agresywnie tree-shakował importy. Bez tej opcji:
+  \begin{itemize}
+    \item \textbf{framer-motion} --- bundluje $\sim$150\,KB zamiast $\sim$30\,KB
+    \item \textbf{lucide-react} --- bundluje 1500+ ikon zamiast $\sim$20 używanych
+    \item \textbf{recharts} --- bundluje cały pakiet zamiast używanych komponentów
+  \end{itemize}
+\end{description}
+
+\begin{infobox}[title=Wpływ na rozmiar bundla]
+Opcja \tskey{optimizePackageImports} redukuje rozmiar bundla klienta o~$\sim$200\,KB (gzipped), co przekłada się na $\sim$0.5s szybsze ładowanie strony na połączeniach 4G. Jest to szczególnie istotne dla komponentu \tstype{lucide-react}, który bez optymalizacji dołącza definicje SVG wszystkich 1500+ ikon.
+\end{infobox}
+
+
+% ============================================================
+\section{Konfiguracja Tailwind CSS v4}
+\label{sec:tailwind-config}
+
+\podtekst używa Tailwind CSS w~wersji 4, która fundamentalnie zmienia model konfiguracji w~porównaniu z~v3. Nie istnieje plik \filepath{tailwind.config.ts} --- cała konfiguracja odbywa się w~pliku CSS za pomocą dyrektyw \tskey{@theme} i~\tskey{@import}.
+
+\subsection{PostCSS}
+
+Tailwind v4 jest załadowany jako plugin PostCSS:
+
+\begin{lstlisting}[style=podcodeCSS, caption={globals.css --- import Tailwind v4}]
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+\end{lstlisting}
+
+Trzy importy ładują odpowiednio: bazowy Tailwind z~utility classes, animacje CSS zintegrowane z~Tailwind, oraz style shadcn/ui.
+
+\subsection{Dyrektywa @theme inline}
+
+Konfiguracja motywu odbywa się za pomocą bloku \tskey{@theme inline}, który mapuje CSS custom properties na tokeny Tailwind:
+
+\begin{lstlisting}[style=podcodeCSS, caption={globals.css --- mapowanie tokenów (fragment)}]
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-jetbrains-mono);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-chart-a: var(--chart-a);
+  --color-chart-b: var(--chart-b);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+\end{lstlisting}
+
+Ten blok tworzy dwupoziomową abstrakcję:
+\begin{enumerate}
+  \item \textbf{CSS custom properties} (\tskey{--background}, \tskey{--success}, etc.) --- definiowane w~selektorze \tskey{:root} z~konkretnymi wartościami hex.
+  \item \textbf{Tokeny Tailwind} (\tskey{--color-background}, \tskey{--color-success}, etc.) --- wskazują na CSS properties, co umożliwia używanie klas jak \tskey{bg-background}, \tskey{text-success}, \tskey{rounded-lg}.
+\end{enumerate}
+
+\subsection{Niestandardowe rodziny fontów}
+
+\begin{table}[H]
+\centering
+\caption{Rodziny fontów skonfigurowane w~Tailwind}
+\label{tab:font-families}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{Token Tailwind} & \textbf{Font} & \textbf{Zastosowanie} \\
+\midrule
+\rowcolor{PodBlue!3}
+\tskey{font-sans} & Geist Sans & Tekst body, opisy, labels \\
+\tskey{font-mono} & Geist Mono & Dane liczbowe, tabele, kod \\
+\rowcolor{PodBlue!3}
+\tskey{font-display} & JetBrains Mono & Nagłówki sekcji, tytuły \\
+\tskey{font-story-display} & Syne & Story mode --- nagłówki immersyjne \\
+\rowcolor{PodBlue!3}
+\tskey{font-story-body} & Space Grotesk & Story mode --- tekst narracyjny \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Skala border-radius}
+
+Tailwind v4 pozwala definiować skalę zaokrągleń jako funkcję jednej zmiennej bazowej:
+
+\begin{lstlisting}[style=podcodeCSS, caption={Skala border-radius oparta na zmiennej \texttt{--radius}}]
+:root {
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);  /* 4px */
+  --radius-md: calc(var(--radius) - 2px);  /* 6px */
+  --radius-lg: var(--radius);               /* 8px */
+  --radius-xl: calc(var(--radius) + 4px);  /* 12px */
+  --radius-2xl: calc(var(--radius) + 8px); /* 16px */
+}
+\end{lstlisting}
+
+Zmiana jednej wartości \tskey{--radius} propaguje się na całą skalę, zapewniając spójność wizualną.
+
+\subsection{Dark mode}
+
+\podtekst domyślnie działa w~trybie ciemnym --- zmienne kolorów w~\tskey{:root} definiują ciemną paletę (\tskey{--background: \#050505}). Wariant jasny nie jest aktualnie zaimplementowany, ale mechanizm jest przygotowany:
+
+\begin{lstlisting}[style=podcodeCSS, caption={Custom variant dla dark mode}]
+@custom-variant dark (&:is(.dark *));
+\end{lstlisting}
+
+Klasa \tskey{.dark} na elemencie nadrzędnym aktywuje wariant ciemny. W~obecnej wersji cała aplikacja jest ciemna.
+
+
+% ============================================================
+\section{Docker}
+\label{sec:docker}
+
+\podtekst używa wieloetapowego (multi-stage) Dockerfile'a, który minimalizuje rozmiar końcowego obrazu i~separuje zależności buildowe od runtime'owych.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1cm,
+  every node/.style={font=\small},
+]
+
+% Layer 1: base
+\node[podbox blue, minimum width=12cm, minimum height=1.5cm] (base) {};
+\node[font=\bfseries\color{PodBlueDark}, anchor=west] at ([xshift=10pt]base.west) {1. BASE};
+\node[font=\small\color{PodTextSecondary}, anchor=east] at ([xshift=-10pt]base.east) {node:22-alpine + pnpm 10.29.3};
+\node[font=\scriptsize\ttfamily\color{PodTextMuted}, anchor=south west] at ([shift={(10pt,4pt)}]base.south west) {corepack enable \&\& corepack prepare pnpm@10.29.3 --activate};
+
+% Layer 2: deps
+\node[podbox purple, minimum width=12cm, minimum height=1.5cm, below=of base] (deps) {};
+\node[font=\bfseries\color{PodPurpleDark}, anchor=west] at ([xshift=10pt]deps.west) {2. DEPS};
+\node[font=\small\color{PodTextSecondary}, anchor=east] at ([xshift=-10pt]deps.east) {pnpm install --frozen-lockfile};
+\node[font=\scriptsize\ttfamily\color{PodTextMuted}, anchor=south west] at ([shift={(10pt,4pt)}]deps.south west) {COPY package.json pnpm-lock.yaml pnpm-workspace.yaml};
+
+% Layer 3: builder
+\node[podbox amber, minimum width=12cm, minimum height=1.5cm, below=of deps] (builder) {};
+\node[font=\bfseries\color{PodWarning!80!black}, anchor=west] at ([xshift=10pt]builder.west) {3. BUILDER};
+\node[font=\small\color{PodTextSecondary}, anchor=east] at ([xshift=-10pt]builder.east) {pnpm build};
+\node[font=\scriptsize\ttfamily\color{PodTextMuted}, anchor=south west] at ([shift={(10pt,4pt)}]builder.south west) {COPY --from=deps /app/node\_modules \&\& COPY . . \&\& pnpm build};
+
+% Layer 4: runner
+\node[podbox green, minimum width=12cm, minimum height=2.2cm, below=of builder] (runner) {};
+\node[font=\bfseries\color{PodSuccess!80!black}, anchor=north west] at ([shift={(10pt,-6pt)}]runner.north west) {4. RUNNER};
+\node[font=\small\color{PodTextSecondary}, anchor=north east] at ([shift={(-10pt,-6pt)}]runner.north east) {standalone, port 8080};
+\node[font=\scriptsize\ttfamily\color{PodTextMuted}, anchor=south west] at ([shift={(10pt,6pt)}]runner.south west) {
+  \begin{minipage}{10.5cm}
+  USER nextjs (uid:1001) | NODE\_ENV=production\\
+  HEALTHCHECK --interval=30s --timeout=10s /api/health\\
+  CMD ["node", "server.js"]
+  \end{minipage}
+};
+
+% Arrows
+\draw[podarrow] (base) -- (deps);
+\draw[podarrow purple] (deps) -- (builder);
+\draw[podarrow, color=PodWarning] (builder) -- (runner);
+
+% Size annotations
+\node[font=\scriptsize\color{PodTextMuted}, anchor=west] at ([xshift=10pt]base.east) {};
+\node[font=\scriptsize\color{PodDanger}, anchor=west] at ([xshift=1cm]deps.east) {$\sim$500\,MB};
+\node[font=\scriptsize\color{PodWarning}, anchor=west] at ([xshift=1cm]builder.east) {$\sim$800\,MB};
+\node[font=\scriptsize\color{PodSuccess}, anchor=west] at ([xshift=1cm]runner.east) {$\sim$150\,MB};
+
+\end{tikzpicture}
+\caption{Cztery etapy multi-stage Dockerfile --- od bazy Alpine po minimalny runner.}
+\label{fig:docker-stages}
+\end{figure}
+
+\subsection{Kompletny Dockerfile}
+
+\begin{lstlisting}[style=podcodeBash, caption={Dockerfile --- wieloetapowy build}]
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
+
+FROM base AS deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm build
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=8080
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs \
+  /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs \
+  /app/.next/static ./.next/static
+USER nextjs
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=10s \
+  --start-period=15s --retries=3 \
+  CMD node -e "const http = require('http'); \
+    http.get('http://localhost:8080/api/health', (r) => \
+    { if (r.statusCode !== 200) process.exit(1); }) \
+    .on('error', () => process.exit(1))"
+CMD ["node", "server.js"]
+\end{lstlisting}
+
+\subsection{Szczegóły poszczególnych etapów}
+
+\begin{description}
+  \item[BASE] Obraz Alpine z~Node.js 22 i~pnpm 10.29.3 aktywowanym przez corepack. Alpine wybrano dla minimalnego rozmiaru ($\sim$40\,MB bazowy obraz vs $\sim$350\,MB dla Debian).
+
+  \item[DEPS] Instalacja zależności z~\tskey{--frozen-lockfile} (wymaga dokładnej zgodności z~\filepath{pnpm-lock.yaml}). Kopiowane są tylko pliki manifestu --- zmiana kodu źródłowego nie invaliduje cache warstwy zależności.
+
+  \item[BUILDER] Kopiowanie kodu źródłowego i~uruchomienie \tskey{pnpm build}. Generuje \filepath{.next/standalone/} i~\filepath{.next/static/}.
+
+  \item[RUNNER] Minimalny obraz produkcyjny:
+  \begin{itemize}
+    \item Użytkownik \texttt{nextjs} (UID 1001) --- aplikacja nie działa jako root.
+    \item Port 8080 --- standard Cloud Run / Firebase.
+    \item Healthcheck co 30s --- zapytanie do \filepath{/api/health} z~15s grace period na start.
+    \item \tskey{CMD ["node", "server.js"]} --- uruchomienie standalone serwera.
+  \end{itemize}
+\end{description}
+
+\begin{warningbox}[title=Bezpieczeństwo kontenera]
+Kontener produkcyjny działa jako użytkownik nieprywilejowany (\texttt{nextjs}, UID 1001). Żaden proces w~kontenerze nie ma uprawnień root. Pliki z~etapu builder kopiowane są z~flagą \tskey{--chown=nextjs:nodejs}.
+\end{warningbox}
+
+
+% ============================================================
+\section{Firebase Hosting}
+\label{sec:firebase}
+
+\podtekst jest hostowany na Firebase Hosting z~backends obsługiwanym przez Cloud Run. Konfiguracja jest minimalna.
+
+\subsection{Konfiguracja projektu}
+
+\begin{table}[H]
+\centering
+\caption{Konfiguracja Firebase}
+\label{tab:firebase-config}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{Parametr} & \textbf{Wartość} & \textbf{Opis} \\
+\midrule
+\rowcolor{PodBlue!3}
+Projekt & \texttt{chatscope-2026} & Nazwa projektu Firebase \\
+Region & \texttt{europe-west1} & Region backendu (Belgia) --- niski latency dla PL \\
+\rowcolor{PodBlue!3}
+Hosting & \texttt{frameworksBackend} & Firebase automatycznie builduje Next.js \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{firebase.json}
+
+\begin{lstlisting}[style=podcodeJSON, caption={firebase.json --- konfiguracja hostingu}]
+{
+  "hosting": {
+    "source": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "frameworksBackend": {
+      "region": "europe-west1"
+    }
+  }
+}
+\end{lstlisting}
+
+Opcja \tskey{frameworksBackend} instruuje Firebase, by automatycznie zbudował i~wdrożył aplikację Next.js jako Cloud Run service w~podanym regionie. Firebase obsługuje:
+\begin{itemize}
+  \item Routing statycznych zasobów przez CDN
+  \item Dynamiczne ścieżki (SSR, API Routes) przez Cloud Run
+  \item Automatyczne certyfikaty SSL/TLS
+  \item Rewrites między CDN a~Cloud Run
+\end{itemize}
+
+\subsection{.firebaserc}
+
+\begin{lstlisting}[style=podcodeJSON, caption={.firebaserc --- powiązanie z~projektem}]
+{"projects":{"default":"chatscope-2026"}}
+\end{lstlisting}
+
+Plik \filepath{.firebaserc} łączy lokalne repozytorium z~projektem Firebase. Nazwa \texttt{chatscope-2026} jest historyczna (sprzed rebrandingu na \podtekst) --- zmiana nazwy projektu Firebase nie jest konieczna.
+
+
+% ============================================================
+\section{Zmienne środowiskowe}
+\label{sec:env-vars}
+
+\begin{table}[H]
+\centering
+\caption{Zmienne środowiskowe \podtekst}
+\label{tab:env-vars}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l c c X@{}}
+\toprule
+\textbf{Zmienna} & \textbf{Wymagana} & \textbf{Środowisko} & \textbf{Opis} \\
+\midrule
+\rowcolor{PodDanger!5}
+\tskey{GEMINI\_API\_KEY} & \danger{Tak} & Serwer & Klucz API Google AI Studio. Wymagany do analizy AI. Bez niego endpointy \filepath{/api/analyze*} zwracają błąd. \\
+\rowcolor{PodBlue!3}
+\tskey{NEXT\_PUBLIC\_GA\_ID} & Nie & Klient & ID Google Analytics 4 (format: \texttt{G-XXXXXXXXXX}). Jeśli ustawiony i~użytkownik wyrazi zgodę na cookies, włącza śledzenie. \\
+\rowcolor{PodBlue!3}
+\tskey{NEXT\_PUBLIC\_APP\_URL} & Nie & Klient & Bazowy URL aplikacji (np.\ \texttt{https://podtekst.app}). Używany do generowania linków w~meta tagach i~Open Graph. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title=Bezpieczeństwo kluczy API]
+Zmienna \tskey{GEMINI\_API\_KEY} jest zmienną serwerową --- \textbf{nie} ma prefiksu \tskey{NEXT\_PUBLIC\_}. Next.js automatycznie zapewnia, że zmienne bez tego prefiksu nie są dostępne w~bundlu klienta. Dodatkowe zabezpieczenie stanowi import \tskey{server-only} w~module \filepath{gemini.ts}.
+\end{warningbox}
+
+\subsection{Plik .env.local}
+
+Zmienne środowiskowe w~środowisku deweloperskim definiowane są w~pliku \filepath{.env.local} (dodanym do \filepath{.gitignore}):
+
+\begin{lstlisting}[style=podcodeBash, caption={Przykładowy .env.local}]
+GEMINI_API_KEY=AIzaSy...
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+\end{lstlisting}
+
+
+% ============================================================
+\section{Polecenia deweloperskie}
+\label{sec:dev-commands}
+
+\begin{table}[H]
+\centering
+\caption{Polecenia deweloperskie (skrypty npm/pnpm)}
+\label{tab:dev-commands}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{Polecenie} & \textbf{Skrypt} & \textbf{Opis} \\
+\midrule
+\rowcolor{PodBlue!3}
+\texttt{pnpm dev} & \texttt{next dev} & Uruchomienie serwera deweloperskiego z~HMR (Turbopack). Port domyślny: 3000. Automatyczne odświeżanie przy zmianach kodu. \\
+\texttt{pnpm build} & \texttt{next build} & Build produkcyjny. Generuje \filepath{.next/standalone/} i~\filepath{.next/static/}. Waliduje typy TypeScript, uruchamia prerendering stron statycznych. \\
+\rowcolor{PodBlue!3}
+\texttt{pnpm start} & \texttt{next start} & Uruchomienie serwera produkcyjnego lokalnie (po \texttt{pnpm build}). Port domyślny: 3000. \\
+\texttt{pnpm lint} & \texttt{eslint} & Statyczna analiza kodu --- ESLint 9 z~konfiguracją next/core-web-vitals. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title=Turbopack w~dev mode]
+Next.js 16 domyślnie używa Turbopacka (napisanego w~Rust) jako bundlera w~trybie deweloperskim. Turbopack jest $\sim$10x szybszy od Webpacka przy HMR (Hot Module Replacement), co oznacza natychmiastowe odświeżanie przy zmianach kodu --- nawet w~projektach z~40+ komponentami jak \podtekst.
+\end{infobox}
+
+
+% ============================================================
+\section{Zarządzanie zależnościami}
+\label{sec:dependency-management}
+
+\podtekst używa \textbf{pnpm} jako menedżera pakietów. Wybór pnpm nad npm/yarn uzasadniony jest:
+
+\begin{itemize}
+  \item \textbf{Content-addressable storage:} pakiety przechowywane globalnie i~linkowane do projektów --- oszczędność miejsca na dysku.
+  \item \textbf{Strict node\_modules:} pnpm tworzy \textit{non-flat} \filepath{node\_modules}, wymuszając deklarowanie wszystkich zależności bezpośrednich w~\filepath{package.json}. Zapobiega ,,phantom dependencies'' (korzystanie z~transient deps bez deklaracji).
+  \item \textbf{Deterministic lockfile:} \filepath{pnpm-lock.yaml} gwarantuje identyczne drzewo zależności na każdej maszynie (flaga \tskey{--frozen-lockfile} w~CI/Docker).
+  \item \textbf{Szybkość:} $\sim$2x szybszy od npm, $\sim$1.5x szybszy od yarn w~cold install.
+\end{itemize}
+
+\subsection{Statystyki zależności}
+
+\begin{table}[H]
+\centering
+\caption{Podsumowanie zależności projektu}
+\label{tab:dep-stats}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l c X@{}}
+\toprule
+\textbf{Kategoria} & \textbf{Liczba} & \textbf{Kluczowe pakiety} \\
+\midrule
+\rowcolor{PodBlue!3}
+Produkcyjne & 20+ & next, react, @google/generative-ai, recharts, framer-motion, jspdf \\
+Deweloperskie & 10+ & typescript, eslint, prettier, tailwindcss, shadcn \\
+\rowcolor{PodBlue!3}
+Łącznie (w~drzewie) & 500+ & Transient dependencies wszystkich pakietów \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Aktualizacja zależności}
+
+Strategia aktualizacji zależności w~\podtekst:
+
+\begin{enumerate}
+  \item \textbf{Patch i~minor} (np.\ 3.7.0 $\rightarrow$ 3.7.1 lub 3.8.0) --- aktualizowane regularnie, po weryfikacji \tskey{pnpm build} bez błędów.
+  \item \textbf{Major} (np.\ Next.js 16 $\rightarrow$ 17) --- aktualizowane ostrożnie, po przeczytaniu changelog i~przetestowaniu na branchu.
+  \item \textbf{Security patches} --- natychmiastowa aktualizacja. \tskey{pnpm audit} uruchamiany przed każdym deploymentem.
+\end{enumerate}
+
+Wersje w~\filepath{package.json} używają operatora \tskey{\^{}} (caret), który pozwala na automatyczne minor/patch updates w~ramach major version:
+
+\begin{lstlisting}[style=podcodeJSON, caption={Fragment package.json --- wersjonowanie}]
+{
+  "dependencies": {
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "@google/generative-ai": "^0.24.1",
+    "recharts": "^3.7.0",
+    "framer-motion": "^12.34.0"
+  }
+}
+\end{lstlisting}
+
+Wyjątki: \tskey{next} i~\tskey{react} mają pinned versions (bez \tskey{\^{}}), ponieważ ich aktualizacja wymaga szczególnej ostrożności i~pełnego testowania.

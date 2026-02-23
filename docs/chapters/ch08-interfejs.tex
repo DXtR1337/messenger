@@ -1,0 +1,1121 @@
+% ============================================================
+% Rozdział 8 — Interfejs Użytkownika
+% ============================================================
+
+\chapter{Interfejs Użytkownika}
+\label{ch:interfejs}
+
+\begin{center}
+\Large\itshape\color{PodPurple}
+,,Bloomberg Terminal meets Spotify Wrapped meets clinical psychology report.''
+\end{center}
+
+\vspace{8pt}
+
+Interfejs \podtekst to nie typowy SaaS dashboard. To \textbf{edytorialny, data-dense, ciemny} system zaprojektowany z~myślą o~jednoczesnym oddziaływaniu na dwa instynkty: ciekawość analityczną (,,chcę zrozumieć dane'') i~emocjonalną gratyfikację (,,chcę zobaczyć się w~tych danych''). Niniejszy rozdział opisuje kompletny system projektowy, każdy ekran aplikacji oraz inwentarz ponad 40~komponentów interfejsu.
+
+
+% ============================================================
+% 8.1 System projektowy
+% ============================================================
+\section{System projektowy}
+\label{sec:design-system}
+
+\subsection{Filozofia wizualna}
+
+System projektowy \podtekst opiera się na trzech filarach:
+
+\begin{description}
+  \item[Ciemność] Ciemny motyw jest domyślny i~jedyny. Nie ma trybu jasnego. Tło \texttt{\#050505} jest niemal czarne, co nadaje interfejsowi charakter terminala i~pozwala kolorom danych wyraźnie wyróżniać się z~tła.
+
+  \item[Gęstość informacyjna] Ekrany są projektowane w~duchu editorial design --- dużo danych, mało białej przestrzeni, precyzyjne odstępy. Każdy piksel komunikuje wartość.
+
+  \item[Precyzja emocjonalna] Kolory nie są ozdobnikami --- są nośnikami znaczenia. \personA{Niebieski} zawsze oznacza Osobę~A, \personB{fioletowy} zawsze Osobę~B. \score{Zielony} to wartość pozytywna, \warn{pomarańczowy} to ostrzeżenie, \danger{czerwony} to zagrożenie.
+\end{description}
+
+\begin{warningbox}[title=Anty-wzorce]
+\podtekst celowo unika: pastelowych palet, zaokrąglonych-wszystkiego, domyślnego Tailwind Blue, generycznego SaaS look, cutesy ilustracji, nadmiernych paddingów. Estetyka jest \textbf{ciemna, precyzyjna, information-rich, pewna siebie i~lekko prowokacyjna}.
+\end{warningbox}
+
+\subsection{Paleta kolorów}
+\label{subsec:paleta-kolorow}
+
+Wszystkie kolory zdefiniowane są jako zmienne CSS w~pliku \filepath{src/app/globals.css} i~mapowane na kolory Tailwind via \texttt{@theme inline}.
+
+\begin{table}[H]
+\caption{Paleta kolorów \podtekst}
+\label{tab:paleta}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l l X @{}}
+\toprule
+\textbf{Zmienna CSS} & \textbf{Hex} & \textbf{Token Tailwind} & \textbf{Zastosowanie} \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Tła}} \\
+\texttt{-{}-background} & \texttt{\#050505} & \texttt{bg-background} & Główne tło strony \\
+\texttt{-{}-popover} & \texttt{\#0A0A0A} & \texttt{bg-popover} & Tło popoverów, sidebar \\
+\texttt{-{}-card} & \texttt{\#111111} & \texttt{bg-card} & Karty, sekcje \\
+\texttt{-{}-card-hover} & \texttt{\#161616} & \texttt{bg-card-hover} & Karty w~stanie hover \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Obramowania}} \\
+\texttt{-{}-border} & \texttt{\#1A1A1A} & \texttt{border-border} & Domyślne obramowania \\
+\texttt{-{}-border-hover} & \texttt{\#2A2A2A} & \texttt{border-border-hover} & Obramowanie hover \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Tekst}} \\
+\texttt{-{}-foreground} & \texttt{\#FAFAFA} & \texttt{text-foreground} & Tekst główny (tytuły, wartości) \\
+\texttt{-{}-muted-foreground} & \texttt{\#888888} & \texttt{text-muted-foreground} & Tekst pomocniczy (opisy) \\
+\texttt{-{}-text-muted} & \texttt{\#555555} & \texttt{text-text-muted} & Tekst wyciszony (labele) \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Akcenty}} \\
+\texttt{-{}-primary} & \texttt{\#3B82F6} & \texttt{text-primary} & Akcent niebieski, CTA \\
+\texttt{-{}-chart-a} & \texttt{\#3B82F6} & \texttt{text-chart-a} & Kolor Osoby~A na wykresach \\
+\texttt{-{}-chart-b} & \texttt{\#A855F7} & \texttt{text-chart-b} & Kolor Osoby~B na wykresach \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Semantyczne}} \\
+\texttt{-{}-success} & \texttt{\#10B981} & \texttt{text-success} & Pozytywne wartości \\
+\texttt{-{}-warning} & \texttt{\#F59E0B} & \texttt{text-warning} & Ostrzeżenia, neutralne \\
+\texttt{-{}-danger} & \texttt{\#EF4444} & \texttt{text-danger} & Negatywne, red flags \\
+\texttt{-{}-cyan} & \texttt{\#06B6D4} & \texttt{text-cyan} & Informacyjne wyróżnienia \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small]
+  % Row 1: Backgrounds
+  \node[anchor=west, font=\footnotesize\bfseries, color=PodTextSecondary] at (0, 4.2) {TŁA};
+  \fill[black!98!white, rounded corners=2pt] (0,3.4) rectangle (2, 4); \node[font=\ttfamily\tiny, white] at (1, 3.7) {\#050505};
+  \fill[black!96!white, rounded corners=2pt] (2.2,3.4) rectangle (4.2, 4); \node[font=\ttfamily\tiny, white] at (3.2, 3.7) {\#0A0A0A};
+  \fill[PodCard, rounded corners=2pt] (4.4,3.4) rectangle (6.4, 4); \node[font=\ttfamily\tiny, white] at (5.4, 3.7) {\#111111};
+  \fill[PodCardHover, rounded corners=2pt] (6.6,3.4) rectangle (8.6, 4); \node[font=\ttfamily\tiny, white] at (7.6, 3.7) {\#161616};
+
+  % Row 2: Accents
+  \node[anchor=west, font=\footnotesize\bfseries, color=PodTextSecondary] at (0, 3) {AKCENTY};
+  \fill[PodBlue, rounded corners=2pt] (0,2.2) rectangle (2, 2.8); \node[font=\ttfamily\tiny, white] at (1, 2.5) {\#3B82F6};
+  \fill[PodPurple, rounded corners=2pt] (2.2,2.2) rectangle (4.2, 2.8); \node[font=\ttfamily\tiny, white] at (3.2, 2.5) {\#A855F7};
+  \fill[PodCyan, rounded corners=2pt] (4.4,2.2) rectangle (6.4, 2.8); \node[font=\ttfamily\tiny, white] at (5.4, 2.5) {\#06B6D4};
+
+  % Row 3: Semantic
+  \node[anchor=west, font=\footnotesize\bfseries, color=PodTextSecondary] at (0, 1.8) {SEMANTYCZNE};
+  \fill[PodSuccess, rounded corners=2pt] (0,1.0) rectangle (2, 1.6); \node[font=\ttfamily\tiny, white] at (1, 1.3) {\#10B981};
+  \fill[PodWarning, rounded corners=2pt] (2.2,1.0) rectangle (4.2, 1.6); \node[font=\ttfamily\tiny, white] at (3.2, 1.3) {\#F59E0B};
+  \fill[PodDanger, rounded corners=2pt] (4.4,1.0) rectangle (6.4, 1.6); \node[font=\ttfamily\tiny, white] at (5.4, 1.3) {\#EF4444};
+\end{tikzpicture}
+\caption{Próbki kolorów systemu projektowego \podtekst}
+\label{fig:color-swatches}
+\end{figure}
+
+\subsection{Typografia}
+
+\podtekst wykorzystuje cztery rodziny fontów, każda z~precyzyjnie przypisaną rolą:
+
+\begin{table}[H]
+\caption{System typograficzny}
+\label{tab:typografia}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l l X @{}}
+\toprule
+\textbf{Font} & \textbf{Token CSS} & \textbf{Rola} & \textbf{Zastosowanie} \\
+\midrule
+Geist Sans & \texttt{-{}-font-sans} & Body & Tekst główny, opisy, paragony, UI \\
+Geist Mono & \texttt{-{}-font-mono} & Data & Liczby, wartości metryczne, countdowns \\
+JetBrains Mono & \texttt{-{}-font-display} & Display & Nagłówki sekcji, labele KPI, badge titles \\
+Syne & \texttt{-{}-font-story-display} & Story Display & Nagłówki w~Story Mode (bold, expressive) \\
+Space Grotesk & \texttt{-{}-font-story-body} & Story Body & Tekst w~Story Mode (geometryczny, nowoczesny) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Rozmiar bazowy jest responsywny: \texttt{font-size: clamp(14px, 0.875rem + 0.25vw, 18px)}, co zapewnia czytelność na każdej rozdzielczości.
+
+\subsection{Breakpointy responsywne}
+
+\begin{table}[H]
+\caption{Breakpointy responsywne}
+\label{tab:breakpoints}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l X @{}}
+\toprule
+\textbf{Breakpoint} & \textbf{Zakres} & \textbf{Zachowanie} \\
+\midrule
+Mobile & $\leq$ 767px & Sidebar jako drawer (translateX), 1 kolumna, KPI stack \\
+Tablet & 768px -- 1279px & Sidebar collapsed (ikony), 2 kolumny, KPI grid 2$\times$2 \\
+Desktop & $\geq$ 1280px & Sidebar expanded, 3 kolumny, KPI grid 4$\times$1 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Karty (Card System)}
+
+Karta jest podstawową jednostką kompozycji UI. Każda karta w~\podtekst ma następujące cechy:
+
+\begin{itemize}
+  \item \textbf{Tło:} \texttt{\#111111} (\texttt{bg-card})
+  \item \textbf{Obramowanie:} 1px solid \texttt{\#1A1A1A} (\texttt{border-border})
+  \item \textbf{Border-radius:} \texttt{0.5rem} (zaokrąglone, ale subtelne)
+  \item \textbf{Hover:} tło zmienia się na \texttt{\#161616}, border na \texttt{\#2A2A2A}, opcjonalny \texttt{scale(1.02)} z~\texttt{transition-all duration-200}
+  \item \textbf{Padding:} wewnętrzny \texttt{p-4} do \texttt{p-6}
+\end{itemize}
+
+\subsection{Tekstura Grain}
+
+Na całą stronę nałożona jest subtelna tekstura grain (fractal noise) z~opacją 3\%. Realizacja: inline SVG z~\texttt{feTurbulence} (baseFrequency 0.85, 4 octaves), renderowany jako \texttt{background-image} na elemencie \texttt{pointer-events-none} z~pozycją absolutną. Efekt: lekka analogowa ziarnistość, która dodaje głębi ciemnemu tłu bez wpływu na czytelność tekstu i~danych.
+
+
+% ============================================================
+% 8.2 Strona lądowania
+% ============================================================
+\section{Strona lądowania}
+\label{sec:landing}
+
+Strona lądowania jest zaprojektowana jako full-viewport, scroll-driven narrative experience. Składa się z~dziewięciu sekcji, każda zaprojektowana jako samodzielna jednostka wizualna.
+
+\subsection{Architektura komponentów}
+
+\begin{table}[H]
+\caption{Komponenty strony lądowania}
+\label{tab:landing-components}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l X @{}}
+\toprule
+\textbf{Komponent} & \textbf{Plik} & \textbf{Opis} \\
+\midrule
+LandingHero & \filepath{LandingHero.tsx} & Full-viewport hero z~3D sceną Spline, floating data fragments \\
+LandingSocialProof & \filepath{LandingSocialProof.tsx} & Social proof: liczby, badge'e, cytaty użytkowników \\
+LandingHowItWorks & \filepath{LandingHowItWorks.tsx} & 3-krokowy explainer: Upload → Analyze → Discover \\
+LandingFeatureShowcase & \filepath{LandingFeatureShowcase.tsx} & Karty feature z~preview visualizacji i~sample data \\
+SplineInterlude & \filepath{SplineInterlude.tsx} & Przerywnik z~3D scenami Spline (desktop only) \\
+LandingDemo & \filepath{LandingDemo.tsx} & Interaktywne demo z~preloadowaną analizą \\
+LandingFAQ & \filepath{LandingFAQ.tsx} & Accordion FAQ z~najczęściej zadawanymi pytaniami \\
+LandingFooter & \filepath{LandingFooter.tsx} & Minimalny footer: linki, prywatność, branding \\
+ParticleBackground & \filepath{ParticleBackground.tsx} & Globalny animowany network graph w~tle \\
+CurtainReveal & \filepath{CurtainReveal.tsx} & Teatralna animacja kurtyny z~neonowym logo przy pierwszym ładowaniu \\
+ScrollProgress & \filepath{ScrollProgress.tsx} & Pasek postępu scroll z~gradientem blue→purple→green, fixed na górze viewportu \\
+HangingLetters & \filepath{HangingLetters.tsx} & Animacja fizyki wahadła --- litery P,o,d,T,e,k,s,T wiszące na linkach z~idle sway i~interakcją myszy \\
+PTLogo & \filepath{shared/PTLogo.tsx} & Logo SVG ,,PT'' z~gradientem blue→purple, używane w~nawigacji i~landing page \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Hero Section}
+
+Sekcja hero zajmuje 100vh i~jest centralnym elementem pierwszego wrażenia. Składa się z~następujących warstw (z-index rosnący):
+
+\begin{enumerate}
+  \item \textbf{ParticleBackground} (z-index: 0) --- globalny canvas z~animowaną siecią cząsteczek. Cząsteczki łączą się liniami, gdy są blisko siebie, tworząc wizualizację podobną do network graph. Kolory: niebieski i~fioletowy z~niską opacją.
+
+  \item \textbf{Scena 3D Spline} (z-index: 1) --- interaktywny model 3D mózgu/sieci neuronowej, ładowany asynchronicznie via \texttt{next/dynamic} z~\texttt{ssr: false}. Widoczny tylko na desktop ($\geq$768px). Użytkownik może obracać scenę myszką, ale scroll jest bezpieczny (nie przechwytuje wheel events).
+
+  \item \textbf{Grain overlay} (z-index: 2) --- tekstura ziarnistości, opacja 3\%.
+
+  \item \textbf{Floating Data Fragments} (z-index: 2) --- sześć fragmentów danych unoszących się po ekranie z~subtelnymi animacjami drift: ,,4\,521 wiadomości'', ,,78 / 100'', ,,23:00'', ,,ENFP'', ,,ghosting: 3d'', ,,❤️ 1\,234×''. Opacja 7--10\%, font mono, rozmiar 0.65rem, z~keyframe \texttt{heroFragmentDrift}.
+
+  \item \textbf{Content} (z-index: 10) --- centrowany blok z:
+  \begin{itemize}
+    \item Diagonalny tekst dekoracyjny (obrócony o~$-12°$): ,,Twoje rozmowy mówią więcej niż myślisz''
+    \item Logo \podtekst (48px bold, gradient niebieski→fioletowy)
+    \item Tagline: ,,odkryj to, co kryje się między wierszami''
+    \item Subtekst: ,,(bo wiesz, eks...)''
+    \item CTA: przycisk ,,Analizuj za darmo'' ze strzałką → Dashboard
+  \end{itemize}
+\end{enumerate}
+
+\subsection{Social Proof}
+
+Sekcja social proof wyświetla metryki agregowane: łączna liczba przeanalizowanych rozmów, łączna liczba przetworzonych wiadomości, średni health score. Dane renderowane z~animated count-up przy scroll-in.
+
+\subsection{How It Works}
+
+Trzy kolumny (desktop) lub karuzela (mobile) z~krokami:
+\begin{enumerate}
+  \item \textbf{Wrzuć plik} --- ikona Upload, opis obsługiwanych formatów
+  \item \textbf{Poczekaj chwilę} --- ikona zegara, opis parsowania + analizy AI
+  \item \textbf{Odkryj prawdę} --- ikona wykresu, opis dostępnych wyników
+\end{enumerate}
+
+Każdy krok ma animowany numer (scale-in), ikonę i~opis. Strzałki między krokami (desktop) i~pionowe connectors (mobile).
+
+\subsection{Feature Showcase}
+
+Scrollowalne karty z~podglądem typów analizy: Tone Analysis, Personality Profile, Relationship Dynamics. Każda karta zawiera mini-wizualizację z~sample data --- nie screenshot, lecz faktyczny komponent renderowany z~mockowanymi danymi.
+
+\subsection{Spline Interlude}
+
+Przerywnik między sekcjami, wyświetlający dodatkowe sceny 3D Spline (\filepath{scene-2.splinecode}, \filepath{scene-3.splinecode}). Widoczny tylko na desktop. Sceny ładowane lazy --- nie blokują first paint.
+
+\subsection{Demo Section}
+
+Interaktywne demo z~preloadowaną przykładową analizą. Użytkownik może kliknąć w~zakładki (KPI, Heatmap, Personality) i~zobaczyć prawdziwe komponenty analizy z~mockowanymi danymi. Cel: przekonanie użytkownika, że warto wrzucić własną rozmowę.
+
+\subsection{FAQ}
+
+Komponent accordion (shadcn/ui \texttt{Collapsible}) z~najczęściej zadawanymi pytaniami. Pytania dotyczą: prywatności, formatu plików, dokładności AI, obsługiwanych platform, modelu cenowego.
+
+
+% ============================================================
+% 8.3 Dashboard
+% ============================================================
+\section{Dashboard}
+\label{sec:dashboard}
+
+Dashboard (\filepath{src/app/(dashboard)/dashboard/page.tsx}) wyświetla listę wszystkich wcześniejszych analiz użytkownika, przechowywanych w~IndexedDB (offline-first, bez serwera).
+
+\subsection{Siatka analiz}
+
+Analizy wyświetlane są jako karty w~siatce responsywnej: 3 kolumny na desktop, 2 na tablecie, 1 na mobile. Każda karta zawiera:
+
+\begin{itemize}
+  \item \textbf{Tytuł rozmowy} --- nazwy uczestników
+  \item \textbf{Metadata badges} --- ikony z~lucide-react:
+  \begin{itemize}
+    \item \texttt{MessageSquareText} + liczba wiadomości
+    \item \texttt{BarChart3} + liczba uczestników
+    \item \texttt{Brain} + badge ,,AI'' jeśli analiza jakościowa jest kompletna
+  \end{itemize}
+  \item \textbf{Mini Health Ring} --- SVG ring z~health score (36$\times$36px, animated \texttt{strokeDashoffset}), kolorowany: $\geq$80 zielony, $\geq$60 niebieski, $\geq$40 pomarańczowy, $<$40 czerwony
+  \item \textbf{Data analizy} --- sformatowana po polsku (,,15 sty 2026'')
+  \item \textbf{Przycisk usuwania} --- ikona X, z~dwuetapowym potwierdzeniem (kliknij → ,,Na pewno?'' → potwierdź)
+\end{itemize}
+
+\subsection{Empty state}
+
+Gdy brak analiz, wyświetlany jest animowany empty state z~ikoną i~przyciskiem ,,Rozpocznij pierwszą analizę'' prowadzącym do \filepath{/analysis/new}.
+
+\subsection{Porównanie rozmów}
+
+Przycisk \texttt{GitCompareArrows} umożliwia porównanie dwóch wybranych analiz side-by-side. Porównanie jest dostępne tylko w~planie Unlimited.
+
+
+% ============================================================
+% 8.4 Upload i przetwarzanie
+% ============================================================
+\section{Upload i~przetwarzanie}
+\label{sec:upload}
+
+\subsection{DropZone}
+
+Komponent \texttt{DropZone} (\filepath{src/components/upload/DropZone.tsx}) to centralny element strony uploadu. Implementacja:
+
+\begin{description}
+  \item[Drag-and-drop] Obsługa zdarzeń \texttt{onDragEnter}, \texttt{onDragOver}, \texttt{onDragLeave}, \texttt{onDrop} z~counter-based tracking (zapobiega migotaniu przy przechodzeniu nad elementami potomnymi). Wizualny feedback: niebieskie obramowanie + zmiana tła podczas przeciągania.
+
+  \item[Multi-file] Akceptacja wielu plików jednocześnie (np. \texttt{message\_1.json} ... \texttt{message\_5.json} z~Messengera). Pliki są scalane w~jedną rozmowę.
+
+  \item[Formaty] Akceptowane rozszerzenia: \texttt{.json} (Messenger, Instagram, Telegram), \texttt{.txt} (WhatsApp). Inne formaty wyświetlają komunikat błędu z~instrukcją eksportu.
+
+  \item[Limity rozmiaru] Twardy limit: 500\,MB per plik. Ostrzeżenie: powyżej 200\,MB wyświetlany jest komunikat o~możliwym dłuższym czasie przetwarzania.
+
+  \item[Podgląd plików] Po wybraniu plików wyświetlana jest lista z~nazwami, rozmiarami i~ikoną typu (FileJson / FileText). Użytkownik może usunąć poszczególne pliki przed rozpoczęciem analizy.
+\end{description}
+
+\subsection{Selektor typu relacji}
+
+Sześć typów relacji wyświetlanych jako klikalne karty z~ikonami:
+
+\begin{table}[H]
+\caption{Typy relacji}
+\label{tab:relationship-types-ui}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} c l X @{}}
+\toprule
+\textbf{Ikona} & \textbf{Typ} & \textbf{Wpływ na analizę AI} \\
+\midrule
+💑 & Romantyczna & Język miłości, attachment style, red/green flags romantyczne \\
+👫 & Przyjaźń & Lojalność, shared experiences, konflikt vs harmonia \\
+💼 & Koleżeńska & Formalność, hierarchia, profesjonalizm \\
+🤝 & Profesjonalna & Power dynamics, assertiveness, boundary management \\
+👨‍👩‍👧 & Rodzinna & Intergenerational patterns, emotional support, control \\
+❓ & Inna & Neutralne prompty, brak specjalizacji \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{ProcessingState}
+
+Komponent \texttt{ProcessingState} (\filepath{src/components/upload/ProcessingState.tsx}) wizualizuje trzyetapowy pipeline przetwarzania:
+
+\begin{enumerate}
+  \item \textbf{Parsowanie} (,,Odczytywanie i~dekodowanie danych z~Messengera'') --- ikona spinnera podczas pracy, check-mark po zakończeniu.
+  \item \textbf{Obliczanie} (,,Wyliczanie metryk ilościowych'') --- pasek postępu z~liczbą przetworzonych wiadomości.
+  \item \textbf{Zapis} (,,Zapisywanie wyników analizy'') --- persystencja do IndexedDB.
+\end{enumerate}
+
+Każdy etap ma trzy stany wizualne:
+\begin{itemize}
+  \item \texttt{pending} --- ikona szara, tekst wyciszony
+  \item \texttt{active} --- spinner (animowany via Framer Motion \texttt{rotate: 360}, \texttt{duration: 0.8s}, \texttt{repeat: Infinity}), tekst biały
+  \item \texttt{complete} --- zielony check-mark z~animacją \texttt{scale: 0 → 1}, tekst success
+\end{itemize}
+
+Błędy wyświetlane są jako czerwony alert z~ikoną \texttt{AlertCircle} i~komunikatem opisowym.
+
+
+% ============================================================
+% 8.5 Strona analizy
+% ============================================================
+\section{Strona analizy}
+\label{sec:analysis-page}
+
+Strona analizy (\filepath{src/app/(dashboard)/analysis/[id]/page.tsx}) jest największym i~najbardziej złożonym ekranem w~\podtekst. Wyświetla pełen wynik analizy --- zarówno metryki ilościowe, jak i~(opcjonalnie) wyniki analizy AI. Składa się z~ponad 40~komponentów, podzielonych na dziesięć sekcji tematycznych.
+
+\subsection{Inwentarz komponentów}
+
+\begin{longtable}{@{} l l p{5.2cm} l @{}}
+\caption{Inwentarz komponentów strony analizy}
+\label{tab:components-inventory} \\
+\toprule
+\textbf{Sekcja} & \textbf{Komponent} & \textbf{Opis} & \textbf{Źródło danych} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Sekcja} & \textbf{Komponent} & \textbf{Opis} & \textbf{Źródło danych} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\small\itshape Kontynuacja na następnej stronie...} \\
+\endfoot
+\bottomrule
+\endlastfoot
+
+% ── HEADER ──
+\multicolumn{4}{@{}l}{\textbf{Nagłówek}} \\
+& AnalysisHeader & Tytuł rozmowy, okres, liczba wiadomości, health score ring SVG & Ilościowe + AI \\
+& SectionNavigator & Sticky nawigacja po sekcjach z~aktywną pozycją scroll-spy & --- \\
+& SectionDivider & Wizualny separator sekcji z~ikoną i~tytułem & --- \\
+\addlinespace
+
+% ── PARTICIPANTS ──
+\multicolumn{4}{@{}l}{\textbf{Uczestnicy}} \\
+& ParticipantStrip & Awatary (generowane inicjały), message counts, procentowy pasek proporcji & Ilościowe \\
+\addlinespace
+
+% ── KPI ──
+\multicolumn{4}{@{}l}{\textbf{KPI}} \\
+& KPICards & 4 karty: czas odpowiedzi, wiad./dzień, reakcje, inicjacja. Count-up, sparkline, trend & Ilościowe \\
+& Sparkline & Mini-wykres inline (SVG polyline, 40$\times$16px) & Ilościowe \\
+\addlinespace
+
+% ── WYKRESY ──
+\multicolumn{4}{@{}l}{\textbf{Wykresy}} \\
+& TimelineChart & Wykres area, miesięczny, filtry: 3M/6M/1Y/All & Ilościowe \\
+& HeatmapChart & Grid 7$\times$24 (dni $\times$ godziny), intensywność koloru & Ilościowe \\
+& ResponseTimeChart & Wykres liniowy, mediana odpowiedzi per miesiąc & Ilościowe \\
+& BurstActivity & Wizualizacja wykrytych burstów (klastry szybkich wiadomości) & Ilościowe \\
+\addlinespace
+
+% ── DANE ──
+\multicolumn{4}{@{}l}{\textbf{Dane szczegółowe}} \\
+& StatsGrid & Tabela podsumowująca: łączne wiadomości, słowa, dni, reakcje per osoba & Ilościowe \\
+& MessageLengthSection & Porównanie średniej/mediany długości wiadomości + histogram & Ilościowe \\
+& WeekdayWeekendCard & Porównanie aktywności weekday vs weekend per osoba & Ilościowe \\
+& TopWordsCard & Top 20 najczęstszych słów per osoba (z~filtrowaniem stop-words) & Ilościowe \\
+& EmojiReactions & Top emoji + reakcje, ranking, count per osoba & Ilościowe \\
+& CatchphraseCard & Automatycznie wykryte catchphrases (n-gramy) per osoba & Ilościowe \\
+\addlinespace
+
+% ── VIRAL ──
+\multicolumn{4}{@{}l}{\textbf{Viral Scores}} \\
+& ViralScoresSection & 3 gauge'e: Compatibility, Interest, Delusion + per-osoba breakdown & Ilościowe \\
+& BestTimeToTextCard & Optymalna godzina na wiadomość (najkrótszy czas odpowiedzi) & Ilościowe \\
+& GhostForecast & Prognoza ghostingu w~motywach pogodowych (6 poziomów: ☀️→🌪️) & Ilościowe \\
+\addlinespace
+
+% ── AI: TON ──
+\multicolumn{4}{@{}l}{\textbf{AI: Ton i~styl}} \\
+& ToneRadarChart & 6-osiowy radar canvas: ciepły, żartobliwy, analityczny, lękowy, romantyczny, neutralny & AI Pass 1 \\
+& ToneAnalysis & Primarny/sekundarny ton per osoba, warmth bar, formality bar, humor style & AI Pass 1 \\
+\addlinespace
+
+% ── AI: OSOBOWOŚĆ ──
+\multicolumn{4}{@{}l}{\textbf{AI: Osobowość}} \\
+& AttachmentStyleCards & Styl przywiązania per osoba (secure, anxious, avoidant, disorganized) & AI Pass 3 \\
+& CommunicationStyleMeters & Skale: directness, assertiveness, validation-seeking, avoidance & AI Pass 2 \\
+& PersonalityDeepDive & Big Five (5 pasków), MBTI, styl przywiązania, EQ, obserwacje kliniczne & AI Pass 3 \\
+& PersonalityProfiles & Syntetyczny profil per osoba: summary, strengths, areas to watch & AI Pass 3 \\
+& LoveLanguageCard & Top 3 języki miłości per osoba z~procentami i~dowodami & AI Pass 3 \\
+\addlinespace
+
+% ── AI: DYNAMIKA ──
+\multicolumn{4}{@{}l}{\textbf{AI: Dynamika relacji}} \\
+& RelationshipBalance & Gauge balansu władzy ($-100$ do $+100$), praca emocjonalna, reciprocity & AI Pass 2 \\
+& DynamicsSection & Wzorce konfliktu, intymność, unikanie tematów, inside jokes & AI Pass 2 \\
+& TurningPointsTimeline & Oś czasu z~AI-identified punktami zwrotnymi w~relacji & AI Pass 4 \\
+& FinalReport & Synteza: health score, summary, red/green flags, actionable insights & AI Pass 4 \\
+\addlinespace
+
+% ── ODZNAKI ──
+\multicolumn{4}{@{}l}{\textbf{Odznaki i~nagrody}} \\
+& BadgesGrid & 12 odznak osiągnięć (grid 3$\times$4 desktop, 2$\times$6 mobile) & Ilościowe \\
+& GroupChatAwards & Specjalne nagrody dla czatów grupowych ($>$2 uczestników) & Ilościowe \\
+& NetworkGraph & Interaktywny graf sieciowy (force-directed, canvas) & Ilościowe \\
+\addlinespace
+
+% ── SHARE ──
+\multicolumn{4}{@{}l}{\textbf{Udostępnianie i~eksport}} \\
+& ShareCardGallery & Galeria 15 typów Share Cards z~podglądem + export PNG & Oba \\
+& ShareCaptionModal & Modal generujący podpisy pod posty + hashtagi & --- \\
+& ExportPDFButton & Generowanie PDF z~pełnym raportem (html2canvas + jsPDF) & Oba \\
+& AnalysisImageCard & Card z~opcją eksportu jako obraz (dom-to-image) & Oba \\
+& RoastImageCard & Roast jako grafika do udostępnienia & AI \\
+\addlinespace
+
+% ── SPECJALNE ──
+\multicolumn{4}{@{}l}{\textbf{Sekcje specjalne}} \\
+& RoastSection & Bezlitosny, zabawny roast każdego uczestnika & AI \\
+& CPSScreener & Conversation Personality Score --- profil osobowości rozmowy & AI Pass 5 \\
+& ComparisonRadar & Radar porównawczy dwóch analiz (overlay) & Oba \\
+& ComparisonTable & Tabela porównawcza dwóch analiz (metryki side-by-side) & Ilościowe \\
+& ComparisonTimeline & Overlay timeline dwóch analiz (normalizowany) & Ilościowe \\
+\end{longtable}
+
+\subsection{AnalysisHeader}
+
+Komponent \texttt{AnalysisHeader} (\filepath{src/components/analysis/AnalysisHeader.tsx}) stanowi wizytówkę strony analizy. Wyświetla:
+
+\begin{itemize}
+  \item \textbf{Tytuł rozmowy} --- nazwy uczestników, font 24px bold
+  \item \textbf{Okres} --- sformatowany po polsku: ,,Sty 2023 --- Gru 2025'', funkcja \tsfunc{formatPolishDateRange()}
+  \item \textbf{Liczba wiadomości} --- sformatowana z~separatorem tysięcy (locale \texttt{pl-PL})
+  \item \textbf{Health Score Ring} --- SVG ring (animowany \texttt{strokeDashoffset} via Framer Motion), kolorowany progowo:
+  \begin{itemize}
+    \item $\geq$ 70: \score{\#10b981} (zielony)
+    \item $\geq$ 40: \warn{\#f59e0b} (pomarańczowy)
+    \item $<$ 40: \danger{\#ef4444} (czerwony)
+  \end{itemize}
+  \item \textbf{Verdict} --- tekstowy werdykt AI (np. ,,Zdrowa relacja z~drobnymi napięciami'')
+\end{itemize}
+
+\subsection{KPICards}
+
+Komponent \texttt{KPICards} (\filepath{src/components/analysis/KPICards.tsx}) wyświetla cztery kluczowe wskaźniki w~jednym rzędzie (desktop) lub siatce 2$\times$2 (tablet/mobile):
+
+\begin{enumerate}
+  \item \textbf{Czas odpowiedzi} --- mediana, format: ,,2m 34s'' lub ,,1h 15m''. Formatowanie via \tsfunc{formatResponseTime()}.
+  \item \textbf{Wiadomości / dzień} --- średnia dzienna aktywność z~jednym miejscem po przecinku.
+  \item \textbf{Reakcje} --- łączna liczba reakcji, z~podziałem na top 3 emoji.
+  \item \textbf{Proporcja inicjacji} --- stosunek inicjacji konwersacji (np. ,,65:35'').
+\end{enumerate}
+
+Każda karta KPI zawiera:
+\begin{itemize}
+  \item \textbf{Animated count-up} --- hook \tsfunc{useAnimatedCounter()} z~krzywą easeOutCubic ($1 - (1-t)^3$), duration 1200ms, triggerowany via \texttt{IntersectionObserver} (\texttt{useInView}, \texttt{once: true}).
+  \item \textbf{Sparkline} --- mini-wykres SVG (\texttt{polyline}) 40$\times$16px pokazujący trend na ostatnich 6 miesiącach.
+  \item \textbf{Trend indicator} --- strzałka w~górę/dół z~procentową zmianą, kolorowana semantycznie.
+\end{itemize}
+
+\subsection{HeatmapChart}
+
+Komponent \texttt{HeatmapChart} (\filepath{src/components/analysis/HeatmapChart.tsx}) renderuje macierz $7 \times 24$ (dni tygodnia $\times$ godziny dnia). Implementacja:
+
+\begin{itemize}
+  \item \textbf{Grid} --- 168 komórek renderowanych jako \texttt{<div>} z~dynamicznym \texttt{backgroundColor}
+  \item \textbf{Intensywność} --- 6 poziomów kolorystycznych, od \texttt{rgba(59,130,246,0.03)} (brak aktywności) do \texttt{rgba(59,130,246,0.8)} (peak activity)
+  \item \textbf{Osie} --- Pon--Nd (polskie skróty), godziny: 0, 4, 8, 12, 16, 20
+  \item \textbf{Tooltip} --- na hover wyświetla liczbę wiadomości dla danej komórki
+  \item \textbf{Animacja wejścia} --- komórki pojawiają się z~staggered delay (fade-in), triggerowany \texttt{useInView}
+\end{itemize}
+
+\subsection{ToneRadarChart}
+
+Komponent \texttt{ToneRadarChart} (\filepath{src/components/analysis/ToneRadarChart.tsx}) rysuje 6-osiowy radar chart na elemencie \texttt{<canvas>} z~obsługą HiDPI (\texttt{devicePixelRatio}).
+
+\textbf{Sześć osi:} Ciepły, Żartobliwy, Analityczny, Lękowy, Romantyczny, Neutralny.
+
+Dane mapowane z~interfejsu \tstype{PersonTone} via \tsfunc{mapToneData()}:
+\begin{itemize}
+  \item \texttt{warmth} → oś Ciepły (0--1, normalizacja z~10-pkt skali)
+  \item \texttt{humor\_presence} → oś Żartobliwy
+  \item \texttt{formality\_level} (odwrócony) → oś Analityczny
+  \item \texttt{secondary\_tones} (szukanie ,,anxi''/,,lęk'') → oś Lękowy
+  \item \texttt{primary\_tone} (szukanie ,,roman'') → oś Romantyczny
+  \item Reszta → oś Neutralny (obliczana)
+\end{itemize}
+
+Dwie warstwy danych: \personA{Osoba A (niebieski, \#3B82F6)} i~\personB{Osoba B (fioletowy, \#A855F7)}, z~przezroczystym fill i~solid stroke.
+
+\subsection{PersonalityDeepDive}
+
+Komponent \texttt{PersonalityDeepDive} (\filepath{src/components/analysis/PersonalityDeepDive.tsx}) to najbardziej rozbudowany komponent AI. Wyświetla kompletny profil osobowości per uczestnik:
+
+\begin{description}
+  \item[Big Five] Pięć pasków postępu (ScoreBar, max 10.0): Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism. Kolor: \texttt{bg-accent}.
+
+  \item[MBTI] 4-literowy typ z~procentowym rozkładem na każdej osi (np. ,,E72/I28, N65/S35, F80/T20, P55/J45''). Render: 4 mini-gauge'e.
+
+  \item[Styl przywiązania] Badge z~typem (Secure, Anxious, Avoidant, Disorganized), opis, pewność (0--100).
+
+  \item[Inteligencja emocjonalna] Cztery paski: samoświadomość, samoregulacja, empatia, umiejętności społeczne.
+
+  \item[Obserwacje kliniczne] Lista z~badge'ami severity: \texttt{none} (zielony), \texttt{mild} (żółty), \texttt{moderate} (żółty), \texttt{significant} (czerwony), \texttt{severe} (czerwony). Każda obserwacja ma: typ (anxiety, avoidance, manipulation, codependency), severity, opis, evidence.
+\end{description}
+
+\subsection{ViralScoresSection}
+
+Komponent \texttt{ViralScoresSection} (\filepath{src/components/analysis/ViralScoresSection.tsx}) wyświetla trzy główne gauge'e:
+
+\begin{description}
+  \item[Compatibility Gauge] SVG ring (radius 54, stroke 8), animowany via Framer Motion. Kolorowanie: $\geq$80 zielony (,,Idealne dopasowanie!''), $\geq$60 niebieski (,,Dobra kompatybilność''), $\geq$40 pomarańczowy (,,Przeciętna kompatybilność''), $<$40 czerwony (,,Niska kompatybilność'').
+
+  \item[Interest Score] Per osoba, wizualizacja: dwa paski obok siebie, niebieski i~fioletowy.
+
+  \item[Delusion Score] Per osoba, z~verdict textowym.
+\end{description}
+
+Algorytm Compatibility Score oblicza Activity Overlap (Szymkiewicz-Simpson na wektorach aktywności godzinowej), Response Balance, Engagement Balance i~agreguje z~wagami.
+
+\subsection{GhostForecast}
+
+Komponent \texttt{GhostForecast} (\filepath{src/components/analysis/GhostForecast.tsx}) to unikalna funkcja rozrywkowa. Wyświetla prognozę ghostingu w~motywach pogodowych per uczestnik:
+
+\begin{table}[H]
+\caption{Skala Ghost Forecast}
+\label{tab:ghost-forecast}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} c c l l X @{}}
+\toprule
+\textbf{Score} & \textbf{Ikona} & \textbf{Label} & \textbf{Kolor} & \textbf{Interpretacja} \\
+\midrule
+0--14 & ☀️ & Bezpiecznie & \score{\#10b981} & Zero ryzyka ghostingu \\
+15--29 & 🌤️ & Lekkie chmury & \texttt{\#84cc16} & Minimalne sygnały \\
+30--44 & ⛅ & Zachmurzenie & \warn{\#eab308} & Umiarkowane ryzyko \\
+45--59 & 🌧️ & Uwaga & \texttt{\#f97316} & Wyraźne sygnały ostrzegawcze \\
+60--79 & ⛈️ & Zagrożenie & \danger{\#ef4444} & Wysokie ryzyko \\
+80--100 & 🌪️ & Ewakuacja! & \texttt{\#dc2626} & Krytyczny poziom --- ghost imminent \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Każdy uczestnik renderowany jako karta z~ikoną pogodową, wynikiem, labelem i~opisem czynników ryzyka (malejący trend wiadomości, rosnący czas odpowiedzi, zmniejszająca się proporcja inicjacji).
+
+\subsection{FinalReport}
+
+Komponent \texttt{FinalReport} (\filepath{src/components/analysis/FinalReport.tsx}) to kulminacja analizy AI. Wyświetla:
+\begin{itemize}
+  \item \textbf{Health Score} z~dużym SVG ring i~werdyktem
+  \item \textbf{Summary} --- 3--5 zdań syntezy (AI Pass 4)
+  \item \textbf{Zielone flagi} --- lista pozytywnych wzorców (np. ,,Wysoka reciprocity'', ,,Zdrowe granice'')
+  \item \textbf{Czerwone flagi} --- lista negatywnych wzorców (np. ,,Passive-aggressive patterns'', ,,Declining engagement'')
+  \item \textbf{Actionable insights} --- konkretne, spersonalizowane sugestie (np. ,,Spróbuj inicjować rozmowy częściej --- aktualnie 28\% inicjacji to Twoje'')
+\end{itemize}
+
+\subsection{BadgesGrid}
+
+Komponent \texttt{BadgesGrid} (\filepath{src/components/analysis/BadgesGrid.tsx}) wyświetla 12 odznak w~responsywnej siatce (3$\times$4 desktop, 2$\times$6 mobile). Każda odznaka:
+\begin{itemize}
+  \item Duże emoji (32px)
+  \item Polska nazwa (bold)
+  \item Holder (,,Przyznana: [imię]'')
+  \item Evidence (,,18.3\% wiadomości po 22:00'')
+  \item Staggered entrance animation (delay per karta: 50ms)
+\end{itemize}
+
+\subsection{NetworkGraph}
+
+Komponent \texttt{NetworkGraph} (\filepath{src/components/analysis/NetworkGraph.tsx}) wyświetla interaktywny graf sieciowy dla czatów grupowych ($>$2 uczestników). Implementacja force-directed layout na canvas z:
+\begin{itemize}
+  \item Węzły = uczestnicy (koło z~inicjałami, rozmiar proporcjonalny do liczby wiadomości)
+  \item Krawędzie = interakcje (grubość proporcjonalna do liczby wzajemnych odpowiedzi)
+  \item Kolory = automatycznie przypisane z~palety (niebieski, fioletowy, cyan, zielony, pomarańczowy)
+  \item Interakcja = drag-and-drop węzłów, hover z~tooltipem
+\end{itemize}
+
+\subsection{ShareCardGallery}
+
+Komponent \texttt{ShareCardGallery} (\filepath{src/components/share-cards/ShareCardGallery.tsx}) renderuje galerię 15 typów Share Cards. Użytkownik widzi miniaturki w~siatce. Kliknięcie otwiera full-size podgląd w~modalu z~przyciskami:
+\begin{itemize}
+  \item \textbf{Pobierz PNG} --- export via \texttt{dom-to-image} / \texttt{html2canvas}
+  \item \textbf{Kopiuj do schowka} --- API Clipboard
+  \item \textbf{Zamknij} (X) --- AnimatePresence exit animation
+\end{itemize}
+
+Karty wymagające analizy AI są oznaczone i~niedostępne, gdy analiza AI nie została uruchomiona.
+
+
+% ============================================================
+% 8.6 Tryb Story
+% ============================================================
+\section{Tryb Story}
+\label{sec:story-mode}
+
+Tryb Story to immersive, full-screen experience w~stylu Spotify Wrapped. Użytkownik przechodzi przez 12 scen, każda prezentująca inny aspekt analizy z~animacjami, gradientami i~typografią ekspresyjną.
+
+\subsection{Architektura}
+
+\begin{itemize}
+  \item \textbf{Router:} dedykowana grupa route \filepath{src/app/(story)/} z~własnym layoutem (bez sidebar, bez topbar, full-screen).
+  \item \textbf{Nawigacja:} \texttt{StoryNavigation} --- strzałki lewo/prawo, pasek postępu (12 segmentów), swipe gestures na mobile.
+  \item \textbf{Wrapper:} \texttt{StorySceneWrapper} --- full-viewport container z~gradient background, animacjami wejścia/wyjścia (fade + scale).
+  \item \textbf{Fonty:} Syne (display, bold) + Space Grotesk (body, geometryczny).
+\end{itemize}
+
+\subsection{Sceny}
+
+\begin{table}[H]
+\caption{12 scen Story Mode}
+\label{tab:story-scenes}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} c l X @{}}
+\toprule
+\textbf{Nr} & \textbf{Komponent} & \textbf{Opis wizualny i~treść} \\
+\midrule
+1 & StoryIntro & Tytuł rozmowy, uczestnicy, łączna liczba wiadomości i~dni. Canvas z~particle animation (cząsteczki blue/purple). Duże liczby z~count-up. \\
+\addlinespace
+2 & StoryCharacters & Profile uczestników: imiona, awatary, kluczowe statystyki (wiadomości, słowa, emoji). Karty z~gradientem. \\
+\addlinespace
+3 & StoryNumbers & Headline stats: łączne wiadomości, łączne słowa, łączne reakcje, najdłuższa wiadomość. Duże typographic numbers z~opisami. \\
+\addlinespace
+4 & StoryVersus & Porównanie dwóch uczestników head-to-head: 6--8 metryk side-by-side z~progress barami i~,,winner'' indicators. \\
+\addlinespace
+5 & StoryPersonality & Profil Big Five + MBTI per osoba. Kolorowe paski, 4-literowy typ MBTI w~dużym foncie. \\
+\addlinespace
+6 & StoryFlags & Zielone i~czerwone flagi z~ikonami i~opisami. Dramatyczne tło (gradient red/green). \\
+\addlinespace
+7 & StoryTimeline & Uproszczony timeline: najaktywniejsze miesiące, punkty zwrotne, trend. Linia czasu z~annotacjami. \\
+\addlinespace
+8 & StoryVibeCheck & Ton emocjonalny i~styl komunikacji per osoba. Radar chart uproszczony do kolorowych pasków. \\
+\addlinespace
+9 & StoryWordCloud & Top słowa per osoba w~formacie word cloud (rozmiar proporcjonalny do częstości). \\
+\addlinespace
+10 & StoryShareCard & Preview Share Card z~CTA: ,,Udostępnij na TikToku/Instagramie''. \\
+\addlinespace
+11 & StoryNavigation & --- (komponent nawigacyjny, nie scena) \\
+\addlinespace
+12 & StorySceneWrapper & --- (wrapper, nie scena) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Animacje scen}
+
+Każda scena używa Framer Motion \texttt{AnimatePresence} z~wariantami:
+\begin{itemize}
+  \item \textbf{Enter:} \texttt{opacity: 0 → 1}, \texttt{y: 30 → 0}, duration 600ms, ease \texttt{easeOut}
+  \item \textbf{Exit:} \texttt{opacity: 1 → 0}, \texttt{y: 0 → -20}, duration 400ms
+  \item \textbf{Staggered children:} delay 100--200ms na element, bottom-up
+\end{itemize}
+
+\texttt{StoryIntro} dodatkowo zawiera canvas-based particle system z~40 cząsteczkami (20 niebieskich, 20 fioletowych) poruszającymi się chaotycznie i~łączącymi się liniami w~odległości $<$120px.
+
+
+% ============================================================
+% 8.7 System animacji
+% ============================================================
+\section{System animacji}
+\label{sec:animations}
+
+\podtekst wykorzystuje animacje jako element komunikacji, nie dekoracji. Każda animacja ma uzasadnienie UX: albo komunikuje zmianę stanu, albo kieruje uwagę użytkownika, albo nadaje poczucie responsywności interfejsu.
+
+\subsection{Biblioteka i~podejście}
+
+Główna biblioteka: \textbf{Framer Motion} (React). Uzupełniająco: CSS \texttt{@keyframes} dla lekkich, powtarzalnych animacji (spinner, pulse, drift), oraz canvas API dla particle systems i~radar charts.
+
+\subsection{Katalog animacji}
+
+\begin{table}[H]
+\caption{Kompletny katalog animacji}
+\label{tab:animations-catalog}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l l X @{}}
+\toprule
+\textbf{Animacja} & \textbf{Technologia} & \textbf{Parametry} & \textbf{Kontekst użycia} \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Przejścia stron}} \\
+Page transition & Framer Motion & fade + slide-up, 300ms & Przejścia między stronami \\
+Section reveal & Framer Motion & fade + slide-up, 400ms, stagger & Sekcje wchodzące przy scroll \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Karty i~komponenty}} \\
+Card entrance & Framer Motion & stagger 50--80ms, fade + y:16 & Karty na stronie analizy \\
+Card hover & CSS transition & scale(1.02), 200ms & Interaktywne karty \\
+Badge entrance & Framer Motion & stagger 50ms, scale 0→1 & Odznaki na BadgesGrid \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Dane i~wykresy}} \\
+KPI count-up & rAF + easeOutCubic & $1-(1-t)^3$, 1200ms & KPICards --- animacja liczb \\
+Health ring & Framer Motion & strokeDashoffset, 1500ms & AnalysisHeader, Dashboard \\
+Sparkline draw & SVG transition & strokeDashoffset, 800ms & Mini-wykresy w~KPI \\
+Tone radar & Canvas scale-in & scale 0→1, 800ms & ToneRadarChart \\
+Heatmap cells & Framer Motion & stagger 5ms, opacity, 200ms & HeatmapChart (168 komórek) \\
+Timeline draw & Recharts animation & 1200ms, easeOut & TimelineChart (area chart) \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Interakcja}} \\
+Sidebar collapse & CSS transition & width 240→60px, 300ms & Navigation (desktop) \\
+Mobile drawer & Framer Motion & translateX: $-$100\%→0, 300ms & Navigation (mobile) \\
+Modal enter/exit & AnimatePresence & opacity + scale, 200ms & ShareCaptionModal \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Dekoracyjne}} \\
+Grain texture & CSS background & static, 3\% opacity & Globalny overlay \\
+Particle network & Canvas rAF & 40 cząsteczek, $\infty$ & ParticleBackground \\
+Fragment drift & CSS @keyframes & 16--24s, ease-in-out, $\infty$ & LandingHero floating data \\
+Confetti burst & Canvas rAF & 80 cząsteczek, 3s, gravity & Po ukończeniu analizy \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Stany ładowania}} \\
+Skeleton pulse & CSS animate-pulse & 2s, ease-in-out, $\infty$ & Skeleton screens \\
+Spinner & Framer Motion & rotate: 360°, 0.8s, linear & ProcessingState \\
+Progress bar & CSS transition & width, 300ms & Parsing/analyzing/saving \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Scroll-triggered reveals}
+
+Wszystkie sekcje strony analizy używają wzorca scroll-triggered reveal opartego na hooku \tsfunc{useInView()} z~Framer Motion:
+
+\begin{lstlisting}[style=podcode, caption={Wzorzec scroll-triggered animation}]
+const ref = useRef<HTMLDivElement>(null);
+const inView = useInView(ref, { once: true, margin: '-50px' });
+
+return (
+  <motion.div
+    ref={ref}
+    initial={{ opacity: 0, y: 16 }}
+    animate={inView ? { opacity: 1, y: 0 } : {}}
+    transition={{ duration: 0.4 }}
+  >
+    {/* content */}
+  </motion.div>
+);
+\end{lstlisting}
+
+Parametr \texttt{once: true} gwarantuje, że animacja uruchamia się tylko raz (nie resetuje przy przewijaniu w~górę). Parametr \texttt{margin: '-50px'} triggeruje animację 50px przed wejściem elementu w~viewport, co daje naturalne wrażenie ,,ujawniania się''.
+
+\subsection{KPI Count-Up --- easeOutCubic}
+
+Animacja count-up w~\texttt{KPICards} używa hooka \tsfunc{useAnimatedCounter()} z~krzywą \texttt{easeOutCubic}:
+
+\begin{equation}
+\text{eased}(t) = 1 - (1 - t)^3
+\label{eq:ease-out-cubic}
+\end{equation}
+
+\noindent gdzie $t \in [0, 1]$ to znormalizowany postęp czasu. Krzywa deceleracyjna --- szybki start, łagodne zakończenie --- nadaje poczucie precyzji i~naturalności. Implementacja opiera się na \texttt{requestAnimationFrame} z~pomiarami via \texttt{performance.now()}, co zapewnia płynność niezależnie od framerate.
+
+\subsection{Confetti Burst}
+
+Jednorazowa animacja 80 cząsteczek uruchamiana po zakończeniu analizy AI. Parametry:
+\begin{itemize}
+  \item 80 cząsteczek o~losowym kolorze (niebieski, fioletowy, cyan, zielony, pomarańczowy)
+  \item Losowa pozycja startowa: top-center z~rozrzutem $\pm$30\%
+  \item Prędkość początkowa: $v_y \in [-12, -6]$, $v_x \in [-4, 4]$
+  \item Grawitacja: $g = 0.15$ (per frame)
+  \item Rotacja: losowa prędkość kątowa
+  \item Opacja: fade-out w~ostatnich 40\% czasu życia
+  \item Czas życia: 3 sekundy
+  \item Render: canvas \texttt{fillRect} z~transformacją rotate
+\end{itemize}
+
+\subsection{prefers-reduced-motion}
+
+Wszystkie animacje respektują ustawienie systemowe \texttt{prefers-reduced-motion: reduce}:
+
+\begin{itemize}
+  \item Framer Motion: globalny \texttt{MotionConfig} z~\texttt{reducedMotion: "user"}
+  \item CSS: media query \texttt{@media (prefers-reduced-motion: reduce)} wyłącza \texttt{@keyframes}, ustawia \texttt{transition-duration: 0.01ms}
+  \item Canvas: particle systems i~confetti nie uruchamiają się
+  \item Count-up: wartość docelowa wyświetlana natychmiast (bez animacji)
+\end{itemize}
+
+
+% ============================================================
+% 8.8 Dostępność
+% ============================================================
+\section{Dostępność}
+\label{sec:accessibility}
+
+\podtekst implementuje zestaw najlepszych praktyk dostępności (WCAG 2.1 AA) mimo ciemnej, data-dense estetyki.
+
+\subsection{Semantyczny HTML}
+
+\begin{itemize}
+  \item \texttt{<main>}, \texttt{<nav>}, \texttt{<header>}, \texttt{<section>}, \texttt{<article>} --- prawidłowa hierarchia landmarków
+  \item \texttt{<h1>}--\texttt{<h4>} --- zachowana hierarchia nagłówków (bez pomijania poziomów)
+  \item \texttt{<button>} --- wszystkie interaktywne elementy to prawdziwe buttony (nie \texttt{<div onClick>})
+  \item \texttt{<table>} --- tabele danych z~\texttt{<caption>}, \texttt{<thead>}, \texttt{<th scope>}
+\end{itemize}
+
+\subsection{ARIA Labels}
+
+\begin{itemize}
+  \item Wykresy canvas: \texttt{role="img"} + \texttt{aria-label} z~opisem tekstowym (np. ,,Radar tonów: Osoba A --- ciepły 0.8, żartobliwy 0.6...'')
+  \item Ikony dekoracyjne: \texttt{aria-hidden="true"}
+  \item Ikony funkcjonalne: \texttt{aria-label} (np. ,,Usuń analizę'', ,,Zamknij modal'')
+  \item Progress bars: \texttt{role="progressbar"}, \texttt{aria-valuenow}, \texttt{aria-valuemin}, \texttt{aria-valuemax}
+  \item Health score ring: \texttt{aria-label="Wynik zdrowia relacji: 72 na 100"}
+\end{itemize}
+
+\subsection{Nawigacja klawiaturą}
+
+\begin{itemize}
+  \item \texttt{Tab order} --- logiczny, zgodny z~wizualną hierarchią
+  \item \texttt{Focus states} --- widoczne obramowanie focus (ring, 2px, \texttt{ring-primary}), nigdy ukrywane
+  \item \texttt{Escape} --- zamyka modale, dropdown, sidebar mobilny
+  \item \texttt{Enter / Space} --- aktywuje buttony, otwiera karty
+  \item \texttt{Arrow keys} --- nawigacja w~Story Mode (lewo/prawo = poprzednia/następna scena)
+\end{itemize}
+
+\subsection{Skip-to-content}
+
+Link ,,Przejdź do treści'' (\texttt{<a href="\#main-content">}) ukryty wizualnie (off-screen), widoczny na focus. Pozwala pominąć sidebar i~topbar.
+
+\subsection{Kontrasty}
+
+\begin{table}[H]
+\caption{Kontrasty kolorystyczne (WCAG AA)}
+\label{tab:contrasts}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l l c @{}}
+\toprule
+\textbf{Element} & \textbf{Kolor tekstu} & \textbf{Kolor tła} & \textbf{Ratio} \\
+\midrule
+Tekst główny & \texttt{\#FAFAFA} & \texttt{\#050505} & 19.5:1 \\
+Tekst pomocniczy & \texttt{\#888888} & \texttt{\#050505} & 5.9:1 \\
+Tekst wyciszony & \texttt{\#555555} & \texttt{\#111111} & 2.7:1\textsuperscript{*} \\
+Accent na card & \texttt{\#3B82F6} & \texttt{\#111111} & 4.6:1 \\
+Success na card & \texttt{\#10B981} & \texttt{\#111111} & 5.8:1 \\
+Danger na card & \texttt{\#EF4444} & \texttt{\#111111} & 4.5:1 \\
+\bottomrule
+\end{tabularx}
+
+\vspace{4pt}
+\footnotesize\color{PodTextSecondary}
+\textsuperscript{*} Tekst wyciszony (\texttt{\#555555}) poniżej progu AA (4.5:1) --- stosowany wyłącznie dla dekoracyjnych labeli, nie dla treści istotnej. Alternatywa: \texttt{\#666666} (3.5:1) lub zwiększenie jasności tła.
+\end{table}
+
+\subsection{Responsywność i~dotyk}
+
+\begin{itemize}
+  \item \textbf{Touch targets:} minimum 44$\times$44px dla wszystkich interaktywnych elementów na mobile
+  \item \textbf{Swipe gestures:} obsługa w~Story Mode (lewo/prawo = nawigacja scen)
+  \item \textbf{Pinch-to-zoom:} nie blokowany (brak \texttt{user-scalable=no})
+  \item \textbf{Landscape:} obsługiwany --- layout automatycznie adaptuje się via CSS grid/flexbox
+\end{itemize}
+
+\begin{infobox}[title=Ciemny motyw i~dostępność]
+Ciemny motyw jest domyślny i~jedyny --- co w~kontekście dostępności jest celową decyzją. Badania wskazują, że ciemne motywy zmniejszają zmęczenie oczu przy długim użytkowaniu i~są preferowane przez większość użytkowników aplikacji analitycznych. Jednakże dla użytkowników wymagających wysokiego kontrastu, \podtekst zapewnia \texttt{@media (forced-colors: active)} z~fallbackiem na kolory systemowe.
+\end{infobox}
+
+\section{Nowe komponenty: Translator Podtekstów}
+\label{sec:subtext-decoder-ui}
+
+Translator Podtekstów to moduł analizy AI dekodujący ukryte znaczenia wiadomości. Składa się z~dwóch komponentów: interaktywnego dekodera (\texttt{SubtextDecoder}) osadzonego w~stronie analizy oraz karty udostępniania (\texttt{SubtextCard}) w~galerii Share Cards.
+
+\subsection{SubtextDecoder.tsx}
+\label{subsec:subtext-decoder}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/SubtextDecoder.tsx} (339~LOC)
+  \item[Typ propsów] \tstype{SubtextDecoderProps}:
+\end{description}
+
+\begin{lstlisting}[style=podcode]
+interface SubtextDecoderProps {
+  subtextResult?: SubtextResult;
+  onRunSubtext: () => Promise<void>;
+  isLoading: boolean;
+  progress: number;
+  canRun: boolean;
+  error?: string | null;
+}
+\end{lstlisting}
+
+Komponent działa w~trzech stanach: \textbf{(1)}~przycisk uruchomienia (gdy analiza nie została jeszcze wykonana), \textbf{(2)}~pasek postępu z~animacją gradientową \texttt{purple-600}$\to$\texttt{pink-500}, \textbf{(3)}~pełne wyniki z~listą zdekodowanych wiadomości.
+
+\subsubsection{Sub-komponenty}
+
+\begin{description}
+  \item[\tsfunc{CategoryBadge()}] Kolorowa pigułka (\textit{pill}) z~emoji i~polską etykietą kategorii. Kolory tła i~obramowania generowane dynamicznie z~palety \tstype{CATEGORY\_META} --- 12~kategorii: \textit{deflection}, \textit{hidden\_anger}, \textit{seeking\_validation}, \textit{power\_move}, \textit{genuine}, \textit{testing}, \textit{guilt\_trip}, \textit{passive\_aggressive}, \textit{love\_signal}, \textit{insecurity}, \textit{distancing}, \textit{humor\_shield}.
+
+  \item[\tsfunc{SubtextItemCard()}] Rozwijalna karta prezentująca parę: oryginalna wiadomość $\to$ zdekodowany podtekst. Nagłówek zawiera nadawcę, timestamp, badge kategorii oraz opcjonalny marker \texttt{WOW} (dla \tskey{isHighlight = true}). Sekcja kontekstu jest składana --- kliknięcie rozwija listę okolicznych wiadomości (\tskey{surroundingMessages}). Animacja wejścia: \texttt{framer-motion} z~opóźnieniem \tskey{delay = min(index * 0.05, 1s)} --- efekt kaskadowego pojawiania się kart.
+
+  \item[\tsfunc{SummaryStrip()}] Pasek podsumowania nad listą wyników. Zawiera:
+    \begin{itemize}
+      \item \textbf{Deception score} per osoba --- animowany pasek postępu z~kolorami: \score{$\leq$40\%}, \warn{40--60\%}, \danger{$>$60\%}.
+      \item \textbf{Top 5 kategorii} --- lista badges z~liczbą wystąpień.
+      \item \textbf{Biggest Reveal} --- wyróżniona karta z~obramowaniem \tskey{amber-500/30} prezentująca najbardziej zaskakujące odkrycie.
+    \end{itemize}
+\end{description}
+
+Domyślnie wyświetlanych jest 10~elementów; przycisk ,,Pokaż wszystkie'' rozwija pełną listę. Pod wynikami wyświetlany jest \tskey{disclaimer} z~informacją o~rozrywkowym charakterze analizy.
+
+\subsection{SubtextCard.tsx}
+\label{subsec:subtext-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/share-cards/SubtextCard.tsx} (177~LOC)
+  \item[Typ propsów] \tstype{SubtextCardProps}: \tskey{subtextResult: SubtextResult}, \tskey{participants: string[]}
+\end{description}
+
+Karta udostępniania osadzona w~\tsfunc{ShareCardShell()} z~gradientem:
+
+\begin{lstlisting}[style=podcode]
+gradient="linear-gradient(160deg, #0a0a1a 0%,
+  #1a0528 30%, #0d0b2e 60%, #080818 100%)"
+\end{lstlisting}
+
+\noindent Struktura wizualna:
+
+\begin{enumerate}
+  \item \textbf{Tytuł} --- ,,Translator Podtekstów'' z~gradientem tekstowym \tskey{purple $\to$ pink} (font Syne, 800 weight).
+  \item \textbf{Top 4 elementy} --- wybierane priorytetowo: najpierw \tskey{isHighlight}, potem najwyższy \tskey{confidence}. Każdy element to zaokrąglona karta z~obramowaniem w~kolorze kategorii, zawierająca: nadawcę, badge kategorii, oryginalną wiadomość (max 2~linie, \tskey{-webkit-line-clamp}), strzałkę~$\blacktriangledown$ oraz zdekodowany podtekst (pogrubiony, 0.9~opacity).
+  \item \textbf{Stopka} --- \tskey{deceptionScore} per uczestnik: wartość procentowa w~kolorze \score{zielonym}/\warn{pomarańczowym}/\danger{czerwonym} z~podpisem ,,ukrytych emocji''.
+\end{enumerate}
+
+Przycisk ,,Pobierz PNG'' pod kartą korzysta z~hooka \tsfunc{useCardDownload()} z~argumentem \tskey{'podtekst-translator'}.
+
+
+\subsection{Nowe komponenty: Szczery Profil Randkowy}
+\label{sec:dating-profile-ui}
+
+Szczery Profil Randkowy to moduł rozrywkowy generujący brutalne, ale humorystyczne profile randkowe na podstawie rzeczywistych wzorców komunikacji. Składa się z~trzech komponentów: przycisku wyzwalającego (\texttt{DatingProfileButton}), widoku wyników (\texttt{DatingProfileResult}) oraz karty udostępniania (\texttt{DatingProfileCard}).
+
+\subsubsection{DatingProfileButton.tsx}
+\label{subsubsec:dating-profile-button}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/DatingProfileButton.tsx}
+  \item[Typ propsów] \tstype{StoredAnalysis}, callback \tsfunc{onComplete()}
+\end{description}
+
+Przycisk wyzwalający generowanie profili randkowych. Działa w~trzech stanach:
+
+\begin{description}
+  \item[Stan idle] Przycisk z~ikoną i~etykietą, gotowy do kliknięcia. Uruchomienie inicjuje pipeline SSE.
+
+  \item[Stan loading] Animowany pasek postępu z~wizualizacją kolejnych etapów przetwarzania. Komponent pobiera próbki wiadomości via \tsfunc{sampleMessages()}, buduje kontekst ilościowy via \tsfunc{buildQuantitativeContext()} i~przekazuje istniejącą analizę jakościową (\texttt{pass1}, \texttt{pass3}) jeśli jest dostępna --- co pozwala AI na głębsze profilowanie oparte o~wcześniej zidentyfikowane cechy osobowości.
+
+  \item[Stan error] Komunikat błędu z~możliwością ponownej próby.
+\end{description}
+
+\subsubsection{DatingProfileResult.tsx}
+\label{subsubsec:dating-profile-result}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/DatingProfileResult.tsx}
+  \item[Typ propsów] Renderuje \tstype{PersonDatingProfile} dla każdego uczestnika rozmowy.
+\end{description}
+
+Wyświetlanie wyników w~stylu karty Tinder/Hinge. Dla każdego uczestnika generowana jest osobna karta profilowa o~następującej strukturze:
+
+\begin{enumerate}
+  \item \textbf{Bio} --- krótki, prowokacyjny opis wygenerowany przez AI na podstawie wzorców komunikacji.
+
+  \item \textbf{Siatka statystyk} --- grid z~elementami w~formacie: emoji + label + wartość. Obejmuje metryki takie jak średni czas odpowiedzi, stosunek inicjacji, najczęstsze godziny aktywności.
+
+  \item \textbf{3 prompty Hinge} --- trzy odpowiedzi na pytania w~stylu aplikacji Hinge (np. ,,Moja ulubiona strategia unikania odpowiedzi to...''), wygenerowane przez AI z~odniesieniem do rzeczywistych zachowań.
+
+  \item \textbf{Red/green flags z~ikonami} --- lista pozytywnych i~negatywnych cech komunikacyjnych, każda z~dedykowaną ikoną i~krótkim opisem.
+
+  \item \textbf{Match prediction} --- przewidywanie AI dotyczące kompatybilności z~potencjalnymi partnerami.
+
+  \item \textbf{Dealbreaker} --- cecha komunikacyjna zidentyfikowana jako potencjalna przeszkoda w~relacji.
+
+  \item \textbf{Overall rating ze gwiazdkami} --- ocena ogólna profilu w~skali gwiazdkowej, renderowana jako wypełnione/puste ikony gwiazdek.
+\end{enumerate}
+
+Układ responsywny: na desktop karty profilowe wyświetlane są obok siebie (side-by-side), na mobile --- jedna pod drugą w~układzie pionowym.
+
+\subsubsection{DatingProfileCard.tsx}
+\label{subsubsec:dating-profile-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/share-cards/DatingProfileCard.tsx}
+  \item[Typ] Karta udostępniania (Share Card) do mediów społecznościowych.
+\end{description}
+
+Karta osadzona w~\tsfunc{ShareCardShell()} z~gradientem tła. Zawiera skróconą wersję profilu randkowego: bio, 3~statystyki oraz \texttt{overall\_rating}. Zaprojektowana jako atrakcyjny wizualnie obrazek do pobrania i~udostępnienia na Instagramie, TikToku lub Stories.
+
+
+\subsection{Nowe komponenty: Stawiam Zakład}
+\label{sec:delusion-quiz-ui}
+
+Stawiam Zakład (Delusion Quiz) to interaktywny quiz samoświadomości, w~którym użytkownik odpowiada na pytania dotyczące rozmowy, a~następnie porównuje swoje odpowiedzi z~rzeczywistymi danymi. Składa się z~dwóch komponentów: interaktywnego quizu (\texttt{DelusionQuiz}) oraz karty udostępniania (\texttt{DelusionCard}).
+
+\subsubsection{DelusionQuiz.tsx}
+\label{subsubsec:delusion-quiz}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/DelusionQuiz.tsx}
+  \item[Typ propsów] \tstype{QuantitativeAnalysis}, \tstype{ParsedConversation}, callback \tsfunc{onComplete()}
+\end{description}
+
+Interaktywny quiz działający w~trzech fazach:
+
+\begin{description}
+  \item[Faza 1 --- IntroScreen] Animowane intro z~opisem mechaniki quizu i~przyciskiem ,,Start''. Wyjaśnia koncepcję: użytkownik zgaduje wartości metryk, a~następnie konfrontuje je z~rzeczywistością.
+
+  \item[Faza 2 --- Pytania] Karty pytań z~animacją przejść (framer-motion: slide + fade). Każde pytanie zawiera:
+    \begin{itemize}
+      \item Pasek postępu (progress bar) pokazujący postęp w~quizie.
+      \item Treść pytania dotyczącego konkretnej metryki rozmowy.
+      \item Przyciski z~opcjami odpowiedzi --- po wybraniu następuje reveal z~poprawną odpowiedzią i~tekstem wyjaśniającym (\tskey{revealText}), kolorowanym semantycznie (zielony = trafienie, czerwony = pudło).
+    \end{itemize}
+
+  \item[Faza 3 --- ResultScreen] Ekran wyników zawierający:
+    \begin{itemize}
+      \item \textbf{Delusion Index} --- duża liczba (0--100) z~animacją count-up, reprezentująca odchylenie odpowiedzi od rzeczywistości.
+      \item \textbf{Etykieta} --- tekstowa klasyfikacja wyniku: BAZOWANY, REALISTA, OPTYMISTA, MARZY\-CIEL lub DELULU, przypisywana na podstawie progów Delusion Index.
+      \item \textbf{Podsumowanie} --- liczba poprawnych vs błędnych odpowiedzi.
+      \item \textbf{Lista pytań} --- przegląd wszystkich pytań z~odpowiedziami użytkownika i~poprawnymi wartościami.
+    \end{itemize}
+\end{description}
+
+\textbf{Kluczowa cecha architekturalna:} quiz nie wymaga wywołań API --- cała logika opiera się na funkcjach \tsfunc{buildQuestions()} (generowanie pytań z~danych ilościowych) oraz \tsfunc{computeDelusionResult()} (obliczanie Delusion Index). Dane nigdy nie opuszczają przeglądarki.
+
+\subsubsection{DelusionCard.tsx}
+\label{subsubsec:delusion-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/share-cards/DelusionCard.tsx}
+  \item[Typ] Karta udostępniania (Share Card) z~wynikiem Delusion Index.
+\end{description}
+
+Karta prezentująca Delusion Index score wraz z~etykietą klasyfikacji. Zaprojektowana w~kolorystyce quizu --- gradient tła nawiązujący do poziomu ,,delusionality''.
+
+
+\subsection{Nowe komponenty: Symulator Odpowiedzi}
+\label{sec:reply-simulator-ui}
+
+Symulator Odpowiedzi to interaktywny moduł AI symulujący odpowiedzi wybranego uczestnika rozmowy na podstawie jego wzorców komunikacyjnych. Składa się z~dwóch komponentów: pełnego interfejsu czatu (\texttt{ReplySimulator}) oraz karty udostępniania (\texttt{SimulatorCard}).
+
+\subsubsection{ReplySimulator.tsx}
+\label{subsubsec:reply-simulator}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/ReplySimulator.tsx}
+  \item[Typ propsów] \tstype{ParsedConversation}, \tstype{QuantitativeAnalysis}, \tstype{QualitativeAnalysis?}, \tskey{participants: string[]}
+\end{description}
+
+Pełen interfejs czatu działający w~trzech fazach:
+
+\begin{description}
+  \item[Faza \texttt{select}] Wybór osoby do symulacji. Każdy uczestnik rozmowy prezentowany jest jako klikalna karta z~imieniem i~krótkim opisem stylu komunikacji. Po wybraniu osoby interfejs przechodzi do fazy czatu.
+
+  \item[Faza \texttt{chat}] Interaktywny messenger z~następującymi elementami:
+    \begin{itemize}
+      \item \textbf{Wiadomości użytkownika} --- wyrównane do prawej strony, tło niebieskie (\texttt{\#3B82F6}), dymki w~stylu iMessage.
+      \item \textbf{Wiadomości symulowane} --- wyrównane do lewej strony, tło fioletowe (\texttt{\#A855F7}), opatrzone wskaźnikiem confidence score (pewności AI co do trafności odpowiedzi).
+      \item \textbf{TypingIndicator} --- trzy animowane kropki (framer-motion), symulujące ,,pisanie'' przez drugą osobę. Wyświetlany podczas oczekiwania na odpowiedź z~API.
+      \item \textbf{Pole tekstowe} --- input z~limitem \tskey{MAX\_MESSAGE\_LENGTH = 200} znaków i~przyciskiem wysyłania.
+      \item \textbf{Limity} --- maksymalnie \tskey{MAX\_EXCHANGES = 5} wymian wiadomości na sesję. Wymagane minimum \tskey{MIN\_MESSAGES\_REQUIRED = 500} wiadomości w~oryginalnej rozmowie, aby AI miała wystarczający materiał do nauki wzorców.
+    \end{itemize}
+
+  \item[Faza \texttt{summary}] Podsumowanie sesji symulacji z~przeglądem wymienionych wiadomości i~przyciskiem udostępniania (Share Card).
+\end{description}
+
+\subsubsection{SimulatorCard.tsx}
+\label{subsubsec:simulator-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/share-cards/SimulatorCard.tsx}
+  \item[Typ] Karta udostępniania (Share Card) z~podglądem wymiany wiadomości.
+\end{description}
+
+Karta prezentująca fragment symulowanej konwersacji --- kilka par wiadomości (użytkownik → symulacja) w~układzie dymek-czat. Zaprojektowana jako atrakcyjny wizualnie podgląd zachęcający do wypróbowania symulatora.
+

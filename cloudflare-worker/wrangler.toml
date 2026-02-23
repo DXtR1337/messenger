@@ -1,0 +1,8 @@
+name = "podtekst-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+routes = [
+  { pattern = "podtekst.app/*", zone_name = "podtekst.app" },
+  { pattern = "www.podtekst.app/*", zone_name = "podtekst.app" }
+]

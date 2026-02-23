@@ -1,0 +1,271 @@
+% ============================================================
+% Rozdział 6 — Rekomendacje i Mapa Drogowa
+% ============================================================
+
+\chapter{Rekomendacje i~Mapa Drogowa}
+\label{ch:rekomendacje}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Plan bez priorytetów to lista życzeń.''
+\end{center}
+
+\vspace{8pt}
+
+Na podstawie wyników trzech agentów analitycznych i~syntezy eksperckiej, niniejszy rozdział prezentuje \textbf{priorytetyzowane rekomendacje} w~pięciu tierach --- od natychmiastowych poprawek bezpieczeństwa po długoterminową strategię walidacji naukowej.
+
+% ============================================================
+\section{Tier 0 --- Bezpieczeństwo (natychmiast)}
+\label{sec:tier0}
+\index{rekomendacje!Tier 0}
+
+\begin{criticalbox}[title=Działania natychmiastowe --- przed kolejnym deploymentem]
+Te zmiany powinny zostać wdrożone \textbf{przed jakimkolwiek nowym wdrożeniem na produkcję}. Szacowany czas: 2--4 godziny.
+
+\begin{enumerate}
+  \item \textbf{Zmienić Gemini Safety Settings} z~\texttt{BLOCK\_NONE} na \texttt{BLOCK\_ONLY\_HIGH}\\
+  \filepath{src/lib/analysis/gemini.ts} --- linijki z~\texttt{SAFETY\_SETTINGS}\\
+  \emph{Czas: 5 minut. Wpływ: zapobiega generowaniu skrajnie szkodliwych treści.}
+
+  \item \textbf{Włączyć rate limiting na produkcji}\\
+  \filepath{src/lib/rate-limit.ts} --- odkomentować/aktywować guard clause\\
+  \emph{Czas: 10 minut. Wpływ: chroni przed nadużyciami API i~kosztami Gemini.}
+
+  \item \textbf{Zwalidować \texttt{relationshipContext}} przez Zod enum\\
+  \filepath{src/lib/validation/schemas.ts} --- zmienić z~passthrough na \texttt{z.enum([...])}\\
+  \emph{Czas: 15 minut. Wpływ: eliminuje ryzyko prompt injection przez kontekst relacji.}
+
+  \item \textbf{Zwalidować rozmiar payload} na endpointach SSE\\
+  Dodać \texttt{Content-Length} check na routach \texttt{/api/analyze/*}\\
+  \emph{Czas: 30 minut. Wpływ: zapobiega OOM na serwerze.}
+\end{enumerate}
+\end{criticalbox}
+
+% ============================================================
+\section{Tier 1 --- Bugi krytyczne (1--2 dni)}
+\label{sec:tier1}
+\index{rekomendacje!Tier 1}
+
+\begin{table}[H]
+\centering
+\caption{Tier 1 --- naprawy krytyczne}
+\label{tab:tier1}
+\begin{tabularx}{\textwidth}{l L{5cm} l X}
+\toprule
+\textbf{ID} & \textbf{Problem} & \textbf{Plik} & \textbf{Naprawa} \\
+\midrule
+\bugid{QUANT-01} & reactionRate / messagesReceived & viral-scores.ts & Zmienić dzielnik na poprawny \\
+\bugid{QUANT-02} & responseSymmetry zwraca 100 gdy brak danych & viral-scores.ts & Zwracać 50 (neutralne) \\
+\bugid{QUANT-03} & wrapped percent > 100 & wrapped-data.ts & Dodać \texttt{Math.min(x, 100)} \\
+\bugid{QUANT-04} & delusionHolder odwrócony & viral-scores.ts & Przypisać do \texttt{sorted[1][0]} \\
+\bugid{QUANT-05} & reciprocity maxMed=0 → 100 & reciprocity.ts & Zwracać 50 (neutralne) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Szacowany czas na naprawę wszystkich 5~bugów: \textbf{2--3 godziny} (z~testami manualnymi).
+
+% ============================================================
+\section{Tier 2 --- Jakość psychologiczna (1--2 tygodnie)}
+\label{sec:tier2}
+\index{rekomendacje!Tier 2}
+
+\subsection{Redesign Health Score}
+
+Obecna formuła ($0.25 \cdot B + 0.20 \cdot R + 0.20 \cdot P + 0.20 \cdot S + 0.15 \cdot G$) opiera się na arbitralnych wagach. Rekomendacje:
+
+\begin{enumerate}
+  \item \textbf{Empirycznie skalibrować wagi}: zebrać dane od 100+ użytkowników z~równoczesnym kwestionariuszem satysfakcji (RAS/CSI). Użyć regresji wielorakiej, by ustalić wagi predykcyjne.
+  \item \textbf{Dodać confidence interval}: zamiast jednej liczby 0--100, prezentować zakres (np.\ ,,65 $\pm$ 12'').
+  \item \textbf{Bold disclaimer}: ,,Ten wynik NIE jest zwalidowanym instrumentem klinicznym. Służy wyłącznie do celów orientacyjnych i~rozrywkowych.''
+\end{enumerate}
+
+\subsection{Subtext Decoder --- scoring oparty na LIWC}
+
+Obecny scoring (,,ok'' = 5~pkt, ,,\ldots'' = 2~pkt) jest ad-hoc. Rekomendacja:
+
+\begin{enumerate}
+  \item Zastąpić ręczne wagi systemem opartym na LIWC (Linguistic Inquiry and Word Count) lub polskim odpowiedniku (np.\ LIWC-PL).
+  \item Uwzględnić kontekst konwersacyjny: ,,ok'' po długiej wiadomości partnera to inny sygnał niż ,,ok'' po pytaniu ,,chcesz kawy?''.
+  \item Dodać kalibrację progów ufności: jasne mapowanie score $\rightarrow$ confidence.
+\end{enumerate}
+
+\subsection{Kalibracja Delusion Quiz}
+
+\begin{enumerate}
+  \item Zwalidować pytania na próbie 50+ osób z~równoczesną oceną self-awareness.
+  \item Zmienić label'e z~meme-style (,,TOTAL DELULU'') na bardziej informacyjne z~opcją przełączenia trybu ,,fun'' vs ,,serious''.
+  \item Rozszerzyć quiz z~15 do 20--25 pytań pokrywających więcej wymiarów.
+\end{enumerate}
+
+\subsection{Wyraźne disclaimery}
+
+Dodać \textbf{bold, niepomijalny disclaimer} do każdej sekcji prezentującej wyniki psychologiczne:
+\begin{itemize}
+  \item Health Score --- ,,nie jest zwalidowanym instrumentem klinicznym''
+  \item Attachment style --- ,,oparte na tekście, max 65\% pewności, nie zastępuje diagnozy''
+  \item Big Five --- ,,przybliżenie na podstawie wzorców językowych''
+  \item Subtext --- ,,interpretacja rozrywkowa, nie analiza intencji''
+  \item Viral scores --- ,,metryki behawioralne, nie ocena relacji''
+\end{itemize}
+
+% ============================================================
+\section{Tier 2b --- Problemy inżynieryjne (1--2 tygodnie)}
+\label{sec:tier2b}
+
+\begin{table}[H]
+\centering
+\caption{Tier 2b --- naprawy inżynieryjne}
+\begin{tabularx}{\textwidth}{l L{6cm} X}
+\toprule
+\textbf{ID} & \textbf{Problem} & \textbf{Naprawa} \\
+\midrule
+\issueid{ENG-01} & Hardcoded slope normalization (1200) & Kalibracja na rzeczywistych danych \\
+\issueid{ENG-02} & Message length multiplier (25) unjustified & Empiryczna kalibracja \\
+\issueid{ENG-03} & Engagement balance multiplier (500) extreme & Zmniejszyć do 200--300 \\
+\issueid{ENG-04} & Early Bird badge: absolute vs \% & Zmienić na percentage \\
+\issueid{ENG-05} & Catchphrase uniqueness 0.6 → 0.75+ & Podnieść próg \\
+\issueid{ENG-06} & Trends message length: mean → median & Zmienić na median \\
+\issueid{ENG-07} & Burst threshold 3x arbitrary & Kalibracja statystyczna \\
+\issueid{ENG-08} & Peak hour window edge case (hour 23) & Fix modulo wrapping \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Tier 3 --- Infrastruktura (2--4 tygodnie)}
+\label{sec:tier3}
+\index{rekomendacje!Tier 3}
+
+\begin{enumerate}
+  \item \textbf{Testy automatyczne (Vitest)}:
+  \begin{itemize}
+    \item Unit testy dla silnika ilościowego (pokrycie 80\%+)
+    \item Testy parserów dla każdej platformy (z~fixture'ami)
+    \item Testy integracyjne dla API routes
+    \item Szacowany czas: 2~tygodnie
+  \end{itemize}
+
+  \item \textbf{CI/CD pipeline}:
+  \begin{itemize}
+    \item GitHub Actions: lint → build → test → deploy
+    \item Preview deployments na PR
+    \item Automatyczny deploy na Cloud Run po merge do main
+    \item Szacowany czas: 1~tydzień
+  \end{itemize}
+
+  \item \textbf{Autoryzacja (Supabase Auth)}:
+  \begin{itemize}
+    \item OAuth (Google, Facebook, Apple)
+    \item Session management
+    \item Migracja z~localStorage na server-side
+    \item Szacowany czas: 2~tygodnie
+  \end{itemize}
+
+  \item \textbf{Płatności (Stripe)}:
+  \begin{itemize}
+    \item Free / Pro (\$9.99) / Unlimited (\$24.99)
+    \item Webhooks, invoice management
+    \item Szacowany czas: 1--2~tygodnie
+  \end{itemize}
+
+  \item \textbf{Internacjonalizacja (i18n)}:
+  \begin{itemize}
+    \item next-intl lub similar
+    \item Języki: PL (obecny), EN, DE, ES
+    \item Lokalizacja promptów AI
+    \item Szacowany czas: 2--3~tygodnie
+  \end{itemize}
+
+  \item \textbf{Decompose analysis page}:
+  \begin{itemize}
+    \item Rozbić 985-liniowy \filepath{analysis/[id]/page.tsx} na 10--15 mniejszych komponentów
+    \item Osobne pliki per sekcja (Metrics, Activity, Communication, Viral, AI)
+    \item Szacowany czas: 1~tydzień
+  \end{itemize}
+\end{enumerate}
+
+% ============================================================
+\section{Tier 4 --- Przyszłość (kwartały)}
+\label{sec:tier4}
+\index{rekomendacje!Tier 4}
+
+\begin{enumerate}
+  \item \textbf{Public Developer API}: REST/GraphQL API do analizy rozmów dla third-party developerów. Rate limiting, API keys, dokumentacja OpenAPI.
+  \item \textbf{NEO-PI-R benchmarking}: Formalne badanie walidacyjne Big Five z~użyciem kwestionariusza NEO-PI-R na próbie 100+.
+  \item \textbf{Longitudinal study}: Śledzenie tych samych par/grup przez 6--12 miesięcy, weryfikacja predykcyjności Ghost Risk i~Health Score.
+  \item \textbf{Teams parser}: Microsoft Teams eksport (JSON), rozszerzenie ekosystemu platform.
+  \item \textbf{Bulk Analysis}: Analiza wielu rozmów jednocześnie z~porównaniem krzyżowym.
+  \item \textbf{White-label}: Możliwość brandowania analizy pod inne marki (terapeuci par, life coach'e).
+\end{enumerate}
+
+% ============================================================
+\section{Harmonogram wdrożenia}
+\label{sec:harmonogram}
+\index{harmonogram}
+
+\begin{table}[H]
+\centering
+\caption{Proponowany harmonogram --- 12~tygodni}
+\label{tab:harmonogram}
+\begin{tabularx}{\textwidth}{l C{1.5cm} X}
+\toprule
+\textbf{Tydzień} & \textbf{Tier} & \textbf{Działania} \\
+\midrule
+\rowcolor{PodDanger!8}
+T1 & 0 + 1 & Safety settings, rate limiting, 5~critical bugs \\
+\rowcolor{PodWarning!8}
+T2--T3 & 2 & Health Score disclaimer, subtext redesign, delusion calibration \\
+\rowcolor{PodWarning!8}
+T3--T4 & 2b & Multiplier calibration, badge fixes, trend fixes \\
+\rowcolor{PodBlue!8}
+T4--T6 & 3a & Vitest test suite (80\% coverage target) \\
+\rowcolor{PodBlue!8}
+T5--T6 & 3b & CI/CD pipeline (GitHub Actions) \\
+\rowcolor{PodBlue!8}
+T6--T8 & 3c & Supabase Auth + session management \\
+\rowcolor{PodBlue!8}
+T8--T10 & 3d & Stripe payments + pricing tiers \\
+\rowcolor{PodPurple!8}
+T10--T12 & 3e & i18n (EN + DE) + analysis page decomposition \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Metryki sukcesu}
+\label{sec:metryki-sukcesu}
+\index{metryki sukcesu}
+
+\begin{table}[H]
+\centering
+\caption{KPI per tier}
+\label{tab:kpi}
+\begin{tabularx}{\textwidth}{l L{5cm} L{4cm} C{2cm}}
+\toprule
+\textbf{Tier} & \textbf{Metryka} & \textbf{Target} & \textbf{Obecny} \\
+\midrule
+0 & Zero krytycznych luk bezpieczeństwa & 0 & 4 \\
+1 & Zero bugów krytycznych w~silniku & 0 & 5 \\
+2 & Health Score z~confidence interval & Tak & Nie \\
+2 & Disclaimery na każdym wyniku psychologicznym & 100\% & 30\% \\
+2b & Hardcoded multipliers skalibrowane & 0 magicznych & 6 \\
+3 & Test coverage (Vitest) & 80\% & 0\% \\
+3 & CI/CD pipeline aktywny & Tak & Nie \\
+3 & Auth + Payments działające & Tak & Nie \\
+4 & Big Five vs NEO-PI-R korelacja $r$ & $> 0.5$ & Nieznana \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Podsumowanie rekomendacji}
+\label{sec:rekomendacje-podsumowanie}
+
+\begin{scorebox}[title={Priorytetyzacja: od ognia do architektury}]
+\textbf{Tydzień 1}: Gasić pożary --- bezpieczeństwo i~bugi krytyczne. \\
+\textbf{Tygodnie 2--4}: Budować zaufanie --- disclaimery, kalibracja, jakość psychologiczna. \\
+\textbf{Tygodnie 4--8}: Budować fundament --- testy, CI/CD, auth. \\
+\textbf{Tygodnie 8--12}: Budować przyszłość --- payments, i18n, skalowanie. \\
+\textbf{Kwartały}: Budować wiarygodność --- walidacja naukowa, API, longitudinal studies.
+\end{scorebox}

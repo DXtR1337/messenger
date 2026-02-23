@@ -207,6 +207,7 @@ export default function DiscordImport({ relationshipType, autoChannelId }: Disco
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       const conversation = parseDiscordMessages(allMessages, resolvedChannelName);
+      conversation.metadata.discordChannelId = channelId.trim();
 
       if (conversation.metadata.totalMessages < 100) {
         throw new Error(

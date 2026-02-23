@@ -436,6 +436,36 @@ export interface MegaRoastResult {
 }
 
 // ============================================================
+// CWEL TYGODNIA — AI-first group chat award ceremony
+// ============================================================
+
+export interface CwelNomination {
+  categoryId: string;
+  categoryTitle: string;
+  emoji: string;
+  winner: string;
+  reason: string;
+  evidence: string[];
+  runnerUp?: string;
+}
+
+export interface CwelTygodniaResult {
+  winner: string;
+  winnerScore: number;
+  winnerCategories: number;
+  nominations: CwelNomination[];
+  ranking: Array<{ name: string; score: number; oneLiner: string }>;
+  intro: string;
+  crowningSpeech: string;
+  verdict: string;
+  hallOfShame: Array<{
+    person: string;
+    quote: string;
+    commentary: string;
+  }>;
+}
+
+// ============================================================
 // Container & Storage Types
 // ============================================================
 
@@ -465,6 +495,8 @@ export interface QualitativeAnalysis {
   coupleQuiz?: CoupleQuizComparison;
   /** Mega Roast — single-target roast using full group context (optional) */
   megaRoast?: MegaRoastResult;
+  /** Cwel Tygodnia — AI-first group chat award ceremony (optional) */
+  cwelTygodnia?: CwelTygodniaResult;
   completedAt?: number;
 }
 

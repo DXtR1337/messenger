@@ -1,0 +1,903 @@
+% ============================================================
+% Sekcja S1: Unit economics i koszty AI
+% ============================================================
+
+\section{Unit economics i~koszty AI}
+\label{sec:unit-economics}
+
+Każde wywołanie analizy AI w~\podtekst generuje realne koszty po stronie Google Gemini API. Niniejsza sekcja dokumentuje konfigurację modelu, szacunki tokenów, koszty per analiza w~PLN oraz margines na tier w~kontekście proponowanego modelu cenowego. Wszystkie kalkulacje używają oficjalnego cennika Google Gemini z~lutego 2026 przeliczonego na PLN.
+
+\subsection{Konfiguracja modelu}
+
+\begin{table}[H]
+\centering
+\caption{Konfiguracja modelu Gemini w~\podtekst}
+\label{tab:ue-model-config}
+\begin{tabularx}{\textwidth}{L{4.5cm}L{4.5cm}X}
+\toprule
+\textbf{Parametr} & \textbf{Wartość} & \textbf{Plik} \\
+\midrule
+Model & \texttt{gemini-3-flash-preview} & \filepath{gemini.ts:67} \\
+Temperature & 0.3 & \filepath{gemini.ts:70} \\
+Max output tokens (domyślny) & 8\,192 & \filepath{gemini.ts:69} \\
+Max output tokens (CPS/Subtext) & 16\,384 & per batch call \\
+Response MIME type & \texttt{application/json} & \filepath{gemini.ts:71} \\
+Safety settings & Wszystkie \texttt{BLOCK\_NONE} & \filepath{gemini.ts:49--54} \\
+Retry policy & 3$\times$ exponential backoff (1s, 2s, 4s) & \filepath{gemini.ts:56--105} \\
+Model obrazów & \texttt{gemini-3-pro-image-preview} & osobny endpoint \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Brak prompt cachingu i~response cachingu}}]
+Na dzień audytu \podtekst nie implementuje żadnej formy cachowania:
+\begin{itemize}
+  \item \textbf{Prompt caching:} brak --- ten sam system prompt (np.\ \tstype{PASS\_1\_SYSTEM}) jest wysyłany jako pełny tekst przy każdym wywołaniu, nawet jeśli 10 użytkowników uruchomi analizę w~ciągu minuty.
+  \item \textbf{Response caching:} brak --- ponowna analiza tej samej konwersacji generuje pełny koszt API, mimo identycznych danych wejściowych.
+\end{itemize}
+\end{warningbox}
+
+
+\subsection{Tokeny promptów systemowych}
+
+\begin{table}[H]
+\centering
+\caption{Szacunkowa liczba tokenów promptów systemowych}
+\label{tab:ue-prompt-tokens}
+\begin{tabularx}{\textwidth}{L{5cm}R{2cm}X}
+\toprule
+\textbf{Prompt} & \textbf{$\sim$Tokeny} & \textbf{Lokalizacja} \\
+\midrule
+PASS\_1\_SYSTEM (Overview) & $\sim$450 & \filepath{prompts.ts:16--57} \\
+PASS\_2\_SYSTEM (Dynamics) & $\sim$1\,100 & \filepath{prompts.ts:63--145} \\
+PASS\_3\_SYSTEM (Individual Profiles) & $\sim$1\,400 & \filepath{prompts.ts:151--296} \\
+PASS\_4\_SYSTEM (Synthesis) & $\sim$900 & \filepath{prompts.ts:302--369} \\
+ROAST\_SYSTEM & $\sim$550 & \filepath{prompts.ts:375--410} \\
+ENHANCED\_ROAST\_SYSTEM & $\sim$750 & \filepath{prompts.ts:416--458} \\
+STANDUP\_ROAST\_SYSTEM & $\sim$900 & \filepath{prompts.ts:464--516} \\
+SUBTEXT\_SYSTEM & $\sim$1\,200 & \filepath{prompts.ts:574--620} \\
+CPS\_BATCH\_PROMPT & $\sim$600--800 & \filepath{prompts.ts:526--568} \\
+\midrule
+\textbf{Suma (pełna analiza)} & \textbf{$\sim$7\,850} & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsection{Wywołania API per scenariusz}
+
+Liczba wywołań Gemini API zależy od zakresu analizy:
+
+\begin{table}[H]
+\centering
+\caption{Wywołania API Gemini per scenariusz analizy}
+\label{tab:ue-api-calls}
+\begin{tabularx}{\textwidth}{L{5.5cm}R{1.5cm}X}
+\toprule
+\textbf{Scenariusz} & \textbf{Wywołania} & \textbf{Szczegóły} \\
+\midrule
+Podstawowa analiza (standard) & 5 & Pass 1--4 + Roast \\
+Z 2 uczestnikami (Pass 3 per osoba) & 6 & Pass 1--4 + Roast + dodatkowy Pass~3 \\
++ Enhanced Roast & +1 & Roast z~pełnym kontekstem psychologicznym \\
++ StandUp Comedy & +1 & 7 aktów w~jednym wywołaniu \\
++ CPS (3 batche) & +3 & 21 pytań per batch \\
++ Subtext (3 batche) & +3 & 8 okien kontekstowych per batch \\
++ Court Trial & +1 & Wykorzystuje wyniki Pass 1, 2, 4 \\
++ Dating Profile & +1 & Profil randkowy z~wzorców \\
++ Reply Simulator ($\times$5) & +5 & Maks. 5 wymian per sesja \\
++ Image Generation & +1 & Gemini Pro (droższy model) \\
+\midrule
+\textbf{Pełny zestaw (max)} & \textbf{$\sim$22} & Przy 2 uczestnikach \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsection{Szacunek tokenów per wywołanie}
+
+\begin{metricbox}
+\textbf{Założenia szacunkowe:}
+\begin{itemize}
+  \item System prompt: $\sim$1\,000 tokenów (średnia z~tabeli \ref{tab:ue-prompt-tokens})
+  \item Próbka wiadomości: 200--500 wiadomości $\times$ $\sim$30 tokenów/wiadomość $\approx$ 6\,000--15\,000 tokenów
+  \item Kontekst ilościowy: $\sim$500 tokenów
+  \item \textbf{Łącznie input per wywołanie: $\sim$16\,000 tokenów}
+  \item Typowy output per wywołanie: $\sim$4\,000 tokenów (JSON z~analizą)
+  \item Maksymalna długość wiadomości: 2\,000 znaków (\tsfunc{sanitizeForPrompt()})
+\end{itemize}
+\end{metricbox}
+
+\subsection{Cennik Gemini API (PLN)}
+
+\begin{table}[H]
+\centering
+\caption{Cennik Gemini API w~\podtekst (PLN, luty 2026)}
+\label{tab:ue-gemini-pricing}
+\begin{tabularx}{\textwidth}{L{5.5cm}R{3cm}R{3cm}}
+\toprule
+\textbf{Kategoria} & \textbf{Flash (tekst/obraz/video)} & \textbf{Pro (obraz)} \\
+\midrule
+Input (per 1M tokenów) & \textbf{0,25~PLN} & wyższy \\
+Output z~thinking (per 1M tokenów) & \textbf{4,50~PLN} & wyższy \\
+Cached input (per 1M tokenów) & \textbf{0,20~PLN} & --- \\
+Batch API (50\% taniej) & 0,125 / 2,25~PLN & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\danger{Uwaga: thinking tokens w~cenie output}}]
+Cena output \textbf{4,50~PLN/1M} obejmuje \textbf{thinking tokens} generowane wewnętrznie przez model. Jeśli model generuje 2--3$\times$ więcej thinking tokenów niż widoczny output, rzeczywisty koszt output może być 2--3$\times$ wyższy od wartości podanych w~tabeli \ref{tab:ue-cost-per-analysis}. Zalecamy wdrożenie monitoringu thinking tokenów (patrz tabela \ref{tab:ue-priorities}, pozycja~3).
+\end{warningbox}
+
+
+\subsection{Koszt per analiza (PLN)}
+
+\begin{table}[H]
+\centering
+\caption{Koszt API per analiza --- scenariusze (PLN)}
+\label{tab:ue-cost-per-analysis}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{4cm}R{1.5cm}R{2.5cm}R{2.5cm}R{2.5cm}}
+\toprule
+\textbf{Scenariusz} & \textbf{Wywoł.} & \textbf{Input (tokens)} & \textbf{Output (tokens)} & \textbf{Koszt} \\
+\midrule
+\rowcolor{PodSuccess!5}
+Podstawowa (5 calls) & 5 & 80\,000 & 20\,000 & \textbf{0,11~PLN} \\
+Rozszerzona (10 calls) & 10 & 160\,000 & 40\,000 & \textbf{0,22~PLN} \\
+\rowcolor{PodWarning!5}
+Pełna (20 calls) & 20 & 320\,000 & 80\,000 & \textbf{0,44~PLN} \\
+\rowcolor{PodWarning!5}
+Pełna + obraz & 21 & 340\,000 & 85\,000 & \textbf{$\sim$0,50~PLN} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title={\textbf{Wzór kalkulacji (PLN)}}]
+$$
+\text{Koszt} = \frac{\text{Input tokens} \times 0{,}25}{1\,000\,000} + \frac{\text{Output tokens} \times 4{,}50}{1\,000\,000}
+$$
+Przykład --- podstawowa analiza (5 wywołań):
+$$
+\frac{80\,000 \times 0{,}25}{1\,000\,000} + \frac{20\,000 \times 4{,}50}{1\,000\,000} = 0{,}020 + 0{,}090 = 0{,}11~\text{PLN}
+$$
+\end{infobox}
+
+\begin{metricbox}
+\textbf{Kluczowa obserwacja:} Koszt output (\textbf{4,50~PLN/1M}) dominuje w~strukturze kosztów --- stanowi 82\% kosztu podstawowej analizy (0,090 z~0,110~PLN). Input (0,25~PLN/1M) jest marginalny. To oznacza, że optymalizacja input cachingu ma \textbf{ograniczony wpływ} na całkowity koszt.
+\end{metricbox}
+
+
+\subsection{Margines per tier (PLN)}
+
+Poniższa tabela porównuje przychód z~subskrypcji z~kosztem AI dla różnych scenariuszy użycia. Ceny tierów w~PLN:
+
+\begin{itemize}
+  \item \textbf{Pro:} \textbf{29,99~PLN/mies.}
+  \item \textbf{Unlimited:} \textbf{49,99~PLN/mies.}
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Analiza marginu per tier i~scenariusz użycia (PLN)}
+\label{tab:ue-margin-analysis}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{3.5cm}R{1.5cm}R{2cm}R{1.5cm}R{1.5cm}R{2cm}}
+\toprule
+\textbf{Scenariusz} & \textbf{Tier} & \textbf{Cena} & \textbf{Analizy/m} & \textbf{Koszt AI} & \textbf{Margines} \\
+\midrule
+\rowcolor{PodSuccess!5}
+Pro, 3 basic & Pro & 29,99~PLN & 3 & 0,33~PLN & \score{99\%} \\
+\rowcolor{PodSuccess!5}
+Pro, 15 basic & Pro & 29,99~PLN & 15 & 1,65~PLN & \score{95\%} \\
+\rowcolor{PodSuccess!5}
+Pro, 5 full & Pro & 29,99~PLN & 5 & 2,20~PLN & \score{93\%} \\
+\rowcolor{PodSuccess!5}
+Pro, 15 full & Pro & 29,99~PLN & 15 & 6,60~PLN & \score{78\%} \\
+\midrule
+\rowcolor{PodSuccess!5}
+Unlimited, 10 basic & Unlimited & 49,99~PLN & 10 & 1,10~PLN & \score{98\%} \\
+\rowcolor{PodSuccess!5}
+Unlimited, 30 basic & Unlimited & 49,99~PLN & 30 & 3,30~PLN & \score{93\%} \\
+\rowcolor{PodSuccess!5}
+Unlimited, 30 full & Unlimited & 49,99~PLN & 30 & 13,20~PLN & \score{74\%} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title={\textbf{Marże vs poprzednia analiza USD --- z~kontekstem}}]
+Marże w~PLN wyglądają zdrowiej niż w~analizie USD (Pro 15~full: 78\% vs 14\%, Unlimited 30~full: 74\% vs 8\%). Ale porównanie wymaga kontekstu:
+
+\begin{itemize}
+  \item \textbf{Arbitraż walutowy:} koszty API denominowane w~USD ($\sim$4,05~PLN). Przy deprecjacji PLN (np.\ do 4,50~PLN/USD) marże spadają o~$\sim$5~pp.
+  \item \textbf{Niższa gotowość do płacenia:} polski rynek consumer SaaS akceptuje niższe ceny niż rynek USD (patrz tabela~\ref{tab:ue-polish-market}).
+  \item \textbf{Marża na AI $\neq$ rentowność biznesu:} koszty CAC (pozyskania użytkownika), infrastruktury, developmentu nie są uwzględnione.
+\end{itemize}
+\end{infobox}
+
+\begin{table}[H]
+\centering
+\caption{Kontekst cenowy --- polski rynek consumer SaaS}
+\label{tab:ue-polish-market}
+\begin{tabularx}{\textwidth}{L{3.5cm}R{2.5cm}C{2.5cm}X}
+\toprule
+\textbf{Produkt} & \textbf{Cena/mies.} & \textbf{Częstotliwość} & \textbf{Porównanie z~\podtekst} \\
+\midrule
+Spotify Premium & 23,99~PLN & Codziennie & Pro 29,99 = \warn{droższa} \\
+Netflix Basic & 33~PLN & Codziennie & Pro 29,99 = tańsza \\
+Tinder Gold & $\sim$50~PLN & Codziennie & Unlimited 49,99 $\approx$ Tinder \\
+YouTube Premium & 26,99~PLN & Codziennie & Pro 29,99 $\approx$ porównywalny \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Problem: cena vs częstotliwość użycia}}]
+\podtekst w~cenie 29,99~PLN/mies.\ kosztuje więcej niż Spotify Premium, a~jest używana \textbf{okazjonalnie} (1--5$\times$ w~miesiącu vs codziennie). Gotowość polskich użytkowników do płacenia za narzędzie okazjonalne jest istotnie niższa niż za usługi codzienne.
+
+\textbf{Rekomendacja:} rozważyć model \textbf{pay-per-analysis} (np.\ 4,99~PLN/analiza) obok subskrypcji, lub obniżyć Pro do \textbf{14,99--19,99~PLN/mies.} Alternatywnie: zaoferować roczny plan z~rabatem ($\sim$199~PLN/rok = 16,60~PLN/mies.).
+\end{warningbox}
+
+
+\subsection{Analiza break-even}
+
+\subsubsection{Ile analiz może wykonać użytkownik, zanim stanie się nierentowny?}
+
+\begin{table}[H]
+\centering
+\caption{Break-even: maksymalna liczba analiz per tier przy 0\% marginu (PLN)}
+\label{tab:ue-breakeven}
+\begin{tabularx}{\textwidth}{L{3cm}R{2cm}R{2.5cm}R{2.5cm}R{2.5cm}}
+\toprule
+\textbf{Tier} & \textbf{Cena} & \textbf{Break-even (basic)} & \textbf{Break-even (full)} & \textbf{Limit w~planie} \\
+\midrule
+Pro & 29,99~PLN & $\sim$273 analiz & $\sim$68 analiz & 15 analiz \\
+Unlimited & 49,99~PLN & $\sim$454 analizy & $\sim$114 analiz & Soft cap 50/mies. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{metricbox}
+\textbf{Wniosek:} Przy cenach w~PLN break-even jest \textbf{wielokrotnie wyższy} niż realistyczne użycie. Tier Pro z~limitem 15 analiz/miesiąc jest bezpieczny nawet przy \textbf{pełnych} analizach (break-even = 68, limit = 15 --- 4,5$\times$ zapas). Tier Unlimited z~soft capem 50/miesiąc również ma duży margines bezpieczeństwa (break-even = 114 full, soft cap = 50 --- 2,3$\times$ zapas).
+\end{metricbox}
+
+
+\subsection{Wpływ cachingu na koszty}
+
+\begin{table}[H]
+\centering
+\caption{Wpływ prompt cachingu na koszt podstawowej analizy (PLN)}
+\label{tab:ue-caching-impact}
+\begin{tabularx}{\textwidth}{L{4cm}R{3cm}R{3cm}R{3cm}}
+\toprule
+\textbf{Metryka} & \textbf{Bez cachingu} & \textbf{Z cachingiem} & \textbf{Oszczędność} \\
+\midrule
+Input cost (5 calls) & 0,020~PLN & 0,016~PLN & 20\% inputu \\
+Output cost (5 calls) & 0,090~PLN & 0,090~PLN & 0\% \\
+\textbf{Suma} & \textbf{0,110~PLN} & \textbf{0,106~PLN} & \textbf{$\sim$4\%} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Ograniczony wpływ cachingu}}]
+Prompt caching ma \textbf{bardzo ograniczony wpływ} na koszt całkowity analizy, ponieważ:
+\begin{itemize}
+  \item Koszt output (\textbf{4,50~PLN/1M}) stanowi 82\% kosztu i~\textbf{nie podlega cachowaniu}
+  \item Koszt input (\textbf{0,25~PLN/1M}) jest marginalny --- nawet redukcja o~80\% (caching z~0,25 do 0,05~PLN) oszczędza zaledwie \textbf{$\sim$4\%} na podstawowej analizie (z~0,110 na 0,106~PLN)
+  \item Prompt systemowy ($\sim$1\,000 tokenów) stanowi tylko 6\% całego inputu --- reszta to unikalne dane konwersacji
+\end{itemize}
+W~porównaniu z~poprzednią analizą (14--36\% oszczędności), rzeczywisty wpływ cachingu jest \textbf{minimalny}.
+\end{warningbox}
+
+
+\subsection{Propozycje optymalizacji kosztów}
+
+\subsubsection{1. Response caching (hash)}
+
+Ponowna analiza tej samej konwersacji powinna korzystać z~wcześniej wygenerowanych wyników:
+
+\begin{itemize}
+  \item Hash wiadomości (SHA-256 z~treści i~timestampów) jako klucz cache'u
+  \item Jeśli hash się zgadza --- zwróć wynik z~IndexedDB zamiast wywoływać API
+  \item \textbf{Oszczędność:} 100\% kosztów re-analiz (szacunkowo 10--20\% wszystkich wywołań)
+  \item \textbf{Trudność:} Łatwa --- wyłącznie po stronie klienta
+\end{itemize}
+
+\subsubsection{2. Batch API dla funkcji non-real-time}
+
+Funkcje, które nie wymagają natychmiastowego wyniku, mogą korzystać z~Batch API (50\% taniej):
+
+\begin{itemize}
+  \item \textbf{StandUp Comedy PDF} --- użytkownik i~tak musi czekać na generowanie PDF
+  \item \textbf{CPS (3 batche)} --- wynik nie jest interaktywny
+  \item \textbf{Szacowana redukcja:} 50\% kosztów tych wywołań ($\sim$4 z~20 wywołań)
+  \item Batch API: 0,125~PLN input / 2,25~PLN output per 1M tokenów
+\end{itemize}
+
+\subsubsection{3. Monitoring thinking tokenów}
+
+\begin{itemize}
+  \item Wdrożyć logowanie liczby thinking tokenów per wywołanie
+  \item Jeśli model generuje $>$2$\times$ thinking tokens vs widoczny output --- rozważyć zmianę temperature lub struktury promptu
+  \item \textbf{Cel:} Widoczność kosztowa --- bez monitoringu nie wiemy, czy output kosztuje 4,50~PLN czy efektywnie 9--13~PLN per 1M tokenów
+  \item \textbf{Trudność:} Łatwa --- dane dostępne w~response metadata Gemini
+\end{itemize}
+
+\subsubsection{4. Prompt caching (Gemini Context Caching)}
+
+\begin{itemize}
+  \item Prompty systemowe (\tstype{PASS\_1\_SYSTEM}, etc.) identyczne dla każdego użytkownika
+  \item Cached input: 0,20~PLN/1M zamiast 0,25~PLN/1M (20\% taniej)
+  \item \textbf{Rzeczywista oszczędność: $\sim$4\%} na całkowitym koszcie analizy --- ograniczona, bo output dominuje
+  \item \textbf{Trudność:} Średnia --- wymaga zarządzania cache TTL
+\end{itemize}
+
+\subsubsection{5. Korekta limitów per tier}
+
+Przy zdrowych marżach w~PLN korekta nie wymaga agresywnych zmian:
+
+\begin{table}[H]
+\centering
+\caption{Rekomendowane limity tierów (PLN)}
+\label{tab:ue-tier-correction}
+\begin{tabularx}{\textwidth}{L{3.5cm}C{3cm}C{3cm}X}
+\toprule
+\textbf{Metryka} & \textbf{Obecny plan} & \textbf{Rekomendowany} & \textbf{Uzasadnienie} \\
+\midrule
+Pro --- analizy/mies. & 15 & 15 & Bezpieczne (break-even = 68 full) \\
+Pro --- cena & --- & 29,99~PLN & Rynek polski, przystępna cena \\
+Unlimited --- cena & --- & 49,99~PLN & Zdrowy margines do 114 full \\
+Unlimited --- soft cap & brak & 50/mies. & Fair use, 2,3$\times$ zapas do break-even \\
+Funkcje rozrywkowe & w~Pro & Opcjonalnie add-on & 9,99~PLN/mies.\ (opcjonalny) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsection{Skorygowana projekcja przychodów (PLN)}
+
+\begin{warningbox}[title={\danger{Zastrzeżenie: scenariusz modelowy}}]
+Poniższa projekcja opiera się na tych samych \textbf{niewalidowanych} założeniach MAU co tabela~\ref{tab:audyt-projekcja} (500 / 2\,000 / 5\,000 użytkowników). Brak strategii akwizycji, budżetu marketingowego i~danych historycznych o~ruchu. Celem tej tabeli jest wyłącznie ilustracja struktury kosztów AI w~modelu subskrypcyjnym --- nie jest prognozą biznesową.
+\end{warningbox}
+
+\begin{table}[H]
+\centering
+\caption{Projekcja przychodów --- scenariusz modelowy, niewalidowany (PLN)}
+\label{tab:ue-corrected-projection}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{4cm}R{2.5cm}R{2.5cm}R{2.5cm}}
+\toprule
+\textbf{Metryka} & \textbf{Miesiąc 3} & \textbf{Miesiąc 6} & \textbf{Miesiąc 12} \\
+\midrule
+Użytkownicy Pro & 15 & 100 & 250 \\
+Użytkownicy Unlimited & 2 & 15 & 50 \\
+\midrule
+MRR (przychód) & 550~PLN & 3\,749~PLN & 9\,997~PLN \\
+Koszt AI & $\sim$48~PLN & $\sim$333~PLN & $\sim$925~PLN \\
+\midrule
+\rowcolor{PodSuccess!5}
+Margines brutto & \score{91\%} & \score{91\%} & \score{91\%} \\
+\midrule
+Zysk brutto/mies. & 502~PLN & 3\,416~PLN & 9\,072~PLN \\
+\midrule
+\textbf{ARR (Miesiąc 12)} & \multicolumn{3}{r}{\textbf{$\sim$120\,000~PLN}} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{metricbox}
+\textbf{Kluczowy wniosek (z~zastrzeżeniami):} Przy cenach w~PLN model subskrypcyjny jest \textbf{strukturalnie rentowny pod względem kosztów AI} --- marża brutto $\sim$91\%. Koszty AI (0,11--0,50~PLN per analiza) są niskie w~stosunku do cen subskrypcji (29,99 / 49,99~PLN). Jednak marża brutto na koszcie AI nie oznacza rentowności biznesu --- koszty CAC, infrastruktury i~marketingu nie są tu uwzględnione. Pełna prognoza z~uwzględnieniem strategii akwizycji, budżetów marketingowych i~kosztów CAC: patrz sekcja~\ref{sec:strategia-akwizycji}.
+\end{metricbox}
+
+
+\subsection{Podsumowanie rekomendacji}
+
+\begin{table}[H]
+\centering
+\caption{Priorytety optymalizacji kosztów AI}
+\label{tab:ue-priorities}
+\begin{tabularx}{\textwidth}{C{1cm}L{4cm}R{2.5cm}C{2cm}X}
+\toprule
+\textbf{Nr} & \textbf{Optymalizacja} & \textbf{Oszczędność} & \textbf{Trudność} & \textbf{Priorytet} \\
+\midrule
+1 & Response caching (hash) & 10--20\% total & Łatwa & P0 \\
+2 & Batch API (StandUp, CPS) & 50\% na 4 callach & Średnia & P1 \\
+3 & Thinking token monitoring & Widoczność kosztowa & Łatwa & P0 \\
+4 & Prompt caching (Gemini) & $\sim$4\% total (ograniczony) & Średnia & P2 \\
+5 & Korekta limitów tierów & Redukcja ryzyka & Brak kodu & P1 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+% Sekcja S2: Bezpieczeństwo i prywatność
+% ============================================================
+
+\section{Bezpieczeństwo i~prywatność}
+\label{sec:bezpieczenstwo}
+
+Niniejsza sekcja stanowi audyt bezpieczeństwa \podtekst na dzień lutego 2026 (po Fazie~22). Analizuje przepływ danych, walidację API, nagłówki HTTP, rate limiting w~środowisku serverless, zgodność z~RODO, znane podatności oraz ryzyka specyficzne dla integracji Discord.
+
+
+\subsection{Przepływ danych}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.2cm and 2.5cm,
+  every node/.style={font=\small},
+  >=Stealth,
+]
+
+% === Client layer ===
+\node[podbox blue, minimum width=4.5cm, minimum height=1.5cm] (browser) {
+  \begin{minipage}{4cm}
+  \centering
+  \textbf{Przeglądarka}\\
+  {\scriptsize Parsowanie, analiza ilościowa}\\
+  {\scriptsize IndexedDB, localStorage}
+  \end{minipage}
+};
+
+% Upload arrow
+\node[font=\scriptsize\color{PodTextMuted}, above=0.3cm of browser] {Plik eksportu (JSON/TXT)};
+
+% === Data minimization ===
+\node[podbox amber, minimum width=4.5cm, minimum height=1.2cm, below=1.5cm of browser] (sample) {
+  \begin{minipage}{4cm}
+  \centering
+  \textbf{Próbka}\\
+  {\scriptsize 200--500 wiadomości ($<$1\%)}\\
+  {\scriptsize max 2\,000 znaków/msg}
+  \end{minipage}
+};
+
+\draw[dataarrow, color=PodDanger] (browser) -- (sample)
+  node[midway, right=10pt, font=\small\bfseries\color{PodDanger}] {Redukcja $>$99\%};
+
+% === Server layer ===
+\node[podbox purple, minimum width=4.5cm, minimum height=1.5cm, right=3.5cm of sample] (server) {
+  \begin{minipage}{4cm}
+  \centering
+  \textbf{Next.js API Routes}\\
+  {\scriptsize \texttt{import 'server-only'}}\\
+  {\scriptsize Zod walidacja, sanityzacja}
+  \end{minipage}
+};
+
+\draw[dataarrow, color=PodPurple] (sample) -- (server)
+  node[midway, above, font=\scriptsize\color{PodTextSecondary}] {POST /api/analyze/*}
+  node[midway, below, font=\scriptsize\color{PodTextSecondary}] {JSON over HTTPS};
+
+% === Gemini API ===
+\node[podbox green, minimum width=4.5cm, minimum height=1.2cm, below=1.5cm of server] (gemini) {
+  \begin{minipage}{4cm}
+  \centering
+  \textbf{Gemini API}\\
+  {\scriptsize gemini-3-flash-preview}\\
+  {\scriptsize Przetwarzanie, brak retencji}
+  \end{minipage}
+};
+
+\draw[dataarrow, color=PodBlue] (server) -- (gemini)
+  node[midway, right=10pt, font=\scriptsize\color{PodTextSecondary}] {API key (server-only)};
+
+% === Response back ===
+\node[podbox green, minimum width=4.5cm, minimum height=1cm, below=1.5cm of sample] (result) {
+  \begin{minipage}{4cm}
+  \centering
+  \textbf{Wynik AI (JSON)}\\
+  {\scriptsize Bez cytatów wiadomości}
+  \end{minipage}
+};
+
+\draw[dataarrow, color=PodSuccess] (gemini) -- (result)
+  node[midway, below, font=\scriptsize\color{PodTextSecondary}] {SSE stream};
+
+\draw[dataarrow, color=PodSuccess] (result) -- (browser)
+  node[midway, left=10pt, font=\scriptsize\color{PodTextSecondary}] {IndexedDB};
+
+% === Annotations ===
+\node[font=\scriptsize\itshape\color{PodSuccess!80!black}, below=0.2cm of browser, xshift=-3cm] {\score{Dane nigdy nie opuszczają przeglądarki}};
+\node[font=\scriptsize\itshape\color{PodDanger!80!black}, right=0.2cm of server, xshift=1cm] {\danger{Brak retencji}};
+\node[font=\scriptsize\itshape\color{PodDanger!80!black}, right=0.2cm of gemini, xshift=1cm] {\danger{Brak retencji}};
+
+% === Discord path (alternative) ===
+\node[podbox blue, minimum width=3cm, minimum height=1cm, below=1.5cm of result] (discord) {
+  \begin{minipage}{2.8cm}
+  \centering
+  \textbf{Discord API}\\
+  {\scriptsize Bot Token w~body}
+  \end{minipage}
+};
+
+\draw[podarrow dashed] (browser) -- ++(0,-5.5) -| (discord)
+  node[near start, left=10pt, font=\scriptsize\color{PodWarning}] {\warn{Token z~klienta}};
+\draw[dataarrow, color=PodBlue] (discord) -| (server)
+  node[near end, right=5pt, font=\scriptsize\color{PodTextSecondary}] {/api/discord/fetch-messages};
+
+\end{tikzpicture}
+\caption{Przepływ danych w~\podtekst --- od uploadu do wyniku. Czerwone adnotacje oznaczają brak trwałego przechowywania.}
+\label{fig:sec-data-flow}
+\end{figure}
+
+\subsubsection{Kluczowe gwarancje}
+
+\begin{enumerate}[label=\textcolor{PodBlue}{\arabic*.}]
+  \item \textbf{Surowe wiadomości} --- przetwarzane wyłącznie w~przeglądarce (parsery + analiza ilościowa). Nigdy nie wysyłane na serwer w~pełnej postaci.
+  \item \textbf{Próbka} --- 200--500 wiadomości (z~50\,000+), każda obcięta do 2\,000 znaków. Znaki kontrolne usunięte (\filepath{gemini.ts:147--153}).
+  \item \textbf{Serwer} --- przetwarza próbkę w~pamięci, wysyła do Gemini API, streamuje wynik przez SSE. Żadne dane nie są zapisywane na dysk ani w~bazie.
+  \item \textbf{Gemini API} --- Google deklaruje brak retencji danych przesłanych przez API (API Terms of Service).
+\end{enumerate}
+
+
+\subsection{Walidacja API --- przegląd schematów Zod}
+
+\begin{table}[H]
+\centering
+\caption{Inwentarz walidacji Zod per endpoint --- problemy}
+\label{tab:sec-zod-audit}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{3cm}L{3.5cm}L{2.5cm}X}
+\toprule
+\textbf{Endpoint} & \textbf{Schema} & \textbf{Status} & \textbf{Uwagi / Problemy} \\
+\midrule
+\texttt{/api/analyze} & \tstype{analyzeRequestSchema} & \warn{Częściowa} & \tstype{samplesSchema} = \texttt{z.object(\{\}).passthrough()} --- brak głębokiej walidacji struktury próbek \\
+\texttt{/api/analyze/cps} & \tstype{cpsRequestSchema} & \score{OK} & \tstype{participantName} min 1 char \\
+\texttt{/api/analyze/subtext} & \tstype{subtextRequestSchema} & \score{OK} & Min 100 wiadomości, pełny schemat \tstype{SimplifiedMsg} \\
+\texttt{/api/analyze/image} & \tstype{imageRequestSchema} & \score{OK} & Min 1 excerpt, typowane pola \\
+\texttt{/api/analyze/court} & \tstype{courtRequestSchema} & \warn{Częściowa} & \tstype{existingAnalysis} pola to \tstype{z.unknown()} --- brak walidacji typów \\
+\texttt{/api/analyze/dating} & Zod & \warn{Niezweryfikowana} & Schemat nie wyeksportowany do \filepath{schemas.ts} \\
+\texttt{/api/analyze/simulate} & Zod & \warn{Niezweryfikowana} & Schemat nie wyeksportowany do \filepath{schemas.ts} \\
+\texttt{/api/analyze/standup} & \tstype{standUpRequestSchema} & \score{OK} & \tstype{quantitativeContext} wymagany \\
+\texttt{/api/analyze/enhanced-roast} & \tstype{enhancedRoastRequestSchema} & \score{OK} & Wymaga 4 passów w~\tstype{qualitative} \\
+\texttt{/api/discord/fetch} & brak Zod & \danger{Brak} & Ręczna walidacja \tstype{botToken.length >= 50} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title={\textbf{Problem: \texttt{passthrough()} w~samplesSchema}}]
+Schemat \tstype{samplesSchema = z.object(\{\}).passthrough()} przyjmuje \textbf{dowolny obiekt} --- nie waliduje, czy zawiera wymagane klucze (\texttt{overview}, \texttt{dynamics}, \texttt{perPerson}), ani typów wartości wewnątrz. Złośliwy aktor może przesłać obiekt z~dowolną strukturą, co może spowodować runtime error w~\tsfunc{formatMessagesForAnalysis()} lub --- co gorsze --- wstrzyknięcie nieoczekiwanych danych do promptu Gemini.
+
+\textbf{Naprawa:} Zdefiniować pełny schemat \tstype{AnalysisSamples} z~walidacją zagnieżdżonych tablic \tstype{SimplifiedMessage[]}.
+\end{warningbox}
+
+
+\subsection{Nagłówki bezpieczeństwa HTTP}
+
+\begin{table}[H]
+\centering
+\caption{Nagłówki bezpieczeństwa --- obecne vs brakujące}
+\label{tab:sec-headers-audit}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{4.5cm}L{4cm}C{2cm}X}
+\toprule
+\textbf{Nagłówek} & \textbf{Wartość} & \textbf{Status} & \textbf{Źródło} \\
+\midrule
+\rowcolor{PodSuccess!5}
+\texttt{X-Content-Type-Options} & \texttt{nosniff} & \score{Obecny} & \filepath{next.config.ts:10} \\
+\rowcolor{PodSuccess!5}
+\texttt{X-Frame-Options} & \texttt{DENY} & \score{Obecny} & \filepath{next.config.ts:11} \\
+\rowcolor{PodSuccess!5}
+\texttt{Referrer-Policy} & \texttt{strict-origin-when-cross-origin} & \score{Obecny} & \filepath{next.config.ts:12} \\
+\rowcolor{PodSuccess!5}
+\texttt{Permissions-Policy} & \texttt{camera=(), microphone=(), geolocation=()} & \score{Obecny} & \filepath{next.config.ts:13} \\
+\midrule
+\rowcolor{PodDanger!5}
+\texttt{Content-Security-Policy} & --- & \danger{Brak} & Wymaga konfiguracji nonce \\
+\rowcolor{PodDanger!5}
+\texttt{Strict-Transport-Security} & --- & \danger{Brak} & HSTS dla HTTPS enforcement \\
+\rowcolor{PodWarning!5}
+\texttt{X-XSS-Protection} & --- & \warn{Brak} & Przestarzały, ale wciąż rekomendowany \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Content-Security-Policy --- rekomendacja}
+
+CSP jest najbardziej brakującym nagłówkiem. Konfiguracja dla \podtekst wymaga uwzględnienia:
+
+\begin{lstlisting}[style=podcode, caption={Proponowana konfiguracja CSP}, label={lst:sec-csp-proposal}]
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self' 'nonce-{GENERATED}';
+  style-src 'self' 'unsafe-inline';   // Tailwind
+  connect-src 'self'
+    https://generativelanguage.googleapis.com
+    https://discord.com/api/
+    https://www.google-analytics.com;
+  img-src 'self' data: blob:;         // Generated images
+  font-src 'self';
+  frame-src https://app.spline.design; // Spline 3D
+  object-src 'none';
+  base-uri 'self';
+\end{lstlisting}
+
+\begin{infobox}[title={\textbf{Trudność wdrożenia CSP}}]
+Konfiguracja CSP w~Next.js z~Tailwind CSS (\texttt{style-src 'unsafe-inline'}) i~Spline (\texttt{frame-src}) wymaga starannego testowania. Alternatywa: CSP w~trybie \texttt{report-only} na 2--4 tygodnie, aby zidentyfikować naruszenia przed włączeniem enforcing mode.
+\end{infobox}
+
+\subsubsection{Strict-Transport-Security --- rekomendacja}
+
+\begin{lstlisting}[style=podcode, caption={Proponowany nagłówek HSTS}, label={lst:sec-hsts-proposal}]
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+\end{lstlisting}
+
+Cloud Run obsługuje HTTPS natywnie, ale HSTS zapobiega downgrade'owi na HTTP w~przypadku przekierowania.
+
+
+\subsection{Rate limiting w~środowisku serverless}
+\label{sec:sec-rate-limit-serverless}
+
+\subsubsection{Obecna implementacja}
+
+Rate limiter \podtekst (\filepath{src/lib/rate-limit.ts}) używa \tstype{Map<string, \{count, resetTime\}>} w~pamięci procesu:
+
+\begin{lstlisting}[style=podcode, caption={Rate limiter --- stan aktualny (wyłączony)}, label={lst:sec-rate-limit-current}]
+const rateLimitMap = new Map<string, {
+  count: number; resetTime: number;
+}>();
+
+export function rateLimit(_limit: number, _windowMs: number) {
+  // TODO: re-enable rate limiting before production
+  return function checkRateLimit(_ip: string) {
+    return { allowed: true };  // ZAWSZE true
+  };
+}
+\end{lstlisting}
+
+\subsubsection{Dwa problemy}
+
+\begin{description}
+  \item[\danger{Problem 1: wyłączony}] Funkcja \tsfunc{rateLimit()} ignoruje parametry \tstype{\_limit} i~\tstype{\_windowMs} (prefiks \texttt{\_} = nieużywane) i~zawsze zwraca \tstype{\{allowed: true\}}. Komentarz TODO sugeruje, że jest to tymczasowe wyłączenie na czas developmentu --- ale kod działa w~produkcji (Cloud Run).
+
+  \item[\danger{Problem 2: in-memory Map w~serverless}] Nawet po przywróceniu logiki, \tstype{Map} in-memory \textbf{nie działa} w~środowisku Cloud Run:
+\end{description}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.8cm and 1.5cm,
+  every node/.style={font=\small},
+  >=Stealth,
+]
+
+% Container instances
+\node[podbox blue, minimum width=3cm] (c1) {Kontener A\\{\scriptsize Map: 0 req}};
+\node[podbox blue, minimum width=3cm, right=2cm of c1] (c2) {Kontener B\\{\scriptsize Map: 0 req}};
+\node[podbox blue, minimum width=3cm, right=2cm of c2] (c3) {Kontener C\\{\scriptsize Map: 0 req}};
+
+% Load balancer
+\node[podbox purple, minimum width=10cm, above=1.5cm of c2] (lb) {Cloud Run Load Balancer};
+
+% User
+\node[podbox amber, minimum width=3cm, above=1.5cm of lb] (user) {Atakujący\\{\scriptsize 15 requestów}};
+
+% Arrows
+\draw[dataarrow] (user) -- (lb);
+\draw[podarrow] (lb) -- (c1) node[midway, left, font=\scriptsize] {5 req};
+\draw[podarrow] (lb) -- (c2) node[midway, left, font=\scriptsize] {5 req};
+\draw[podarrow] (lb) -- (c3) node[midway, right, font=\scriptsize] {5 req};
+
+% Annotation
+\node[font=\scriptsize\color{PodDanger}, below=0.3cm of c2] {\danger{Każdy kontener widzi tylko 5 req --- limit 5/10min = nigdy nieprzekroczony}};
+
+\end{tikzpicture}
+\caption{Problem rate limitingu in-memory w~środowisku Cloud Run. Trzy instancje = trzykrotny efektywny limit.}
+\label{fig:sec-rate-limit-serverless}
+\end{figure}
+
+\subsubsection{Mechanizm problemu}
+
+\begin{enumerate}
+  \item Cloud Run uruchamia \textbf{stateless kontenery} --- każdy cold start tworzy nową instancję z~pustą \tstype{Map}.
+  \item Przy wielu jednoczesnych żądaniach Cloud Run skaluje się do N~kontenerów --- każdy z~własnym, niezależnym licznikiem.
+  \item Atakujący z~jednego IP wysyła 15 żądań. Load balancer rozkłada je na 3 kontenery po 5. Każdy kontener widzi 5 requestów --- poniżej limitu 5/10min. \textbf{Wszystkie 15 przechodzi.}
+  \item Nawet w~jednym kontenerze --- po minutach bezczynności Cloud Run może go zamknąć. Nowy cold start = \tstype{Map} = pusta.
+\end{enumerate}
+
+\subsubsection{Rekomendacja: Upstash Redis}
+
+\begin{lstlisting}[style=podcode, caption={Proponowany rate limiter z~Upstash Redis}, label={lst:sec-upstash-rate-limit}]
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+export const analyzeRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '10 m'),
+  analytics: true,
+  prefix: 'podtekst:rate-limit',
+});
+\end{lstlisting}
+
+\begin{itemize}
+  \item \textbf{Upstash Redis} --- serverless Redis z~REST API, darmowy tier (10\,000 req/dzień)
+  \item \textbf{Sliding window} --- algorytm okna przesuwnego zamiast fixed window (bardziej sprawiedliwy)
+  \item \textbf{Współdzielony state} --- wszystkie instancje Cloud Run korzystają z~tego samego Redis
+  \item \textbf{Wbudowana analityka} --- dashboard z~rate-limit events
+\end{itemize}
+
+
+\subsection{Checklist RODO}
+
+\begin{table}[H]
+\centering
+\caption{Checklist zgodności z~RODO --- stan na luty 2026}
+\label{tab:sec-gdpr-checklist}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{C{0.8cm}L{4.5cm}C{2cm}X}
+\toprule
+\textbf{Nr} & \textbf{Wymóg RODO} & \textbf{Status} & \textbf{Szczegóły} \\
+\midrule
+\rowcolor{PodSuccess!5}
+1 & Minimalizacja danych & \score{Spełniony} & $<$1\% wiadomości wysyłanych na serwer \\
+\rowcolor{PodSuccess!5}
+2 & Brak retencji na serwerze & \score{Spełniony} & Dane w~pamięci tylko podczas przetwarzania \\
+\rowcolor{PodSuccess!5}
+3 & Cookie consent & \score{Spełniony} & \tstype{CookieConsent.tsx}, GA4 warunkowo \\
+\rowcolor{PodSuccess!5}
+4 & Prawo do usunięcia (Art.~17) & \score{Spełniony} & \tsfunc{deleteAnalysis()} --- atomowe usunięcie \\
+\rowcolor{PodSuccess!5}
+5 & Prawo do przenoszenia (Art.~20) & \score{Spełniony} & Eksport PDF \\
+\rowcolor{PodSuccess!5}
+6 & Przetwarzanie lokalne & \score{Spełniony} & IndexedDB, brak server-side storage \\
+\midrule
+\rowcolor{PodDanger!5}
+7 & Polityka prywatności & \danger{Brak} & Brak strony \texttt{/privacy} \\
+\rowcolor{PodDanger!5}
+8 & Endpoint usunięcia danych & \danger{Brak} & Brak API \texttt{DELETE /api/user-data} \\
+\rowcolor{PodDanger!5}
+9 & Eksport danych (maszynowy) & \danger{Brak} & PDF nie jest formatem maszynowym (brak JSON export) \\
+\rowcolor{PodWarning!5}
+10 & Informacja o~przetwarzaniu AI & \warn{Częściowy} & Brak jawnej informacji, że wiadomości trafiają do Google Gemini \\
+\rowcolor{PodWarning!5}
+11 & Okres retencji cookies & \warn{Nieokreślony} & \tstype{CookieConsent} nie informuje o~okresie ważności GA4 cookies \\
+\rowcolor{PodWarning!5}
+12 & DPO (Data Protection Officer) & \warn{Nie dotyczy} & Wymagany przy przetwarzaniu na dużą skalę (przyszłość) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsection{Raport podatności}
+
+\subsubsection{jsPDF --- 3 podatności HIGH}
+
+Pakiet \texttt{jspdf} w~wersji \texttt{\^{}4.1.0} (plik \filepath{package.json:23}) posiada trzy znane podatności o~poziomie \textbf{HIGH}:
+
+\begin{table}[H]
+\centering
+\caption{Podatności jsPDF 4.1.0}
+\label{tab:sec-jspdf-vulns}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{3cm}L{3.5cm}C{1.5cm}X}
+\toprule
+\textbf{CVE / GHSA} & \textbf{Typ} & \textbf{Severity} & \textbf{Opis} \\
+\midrule
+\rowcolor{PodDanger!5}
+GHSA-p5xg-68wr-hm3m & PDF Injection & \danger{HIGH} & Wstrzyknięcie obiektów PDF przez AcroForm RadioButton \\
+\rowcolor{PodDanger!5}
+GHSA-9vjf-qc39-jprp & Object Injection & \danger{HIGH} & Wstrzyknięcie obiektów PDF via \tsfunc{addJS()} \\
+\rowcolor{PodDanger!5}
+GHSA-67pg-wm7f-q7fj & DoS & \danger{HIGH} & Denial of Service przez spreparowane wymiary GIF \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[title={\textbf{Naprawa}}]
+Aktualizacja do \texttt{jspdf@4.2.0+} rozwiązuje wszystkie trzy podatności. Wymagane zmiany w~kodzie: brak --- API jest kompatybilne.
+
+\begin{lstlisting}[style=podcodeBash]
+pnpm update jspdf@latest
+\end{lstlisting}
+\end{infobox}
+
+\subsubsection{Brak \texttt{dangerouslySetInnerHTML}}
+
+Przeszukanie całego katalogu \filepath{src/} potwierdza \textbf{zero} wystąpień \tsfunc{dangerouslySetInnerHTML}. React auto-escaping chroni przed XSS w~warstwie renderingu.
+
+
+\subsection{Ryzyko: token Discord w~body requestu}
+\label{sec:sec-discord-token-risk}
+
+Endpoint \texttt{/api/discord/fetch-messages} przyjmuje \texttt{botToken} w~body HTTP requestu:
+
+\begin{lstlisting}[style=podcode, caption={Akceptacja botToken z~body requestu}, label={lst:sec-discord-token}]
+// src/app/api/discord/fetch-messages/route.ts:43-58
+let body: {
+  botToken?: string;
+  channelId?: string;
+  messageLimit?: number;
+};
+// ...
+const botToken = (body.botToken && body.botToken.length >= 50)
+  ? body.botToken
+  : process.env.DISCORD_BOT_TOKEN;
+\end{lstlisting}
+
+\subsubsection{Wektor ataku}
+
+\begin{enumerate}
+  \item Użytkownik wkleja swój Discord Bot Token w~UI (\tstype{DiscordImport.tsx}).
+  \item Token jest przechowywany w~React state (pamięć przeglądarki).
+  \item Token jest wysyłany w~body POST do \texttt{/api/discord/fetch-messages}.
+  \item Jeśli strona jest podatna na XSS (np.\ przez wstrzyknięty skrypt w~extension'ie przeglądarki):
+  \begin{itemize}
+    \item Atakujący może odczytać token z~React state lub przechwycić request
+    \item Token umożliwia dostęp do \textbf{wszystkich kanałów} serwera Discord
+  \end{itemize}
+\end{enumerate}
+
+\subsubsection{Ocena ryzyka}
+
+\begin{description}
+  \item[Prawdopodobieństwo:] \warn{Niskie} --- wymaga XSS na stronie \podtekst (brak \tsfunc{dangerouslySetInnerHTML}, CSP planowany)
+  \item[Wpływ:] \danger{Wysoki} --- skradziony bot token daje pełny dostęp do API Discorda
+  \item[Mitigacja obecna:] Token nie jest zapisywany w~localStorage ani IndexedDB --- istnieje tylko w~pamięci React state podczas sesji
+\end{description}
+
+\subsubsection{Rekomendacja}
+
+\begin{enumerate}
+  \item \textbf{Preferować server-side token:} Używać \tstype{process.env.DISCORD\_BOT\_TOKEN} zamiast przyjmowania tokenu od klienta. Endpoint już obsługuje fallback do env var.
+  \item \textbf{Szyfrowanie w~transit:} Jeśli konieczne jest przyjęcie tokenu od użytkownika --- szyfrowanie asymetryczne (public key na kliencie, private key na serwerze).
+  \item \textbf{Jednorazowy token:} Po pobraniu wiadomości --- natychmiast wyczyścić token z~React state.
+\end{enumerate}
+
+
+\subsection{Brak autentykacji}
+
+\begin{warningbox}[title={\danger{Brak jakiejkolwiek warstwy autentykacji}}]
+Na dzień audytu \podtekst nie posiada:
+\begin{itemize}
+  \item Systemu użytkowników (brak rejestracji, logowania)
+  \item Sesji (brak cookies sesyjnych, brak JWT)
+  \item Uprawnień (brak ról, tierów, permisji)
+  \item Identyfikacji użytkownika (rate limit per IP, nie per user)
+\end{itemize}
+Każdy, kto zna URL endpointu API, może wysyłać żądania bez ograniczeń (rate limit wyłączony). W~kontekście monetyzacji (patrz \secref{sec:model-freemium}) oznacza to, że paywall oparty na \tstype{TierContext} (localStorage) można obejść bezpośrednim wywołaniem API.
+\end{warningbox}
+
+
+\subsection{Priorytety napraw bezpieczeństwa}
+
+\begin{table}[H]
+\centering
+\caption{Priorytety napraw bezpieczeństwa}
+\label{tab:sec-fix-priorities}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{C{0.8cm}L{4.5cm}C{1.5cm}C{2cm}X}
+\toprule
+\textbf{Nr} & \textbf{Problem} & \textbf{Severity} & \textbf{Trudność} & \textbf{Priorytet} \\
+\midrule
+\rowcolor{PodDanger!5}
+1 & Przywrócić rate limiting & \danger{CRITICAL} & Łatwa & P0 \\
+\rowcolor{PodDanger!5}
+2 & Migracja rate limit na Redis & \danger{HIGH} & Średnia & P0 \\
+\rowcolor{PodDanger!5}
+3 & Aktualizacja jsPDF do 4.2.0+ & \danger{HIGH} & Łatwa & P0 \\
+\rowcolor{PodDanger!5}
+4 & Dodanie polityki prywatności & \danger{HIGH} & Średnia & P0 \\
+\midrule
+\rowcolor{PodWarning!5}
+5 & Content-Security-Policy & \warn{MEDIUM} & Trudna & P1 \\
+\rowcolor{PodWarning!5}
+6 & Strict-Transport-Security & \warn{MEDIUM} & Łatwa & P1 \\
+\rowcolor{PodWarning!5}
+7 & Deep validation \tstype{samplesSchema} & \warn{MEDIUM} & Średnia & P1 \\
+\rowcolor{PodWarning!5}
+8 & Informacja o~przetwarzaniu AI & \warn{MEDIUM} & Łatwa & P1 \\
+\midrule
+9 & Discord token risk mitigation & LOW & Średnia & P2 \\
+10 & JSON export (Art.~20 RODO) & LOW & Średnia & P2 \\
+11 & Centralizacja schematów Zod & LOW & Łatwa & P2 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{featurebox}
+\textbf{Podsumowanie bezpieczeństwa:} Architektura client-first \podtekst zapewnia silne domyślne zabezpieczenia --- surowe wiadomości nigdy nie opuszczają przeglądarki, brak \tsfunc{dangerouslySetInnerHTML}, brak retencji danych na serwerze. Jednak \textbf{trzy krytyczne braki} (wyłączony rate limit, brak CSP, brak autentykacji) oraz \textbf{trzy podatności HIGH} w~jsPDF wymagają natychmiastowej uwagi przed skalowaniem produktu.
+\end{featurebox}

@@ -1,0 +1,220 @@
+% ============================================================
+% Rozdział 5 — Synteza Ekspercka
+% ============================================================
+
+\chapter{Synteza Ekspercka}
+\label{ch:synteza}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Prawdziwy wgląd nie pochodzi z~jednego źródła --- powstaje na skrzyżowaniu perspektyw.''
+\end{center}
+
+\vspace{8pt}
+
+Niniejszy rozdział nie powtarza wyników agentów, lecz identyfikuje \textbf{wzorce przekrojowe}, sprzeczności między raportami i~systemowe problemy, które ujawniają się dopiero przy syntezie trzech niezależnych analiz.
+
+% ============================================================
+\section{Metodologia syntezy}
+\label{sec:synteza-metodo}
+
+Synteza została przeprowadzona w~trzech krokach:
+\begin{enumerate}
+  \item \textbf{Ekstrakcja}: zebranie wszystkich znalezionych problemów, mocnych stron i~rekomendacji z~raportów trzech agentów.
+  \item \textbf{Krzyżowa weryfikacja}: porównanie, czy ten sam problem został zauważony przez wielu agentów, oraz identyfikacja sprzeczności.
+  \item \textbf{Kategoryzacja przekrojowa}: grupowanie wyników w~tematy systemowe, które wykraczają poza zakres pojedynczego agenta.
+\end{enumerate}
+
+% ============================================================
+\section{Wzorce przekrojowe}
+\label{sec:wzorce-przekrojowe}
+\index{wzorce przekrojowe}
+
+\subsection{Wzorzec 1: Brak walidacji na wielu poziomach}
+
+Problem braku walidacji pojawia się \textbf{niezależnie we wszystkich trzech raportach}, ale na różnych warstwach:
+
+\begin{table}[H]
+\centering
+\caption{Brak walidacji --- manifestacja per warstwa}
+\label{tab:brak-walidacji}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Warstwa} & \textbf{Agent} & \textbf{Problem} \\
+\midrule
+Dane wejściowe & \agentthree & Rate limiting wyłączony, relationshipContext bez walidacji enum \\
+Algorytmy & \agentone & Zero-data zwraca 100 zamiast neutralne 50 (brak guard clause) \\
+Psychometria & \agenttwo & Health Score arbitralne wagi, brak odniesienia do walidowanych instrumentów \\
+Parsery dat & \agentthree & DD/MM vs MM/DD heurystyka może zawodzić dla dat dwuznacznych \\
+Scoring AI & \agenttwo & Subtext decoder: ad-hoc punktacja bez podstawy lingwistycznej \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title=Wniosek]
+System konsekwentnie \emph{zakłada poprawność} danych wejściowych i~parametrów zamiast je walidować. Dotyczy to zarówno warstwy technicznej (brak guard clause), jak i~merytorycznej (brak walidacji psychometrycznej).
+\end{warningbox}
+
+\subsection{Wzorzec 2: Napięcie rozrywka--nauka}
+\index{rozrywka vs nauka}
+
+Drugi wzorzec jest centralnym dylematem produktowym \podtekst. Z~jednej strony, moduły rozrywkowe (Roast, Court Trial, Dating Profile) stanowią o~unikalności produktu i~napędzają wiralność. Z~drugiej, łączenie psychologii klinicznej (attachment theory, Big Five, manipulation detection) z~komedią tworzy ryzyko:
+
+\begin{itemize}
+  \item \textbf{\agenttwo}: ,,Roasting weaponizes attachment styles --- mixing psychology with comedy risks trivializing serious patterns.''
+  \item \textbf{\agenttwo}: ,,Labels like BAZOWANY vs TOTAL DELULU are funny but not psychological.''
+  \item \textbf{\agentone}: ,,Treat viral scores as entertainment, not relationship diagnosis.''
+\end{itemize}
+
+\begin{moderatebox}[title=Implikacja]
+Użytkownicy mogą internalizować wyniki (np.\ ,,nasz Health Score to 52, więc relacja jest chora'') bez zrozumienia, że te liczby \textbf{nie są zwalidowanymi instrumentami klinicznymi}. Disclaimery istnieją, ale są krótkie i~łatwe do przeoczenia.
+\end{moderatebox}
+
+\subsection{Wzorzec 3: Architektura dojrzała, infrastruktura niedojrzała}
+
+\begin{table}[H]
+\centering
+\caption{Kontrast dojrzałości: architektura vs infrastruktura}
+\begin{tabularx}{\textwidth}{L{5cm} C{2cm} L{5cm} C{2cm}}
+\toprule
+\textbf{Dojrzałe (8+/10)} & \textbf{Ocena} & \textbf{Niedojrzałe ($<$6/10)} & \textbf{Ocena} \\
+\midrule
+Silnik O(n) & \scorehi{8.0} & Walidacja psychometryczna & \scorelo{3.0} \\
+Obsługa błędów & \scorehi{8.5} & Bezpieczeństwo AI & \scorelo{5.5} \\
+Schematy JSON & \scorehi{9.0} & Rate limiting & \scorelo{2.0} \\
+Kalibracja kontekstu & \scorehi{8.0} & Disclaimery & \scorelo{5.0} \\
+Parsery platform & \scorehi{7.5} & Entertainment framing & \scorelo{4.0} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+System jest \textbf{technicznie dojrzały} (TypeScript strict, czyste wzorce, wyrafinowane algorytmy), ale \textbf{produktowo i~naukowo niedojrzały} (brak walidacji, brak auth/payments, brak testów automatycznych).
+
+\subsection{Wzorzec 4: Doskonała separacja klient--serwer}
+\index{prywatność!separacja klient-serwer}
+
+\begin{strengthbox}[title=Konsensus wszystkich agentów]
+Wszystkie trzy agenty niezależnie potwierdziły, że architektura prywatności jest \textbf{wzorcowa}:
+\begin{itemize}
+  \item Surowe wiadomości przetwarzane wyłącznie po stronie klienta (przeglądarka).
+  \item Do serwera trafia jedynie 200--500 spróbkowanych wiadomości per pass (< 1\% rozmowy).
+  \item IndexedDB lokalna, localStorage z~prefiksem \texttt{podtekst-*}.
+  \item Share URL anonimizuje wszystkie dane osobowe + kompresja LZ-string.
+  \item Discord token użyty jednorazowo, nie przechowywany.
+\end{itemize}
+\end{strengthbox}
+
+% ============================================================
+\section{Sprzeczności między agentami}
+\label{sec:sprzecznosci}
+\index{sprzeczności}
+
+\subsection{CPS: ,,Strong'' vs ,,6/10 frameworks''}
+
+\agentone ocenił CPS Communication Pattern Screening jako \emph{,,najsilniejszy komponent psychologiczny''}, podczas gdy \agenttwo przyznał frameworkom psychologicznym ogółem \scoremed{6/10}.
+
+\textbf{Rozstrzygnięcie}: Nie ma sprzeczności. \agentone oceniał CPS \emph{relatywnie} (na tle innych metryk wiralnych --- Compatibility 3/10, Interest 3/10, Delusion 2/10). \agenttwo oceniał \emph{absolutnie} (wobec standardów psychometrii klinicznej). CPS jest rzeczywiście najlepszym komponentem systemu, ale nawet on nie przeszedł walidacji psychometrycznej.
+
+\subsection{Parsery ,,7--8.5/10'' vs ,,5 critical bugs''}
+
+\agentthree ocenił parsery wysoko (Messenger 8.5, WhatsApp 7.5), a~jednocześnie \agentone znalazł 5~bugów krytycznych w~silniku ilościowym, który działa \emph{na danych z~parserów}.
+
+\textbf{Rozstrzygnięcie}: Parsery i~silnik ilościowy to dwie różne warstwy. Parsery poprawnie normalizują surowe dane do \tstype{UnifiedMessage}. Bugi są w~warstwie \emph{post-processing} (viral-scores.ts, reciprocity.ts, wrapped-data.ts), nie w~parsowaniu. Nie ma sprzeczności.
+
+% ============================================================
+\section{Gotowość produkcyjna}
+\label{sec:gotowosc}
+\index{gotowość produkcyjna}
+
+\begin{table}[H]
+\centering
+\caption{Traffic light --- gotowość per obszar}
+\label{tab:traffic-light}
+\begin{tabularx}{\textwidth}{L{4.5cm} C{2cm} X}
+\toprule
+\textbf{Obszar} & \textbf{Status} & \textbf{Warunek przejścia} \\
+\midrule
+\rowcolor{PodSuccess!8}
+Parsery platform & \scorehi{GO} & Gotowe do produkcji \\
+\rowcolor{PodSuccess!8}
+Silnik ilościowy (core) & \scorehi{GO} & Po naprawie 5~bugów krytycznych \\
+\rowcolor{PodSuccess!8}
+Pipeline AI (4 pasy) & \scorehi{GO} & Po zmianie safety settings \\
+\rowcolor{PodWarning!8}
+Moduły rozrywkowe & \scoremed{WAIT} & Dodać disclaimery, review framing \\
+\rowcolor{PodWarning!8}
+Interfejs użytkownika & \scoremed{WAIT} & Decompose analysis page, a11y fixes \\
+\rowcolor{PodDanger!8}
+Bezpieczeństwo & \scorelo{STOP} & Rate limiting, safety settings, enum validation \\
+\rowcolor{PodDanger!8}
+Walidacja psychologiczna & \scorelo{STOP} & Health Score redesign, disclaimery \\
+\rowcolor{PodDanger!8}
+Auth \& Payments & \scorelo{STOP} & Supabase + Stripe (nie zaimplementowane) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Dług techniczny}
+\label{sec:dlug}
+\index{dług techniczny}
+
+Na podstawie trzech raportów zidentyfikowano następujące kategorie długu technicznego:
+
+\begin{enumerate}
+  \item \textbf{Brak testów automatycznych}: Zero unit/integration tests. Vitest skonfigurowany (Faza 21), ale brak pokrycia. \emph{Ryzyko: regresje przy każdej zmianie.}
+  \item \textbf{Monolityczna strona wyników}: 985~LOC w~jednym pliku (\filepath{analysis/[id]/page.tsx}). \emph{Ryzyko: trudność w~utrzymaniu, testowaniu i~code review.}
+  \item \textbf{Hardcoded multipliers}: Minimum 6~magicznych liczb (1200, 25, 500, 200, 300, 3x) bez kalibracji. \emph{Ryzyko: arbitralność wyników.}
+  \item \textbf{Brak CI/CD}: Brak automatycznego pipeline'u budowania, testowania i~deploymentu. \emph{Ryzyko: błędy trafiają na produkcję.}
+  \item \textbf{Rate limiting wyłączony}: Funkcja istnieje, ale jest wyłączona w~kodzie. \emph{Ryzyko: abuse API, koszty Gemini.}
+  \item \textbf{Preview model Gemini}: Użycie \texttt{gemini-3-flash-preview} (niestabilny preview) zamiast stabilnej wersji. \emph{Ryzyko: zmiany w~API mogą złamać pipeline.}
+\end{enumerate}
+
+% ============================================================
+\section{Co warto dodać --- analiza przyszłościowa}
+\label{sec:przyszlosc-kontent}
+\index{przyszłe funkcje}
+
+Na podstawie analizy brakujących metryk (\agentone), luk w~frameworkach psychologicznych (\agenttwo) i~możliwości UI (\agentthree), identyfikujemy następujące obszary wartego rozwoju:
+
+\subsection{Nowe metryki analityczne}
+
+\begin{featurebox}[title=Brakujące metryki (priorytet: wysoki)]
+\begin{description}
+  \item[Analiza sentymentu (LIWC-based)] Detekcja pozytywnego/negatywnego/neutralnego tonu per wiadomość. Pozwala na śledzenie trajektorii emocjonalnej rozmowy w~czasie. Bazować na LIWC (Linguistic Inquiry and Word Count) lub polskim odpowiedniku.
+  \item[Detekcja konfliktów] Automatyczne rozpoznawanie kłótni, eskalacji i~rozwiązań. Sygnały: nagły wzrost długości wiadomości, zmiana tonu, cisza > 24h po intensywnej wymianie.
+  \item[Wspólne tematy (topic modeling)] Wyekstrahowanie głównych tematów rozmowy i~śledzenie, które tematy inicjuje każda osoba. LDA lub embedding-based clustering.
+  \item[Progresja bliskości/wrażliwości] Detekcja, czy rozmowa z~czasem staje się bardziej osobista (dłuższe wiadomości, większa wrażliwość, mniej defensywności).
+\end{description}
+\end{featurebox}
+
+\subsection{Nowe funkcje rozrywkowe}
+
+\begin{featurebox}[title=Proponowane nowe moduły]
+\begin{description}
+  \item[Couple Mode (tryb par)] Wspólna analiza dwóch osób z~porównaniem perspektyw. Każda osoba odpowiada na quiz i~widzi, jak postrzega relację vs jak dane ją opisują.
+  \item[Team Features (funkcje zespołowe)] Dla grup 5+ osób: role (lider, mediator, prowokator), podgrupy, koalicje, izolowani członkowie. Rozszerzenie metryki sieci.
+  \item[Shared Analyses] Możliwość udostępnienia pełnej analizy drugiej osobie z~rozmowy (za zgodą) zamiast tylko anonimowej karty.
+  \item[Longitudinal Tracking] Powtórzenie analizy tej samej rozmowy po miesiącach/latach z~porównaniem trendów.
+  \item[Voice Message Transcription] Transkrypcja wiadomości głosowych (Whisper API) i~włączenie do analizy tekstowej.
+\end{description}
+\end{featurebox}
+
+\subsection{Walidacja naukowa}
+
+\begin{infobox}[title=Rekomendowane badania walidacyjne]
+\begin{enumerate}
+  \item \textbf{Benchmarking Big Five}: Porównanie wyników z~kwestionariuszem NEO-PI-R na próbie 100+ osób, które dostarczą zarówno eksporty rozmów, jak i~wypełnione kwestionariusze.
+  \item \textbf{Walidacja Health Score}: Porównanie z~Couples Satisfaction Index (CSI) lub Relationship Assessment Scale (RAS) --- czy wysoki Health Score koreluje z~wysoką satysfakcją?
+  \item \textbf{A/B testing disclaimer'ów}: Test, czy bardziej wyraźne disclaimery (,,To NIE jest diagnoza kliniczna'') wpływają na interpretację wyników przez użytkowników.
+  \item \textbf{Kalibracja progów CPS}: Porównanie wyników CPS z~diagnozami klinicznymi na próbie pacjentów terapii par.
+\end{enumerate}
+\end{infobox}
+
+% ============================================================
+\section{Podsumowanie syntezy}
+\label{sec:synteza-podsumowanie}
+
+\podtekst jest \textbf{technicznie imponującym produktem} z~dojrzałą architekturą kodu, innowacyjnym pipeline'em AI i~solidnym podejściem do prywatności. Główne ryzyka leżą nie w~kodzie, lecz w~\textbf{interpretacji wyników}: użytkownicy mogą traktować entertainment-grade metryki jako clinical-grade diagnozy.
+
+Priorytetami powinny być: (1)~naprawa 9~bugów krytycznych, (2)~włączenie zabezpieczeń (rate limiting, safety settings), (3)~dodanie wyraźnych disclaimerów, (4)~walidacja psychometryczna kluczowych metryk. Dopiero po tych krokach system będzie gotowy do skalowania.

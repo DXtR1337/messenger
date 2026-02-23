@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import {
   AreaChart,
   Area,
@@ -62,7 +62,7 @@ interface ChartDataPoint {
   [key: string]: string | number;
 }
 
-export default function TimelineChart({
+function TimelineChart({
   monthlyVolume,
   participants,
 }: TimelineChartProps) {
@@ -263,3 +263,5 @@ export default function TimelineChart({
     </motion.div>
   );
 }
+
+export default memo(TimelineChart);

@@ -1,0 +1,658 @@
+% ============================================================
+% AKTUALIZACJA: Rozdziały 12 i 13 — nowe sekcje do dołączenia
+% Wygenerowano: luty 2026
+% ============================================================
+%
+% INSTRUKCJA:
+%   - Sekcja A → dołączyć do ch12-typy-danych.tex (po linii 1934)
+%   - Sekcja B → dołączyć do ch13-rozwoj.tex (po linii 460)
+%
+
+
+% ############################################################
+% SEKCJA A — do ch12-typy-danych.tex
+% (wstawić PO istniejącym podsumowaniu zależności, linia 1934)
+% ############################################################
+
+
+% ============================================================
+\section{Typy Dekodera Podtekstów}
+\label{sec:subtext-types}
+% ============================================================
+
+Typy z~tej sekcji zdefiniowane są w~pliku:
+
+\filepath{src/lib/analysis/subtext.ts}
+
+Dekoder Podtekstów (Subtext Decoder) stanowi osobny moduł analizy AI, który interpretuje ukryte znaczenia w~wybranych wiadomościach. Wykorzystuje system okien kontekstowych (\tstype{ExchangeWindow}) do ekstrakcji fragmentów rozmowy, które następnie są przetwarzane wsadowo przez model \gemini.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SubtextCategory}
+\label{subsec:subtext-category}
+
+Typ unii literałowej definiujący 12~kategorii ukrytych podtekstów.
+
+\begin{lstlisting}[style=podcode, caption={Typ SubtextCategory}]
+type SubtextCategory =
+  | 'deflection'         // unikanie tematu
+  | 'hidden_anger'       // ukryty gniew
+  | 'seeking_validation' // szukanie potwierdzenia
+  | 'power_move'         // gra o wladze
+  | 'genuine'            // szczere
+  | 'testing'            // testowanie partnera
+  | 'guilt_trip'         // wzbudzanie poczucia winy
+  | 'passive_aggressive' // bierna agresja
+  | 'love_signal'        // ukryty sygnal milosci
+  | 'insecurity'         // niepewnosc
+  | 'distancing'         // dystansowanie sie
+  | 'humor_shield';      // humor jako tarcza
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Wartości \tstype{SubtextCategory} z~opisami}
+\label{tab:subtext-categories}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Wartość} & \textbf{Pol. etykieta} & \textbf{Opis} \\
+\midrule
+\texttt{deflection} & Unikanie tematu & Zmiana tematu lub unik, gdy rozmowa staje się niewygodna \\
+\texttt{hidden\_anger} & Ukryty gniew & Kontrolowany gniew maskowany neutralnym tonem \\
+\texttt{seeking\_validation} & Szukanie potwierdzenia & Subtelne próby uzyskania aprobaty lub zapewnienia \\
+\texttt{power\_move} & Gra o~władzę & Próba przejęcia kontroli nad dynamiką rozmowy \\
+\texttt{genuine} & Szczere & Brak ukrytego podtekstu --- wiadomość jest autentyczna \\
+\texttt{testing} & Testowanie partnera & Prowokacja lub próba sprawdzenia reakcji drugiej strony \\
+\texttt{guilt\_trip} & Wzbudzanie winy & Manipulacja poprzez wywoływanie poczucia winy \\
+\texttt{passive\_aggressive} & Bierna agresja & Agresja wyrażona w~sposób pośredni lub pozornie neutralny \\
+\texttt{love\_signal} & Ukryty sygnał miłości & Uczucia wyrażone nie wprost, zamaskowane humorem lub nonszalancją \\
+\texttt{insecurity} & Niepewność & Lęk lub brak pewności siebie ujawniający się w~stylu komunikacji \\
+\texttt{distancing} & Dystansowanie się & Emocjonalne wycofywanie się z~relacji lub tematu \\
+\texttt{humor\_shield} & Humor jako tarcza & Używanie żartów do unikania wrażliwych tematów \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SubtextItem}
+\label{subsec:subtext-item}
+
+Pojedynczy zdekodowany podtekst --- centralny element wyników dekodera.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs SubtextItem}]
+interface SubtextItem {
+  originalMessage: string;
+  sender: string;
+  timestamp: number;
+  subtext: string;
+  emotion: string;
+  confidence: number;      // 0-100
+  category: SubtextCategory;
+  isHighlight: boolean;
+  exchangeContext: string;
+  windowId: number;
+  surroundingMessages: Array<{
+    sender: string;
+    content: string;
+    timestamp: number;
+  }>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SubtextItem}}
+\label{tab:subtext-item}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{originalMessage} & \tstype{string} & tak & Oryginalna treść wiadomości (po dekodowaniu Unicode) \\
+\texttt{sender} & \tstype{string} & tak & Nazwa nadawcy wiadomości \\
+\texttt{timestamp} & \tstype{number} & tak & Unix timestamp ms oryginalnej wiadomości \\
+\texttt{subtext} & \tstype{string} & tak & Zdekodowany podtekst --- co naprawdę miała na myśli osoba \\
+\texttt{emotion} & \tstype{string} & tak & Dominująca emocja ukryta w~wiadomości (np.~,,frustracja'', ,,tęsknota'') \\
+\texttt{confidence} & 0--100 & tak & Pewność AI co do poprawności dekodowania podtekstu \\
+\texttt{category} & \tstype{SubtextCategory} & tak & Jedna z~12 kategorii podtekstu \\
+\texttt{isHighlight} & \tstype{boolean} & tak & Czy wiadomość jest szczególnie odkrywcza (top 20\%) \\
+\texttt{exchangeContext} & \tstype{string} & tak & Krótki opis kontekstu wymiany zdań \\
+\texttt{windowId} & \tstype{number} & tak & Identyfikator okna kontekstowego (\tstype{ExchangeWindow}) \\
+\texttt{surroundingMessages} & \tstype{Array} & tak & Wiadomości otaczające --- kontekst dla interpretacji (3--5 wiadomości) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm and 1.4cm,
+  every node/.style={font=\scriptsize},
+  leaf/.style={
+    rectangle,
+    draw=PodPurple!30,
+    fill=white,
+    rounded corners=2pt,
+    minimum width=3cm,
+    minimum height=0.5cm,
+    align=center,
+    font=\scriptsize,
+    text=PodPurpleDark,
+    inner sep=3pt,
+  },
+  root/.style={
+    leaf,
+    draw=PodPurple!50,
+    fill=PodPurple!8,
+    font=\scriptsize\bfseries,
+    text=PodPurpleDark,
+    minimum width=3.5cm,
+  },
+  typelabel/.style={
+    font=\tiny,
+    text=PodTextMuted,
+    anchor=west,
+  },
+  arr/.style={->, >=stealth, thin, PodPurple!40},
+]
+  \node[root] (si) {SubtextItem};
+
+  % Left column
+  \node[leaf, below left=0.8cm and 2.5cm of si] (orig) {originalMessage};
+  \node[leaf, below=0.5cm of orig] (sender) {sender};
+  \node[leaf, below=0.5cm of sender] (ts) {timestamp};
+  \node[leaf, below=0.5cm of ts] (sub) {subtext};
+  \node[leaf, below=0.5cm of sub] (emo) {emotion};
+  \node[leaf, below=0.5cm of emo] (conf) {confidence};
+
+  % Right column
+  \node[leaf, below right=0.8cm and 2.5cm of si] (cat) {category};
+  \node[leaf, below=0.5cm of cat] (hl) {isHighlight};
+  \node[leaf, below=0.5cm of hl] (ctx) {exchangeContext};
+  \node[leaf, below=0.5cm of ctx] (wid) {windowId};
+  \node[leaf, below=0.5cm of wid] (surr) {surroundingMessages};
+
+  % Type labels
+  \node[typelabel] at (orig.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (sender.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (ts.east) {\hspace{4pt}\texttt{number}};
+  \node[typelabel] at (sub.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (emo.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (conf.east) {\hspace{4pt}\texttt{0--100}};
+  \node[typelabel] at (cat.east) {\hspace{4pt}\texttt{SubtextCategory}};
+  \node[typelabel] at (hl.east) {\hspace{4pt}\texttt{boolean}};
+  \node[typelabel] at (ctx.east) {\hspace{4pt}\texttt{string}};
+  \node[typelabel] at (wid.east) {\hspace{4pt}\texttt{number}};
+  \node[typelabel] at (surr.east) {\hspace{4pt}\texttt{Array}};
+
+  % Arrows
+  \draw[arr] (si) -- (orig);
+  \draw[arr] (si) -- (sender);
+  \draw[arr] (si) -- (ts);
+  \draw[arr] (si) -- (sub);
+  \draw[arr] (si) -- (emo);
+  \draw[arr] (si) -- (conf);
+  \draw[arr] (si) -- (cat);
+  \draw[arr] (si) -- (hl);
+  \draw[arr] (si) -- (ctx);
+  \draw[arr] (si) -- (wid);
+  \draw[arr] (si) -- (surr);
+
+\end{tikzpicture}
+\caption{Drzewo pól \tstype{SubtextItem} --- 11~pól, z~czego \texttt{category} jest typem unii (\tstype{SubtextCategory}), a~\texttt{surroundingMessages} zawiera tablicę wiadomości kontekstowych.}
+\label{fig:subtext-item-tree}
+\end{figure}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SubtextSummary}
+\label{subsec:subtext-summary}
+
+Zagregowane podsumowanie wyników dekodera podtekstów.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs SubtextSummary}]
+interface SubtextSummary {
+  hiddenEmotionBalance: Record<string, number>;
+  mostDeceptivePerson: string;
+  deceptionScore: Record<string, number>;
+  topCategories: Array<{
+    category: SubtextCategory;
+    count: number;
+  }>;
+  biggestReveal: SubtextItem;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SubtextSummary}}
+\label{tab:subtext-summary}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{hiddenEmotionBalance} & \tstype{Record<string, number>} & Bilans ukrytych emocji per osoba --- stosunek emocji negatywnych do pozytywnych \\
+\texttt{mostDeceptivePerson} & \tstype{string} & Osoba z~największą liczbą podtekstów niezgodnych z~dosłownym przekazem \\
+\texttt{deceptionScore} & \tstype{Record<string, number>} & Wynik ,,zwodniczości'' per osoba (0--100, wyższy = więcej ukrytych intencji) \\
+\texttt{topCategories} & \tstype{Array} & Ranking najczęstszych kategorii podtekstów z~liczbą wystąpień \\
+\texttt{biggestReveal} & \tstype{SubtextItem} & Wiadomość z~największą rozbieżnością między dosłownym a~ukrytym przekazem \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{SubtextResult}
+\label{subsec:subtext-result}
+
+Kontener wyników --- główny interfejs zwracany przez dekoder.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs SubtextResult}]
+interface SubtextResult {
+  items: SubtextItem[];
+  summary: SubtextSummary;
+  disclaimer: string;
+  analyzedAt: number;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SubtextResult}}
+\label{tab:subtext-result}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{items} & \tstype{SubtextItem[]} & tak & Tablica zdekodowanych podtekstów (typowo 20--60 elementów) \\
+\texttt{summary} & \tstype{SubtextSummary} & tak & Zagregowane statystyki i~podsumowanie \\
+\texttt{disclaimer} & \tstype{string} & tak & Klauzula prawna: analiza ma charakter rozrywkowy, nie diagnostyczny \\
+\texttt{analyzedAt} & \tstype{number} & tak & Unix timestamp ms zakończenia analizy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Typy pomocnicze: SimplifiedMsg i~ExchangeWindow}
+\label{subsec:exchange-window}
+
+Wewnętrzne typy pipeline'u dekodera --- ekstrakcja okien kontekstowych z~rozmowy.
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy SimplifiedMsg i~ExchangeWindow}]
+interface SimplifiedMsg {
+  sender: string;
+  content: string;
+  timestamp: number;
+  index: number;
+}
+
+interface ExchangeWindow {
+  windowId: number;
+  messages: SimplifiedMsg[];
+  targetIndices: number[];
+  context: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{SimplifiedMsg}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{sender} & \tstype{string} & Nazwa nadawcy \\
+\texttt{content} & \tstype{string} & Treść wiadomości (uproszczona, bez mediów) \\
+\texttt{timestamp} & \tstype{number} & Unix timestamp ms \\
+\texttt{index} & \tstype{number} & Indeks wiadomości w~oryginalnej tablicy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{ExchangeWindow}}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Opis} \\
+\midrule
+\texttt{windowId} & \tstype{number} & Unikalny identyfikator okna kontekstowego \\
+\texttt{messages} & \tstype{SimplifiedMsg[]} & Wiadomości w~oknie (typowo 5--15 wiadomości) \\
+\texttt{targetIndices} & \tstype{number[]} & Indeksy wiadomości wybranych do dekodowania \\
+\texttt{context} & \tstype{string} & Krótki opis kontekstu okna (generowany automatycznie) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy Procesu Sądowego (Chat Court)}
+\label{sec:court-types}
+% ============================================================
+
+Typy trybu ,,Twój Chat w~Sądzie'' --- satyrycznego procesu sądowego generowanego przez AI na podstawie wzorców komunikacyjnych. Zdefiniowane w~typach analizy jakościowej.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{CourtCharge}
+\label{subsec:court-charge}
+
+Pojedynczy zarzut w~procesie sądowym.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs CourtCharge}]
+interface CourtCharge {
+  id: string;
+  charge: string;
+  article: string;
+  severity: 'wykroczenie' | 'wystepek' | 'zbrodnia';
+  evidence: string[];
+  defendant: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{CourtCharge}}
+\label{tab:court-charge}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{id} & \tstype{string} & tak & Unikalny identyfikator zarzutu (np.~\texttt{"Z-001"}) \\
+\texttt{charge} & \tstype{string} & tak & Treść zarzutu w~języku prawniczym (satyrycznym) \\
+\texttt{article} & \tstype{string} & tak & Fikcyjny artykuł ,,Kodeksu Komunikacji'' \\
+\texttt{severity} & \tstype{union} & tak & Powaga: \texttt{'wykroczenie'} $|$ \texttt{'występek'} $|$ \texttt{'zbrodnia'} \\
+\texttt{evidence} & \tstype{string[]} & tak & Dowody --- parafrazy wzorców komunikacyjnych (bez cytatów) \\
+\texttt{defendant} & \tstype{string} & tak & Imię oskarżonego uczestnika \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{PersonVerdict}
+\label{subsec:person-verdict}
+
+Wyrok indywidualny dla jednego uczestnika.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs PersonVerdict}]
+interface PersonVerdict {
+  name: string;
+  verdict: 'winny' | 'niewinny' | 'warunkowo';
+  mainCharge: string;
+  sentence: string;
+  mugshotLabel: string;
+  funFact: string;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{PersonVerdict}}
+\label{tab:person-verdict}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{name} & \tstype{string} & tak & Imię osądzonego uczestnika \\
+\texttt{verdict} & \tstype{union} & tak & Wyrok: \texttt{'winny'} $|$ \texttt{'niewinny'} $|$ \texttt{'warunkowo'} \\
+\texttt{mainCharge} & \tstype{string} & tak & Główny zarzut, za który wydano wyrok \\
+\texttt{sentence} & \tstype{string} & tak & Kara (satyryczna, np.~,,500h przymusowego słuchania partnera'') \\
+\texttt{mugshotLabel} & \tstype{string} & tak & Etykieta do generowanego ,,mugshota'' (karty oskarżonego) \\
+\texttt{funFact} & \tstype{string} & tak & Zabawny fakt o~komunikacji oskarżonego \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{CourtResult}
+\label{subsec:court-result}
+
+Główny kontener wyników procesu sądowego.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs CourtResult}]
+interface CourtResult {
+  caseNumber: string;
+  courtName: string;
+  charges: CourtCharge[];
+  prosecution: string;
+  defense: string;
+  verdict: CourtVerdict;
+  perPerson: Record<string, PersonVerdict>;
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Pola interfejsu \tstype{CourtResult}}
+\label{tab:court-result}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Pole} & \textbf{Typ} & \textbf{Wym.} & \textbf{Opis} \\
+\midrule
+\texttt{caseNumber} & \tstype{string} & tak & Sygnatura akt (generowana, np.~\texttt{"PT/2026/001"}) \\
+\texttt{courtName} & \tstype{string} & tak & Nazwa sądu (satyryczna, np.~,,Sąd Najwyższy ds.~Komunikacji'') \\
+\texttt{charges} & \tstype{CourtCharge[]} & tak & Lista zarzutów (typowo 3--8) \\
+\texttt{prosecution} & \tstype{string} & tak & Mowa oskarżyciela --- humorystyczne podsumowanie zarzutów \\
+\texttt{defense} & \tstype{string} & tak & Mowa obrońcy --- próba usprawiedliwienia wzorców \\
+\texttt{verdict} & \tstype{CourtVerdict} & tak & Wyrok ogólny sądu z~uzasadnieniem \\
+\texttt{perPerson} & \tstype{Record<string, PersonVerdict>} & tak & Wyroki indywidualne, kluczowane po imieniu uczestnika \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Typy walidacji Zod}
+\label{sec:zod-types}
+% ============================================================
+
+Walidacja runtime'owa za pomocą biblioteki Zod zapewnia typobezpieczeństwo na granicy API --- waliduje dane wejściowe od klienta oraz wyjścia z~modelu AI. Schematy zdefiniowane są w~pliku:
+
+\filepath{src/lib/analysis/schemas.ts}
+
+\begin{infobox}[title={Rola schematów Zod}]
+Schematy Zod zamykają wektor prompt injection: nawet jeśli model AI zwróci nieoczekiwane pola, schemat Zod odetnie je zanim trafią do frontendu. Każdy z~7~endpointów API posiada dedykowany schemat wejściowy.
+\end{infobox}
+
+Kluczowe eksportowane typy (inferowane z~schematów \tsfunc{z.infer<>}):
+
+\begin{table}[H]
+\centering
+\caption{Typy Zod eksportowane ze \filepath{schemas.ts}}
+\label{tab:zod-types}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Typ / Schemat} & \textbf{Endpoint} & \textbf{Walidowane pola} \\
+\midrule
+\tstype{AnalyzeInput} & \texttt{/api/analyze} & messages (limit), participants, relationshipContext (enum) \\
+\tstype{SubtextInput} & \texttt{/api/analyze/subtext} & messages, participants, windowCount (1--20) \\
+\tstype{CourtInput} & \texttt{/api/analyze/court} & messages, participants, relationshipContext \\
+\tstype{CPSInput} & \texttt{/api/analyze/cps} & messages, participants, participantName \\
+\tstype{StandupInput} & \texttt{/api/analyze/standup} & messages, participants, targetPerson \\
+\tstype{RoastInput} & \texttt{/api/analyze/roast} & messages, participants \\
+\tstype{ImageInput} & \texttt{/api/analyze/image} & prompt, style (enum), aspect (enum) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Schemat \tstype{relationshipContext} jest ograniczony do wartości wyliczeniowych: \texttt{romantic}, \texttt{friendship}, \texttt{colleague}, \texttt{professional}, \texttt{family}, \texttt{other} --- co eliminuje dowolne ciągi tekstowe jako wektor ataku.
+
+
+% ────────────────────────────────────────────────────────────
+\subsection{Zaktualizowane podsumowanie zależności}
+\label{subsec:updated-dependency-summary}
+
+\begin{table}[H]
+\centering
+\caption{Zaktualizowana mapa zależności typów --- Faza 19--20}
+\label{tab:type-dependency-map-v2}
+\begin{tabularx}{\textwidth}{l c X}
+\toprule
+\textbf{Kontener} & \textbf{Podtypów} & \textbf{Kluczowe składniki} \\
+\midrule
+\tstype{StoredAnalysis} & 3 & ParsedConversation, QuantitativeAnalysis, QualitativeAnalysis? \\
+\tstype{QuantitativeAnalysis} & 12 & PersonMetrics, TimingMetrics, EngagementMetrics, PatternMetrics, HeatmapData, TrendData, ViralScores?, Badge[]?, BestTimeToText?, CatchphraseResult?, NetworkMetrics?, ReciprocityIndex? \\
+\tstype{QualitativeAnalysis} & 9 & Pass1--4?, RoastResult?, StandUpRoastResult?, CPSResult?, \textbf{SubtextResult?}, \textbf{CourtResult?} \\
+\tstype{PersonProfile} & 10 & BigFiveApproximation, AttachmentIndicators, CommunicationProfile, CommunicationNeeds, EmotionalPatterns, ClinicalObservations, ConflictResolution, EmotionalIntelligence, MBTIResult?, LoveLanguageResult? \\
+\tstype{Pass2Result} & 7 & PowerDynamics, EmotionalLabor, ConflictPatterns, IntimacyMarkers, RedFlag[], GreenFlag[], relationship\_phase? \\
+\tstype{CPSResult} & 4 & CPSAnswer (63$\times$), CPSPatternResult (10$\times$), disclaimer, participantName \\
+\tstype{SubtextResult} & 3 & SubtextItem[], SubtextSummary, disclaimer \\
+\tstype{CourtResult} & 4 & CourtCharge[], CourtVerdict, Record<PersonVerdict>, strings \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Łączna liczba zdefiniowanych interfejsów w~\podtekst: \textbf{$\sim$55}, w~tym:
+\begin{itemize}
+  \item 15 interfejsów parserowych/ilościowych
+  \item 25 interfejsów analizy AI (Pass 1--5)
+  \item 6 interfejsów Dekodera Podtekstów (SubtextCategory, SubtextItem, SubtextSummary, SubtextResult, SimplifiedMsg, ExchangeWindow)
+  \item 4 interfejsy Procesu Sądowego (CourtResult, CourtCharge, PersonVerdict, CourtVerdict)
+  \item 4 interfejsy CPS
+  \item 3 interfejsy magazynowania
+  \item 7 schematów walidacji Zod (inferowane typy)
+\end{itemize}
+
+
+% ############################################################
+% SEKCJA B — do ch13-rozwoj.tex
+% (wstawić PO figurze roadmap, linia 460)
+% ############################################################
+
+
+% ============================================================
+\section{Zrealizowane funkcje (Faza 19--20)}
+\label{sec:faza-19-20}
+% ============================================================
+
+Fazy 19--20 wprowadzają nowe tryby rozrywkowe oparte na AI, walidację runtime'ową oraz hardening bezpieczeństwa. Poniżej podsumowanie czterech kluczowych dostarczeń.
+
+\subsection{Dekoder Podtekstów (Subtext Decoder)}
+
+Moduł analizy AI dekodujący ukryte znaczenia w~wiadomościach. System identyfikuje 12~kategorii podtekstów (\secref{subsec:subtext-category}) i~prezentuje wyniki w~karuzeli interaktywnych kart z~podsumowaniem statystycznym.
+
+\begin{description}
+  \item[Architektura] Ekstrakcja okien kontekstowych (\tstype{ExchangeWindow}) z~rozmowy $\rightarrow$ przetwarzanie wsadowe przez \gemini $\rightarrow$ agregacja w~\tstype{SubtextResult}. Wiadomości dobierane na podstawie długości, obecności reakcji i~zmian tonu.
+
+  \item[Zakres implementacji] 6~plików, $\sim$1840~LOC łącznie:
+  \begin{itemize}
+    \item \filepath{src/lib/analysis/subtext.ts} --- logika ekstrakcji okien, sampling, typy
+    \item \filepath{src/app/api/analyze/subtext/route.ts} --- endpoint API ze streamingiem SSE
+    \item \filepath{src/components/analysis/SubtextDecoder.tsx} --- komponent UI (karuzela + podsumowanie)
+    \item \filepath{src/hooks/useSubtextAnalysis.ts} --- hook React do zarządzania stanem analizy
+    \item Integracja z~istniejącym pipeline'em na stronie analizy
+  \end{itemize}
+
+  \item[Cechy kluczowe] 12~kategorii podtekstów, wskaźnik pewności AI (0--100), ranking ,,największe odkrycie'', bilans ukrytych emocji per osoba, wynik ,,zwodniczości'' (deception score).
+\end{description}
+
+\subsection{Twój Chat w~Sądzie (Chat Court)}
+
+Tryb satyryczny generujący pełny proces sądowy na podstawie wzorców komunikacyjnych. AI pełni rolę prokuratora, obrońcy i~sędziego.
+
+\begin{description}
+  \item[Architektura] Endpoint API przyjmuje sparametryzowane dane rozmowy $\rightarrow$ \gemini generuje zarzuty, mowy stron i~wyrok w~formacie JSON $\rightarrow$ frontend renderuje jako stylizowany dokument sądowy.
+
+  \item[Zakres implementacji] 2~pliki główne:
+  \begin{itemize}
+    \item \filepath{src/app/api/analyze/court/route.ts} --- endpoint API
+    \item \filepath{src/components/analysis/ChatCourt.tsx} --- komponent UI z~animacjami
+  \end{itemize}
+
+  \item[Cechy kluczowe] Fikcyjne artykuły ,,Kodeksu Komunikacji'', trzy poziomy powagi (wykroczenie, występek, zbrodnia), mugshot labels, wyroki z~satyrycznymi karami.
+\end{description}
+
+\subsection{Walidacja Zod}
+
+Wdrożenie walidacji runtime'owej schematami Zod dla wszystkich 7~endpointów API (\secref{sec:zod-types}). Schematy walidują zarówno dane wejściowe od klienta, jak i~(opcjonalnie) strukturę wyjścia z~modelu AI.
+
+\begin{itemize}
+  \item Zamknięcie wektora prompt injection --- pole \texttt{relationshipContext} akceptuje wyłącznie wartości z~enumeracji (\texttt{romantic}, \texttt{friendship}, itd.), eliminując dowolne ciągi tekstowe
+  \item Walidacja limitów: \texttt{windowCount} 1--20, \texttt{messages} z~limitem długości
+  \item Czytelne komunikaty błędów zwracane jako HTTP 400 z~opisem naruszonych reguł
+\end{itemize}
+
+\subsection{Security Hardening}
+
+Uzupełniające zmiany bezpieczeństwa:
+
+\begin{itemize}
+  \item Walidacja enum-only dla \texttt{relationshipContext} na wszystkich endpointach
+  \item Usunięcie \tsfunc{console.error()} z~kodu produkcyjnego --- zastąpione przez strukturowane logowanie z~filtrowaniem treści wiadomości
+  \item Sanityzacja danych wejściowych przed przekazaniem do promptów AI
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Status funkcji --- Fazy 19--20}
+\label{tab:faza-19-20-status}
+\begin{tabularx}{\textwidth}{L{4.5cm}C{1.5cm}C{1.5cm}X}
+\toprule
+\textbf{Funkcja} & \textbf{LOC} & \textbf{Status} & \textbf{Uwagi} \\
+\midrule
+Dekoder Podtekstów & $\sim$1840 & \score{Gotowe} & 6~plików, 12~kategorii, streaming SSE \\
+Chat Court & $\sim$620 & \score{Gotowe} & 2~pliki, pełny pipeline API$\rightarrow$UI \\
+Walidacja Zod & $\sim$280 & \score{Gotowe} & 7~schematów, 7~endpointów \\
+Security Hardening & $\sim$150 & \score{Gotowe} & Enum validation, console cleanup \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Planowane funkcje rozrywkowe (Faza 20+)}
+\label{sec:faza-20-plus}
+% ============================================================
+
+Trzy kolejne tryby rozrywkowe zaplanowane do implementacji. Wszystkie wykorzystują istniejące dane z~\tstype{QuantitativeAnalysis} i/lub model \gemini.
+
+\subsection{Stawiam Zakład (Delusion Quiz)}
+
+Quiz składający się z~15~pytań o~własną rozmowę --- użytkownik zgaduje swoje statystyki, a~system porównuje odpowiedzi z~rzeczywistością.
+
+\begin{description}
+  \item[Przykładowe pytania] ,,Ile procent rozmów inicjujesz?'', ,,Jaki jest Twój średni czas odpowiedzi?'', ,,Kto wysyła więcej emoji?''
+  \item[Wyniki] Self-Awareness Score (0--100, jak dobrze znasz swoją rozmowę) + Delusion Index (0--100, jak bardzo się mylisz)
+  \item[Architektura] \textbf{Zero AI} --- 100\% client-side, bazuje wyłącznie na istniejących danych z~\tstype{QuantitativeAnalysis}. Nie wymaga wywołań API.
+  \item[Priorytet] Wysoki --- niski koszt implementacji, wysoki potencjał viralowy.
+\end{description}
+
+\subsection{Symulator Odpowiedzi (Reply Simulator)}
+
+AI odpowiada w~stylu drugiej osoby --- użytkownik pisze wiadomość, a~model generuje odpowiedź naśladującą słownictwo, długość wiadomości, użycie emoji i~czas odpowiedzi partnera.
+
+\begin{description}
+  \item[Mechanika] Maksymalnie 5~wymian zdań. Model otrzymuje profil komunikacyjny osoby (z~Pass~3) + próbkę jej wiadomości jako few-shot examples.
+  \item[Dane wejściowe] Vocabulary profile, średnia długość wiadomości, top emoji, catchphrases, styl komunikacji z~\tstype{CommunicationProfile}.
+  \item[Architektura] Dedykowany endpoint API ze streamingiem odpowiedzi, limit 5~tur konwersacji.
+  \item[Priorytet] Średni --- wymaga starannego promptu, by uniknąć efektu ,,uncanny valley''.
+\end{description}
+
+\subsection{Szczery Profil Randkowy (Honest Dating Profile)}
+
+AI generuje brutalnie szczery profil na Tinder/Hinge na podstawie wzorców komunikacyjnych --- kontrast między tym, co osoba napisałaby sama, a~tym, co mówią dane.
+
+\begin{description}
+  \item[Sekcje profilu] Bio (3 zdania), ,,Szukam'' (3 bullet pointy), ,,Moje red flagi'' (z~analizy), ,,Moje green flagi'' (z~analizy), ,,Prawdopodobieństwo odpowiedzi'' (z~timing metrics).
+  \item[Dane wejściowe] Wyniki Pass~1--4, ViralScores (ghostRisk, interestScores), PersonProfile (attachment style, communication needs), PatternMetrics (initiation ratio, response time).
+  \item[Architektura] Endpoint API z~jednym przejściem \gemini, wynik renderowany jako karta w~stylu aplikacji randkowej.
+  \item[Priorytet] Wysoki --- duży potencjał viralowy (,,wrzuć na Stories swój profil od PodTeksT'').
+\end{description}
+
+\begin{table}[H]
+\centering
+\caption{Planowane funkcje rozrywkowe --- zestawienie}
+\label{tab:faza-20-plus-plan}
+\begin{tabularx}{\textwidth}{L{3.5cm}C{1.5cm}C{1.5cm}C{1.8cm}X}
+\toprule
+\textbf{Funkcja} & \textbf{AI?} & \textbf{Priorytet} & \textbf{Est. LOC} & \textbf{Zależności} \\
+\midrule
+Stawiam Zakład & Nie & \score{Wysoki} & $\sim$800 & QuantitativeAnalysis \\
+Symulator Odpowiedzi & Tak & \warn{Średni} & $\sim$1200 & Pass~3, CommunicationProfile \\
+Szczery Profil Randkowy & Tak & \score{Wysoki} & $\sim$600 & Pass~1--4, ViralScores \\
+\bottomrule
+\end{tabularx}
+\end{table}

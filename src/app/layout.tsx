@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, JetBrains_Mono, Syne, Space_Grotesk } from "next/fon
 import ConditionalAnalytics from "@/components/shared/ConditionalAnalytics";
 import CookieConsent from "@/components/shared/CookieConsent";
 import ReferralCapture from "@/components/shared/ReferralCapture";
+import { TierProvider } from "@/lib/tiers/tier-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -46,15 +47,44 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://podtekst.app"),
-  title: "PodTeksT — odkryj to, co kryje się między wierszami",
+  title: {
+    default: "PodTeksT — odkryj to, co kryje się między wierszami",
+    template: "%s | PodTeksT",
+  },
   description:
-    "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji. 28 metryk + analiza AI osobowości i dynamiki.",
+    "Przeanalizuj rozmowy z Messengera, WhatsApp, Instagram, Telegram i Discord. 60+ metryk + wielowymiarowa analiza psychologiczna AI. Odkryj podtekst swoich relacji.",
+  keywords: [
+    "analiza rozmów",
+    "messenger analiza",
+    "whatsapp analiza",
+    "instagram analiza",
+    "telegram analiza",
+    "analiza relacji",
+    "psychologia rozmów",
+    "analiza AI",
+    "podtekst",
+    "analiza konwersacji",
+  ],
+  alternates: {
+    canonical: "https://podtekst.app",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large" as const,
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
     title: "PodTeksT — odkryj to, co kryje się między wierszami",
     description:
-      "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji.",
+      "Przeanalizuj rozmowy z Messengera, WhatsApp, Instagram, Telegram i Discord. 60+ metryk + analiza psychologiczna AI.",
     locale: "pl_PL",
     type: "website",
+    siteName: "PodTeksT",
     images: [
       {
         url: "/og/podtekst-og.png",
@@ -68,7 +98,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "PodTeksT — odkryj to, co kryje się między wierszami",
     description:
-      "Wrzuć eksport rozmowy z Messengera i odkryj psychologiczną analizę relacji.",
+      "Przeanalizuj rozmowy z Messengera, WhatsApp, Instagram, Telegram i Discord. 60+ metryk + analiza psychologiczna AI.",
     images: ["/og/podtekst-og.png"],
   },
 };
@@ -89,7 +119,9 @@ export default function RootLayout({
         >
           Przejdź do treści
         </a>
-        <div id="main-content">{children}</div>
+        <TierProvider>
+          <div id="main-content">{children}</div>
+        </TierProvider>
         {process.env.NEXT_PUBLIC_GA_ID && (
           <ConditionalAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}

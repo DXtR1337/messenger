@@ -1,0 +1,80 @@
+% ============================================================
+% PodTeksT — Audyt wieloagentowy (standalone)
+% Kompilacja: xelatex -interaction=nonstopmode audyt.tex
+% ============================================================
+
+\input{preamble}
+
+\begin{document}
+
+\frontmatter
+
+% ---- Title page ----
+\thispagestyle{empty}
+
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[black!97] (current page.south west) rectangle (current page.north east);
+  \fill[PodBlue, opacity=0.08] ([yshift=10cm]current page.south west) rectangle (current page.north east);
+  \fill[PodPurple, opacity=0.08] (current page.south west) rectangle ([yshift=10cm]current page.south east);
+
+  \begin{scope}[opacity=0.08, PodBlue]
+    \draw[line width=0.5pt] (-8, 4) -- (-3, 4) -- (-3, 2) -- (2, 2);
+    \draw[line width=0.5pt] (-8, 3.5) -- (-5, 3.5) -- (-5, 1) -- (-1, 1);
+    \draw[line width=0.5pt] (3, -2) -- (6, -2) -- (6, -4) -- (8, -4);
+  \end{scope}
+
+  \fill[PodBlue] ([yshift=-0.3cm]current page.north west) rectangle ([yshift=-0.35cm]current page.north east);
+  \fill[PodPurple] ([yshift=0.3cm]current page.south west) rectangle ([yshift=0.35cm]current page.south east);
+
+  \node[anchor=center] at ([yshift=3cm]current page.center) {
+    \begin{minipage}{14cm}
+      \centering
+      {\fontsize{72}{80}\selectfont
+        \textbf{\textcolor{PodBlue}{Pod}\textcolor{PodPurple}{TeksT}}}\\[16pt]
+      {\Large\color{PodBlueLight}
+        odkryj to, co kryje się między wierszami}\\[6pt]
+      {\small\color{PodPurpleLight}\itshape
+        (bo wiesz, eks...)}
+    \end{minipage}
+  };
+
+  \draw[PodBlue, line width=1.5pt, opacity=0.5]
+    ([yshift=-0.5cm, xshift=-3cm]current page.center) -- ([yshift=-0.5cm, xshift=3cm]current page.center);
+  \fill[PodPurple, opacity=0.7] (current page.center) ++(0, -0.5) circle (3pt);
+
+  \node[anchor=center] at ([yshift=-2cm]current page.center) {
+    \begin{minipage}{12cm}
+      \centering
+      {\LARGE\color{white}\bfseries
+        Audyt wieloagentowy}\\[12pt]
+      {\normalsize\color{PodBlueLight}
+        Design \textcolor{PodBorder}{|} Monetyzacja \textcolor{PodBorder}{|} Optymalizacja}
+    \end{minipage}
+  };
+
+  \node[anchor=south, font=\small\color{PodTextSecondary}]
+    at ([yshift=1.5cm]current page.south) {
+      Luty 2026\quad\textcolor{PodBorder}{|}\quad
+      Claude Opus 4.6
+    };
+
+\end{tikzpicture}
+
+\cleardoublepage
+
+% ---- TOC ----
+{
+  \hypersetup{linkcolor=PodBlueDark}
+  \tableofcontents
+}
+\cleardoublepage
+
+\listoftables
+\cleardoublepage
+
+% ---- Main Matter ----
+\mainmatter
+
+\input{chapters/ch14-audyt}
+
+\end{document}

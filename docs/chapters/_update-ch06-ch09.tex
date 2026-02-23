@@ -1,0 +1,729 @@
+%% === FOR ch06-analiza-ai.tex ===
+%% Append BEFORE the end of the file (after line 1302, error handling table).
+%% These two new sections document the Subtext Decoder and Court Trial modules.
+
+% ============================================================
+\section{Dekoder Podtekst\'{o}w}
+\label{sec:subtext-decoder}
+
+\begin{featurebox}[title={\textcolor{PodPurple}{Dekoder Podtekst\'{o}w} --- nowy modu\l{} analizy}]
+Modu\l{} \emph{Subtext Decoder} stanowi rozszerzenie silnika AI o~zdolno\'{s}\'{c}
+wykrywania \textbf{ukrytych znacze\'{n}} w~wiadomo\'{s}ciach. Analizuje kr\'{o}tkie,
+pozornie niewinne odpowiedzi (,,ok'', ,,spoko'', ,,jak chcesz'') i~odk\l{}ada je
+na tle kontekstu konwersacji, identyfikuj\k{a}c biern\k{a} agresj\k{e}, niepewno\'{s}\'{c},
+testowanie partnera czy ukryte sygna\l{}y mi\l{}o\'{s}ci.
+\end{featurebox}
+
+Implementacja: \filepath{src/lib/analysis/subtext.ts} (263~LOC) +
+integracja w~\filepath{src/lib/analysis/gemini.ts} (linie 762--888).
+
+
+\subsection{Architektura modu\l{}u}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.2cm and 1.5cm,
+  every node/.style={font=\small},
+]
+  % Input
+  \node[startstop, minimum width=4.5cm] (input) {Pe\l{}na lista wiadomo\'{s}ci\\(\tstype{SimplifiedMsg[]})};
+
+  % Scoring
+  \node[process, below=1.4cm of input, minimum width=4.5cm] (scoring)
+    {\tsfunc{subtextScore()}\\Scoring 0--15+ per wiadomo\'{s}\'{c}};
+
+  % Windows
+  \node[process, below=of scoring, minimum width=4.5cm] (windows)
+    {\tsfunc{extractExchangeWindows()}\\Top 25 okien $\times$ \textasciitilde30 msg};
+
+  % Batching
+  \node[pipeline, below=of windows, minimum width=4.5cm] (batch)
+    {Porcjowanie\\8 okien / batch};
+
+  % Gemini
+  \node[podbox green, below=of batch, minimum width=5cm] (gemini)
+    {\gemini + \texttt{SUBTEXT\_SYSTEM}\\Dekodowanie podtekst\'{o}w};
+
+  % Post-processing
+  \node[process, below=of gemini, minimum width=4.5cm] (post)
+    {Sortowanie, limit 60 items\\Budowanie \tstype{SubtextSummary}};
+
+  % Output
+  \node[startstop, below=of post, minimum width=4.5cm] (output)
+    {\tstype{SubtextResult}};
+
+  % Arrows
+  \draw[dataarrow] (input) -- (scoring);
+  \draw[dataarrow] (scoring) -- node[right, font=\scriptsize, text=PodTextMuted] {score $\geq$ 3} (windows);
+  \draw[dataarrow] (windows) -- node[right, font=\scriptsize, text=PodTextMuted] {$<$30\% overlap} (batch);
+  \draw[dataarrow] (batch) -- (gemini);
+  \draw[dataarrow] (gemini) -- node[right, font=\scriptsize, text=PodTextMuted] {\tstype{SubtextItem[]}} (post);
+  \draw[dataarrow] (post) -- (output);
+
+  % Side annotations
+  \node[podlabel blue, right=2.2cm of scoring] (a1) {czysto algorytmiczne};
+  \node[podlabel blue, right=2.2cm of gemini] (a2) {\gemini API call};
+  \draw[podarrow dashed] (a1) -- (scoring);
+  \draw[podarrow dashed] (a2) -- (gemini);
+\end{tikzpicture}
+\caption{Pipeline Dekodera Podtekst\'{o}w --- od pe\l{}nej listy wiadomo\'{s}ci do wynik\'{o}w analizy.}
+\label{fig:subtext-pipeline}
+\end{figure}
+
+
+\subsection{Typy danych}
+
+\subsubsection{Typ \tstype{SubtextCategory} --- 12~kategorii podtekst\'{o}w}
+
+Ka\.{z}da zdekodowana wiadomo\'{s}\'{c} klasyfikowana jest do jednej z~12~kategorii:
+
+\begin{table}[H]
+\centering
+\caption{Kategorie podtekst\'{o}w z~metadanymi wy\'{s}wietlania}
+\label{tab:subtext-categories}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Kategoria} & \textbf{Emoji} & \textbf{Kolor} & \textbf{Etykieta polska} \\
+\midrule
+\texttt{deflection}         & \emoji{shuffle}  & \textcolor[HTML]{F59E0B}{\rule{8pt}{8pt}} & Unikanie tematu \\
+\texttt{hidden\_anger}       & \emoji{volcano}  & \textcolor[HTML]{EF4444}{\rule{8pt}{8pt}} & Ukryty gniew \\
+\texttt{seeking\_validation} & \emoji{pray}     & \textcolor[HTML]{8B5CF6}{\rule{8pt}{8pt}} & Szukanie potwierdzenia \\
+\texttt{power\_move}         & \emoji{chess}    & \textcolor[HTML]{DC2626}{\rule{8pt}{8pt}} & Gra o~w\l{}adz\k{e} \\
+\texttt{genuine}            & \emoji{green-heart}& \textcolor[HTML]{10B981}{\rule{8pt}{8pt}} & Szczere (brak podtekstu) \\
+\texttt{testing}            & \emoji{test-tube}& \textcolor[HTML]{F97316}{\rule{8pt}{8pt}} & Testowanie \\
+\texttt{guilt\_trip}         & \emoji{sad}      & \textcolor[HTML]{BE185D}{\rule{8pt}{8pt}} & Wzbudzanie winy \\
+\texttt{passive\_aggressive} & \emoji{upside-down}& \textcolor[HTML]{E11D48}{\rule{8pt}{8pt}} & Bierna agresja \\
+\texttt{love\_signal}        & \emoji{purple-heart}& \textcolor[HTML]{EC4899}{\rule{8pt}{8pt}} & Ukryty sygna\l{} mi\l{}o\'{s}ci \\
+\texttt{insecurity}         & \emoji{peek}     & \textcolor[HTML]{6366F1}{\rule{8pt}{8pt}} & Niepewno\'{s}\'{c} \\
+\texttt{distancing}         & \emoji{ice}      & \textcolor[HTML]{64748B}{\rule{8pt}{8pt}} & Dystansowanie si\k{e} \\
+\texttt{humor\_shield}       & \emoji{clown}    & \textcolor[HTML]{EAB308}{\rule{8pt}{8pt}} & Humor jako tarcza \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Metadane ka\.{z}dej kategorii przechowuje sta\l{}a \texttt{CATEGORY\_META} --- obiekt
+\tstype{Record<SubtextCategory, \{label, color, emoji\}>}, u\.{z}ywany bezpo\'{s}rednio
+przez komponenty UI do renderowania badge\'{o}w i~legend.
+
+\subsubsection{Interfejs \tstype{SubtextItem}}
+
+\begin{lstlisting}[style=podcode, caption={Struktura pojedynczego zdekodowanego podtekstu}]
+interface SubtextItem {
+  originalMessage: string;    // Oryginalna wiadomość
+  sender: string;             // Autor wiadomości
+  timestamp: number;          // Unix ms
+  subtext: string;            // Zdekodowany podtekst (PL)
+  emotion: string;            // Zidentyfikowana emocja
+  confidence: number;         // 0--100
+  category: SubtextCategory;  // Jedna z 12 kategorii
+  isHighlight: boolean;       // Czy to "highlight" (max 8)
+  exchangeContext: string;     // Kontekst okna
+  windowId: number;           // ID okna ź\'{o}d\l{}owego
+  surroundingMessages: Array<{
+    sender: string;
+    content: string;
+    timestamp: number;
+  }>;
+}
+\end{lstlisting}
+
+\subsubsection{Interfejs \tstype{SubtextResult}}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Schemat wyniku analizy podtekst\'{o}w}]
+{
+  "items": [SubtextItem, ...],   // max 60, posortowane chronologicznie
+  "summary": {
+    "hiddenEmotionBalance": { "Anna": 73, "Jan": 45 },
+    "mostDeceptivePerson": "Anna",
+    "deceptionScore": { "Anna": 73, "Jan": 45 },
+    "topCategories": [
+      { "category": "passive_aggressive", "count": 12 },
+      { "category": "insecurity", "count": 9 }
+    ],
+    "biggestReveal": { ...SubtextItem... }
+  },
+  "disclaimer": "Analiza podtekst\'{o}w opiera si\k{e} na wzorcach...",
+  "analyzedAt": 1708000000000
+}
+\end{lstlisting}
+
+
+\subsection{Markery pasywne: \texttt{PASSIVE\_MARKERS}}
+
+Centralnym elementem heurystyki jest zbi\'{o}r \texttt{PASSIVE\_MARKERS} ---
+\tstype{Set<string>} zawieraj\k{a}cy \textbf{37~kr\'{o}tkich odpowiedzi}, kt\'{o}re
+w~kontek\'{s}cie konwersacji cz\k{e}sto maskuj\k{a} g\l{}\k{e}bsze emocje:
+
+\begin{table}[H]
+\centering
+\caption{Wybrane markery pasywne pogrupowane tematycznie}
+\label{tab:passive-markers}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Grupa} & \textbf{Przyk\l{}ady} \\
+\midrule
+Zgoda pozorna     & \texttt{ok}, \texttt{okej}, \texttt{dobra}, \texttt{jasne}, \texttt{super} \\
+Dystans           & \texttt{jak chcesz}, \texttt{jak tam chcesz}, \texttt{nie wa\.{z}ne}, \texttt{nvm} \\
+Minimalizm        & \texttt{nic}, \texttt{mhm}, \texttt{no}, \texttt{yhm}, \texttt{ta} \\
+,,Luz''            & \texttt{spoko}, \texttt{git}, \texttt{luz}, \texttt{w porzo}, \texttt{fajnie} \\
+Wielokropek/emoji & \texttt{...}, \texttt{..}, \texttt{.}, \emoji{thumbs-up}, \emoji{slightly-smiling}, \emoji{upside-down} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warningbox}[title=Dlaczego markery pasywne s\k{a} kluczowe?]
+W~j\k{e}zyku polskim kr\'{o}tkie odpowiedzi typu ,,ok'' czy ,,spoko'' s\k{a} kulturowo
+wieloznaczne. W~kontek\'{s}cie d\l{}ugiej wiadomo\'{s}ci partnera, na kt\'{o}r\k{a} odpowiada si\k{e}
+jednym s\l{}owem po 45~minutach --- ,,spoko'' przesta\.{z}e by\'{c} neutralnym potwierdzeniem
+i~staje si\k{e} sygna\l{}em emocjonalnym.
+\end{warningbox}
+
+
+\subsection{Algorytm scoringu: \tsfunc{subtextScore()}}
+\label{subsec:subtext-scoring}
+
+Funkcja \tsfunc{subtextScore()} oblicza \textbf{potencja\l{} podtekstu} ka\.{z}dej wiadomo\'{s}ci
+na skali 0--15+ punkt\'{o}w. Wynik jest sum\k{a} niezale\.{z}nych heurystyk:
+
+\begin{table}[H]
+\centering
+\caption{Regu\l{}y scoringu podtekstu}
+\label{tab:subtext-scoring}
+\begin{tabularx}{\textwidth}{l c X}
+\toprule
+\textbf{Regu\l{}a} & \textbf{Punkty} & \textbf{Warunek} \\
+\midrule
+Marker pasywny        & +5 & Tekst (lowercase, trimmed) $\in$ \texttt{PASSIVE\_MARKERS} \\
+\addlinespace
+Kr\'{o}tka odpowied\'{z} (A)  & +4 & Poprzednia wiadomo\'{s}\'{c} innej osoby $>$20 s\l{}\'{o}w, odpowied\'{z} $\leq$3 s\l{}owa \\
+Kr\'{o}tka odpowied\'{z} (B)  & +3 & Poprzednia $>$10 s\l{}\'{o}w, odpowied\'{z} = 1 s\l{}owo \\
+\addlinespace
+Op\'{o}\'{z}niona odpowied\'{z}  & +3 & Przerwa 15--360 min, zmiana nadawcy \\
+Mocne op\'{o}\'{z}nienie       & +2 & Przerwa 60--360 min (kumuluje si\k{e} z~powy\.{z}szym) \\
+Po d\l{}ugiej ciszy        & +4 & Przerwa $>$24h \\
+\addlinespace
+Ko\'{n}cowe ,,\texttt{...}''  & +2 & Tekst ko\'{n}czy si\k{e} na \texttt{...} lub \texttt{..} \\
+Samotny emoji          & +3 & Wiadomo\'{s}\'{c} sk\l{}ada si\k{e} wy\l{}\k{a}cznie z~emoji \\
+Double-texting         & +1 & Taki sam nadawca jak w~poprzedniej wiadomo\'{s}ci \\
+Znak zapytania         & +1 & Zawiera \texttt{?}, ale nie zaczyna si\k{e} od typowego s\l{}owa pytaj\k{a}cego \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Wiadomo\'{s}ci z~wynikiem $\geq 3$ staj\k{a} si\k{e} \textbf{kandydatami} do analizy AI.
+Typowa konwersacja 10\,000 wiadomo\'{s}ci generuje 800--2\,000 kandydat\'{o}w.
+
+
+\subsection{Ekstrakcja okien wymian: \tsfunc{extractExchangeWindows()}}
+\label{subsec:exchange-windows}
+
+Zamiast wysy\l{}a\'{c} ca\l{}\k{a} konwersacj\k{e} do \gemini, modu\l{} wybiera do
+\textbf{25~okien kontekstowych}, ka\.{z}de zawieraj\k{a}ce \textasciitilde 30 wiadomo\'{s}ci
+otaczaj\k{a}cych punkt o~najwy\.{z}szym scoringu.
+
+\begin{infobox}[title=Parametry ekstrakcji]
+\begin{description}
+  \item[\texttt{maxWindows}] Maksymalna liczba okien (domy\'{s}lnie: 25)
+  \item[\texttt{windowRadius}] Promie\'{n} okna od punktu centralnego (domy\'{s}lnie: 15 wiadomo\'{s}ci w~ka\.{z}d\k{a} stron\k{e})
+  \item[Overlap limit] Maksymalny dopuszczalny overlap mi\k{e}dzy oknami: \textbf{30\%}
+  \item[Minimum wiadomo\'{s}ci] Konwersacje $<$30 wiadomo\'{s}ci s\k{a} odrzucane
+\end{description}
+\end{infobox}
+
+Algorytm krok po kroku:
+\begin{enumerate}
+  \item \textbf{Scoring} --- obliczenie \tsfunc{subtextScore()} dla ka\.{z}dej wiadomo\'{s}ci, filtrowanie $\geq 3$.
+  \item \textbf{Sortowanie} --- kandydaci sortowani malej\k{a}co wg~wyniku (najwy\.{z}szy potencja\l{} = pierwszy wyb\'{o}r).
+  \item \textbf{Selekcja z~kontrol\k{a} overlap} --- iteracja po kandydatach, dodanie okna
+    je\'{s}li overlap z~istniej\k{a}cymi oknami $\leq 30\%$. Zapobiega to wielokrotnemu
+    pokrywaniu tego samego fragmentu rozmowy.
+  \item \textbf{Sortowanie chronologiczne} --- wybrane centra sortowane rosn\k{a}co wg~timestamp.
+  \item \textbf{Budowanie okien} --- dla ka\.{z}dego centrum: wyci\k{e}cie \texttt{messages[center$-$15 \ldots{} center$+$15]},
+    okre\'{s}lenie kontekstu czasowego (,,sesja wieczorna'', ,,po 3-dniowej ciszy''),
+    oznaczenie indeks\'{o}w docelowych (wiadomo\'{s}ci o~wysokim scoringu w~obr\k{e}bie okna).
+\end{enumerate}
+
+Ka\.{z}de okno jest opatrzone automatycznym opisem kontekstu, np.:
+\begin{itemize}
+  \item ,,po 5-dniowej ciszy, sesja wieczorna''
+  \item ,,po przerwie 8h, sesja poranna''
+  \item ,,sesja nocna''
+\end{itemize}
+
+
+\subsection{Integracja z~\gemini: \tsfunc{runSubtextAnalysis()}}
+\label{subsec:run-subtext}
+
+Funkcja \tsfunc{runSubtextAnalysis()} w~\filepath{src/lib/analysis/gemini.ts} (linie 762--888)
+orkiestruje ca\l{}y proces analizy podtekst\'{o}w:
+
+\begin{lstlisting}[style=podcode, caption={Sygnatura \tsfunc{runSubtextAnalysis()}}]
+async function runSubtextAnalysis(
+  messages: SimplifiedMsg[],
+  participants: string[],
+  onProgress?: (status: string) => void,
+  relationshipContext?: Record<string, unknown>,
+  quantitativeContext?: string,
+): Promise<SubtextResult>
+\end{lstlisting}
+
+Przebieg:
+\begin{enumerate}
+  \item Wywo\l{}anie \tsfunc{extractExchangeWindows(messages, 25, 15)} --- ekstrakcja do 25~okien.
+  \item Podzia\l{} okien na \textbf{partie po 8} (\texttt{BATCH\_SIZE = 8}).
+  \item Dla ka\.{z}dej partii:
+    \begin{itemize}
+      \item Sformatowanie okien do tekstu (\tsfunc{formatWindowsForSubtext()})
+      \item Do\l{}\k{a}czenie prefiksu kontekstu relacji i~danych ilo\'{s}ciowych
+      \item Wywo\l{}anie \tsfunc{callGeminiWithRetry()} z~promptem \texttt{SUBTEXT\_SYSTEM}
+      \item Parsowanie odpowiedzi JSON, konwersja do \tstype{SubtextItem[]}
+    \end{itemize}
+  \item Scalenie wynik\'{o}w ze wszystkich partii.
+  \item Sortowanie malej\k{a}co wg~confidence, \textbf{limit do 60~element\'{o}w}.
+  \item Ograniczenie \texttt{isHighlight} do maksymalnie 8~wiadomo\'{s}ci.
+  \item Budowanie \tstype{SubtextSummary}:
+    \begin{itemize}
+      \item \texttt{hiddenEmotionBalance} --- procent wiadomo\'{s}ci nie-genuine per osoba
+      \item \texttt{mostDeceptivePerson} --- osoba z~najwy\.{z}szym \% ukrytych emocji
+      \item \texttt{deceptionScore} --- wynik procentowy per osoba
+      \item \texttt{topCategories} --- 5 najcz\k{e}\'{s}ciej wyst\k{e}puj\k{a}cych kategorii
+      \item \texttt{biggestReveal} --- highlight o~najwy\.{z}szej pewno\'{s}ci
+    \end{itemize}
+  \item Ko\'{n}cowe sortowanie chronologiczne (do wy\'{s}wietlenia w~UI).
+\end{enumerate}
+
+\begin{infobox}[title=Parametry wywo\l{}ania \gemini]
+\begin{tabularx}{\textwidth}{l l}
+  Model          & \texttt{gemini-3-flash-preview} \\
+  Max tokens     & 16\,384 per batch \\
+  Temperature    & 0.3 \\
+  Response format& \texttt{application/json} \\
+  Max retries    & 3 (exponential backoff) \\
+\end{tabularx}
+\end{infobox}
+
+
+\subsection{Prompt systemowy: \texttt{SUBTEXT\_SYSTEM}}
+
+Prompt definiuje rol\k{e} AI jako \emph{psychologa komunikacji specjalizuj\k{a}cego si\k{e}
+w~ukrytych znaczeniach}. Otrzymuje okna kontekstowe z~oznaczonymi indeksami
+docelowymi i~zwraca zdekodowane podteksty w~formacie JSON.
+
+Kluczowe regu\l{}y promptu:
+\begin{itemize}
+  \item Analiza \textbf{ka\.{z}dego} oznaczonego indeksu --- nie pomija\'{c}
+  \item Rozr\'{o}\.{z}nienie mi\k{e}dzy dostucznym a~szczerym komunikatem (kategoria \texttt{genuine})
+  \item Wszystkie warto\'{s}ci tekstowe po polsku
+  \item Confidence 0--100 per item
+  \item Pole \texttt{isHighlight} tylko dla najbardziej ,,odkrywczych'' podtekst\'{o}w
+  \item Wra\.{z}liwo\'{s}\'{c} na j\k{e}zyk potoczny, slang i~skr\'{o}ty (,,nvm'', ,,xd'', ,,tbh'')
+\end{itemize}
+
+
+\subsection{Disclaimer}
+
+Ka\.{z}dy wynik analizy podtekst\'{o}w zawiera obowi\k{a}zkowy disclaimer:
+
+\begin{warningbox}[title=Disclaimer analizy podtekst\'{o}w]
+,,Analiza podtekst\'{o}w opiera si\k{e} na wzorcach j\k{e}zykowych i~kontekstu konwersacji.
+Wyniki maj\k{a} charakter rozrywkowy i~interpretacyjny --- nie stanowi\k{a} diagnozy psychologicznej.
+Prawdziwe intencje rozm\'{o}wc\'{o}w mog\k{a} si\k{e} r\'{o}\.{z}ni\'{c} od interpretacji AI.''
+\end{warningbox}
+
+
+% ============================================================
+\section{Tw\'{o}j Chat w~S\k{a}dzie}
+\label{sec:court-trial}
+
+\begin{featurebox}[title={\textcolor{PodPurple}{Tw\'{o}j Chat w~S\k{a}dzie} --- satyryczny proces s\k{a}dowy}]
+Modu\l{} generuje pe\l{}ny \textbf{fikcyjny proces s\k{a}dowy} na podstawie danych konwersacji.
+Uczestnicy rozmowy staj\k{a} przed ,,S\k{a}dem Okr\k{e}gowym ds.\ Emocjonalnych'' ---
+zarzuty, dowody, mowy stron i~wyrok opieraj\k{a} si\k{e} na rzeczywistych metrykach,
+ale forma jest celowo absurdalna i~rozrywkowa.
+\end{featurebox}
+
+Implementacja: \filepath{src/lib/analysis/court-prompts.ts} (277~LOC).
+
+
+\subsection{Typy danych}
+
+\subsubsection{Interfejs \tstype{CourtCharge} --- zarzut}
+
+\begin{lstlisting}[style=podcode, caption={Struktura zarzutu s\k{a}dowego}]
+interface CourtCharge {
+  id: string;                               // "charge-1", "charge-2"...
+  charge: string;                           // np. "Ghosting w Pierwszym Stopniu"
+  article: string;                          // np. "Art. 47 § 2 Kodeksu Uczuciowego"
+  severity: 'wykroczenie' | 'występek' | 'zbrodnia';
+  evidence: string[];                       // Cytaty / metryki jako dowody
+  defendant: string;                        // Imię oskarżonego
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Stopnie ci\k{e}\.{z}ko\'{s}ci zarzut\'{o}w}
+\label{tab:court-severity}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Severity} & \textbf{Etykieta} & \textbf{Przyk\l{}ady zachowa\'{n}} \\
+\midrule
+\texttt{wykroczenie} & \score{Drobne}    & Sporadyczny double-text, p\'{o}\'{z}na odpowied\'{z} \\
+\texttt{wyst\k{e}pek}   & \warn{Powa\.{z}ne}  & Systematyczny ghosting, monopolizacja konwersacji \\
+\texttt{zbrodnia}    & \danger{Najgorsze} & Chroniczne zaniedbanie emocjonalne, manipulacja \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsubsection{Interfejs \tstype{PersonVerdict} --- wyrok indywidualny}
+
+\begin{lstlisting}[style=podcode, caption={Struktura wyroku per osoba}]
+interface PersonVerdict {
+  name: string;
+  verdict: 'winny' | 'niewinny' | 'warunkowo';
+  mainCharge: string;           // Główny zarzut
+  sentence: string;             // Kreatywna kara
+  mugshotLabel: string;         // Label na kartę mugshot
+  funFact: string;              // Zabawny fakt z danych
+}
+\end{lstlisting}
+
+\subsubsection{Interfejs \tstype{CourtResult} --- pe\l{}ny wynik procesu}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Schemat JSON wyniku procesu s\k{a}dowego}]
+{
+  "caseNumber": "SPRAWA NR PT-2026/48271",
+  "courtName": "S\k{a}d Okr\k{e}gowy ds. Emocjonalnych",
+  "charges": [ ...CourtCharge[] ],
+  "prosecution": "Wysoki S\k{a}dzie, oskar\.{z}yciel przedstawia...",
+  "defense": "Wysoki S\k{a}dzie, obrona wnosi...",
+  "verdict": {
+    "summary": "S\k{a}d uznaje obie strony za winne...",
+    "reasoning": "Uzasadnienie wyroku."
+  },
+  "perPerson": {
+    "Anna": { ...PersonVerdict },
+    "Jan": { ...PersonVerdict }
+  }
+}
+\end{lstlisting}
+
+
+\subsection{Dane wej\'{s}ciowe}
+
+Funkcja \tsfunc{runCourtTrial()} wykorzystuje dane z~\textbf{wielu \'{z}r\'{o}de\l{}}:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.8cm and 2cm,
+  every node/.style={font=\small},
+]
+  % Sources
+  \node[podbox blue, minimum width=3.5cm] (pass1) {Pass 1\\Przegl\k{a}d};
+  \node[podbox blue, minimum width=3.5cm, below=of pass1] (pass2) {Pass 2\\Dynamika};
+  \node[podbox blue, minimum width=3.5cm, below=of pass2] (pass4) {Pass 4\\Synteza};
+  \node[podbox amber, minimum width=3.5cm, below=of pass4] (quant) {Dane ilo\'{s}ciowe\\(\texttt{quantitativeContext})};
+  \node[podbox purple, minimum width=3.5cm, below=of quant] (samples) {Pr\'{o}bki wiadomo\'{s}ci\\(\texttt{overview})};
+
+  % Court
+  \node[podbox red, right=3cm of pass4, minimum width=4cm, minimum height=2.5cm] (court)
+    {S\k{a}d Okr\k{e}gowy\\ds.\ Emocjonalnych\\\tsfunc{runCourtTrial()}};
+
+  % Output
+  \node[startstop, right=2.5cm of court, minimum width=3cm] (result) {\tstype{CourtResult}};
+
+  % Arrows
+  \draw[podarrow dashed] (pass1.east) -| ([xshift=-0.8cm]court.north west) |- ([yshift=0.5cm]court.west);
+  \draw[podarrow dashed] (pass2.east) -- (court.west);
+  \draw[podarrow dashed] (pass4.east) -| ([xshift=-0.8cm]court.south west) |- ([yshift=-0.5cm]court.west);
+  \draw[dataarrow] (quant.east) -| ([xshift=-0.5cm]court.south) -- (court.south);
+  \draw[dataarrow] (samples.east) -| ([xshift=-1.2cm]court.south) |- ([yshift=-0.8cm]court.west);
+  \draw[dataarrow] (court) -- (result);
+
+  % Labels
+  \node[podlabel, above=0.1cm of pass1] {\scriptsize opcjonalne (je\'{s}li dost\k{e}pne)};
+  \node[podlabel, above=0.1cm of quant] {\scriptsize wymagane};
+\end{tikzpicture}
+\caption{Dane wej\'{s}ciowe procesu s\k{a}dowego --- \l{}\k{a}czy wyniki wcze\'{s}niejszych pass\'{o}w z~danymi pierwotnymi.}
+\label{fig:court-inputs}
+\end{figure}
+
+Sygnatura funkcji:
+\begin{lstlisting}[style=podcode, caption={Sygnatura \tsfunc{runCourtTrial()}}]
+async function runCourtTrial(
+  samples: AnalysisSamples,
+  participants: string[],
+  quantitativeContext: string,
+  existingAnalysis?: {
+    pass1?: Record<string, unknown>;
+    pass2?: Record<string, unknown>;
+    pass4?: Record<string, unknown>;
+  },
+): Promise<CourtResult>
+\end{lstlisting}
+
+
+\subsection{Prompt systemowy: \texttt{COURT\_TRIAL\_SYSTEM}}
+
+Prompt definiuje rol\k{e} AI jako \emph{s\k{e}dziego S\k{a}du Okr\k{e}gowego ds.\ Emocjonalnych}
+--- fikcyjnego s\k{a}du specjalizuj\k{a}cego si\k{e} w~,,zbrodniach komunikacyjnych''.
+
+Kluczowe regu\l{}y:
+\begin{itemize}
+  \item \textbf{Styl:} formalny j\k{e}zyk prawniczy + absurdalny kontekst
+  \item \textbf{Zarzuty:} zawsze 2--4, oparte na konkretnych danych (cytaty, metryki)
+  \item \textbf{Kary:} kreatywne i~zabawne (np.\ ,,Zakaz u\.{z}ywania emoji przez 30 dni'')
+  \item \textbf{Artyku\l{}y prawne:} wymys\l{}one, z~Kodeksu Uczuciowego, Ustawy o~Ochronie Emocji itp.
+  \item \textbf{Format:} JSON z~kluczami po angielsku, warto\'{s}ciami po polsku
+\end{itemize}
+
+Kategorie zarzut\'{o}w dost\k{e}pne w~prompcie:
+
+\begin{table}[H]
+\centering
+\caption{Katalog zarzut\'{o}w s\k{a}du emocjonalnego}
+\label{tab:court-charges-catalog}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Zarzut} & \textbf{Opis} \\
+\midrule
+Ghosting w~{[}N{]} Stopniu      & Ignorowanie, cisza, brak odpowiedzi \\
+Breadcrumbing                    & Dawanie nadziei bez intencji \\
+Love Bombing                     & Bombardowanie uczuciami \\
+Zaniedbanie Emocjonalne          & Jednostronna relacja, brak wsparcia \\
+Agresja Bierno-Czynna            & Passive-aggression \\
+Podw\'{o}jne Standardy               & R\'{o}\.{z}ne zasady dla siebie vs partnera \\
+Seryjny Double-Texting           & Bombardowanie wiadomo\'{s}ciami bez odpowiedzi \\
+Nocne N\k{e}kanie                     & Wiadomo\'{s}ci o~3 w~nocy \\
+Emocjonalny Szanta\.{z}               & Guilt-tripping \\
+Monopolizacja Konwersacji        & Monologi bez dania doj\'{s}\'{c} do s\l{}owa \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\subsection{Walidacja wyniku}
+
+Po otrzymaniu odpowiedzi od \gemini, \tsfunc{runCourtTrial()} przeprowadza
+walidacj\k{e} obowi\k{a}zkowych p\'{o}l:
+
+\begin{lstlisting}[style=podcode, caption={Walidacja wyniku procesu s\k{a}dowego}]
+// Uzupełnienie brakujących pól
+if (!result.caseNumber) {
+  result.caseNumber =
+    `SPRAWA NR PT-2026/${Math.floor(10000 + Math.random() * 90000)}`;
+}
+if (!result.courtName) {
+  result.courtName = 'Sąd Okręgowy ds. Emocjonalnych';
+}
+
+// Walidacja krytyczna --- brak = throw
+if (!Array.isArray(result.charges) || result.charges.length === 0) {
+  throw new Error('Analiza nie wygenerowała zarzutów');
+}
+if (!result.verdict || !result.verdict.summary) {
+  throw new Error('Analiza nie wygenerowała wyroku');
+}
+if (!result.perPerson || Object.keys(result.perPerson).length === 0) {
+  throw new Error('Analiza nie wygenerowała wyroków indywidualnych');
+}
+\end{lstlisting}
+
+Strategia jest analog\'{i}czna do pozosta\l{}ych pass\'{o}w: pola opcjonalne s\k{a} uzupe\l{}niane
+warto\'{s}ciami domy\'{s}lnymi, pola krytyczne (zarzuty, wyrok, wyroki indywidualne)
+wywo\l{}uj\k{a} b\l{}\k{a}d z~proz\k{a}b\k{a} o~ponowienie.
+
+
+%% === FOR ch09-api.tex ===
+%% Append BEFORE the closing of the file (after line 633).
+%% Two new endpoint sections: /api/analyze/subtext and /api/analyze/court.
+
+% ============================================================
+\section{POST /api/analyze/subtext}
+\label{sec:api-analyze-subtext}
+
+Endpoint Dekodera Podtekst\'{o}w --- analizuje pe\l{}n\k{a} list\k{e} wiadomo\'{s}ci w~poszukiwaniu
+ukrytych znacze\'{n}. Wykorzystuje streaming SSE do raportowania post\k{e}pu przetwarzania
+wielu partii okien kontekstowych.
+
+Plik: \filepath{src/app/api/analyze/subtext/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.{z}\k{a}dania POST /api/analyze/subtext}
+\label{tab:subtext-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'{s}\'{c}} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Maks.\ rozmiar body & 10~MB (\texttt{10 * 1024 * 1024} bajt\'{o}w) \\
+Rate limit & 5 \.{z}\k{a}da\'{n} / 10 minut na IP \\
+Timeout & 120 sekund \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Schemat Zod:}
+
+\begin{lstlisting}[style=podcode, caption={Schemat walidacji \texttt{subtextRequestSchema} (Zod)}, label={lst:subtext-zod}]
+const simplifiedMessageSchema = z.object({
+  sender: z.string(),
+  content: z.string(),
+  timestamp: z.number(),
+  index: z.number(),
+});
+
+export const subtextRequestSchema = z.object({
+  messages: z.array(simplifiedMessageSchema)
+    .min(100, 'Minimum 100 messages required'),
+  participants: z.array(z.string().min(1))
+    .min(1, 'participants must contain at least one entry'),
+  relationshipContext: z.optional(z.object({}).passthrough()),
+  quantitativeContext: z.optional(z.string()),
+});
+\end{lstlisting}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Przyk\l{}adowe body \.{z}\k{a}dania POST /api/analyze/subtext}, label={lst:subtext-request-body}]
+{
+  "messages": [
+    { "sender": "Anna", "content": "ok", "timestamp": 1708000000000, "index": 1547 },
+    { "sender": "Jan", "content": "Wszystko dobrze?", "timestamp": 1708000060000, "index": 1548 }
+  ],
+  "participants": ["Anna", "Jan"],
+  "relationshipContext": { "type": "romantic" },
+  "quantitativeContext": "Anna: 5200 msg, Jan: 4800 msg..."
+}
+\end{lstlisting}
+
+\begin{infobox}[title=Dlaczego 10~MB?]
+W~przeciwie\'{n}stwie do pozosta\l{}ych endpoint\'{o}w, \texttt{/api/analyze/subtext} otrzymuje
+\textbf{pe\l{}n\k{a} list\k{e} wiadomo\'{s}ci} (jako \tstype{SimplifiedMsg[]}), poniewa\.{z} ekstrakcja
+okien wymian (\tsfunc{extractExchangeWindows()}) odbywa si\k{e} po stronie serwera.
+Konwersacje 50\,000+ wiadomo\'{s}ci mog\k{a} przekracza\'{c} 5~MB.
+\end{infobox}
+
+
+\subsection{Response --- SSE Stream}
+
+Endpoint odpowiada strumieniem SSE z~trzema typami zdarze\'{n}:
+
+\begin{lstlisting}[style=podcodeJSON, caption={Sekwencja zdarze\'{n} SSE dla Dekodera Podtekst\'{o}w}, label={lst:subtext-sse}]
+data: {"type":"progress","status":"Rozpoczynam analiz\k{e} podtekst\'{o}w..."}
+
+data: {"type":"progress","status":"Wyodr\k{e}bnianie wymian zda\'{n}..."}
+
+data: {"type":"progress","status":"Dekodowanie podtekst\'{o}w 1/4..."}
+
+data: {"type":"progress","status":"Dekodowanie podtekst\'{o}w 2/4..."}
+
+data: {"type":"progress","status":"Analiza wzorców ukrywania..."}
+
+data: {"type":"complete","result":{...SubtextResult...}}
+\end{lstlisting}
+
+Endpoint stosuje:
+\begin{itemize}
+  \item \textbf{Heartbeat} co 15s (komentarz SSE \texttt{:\textbackslash n\textbackslash n})
+  \item \textbf{Abort signal handling} --- sprawdzenie \texttt{signal.aborted} przed ka\.{z}dym wysy\l{}aniem post\k{e}pu i~przed/po g\l{}\'{o}wnej analizie
+  \item \textbf{Nag\l{}\'{o}wki}: \texttt{Content-Type: text/event-stream}, \texttt{Cache-Control: no-cache}, \texttt{Connection: keep-alive}
+\end{itemize}
+
+
+% ============================================================
+\section{POST /api/analyze/court}
+\label{sec:api-analyze-court}
+
+Endpoint generuj\k{a}cy satyryczny proces s\k{a}dowy. Wykorzystuje istniej\k{a}ce wyniki
+analizy AI (Pass 1, 2, 4) jako ,,dowody'' oraz dane ilo\'{s}ciowe.
+
+Plik: \filepath{src/app/api/analyze/court/route.ts}
+
+\subsection{Request}
+
+\begin{table}[H]
+\centering
+\caption{Specyfikacja \.{z}\k{a}dania POST /api/analyze/court}
+\label{tab:court-request}
+\begin{tabularx}{\textwidth}{l l}
+\toprule
+\textbf{Parametr} & \textbf{Warto\'{s}\'{c}} \\
+\midrule
+Metoda & \texttt{POST} \\
+Content-Type & \texttt{application/json} \\
+Maks.\ rozmiar body & 5~MB (\texttt{5 * 1024 * 1024} bajt\'{o}w) \\
+Rate limit & 5 \.{z}\k{a}da\'{n} / 10 minut na IP \\
+Timeout & 120 sekund \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Schemat Zod:}
+
+\begin{lstlisting}[style=podcode, caption={Schemat walidacji \texttt{courtRequestSchema} (Zod)}, label={lst:court-zod}]
+export const courtRequestSchema = z.object({
+  samples: z.object({}).passthrough(),
+  participants: z.array(z.string().min(1))
+    .min(1, 'participants must contain at least one entry'),
+  quantitativeContext: z.string(),
+  existingAnalysis: z.optional(z.object({
+    pass1: z.optional(z.object({}).passthrough()),
+    pass2: z.optional(z.object({}).passthrough()),
+    pass4: z.optional(z.object({}).passthrough()),
+  })),
+});
+\end{lstlisting}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Przyk\l{}adowe body \.{z}\k{a}dania POST /api/analyze/court}, label={lst:court-request-body}]
+{
+  "samples": {
+    "overview": [...],
+    "dynamics": [...],
+    "perPerson": {...}
+  },
+  "participants": ["Anna", "Jan"],
+  "quantitativeContext": "Anna: 5200 msg, mediana odpowiedzi 12min...",
+  "existingAnalysis": {
+    "pass1": { "relationship_type": {...}, "tone_per_person": {...} },
+    "pass2": { "power_dynamics": {...} },
+    "pass4": { "health_score": 65, "red_flags": [...] }
+  }
+}
+\end{lstlisting}
+
+
+\subsection{Response --- SSE Stream}
+
+\begin{lstlisting}[style=podcodeJSON, caption={Sekwencja zdarze\'{n} SSE dla procesu s\k{a}dowego}, label={lst:court-sse}]
+data: {"type":"progress","status":"Przygotowuj\k{e} akt oskar\.{z}enia..."}
+
+data: {"type":"complete","result":{...CourtResult...}}
+\end{lstlisting}
+
+Mechanizm streamingu jest identyczny jak w~pozosta\l{}ych endpointach:
+heartbeat 15s, obs\l{}uga \texttt{signal.aborted}, zdarzenie \texttt{error} w~przypadku porazi.
+
+\begin{table}[H]
+\centering
+\caption{Por\'{o}wnanie nowych endpoint\'{o}w z~istniej\k{a}cymi}
+\label{tab:new-endpoints-comparison}
+\begin{tabularx}{\textwidth}{l c c c c}
+\toprule
+\textbf{Cecha} & \textbf{/analyze} & \textbf{/analyze/cps} & \textbf{/analyze/subtext} & \textbf{/analyze/court} \\
+\midrule
+Body limit       & 5 MB  & 5 MB  & 10 MB & 5 MB \\
+Rate limit       & 5/10m & 5/10m & 5/10m & 5/10m \\
+Response         & SSE   & SSE   & SSE   & SSE \\
+Heartbeat        & 15s   & 15s   & 15s   & 15s \\
+Batching         & 4 passy & 1 pass & N$\times$8 okien & 1 call \\
+Zod validation   & Tak   & Tak   & Tak   & Tak \\
+Abort handling   & Tak   & Tak   & Tak   & Tak \\
+\bottomrule
+\end{tabularx}
+\end{table}

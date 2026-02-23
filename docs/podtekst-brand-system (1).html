@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PodTeksT — Logo System & Brand Persona</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pod-blue: #3B82F6;
+    --pod-purple: #A855F7;
+    --bg: #050505;
+    --bg-secondary: #0A0A0A;
+    --card: #111111;
+    --border: #1A1A1A;
+    --text-primary: #FAFAFA;
+    --text-secondary: #888888;
+    --text-muted: #555555;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --cyan: #06B6D4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    line-height: 1.6;
+  }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 60px 32px; }
+
+  /* Section headers */
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  .section-desc {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 48px;
+    max-width: 600px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 64px 0;
+  }
+
+  /* Logo display areas */
+  .logo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 48px;
+  }
+  @media (max-width: 700px) { .logo-grid { grid-template-columns: 1fr; } }
+
+  .logo-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 48px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 240px;
+    position: relative;
+  }
+  .logo-card.full-width {
+    grid-column: 1 / -1;
+    min-height: 320px;
+  }
+  .logo-card.light-bg {
+    background: #F5F5F5;
+  }
+  .logo-card-label {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .logo-card.light-bg .logo-card-label { color: #999; }
+
+  /* Logo type styles */
+  .logo-main {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: 64px;
+    letter-spacing: -1px;
+    user-select: none;
+  }
+  .logo-main .pod { color: var(--pod-blue); }
+  .logo-main .tekst { color: var(--pod-purple); }
+  .logo-main .eks {
+    position: relative;
+  }
+  .logo-main .eks-hidden {
+    color: var(--pod-purple);
+    transition: all 0.5s ease;
+  }
+  .logo-main:hover .eks-hidden,
+  .logo-main.reveal .eks-hidden {
+    color: var(--danger);
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  }
+
+  .logo-tagline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    margin-top: 12px;
+  }
+
+  /* Monochrome */
+  .logo-mono { color: var(--text-primary); }
+  .logo-mono .pod, .logo-mono .tekst, .logo-mono .eks-hidden { color: inherit; }
+
+  /* Dark on light */
+  .logo-dark { color: #111111; }
+  .logo-dark .pod, .logo-dark .tekst, .logo-dark .eks-hidden { color: inherit; }
+
+  /* Favicon */
+  .favicon-display {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    justify-content: center;
+  }
+  .favicon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: 28px;
+  }
+  .favicon-box.dark {
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .favicon-box.blue {
+    background: var(--pod-blue);
+    color: white;
+  }
+  .favicon-box.purple {
+    background: var(--pod-purple);
+    color: white;
+  }
+  .favicon-box.gradient {
+    background: linear-gradient(135deg, var(--pod-blue), var(--pod-purple));
+    color: white;
+  }
+  .favicon-box.dark span:first-child { color: var(--pod-blue); }
+  .favicon-box.dark span:last-child { color: var(--pod-purple); }
+
+  /* Neon variant */
+  .logo-neon .pod {
+    color: var(--pod-blue);
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.15);
+  }
+  .logo-neon .tekst {
+    color: var(--pod-purple);
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.15);
+  }
+  .logo-neon .eks-hidden {
+    color: var(--danger);
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.6), 0 0 30px rgba(239, 68, 68, 0.3), 0 0 60px rgba(239, 68, 68, 0.1);
+    animation: neon-pulse 3s ease-in-out infinite;
+  }
+  @keyframes neon-pulse {
+    0%, 100% { text-shadow: 0 0 10px rgba(239, 68, 68, 0.6), 0 0 30px rgba(239, 68, 68, 0.3); }
+    50% { text-shadow: 0 0 5px rgba(239, 68, 68, 0.4), 0 0 20px rgba(239, 68, 68, 0.15); }
+  }
+
+  /* Story mode logo */
+  .logo-story {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 72px;
+    background: linear-gradient(135deg, var(--pod-blue), var(--pod-purple), var(--danger));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -2px;
+  }
+
+  /* Color palette display */
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 48px;
+  }
+  .swatch {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .swatch-color {
+    height: 80px;
+  }
+  .swatch-info {
+    background: var(--card);
+    padding: 10px 12px;
+  }
+  .swatch-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .swatch-hex {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Brand persona section */
+  .persona-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 700px) { .persona-grid { grid-template-columns: 1fr; } }
+
+  .persona-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  .persona-card h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+  .persona-card p, .persona-card li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+  .persona-card ul {
+    list-style: none;
+    padding: 0;
+  }
+  .persona-card li {
+    padding: 4px 0;
+    padding-left: 20px;
+    position: relative;
+  }
+  .persona-card li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+
+  .persona-card.accent-blue { border-left: 3px solid var(--pod-blue); }
+  .persona-card.accent-purple { border-left: 3px solid var(--pod-purple); }
+  .persona-card.accent-red { border-left: 3px solid var(--danger); }
+  .persona-card.accent-green { border-left: 3px solid var(--success); }
+
+  .trait-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    margin: 3px;
+  }
+  .trait-tag.blue { background: rgba(59,130,246,0.12); color: var(--pod-blue); }
+  .trait-tag.purple { background: rgba(168,85,247,0.12); color: var(--pod-purple); }
+  .trait-tag.red { background: rgba(239,68,68,0.12); color: var(--danger); }
+  .trait-tag.green { background: rgba(16,185,129,0.12); color: var(--success); }
+  .trait-tag.yellow { background: rgba(245,158,11,0.12); color: var(--warning); }
+  .trait-tag.cyan { background: rgba(6,182,212,0.12); color: var(--cyan); }
+
+  /* Typography specimen */
+  .type-specimen {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 16px;
+  }
+  .type-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .type-sample-jb {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: 32px;
+    color: var(--text-primary);
+  }
+  .type-sample-sg {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 500px;
+  }
+  .type-sample-syne {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 48px;
+    color: var(--text-primary);
+  }
+  .type-sample-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 28px;
+    color: var(--pod-blue);
+  }
+
+  /* Manifesto */
+  .manifesto {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 48px;
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .manifesto-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .manifesto-text em {
+    font-style: normal;
+    color: var(--pod-purple);
+  }
+  .manifesto-text strong {
+    color: var(--pod-blue);
+    font-weight: 800;
+  }
+
+  /* Prompt section */
+  .prompt-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .prompt-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--pod-blue);
+    margin-bottom: 12px;
+  }
+  .prompt-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <div class="section-label">Brand System v1.0</div>
+  <div class="section-title">PodTeksT</div>
+  <div class="section-desc">Kompletny system identyfikacji wizualnej, warianty logo, paleta kolorów, typografia i brand persona.</div>
+
+  <!-- ══════════════ LOGO VARIANTS ══════════════ -->
+  <div class="divider"></div>
+  <div class="section-label">01 — Logo</div>
+  <div class="section-title">Warianty logotypu</div>
+  <div class="section-desc">Logo w wersji pełnokolorowej, monochromatycznej, neonowej, story i favicon. Hover na logo aby zobaczyć reveal "eks".</div>
+
+  <div class="logo-grid">
+    <!-- Primary full color -->
+    <div class="logo-card full-width" style="background: var(--bg);">
+      <div class="logo-card-label">Primary — dark background</div>
+      <div class="logo-main" onmouseenter="this.classList.add('reveal')" onmouseleave="this.classList.remove('reveal')">
+        <span class="pod">Pod</span><span class="tekst">T<span class="eks"><span class="eks-hidden">eks</span></span>T</span>
+      </div>
+      <div class="logo-tagline">odkryj to, co kryje się między wierszami</div>
+    </div>
+
+    <!-- Neon variant -->
+    <div class="logo-card" style="background: #020202;">
+      <div class="logo-card-label">Neon — eks reveal</div>
+      <div class="logo-main logo-neon" style="font-size: 48px;">
+        <span class="pod">Pod</span><span class="tekst">T<span class="eks-hidden">eks</span>T</span>
+      </div>
+    </div>
+
+    <!-- Monochrome white -->
+    <div class="logo-card">
+      <div class="logo-card-label">Mono — white</div>
+      <div class="logo-main logo-mono" style="font-size: 48px;">
+        <span class="pod">Pod</span><span class="tekst">T<span class="eks-hidden">eks</span>T</span>
+      </div>
+    </div>
+
+    <!-- Story mode -->
+    <div class="logo-card" style="background: linear-gradient(135deg, #0a0014, #0f0028, #140005);">
+      <div class="logo-card-label" style="color: #555;">Story mode</div>
+      <div class="logo-story">PodTeksT</div>
+    </div>
+
+    <!-- Light background -->
+    <div class="logo-card light-bg">
+      <div class="logo-card-label">Light background</div>
+      <div class="logo-main logo-dark" style="font-size: 48px;">
+        <span class="pod" style="color: #2563EB;">Pod</span><span class="tekst" style="color: #9333EA;">T<span class="eks-hidden" style="color: #9333EA;">eks</span>T</span>
+      </div>
+    </div>
+
+    <!-- Favicons -->
+    <div class="logo-card full-width">
+      <div class="logo-card-label">Favicon & icon variants</div>
+      <div class="favicon-display">
+        <div>
+          <div class="favicon-box dark"><span>P</span><span>T</span></div>
+          <div style="text-align:center; margin-top:8px; font-family:'JetBrains Mono'; font-size:10px; color:var(--text-muted);">Dual color</div>
+        </div>
+        <div>
+          <div class="favicon-box gradient">PT</div>
+          <div style="text-align:center; margin-top:8px; font-family:'JetBrains Mono'; font-size:10px; color:var(--text-muted);">Gradient</div>
+        </div>
+        <div>
+          <div class="favicon-box blue">PT</div>
+          <div style="text-align:center; margin-top:8px; font-family:'JetBrains Mono'; font-size:10px; color:var(--text-muted);">PodBlue</div>
+        </div>
+        <div>
+          <div class="favicon-box purple">PT</div>
+          <div style="text-align:center; margin-top:8px; font-family:'JetBrains Mono'; font-size:10px; color:var(--text-muted);">PodPurple</div>
+        </div>
+        <div>
+          <div class="favicon-box" style="background:var(--bg);border:1px solid var(--border);">
+            <span style="font-size:36px; background: linear-gradient(135deg, var(--pod-blue), var(--pod-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">P</span>
+          </div>
+          <div style="text-align:center; margin-top:8px; font-family:'JetBrains Mono'; font-size:10px; color:var(--text-muted);">Minimal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ COLOR PALETTE ══════════════ -->
+  <div class="divider"></div>
+  <div class="section-label">02 — Kolory</div>
+  <div class="section-title">Paleta kolorów</div>
+  <div class="section-desc">Każdy kolor ma przypisaną rolę semantyczną — nie jest dekoracyjny, lecz komunikacyjny.</div>
+
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-color" style="background: #3B82F6;"></div>
+      <div class="swatch-info"><div class="swatch-name">PodBlue</div><div class="swatch-hex">#3B82F6 — Osoba A, CTA</div></div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #A855F7;"></div>
+      <div class="swatch-info"><div class="swatch-name">PodPurple</div><div class="swatch-hex">#A855F7 — Osoba B, sekcje</div></div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #050505;"></div>
+      <div class="swatch-info"><div class="swatch-name">Background</div><div class="swatch-hex">#050505 — tło główne</div></div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #111111;"></div>
+      <div class="swatch-info"><div class="swatch-name">Card</div><div class="swatch-hex">#111111 — karty, panele</div></div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #1A1A1A;"></div>
+      <div class="swatch-info"><div class="swatch-name">Border</div><div class="swatch-hex">#1A1A1A — separatory</div></div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #10B981;"></div>
+      <div class="swatch-info"><div class="swatch-name">Success</div><div class="swatch-hex">#10B981 — pozytywne</div></div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #F59E0B;"></div>
+      <div class="swatch-info"><div class="swatch-name">Warning</div><div class="swatch-hex">#F59E0B — uwagi</div></div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #EF4444;"></div>
+      <div class="swatch-info"><div class="swatch-name">Danger</div><div class="swatch-hex">#EF4444 — alarmy, "eks"</div></div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: #06B6D4;"></div>
+      <div class="swatch-info"><div class="swatch-name">Cyan</div><div class="swatch-hex">#06B6D4 — akcenty info</div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TYPOGRAPHY ══════════════ -->
+  <div class="divider"></div>
+  <div class="section-label">03 — Typografia</div>
+  <div class="section-title">System fontów</div>
+  <div class="section-desc">Pięć rodzin fontów, każda ze ściśle zdefiniowaną rolą.</div>
+
+  <div class="type-specimen">
+    <div class="type-label">JetBrains Mono — nagłówki & display</div>
+    <div class="type-sample-jb">Profil osobowości</div>
+  </div>
+  <div class="type-specimen">
+    <div class="type-label">JetBrains Mono — wartości KPI</div>
+    <div class="type-sample-mono">87.4<span style="font-size:16px;color:var(--text-muted);margin-left:4px;">%</span></div>
+  </div>
+  <div class="type-specimen">
+    <div class="type-label">Space Grotesk — treść ciągła</div>
+    <div class="type-sample-sg">Osoba A wykazuje wzorzec przywiązania lękowego z pewnością 78%. Czas odpowiedzi wydłużył się o 340% w ciągu dwóch miesięcy.</div>
+  </div>
+  <div class="type-specimen">
+    <div class="type-label">Syne — tryb Story</div>
+    <div class="type-sample-syne">Wasza historia</div>
+  </div>
+
+  <!-- ══════════════ BRAND PERSONA ══════════════ -->
+  <div class="divider"></div>
+  <div class="section-label">04 — Brand persona</div>
+  <div class="section-title">Kim jest PodTeksT</div>
+  <div class="section-desc">Gdyby PodTeksT był osobą.</div>
+
+  <!-- Manifesto -->
+  <div class="manifesto">
+    <div class="manifesto-text">
+      Jesteśmy <strong>precyzyjni</strong>, pewni siebie, <em>trochę złośliwi</em>, zawsze oparci na danych.<br><br>
+      Brzmimy jak przyjaciel, który jest psychologiem i mówi ci prawdę prosto w twarz.
+    </div>
+  </div>
+
+  <div class="persona-grid">
+    <div class="persona-card accent-blue">
+      <h3>Archetyp</h3>
+      <p>Obserwator × Prowokator. Widzi więcej niż powinieneś wiedzieć. Mówi ci to, czego nie chcesz usłyszeć, ale potrzebujesz. Nie moralizuje — prezentuje dane i pozwala im mówić.</p>
+      <br>
+      <p style="color: var(--text-muted); font-size: 12px;">Gdyby siedział w barze: ten znajomy psycholog, który po dwóch drinkach analizuje ci relację na serwetkach. Rysuje wykresy. Mówi "sorry ale twój eks pisze do ciebie 4x mniej niż rok temu, oto dowód".</p>
+    </div>
+
+    <div class="persona-card accent-purple">
+      <h3>Głos</h3>
+      <ul>
+        <li>Pewny siebie, nie arogancki</li>
+        <li>Oparty na danych, nie na opiniach</li>
+        <li>Trochę złośliwy, nigdy okrutny</li>
+        <li>Precyzyjny — każde zdanie niesie informację</li>
+        <li>Nie przeprasza za swoje wnioski</li>
+        <li>Zero hedgingu ("być może", "to tylko sugestia")</li>
+      </ul>
+    </div>
+
+    <div class="persona-card accent-red">
+      <h3>Czego NIE robi</h3>
+      <ul>
+        <li>Nie jest miły dla zasady</li>
+        <li>Nie używa emotikonów w UI</li>
+        <li>Nie mówi "Świetnie ci idzie!"</li>
+        <li>Nie jest wellness appką</li>
+        <li>Nie moralizuje o relacjach</li>
+        <li>Nie jest pastelowy, okrągły, przyjazny</li>
+        <li>Nie brzmi jak chatbot, coach, terapeuta</li>
+      </ul>
+    </div>
+
+    <div class="persona-card accent-green">
+      <h3>Mówi tak</h3>
+      <ul>
+        <li>"Osoba A inicjuje 73% rozmów. Osoba B odpowiada średnio po 47 minutach."</li>
+        <li>"Ghost Risk: 82%. Trend spadkowy od 6 tygodni."</li>
+        <li>"Twój Delusion Score: 67/100. Kto tu kogo okłamuje?"</li>
+        <li>"16 432 wiadomości. 14 miesięcy. Mediana odpowiedzi: 2m 14s."</li>
+      </ul>
+    </div>
+
+    <div class="persona-card accent-blue" style="grid-column: 1 / -1;">
+      <h3>Cechy osobowości</h3>
+      <div style="margin-top: 8px;">
+        <span class="trait-tag blue">precyzyjny</span>
+        <span class="trait-tag blue">analityczny</span>
+        <span class="trait-tag purple">pewny siebie</span>
+        <span class="trait-tag purple">ciemny</span>
+        <span class="trait-tag red">lekko złośliwy</span>
+        <span class="trait-tag red">prowokujący</span>
+        <span class="trait-tag green">wiarygodny</span>
+        <span class="trait-tag green">transparentny</span>
+        <span class="trait-tag yellow">bezpośredni</span>
+        <span class="trait-tag yellow">niefiltrowany</span>
+        <span class="trait-tag cyan">data-obsessed</span>
+        <span class="trait-tag cyan">nocny</span>
+      </div>
+    </div>
+
+    <div class="persona-card accent-purple">
+      <h3>Estetyka DNA</h3>
+      <p style="margin-bottom:12px;">Trzy światy które się przecinają:</p>
+      <ul>
+        <li><strong style="color:var(--pod-blue)">Bloomberg Terminal</strong> — gęstość danych, monospaced, zero dekoracji. Informacja jest dekoracją.</li>
+        <li><strong style="color:var(--pod-purple)">Spotify Wrapped</strong> — narracyjność, viralowość, "wow" z własnych danych.</li>
+        <li><strong style="color:var(--text-secondary)">Raport kliniczny</strong> — struktura, precyzja, pewność diagnostyczna z zastrzeżeniami.</li>
+      </ul>
+    </div>
+
+    <div class="persona-card accent-red">
+      <h3>Grupa docelowa</h3>
+      <ul>
+        <li>18–35 lat, digital-native</li>
+        <li>Po rozstaniu albo w trakcie analizowania relacji</li>
+        <li>Lubi dane i self-insight</li>
+        <li>Udostępnia wyniki na stories</li>
+        <li>Analizuje o 2 w nocy (dosłownie)</li>
+        <li>Nie chce kolejnej pastelowej appki randkowej</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════ IMAGE GEN PROMPTS ══════════════ -->
+  <div class="divider"></div>
+  <div class="section-label">05 — Prompty do generacji</div>
+  <div class="section-title">Nano/Banana Pro prompty</div>
+  <div class="section-desc">Prompty do wygenerowania kluczowych assetów brandowych. Styl: ciemny, techniczny, minimalny, data-driven.</div>
+
+  <div class="prompt-card">
+    <div class="prompt-label">Prompt 1 — App icon / Avatar</div>
+    <div class="prompt-text">Minimalist app icon on pure black background. Two overlapping speech bubbles, one electric blue (#3B82F6) and one purple (#A855F7), forming a Venn diagram shape. Inside the overlap area, tiny data visualization lines glow faintly. No text, no gradients except subtle light falloff. Flat design, geometric, clean edges. Dark moody atmosphere, the bubbles cast subtle colored light onto the black surface beneath them. Square format, suitable for app store icon.</div>
+  </div>
+
+  <div class="prompt-card">
+    <div class="prompt-label">Prompt 2 — Hero image / Landing page background</div>
+    <div class="prompt-text">Abstract dark visualization of a conversation turning into data. Left side: faint, ghostly chat message bubbles fading out in rows, barely visible against near-black background. Right side: the messages dissolve into bright blue (#3B82F6) and purple (#A855F7) data streams, flowing lines, small floating numbers, chart fragments. Transition from organic text to cold data. Grain texture overlay. Cinematic lighting, shallow depth of field effect. Very dark, almost black, with data elements glowing. Ultra-wide 21:9 ratio. No text, no UI elements, pure atmospheric background.</div>
+  </div>
+
+  <div class="prompt-card">
+    <div class="prompt-label">Prompt 3 — OG image / Social share card</div>
+    <div class="prompt-text">Dark, moody social media preview card. Center: large stylized magnifying glass made of thin blue (#3B82F6) glowing lines hovering over a blurred, dark chat conversation background. Inside the magnifying glass lens: sharp data visualizations — a small bar chart, a percentage number, heart emoji turning into a data point. Outside the lens: everything is blurry and dark. Noir aesthetic. Film grain. No text. 1200x630px ratio. Background nearly black (#050505).</div>
+  </div>
+
+  <div class="prompt-card">
+    <div class="prompt-label">Prompt 4 — "eks" concept art</div>
+    <div class="prompt-text">Neon sign in a dark room. The word "eks" glowing in red-orange neon (#EF4444) mounted on a dark wall. The neon tubes have slight imperfections — one letter flickers slightly. Below the sign, faint blue (#3B82F6) and purple (#A855F7) light reflections on a wet floor surface. Moody, noir bar atmosphere. Film grain, shallow depth of field. The sign looks like it belongs in a late-night bar where people go to analyze their ex's messages. Cinematic, melancholic but not sad — more like darkly humorous.</div>
+  </div>
+
+  <div class="prompt-card">
+    <div class="prompt-label">Prompt 5 — Brand mascot / character concept</div>
+    <div class="prompt-text">Stylized character design of a detective/analyst figure. Silhouette only, no facial features visible — just the outline against a dark background with faint data visualizations flowing around them. They wear a long coat and hold a glowing smartphone showing a chat conversation. One eye visible, glowing blue (#3B82F6). Behind them: floating transparent screens showing graphs, heatmaps, percentage numbers in purple (#A855F7). Dark, atmospheric, minimal. Think: noir detective meets data scientist. No text. Character should feel like they know your secrets.</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="divider"></div>
+  <div style="text-align: center; padding: 32px 0;">
+    <div class="logo-main" style="font-size: 32px; margin-bottom: 8px;">
+      <span class="pod">Pod</span><span class="tekst">T<span class="eks-hidden">eks</span>T</span>
+    </div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 4px; color: var(--text-muted);">BRAND SYSTEM v1.0 — LUTY 2026</div>
+  </div>
+
+</div>
+</body>
+</html>

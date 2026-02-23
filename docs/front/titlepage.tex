@@ -1,0 +1,106 @@
+% ============================================================
+% PodTeksT — Title Page
+% ============================================================
+
+\thispagestyle{empty}
+
+\begin{tikzpicture}[remember picture, overlay]
+  % Full page dark background
+  \fill[black!97] (current page.south west) rectangle (current page.north east);
+  % Subtle gradient overlay: blue at top, purple at bottom
+  \fill[PodBlue, opacity=0.08] ([yshift=10cm]current page.south west) rectangle (current page.north east);
+  \fill[PodPurple, opacity=0.08] (current page.south west) rectangle ([yshift=10cm]current page.south east);
+
+  % Decorative circuit/data lines
+  \begin{scope}[opacity=0.08, PodBlue]
+    \draw[line width=0.5pt] (-8, 4) -- (-3, 4) -- (-3, 2) -- (2, 2);
+    \draw[line width=0.5pt] (-8, 3.5) -- (-5, 3.5) -- (-5, 1) -- (-1, 1);
+    \draw[line width=0.5pt] (3, -2) -- (6, -2) -- (6, -4) -- (8, -4);
+    \draw[line width=0.5pt] (4, -1.5) -- (7, -1.5) -- (7, -3.5) -- (8, -3.5);
+    \foreach \x in {-3, -1, 2, 6} {
+      \fill[PodBlue] (\x, {4-\x*0.3}) circle (2pt);
+    }
+  \end{scope}
+
+  \begin{scope}[opacity=0.06, PodPurple]
+    \draw[line width=0.5pt] (-8, -3) -- (-4, -3) -- (-4, -5) -- (0, -5);
+    \draw[line width=0.5pt] (5, 5) -- (8, 5) -- (8, 3);
+    \foreach \x in {-4, 0, 5, 8} {
+      \fill[PodPurple] (\x, {-3+\x*0.2}) circle (2pt);
+    }
+  \end{scope}
+
+  % Blue accent line at top
+  \fill[PodBlue] ([yshift=-0.3cm]current page.north west) rectangle ([yshift=-0.35cm]current page.north east);
+
+  % Purple accent line at bottom
+  \fill[PodPurple] ([yshift=0.3cm]current page.south west) rectangle ([yshift=0.35cm]current page.south east);
+
+  % Main title block
+  \node[anchor=center] at ([yshift=3cm]current page.center) {
+    \begin{minipage}{14cm}
+      \centering
+      % Logo
+      {\fontsize{72}{80}\selectfont
+        \textbf{\textcolor{PodBlue}{Pod}\textcolor{PodPurple}{TeksT}}}\\[16pt]
+      % Tagline
+      {\Large\color{PodBlueLight}
+        odkryj to, co kryje się między wierszami}\\[6pt]
+      % Subtle joke hint
+      {\small\color{PodPurpleLight}\itshape
+        (bo wiesz, eks...)}
+    \end{minipage}
+  };
+
+  % Decorative separator
+  \draw[PodBlue, line width=1.5pt, opacity=0.5]
+    ([yshift=-0.5cm, xshift=-3cm]current page.center) -- ([yshift=-0.5cm, xshift=3cm]current page.center);
+  \fill[PodPurple, opacity=0.7] (current page.center) ++(0, -0.5) circle (3pt);
+
+  % Document type
+  \node[anchor=center] at ([yshift=-2cm]current page.center) {
+    \begin{minipage}{12cm}
+      \centering
+      {\LARGE\color{white}\bfseries
+        Dokumentacja Techniczna \& Brandowa}\\[12pt]
+      {\normalsize\color{PodBlueLight}
+        Kompletna specyfikacja produktu, architektury, \\
+        algorytmów i systemu projektowego}
+    \end{minipage}
+  };
+
+  % Version and date at bottom
+  \node[anchor=south, font=\small\color{PodTextSecondary}]
+    at ([yshift=1.5cm]current page.south) {
+      Wersja 2.0\quad\textcolor{PodBorder}{|}\quad
+      Luty 2026\quad\textcolor{PodBorder}{|}\quad
+      \textasciitilde 314 stron
+    };
+
+  % Chat bubbles decoration (subtle)
+  \begin{scope}[opacity=0.12]
+    % Blue bubble (left)
+    \fill[PodBlue, rounded corners=8pt]
+      ([xshift=-5cm, yshift=-5cm]current page.center)
+      rectangle ++(3.5, 0.8);
+    \fill[PodBlue]
+      ([xshift=-5cm, yshift=-5.3cm]current page.center)
+      -- ++(-0.3, -0.3) -- ++(0.6, 0);
+
+    % Purple bubble (right)
+    \fill[PodPurple, rounded corners=8pt]
+      ([xshift=2cm, yshift=-6cm]current page.center)
+      rectangle ++(4, 0.8);
+    \fill[PodPurple]
+      ([xshift=5.7cm, yshift=-6.3cm]current page.center)
+      -- ++(0.3, -0.3) -- ++(-0.6, 0);
+
+    % Another blue bubble
+    \fill[PodBlue, rounded corners=6pt]
+      ([xshift=-4cm, yshift=-7cm]current page.center)
+      rectangle ++(2.5, 0.6);
+  \end{scope}
+
+\end{tikzpicture}
+
+\cleardoublepage

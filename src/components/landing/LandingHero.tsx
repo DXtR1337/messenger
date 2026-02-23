@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -19,12 +20,24 @@ const DATA_FRAGMENTS = [
 ];
 
 export default function LandingHero() {
+  // Conditional render instead of CSS hide — prevents Spline JS + .splinecode download on mobile
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 768px)');
+    setIsDesktop(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
-      {/* Layer 1: Spline 3D brain scene (desktop only) */}
-      <div className="absolute inset-0 hidden md:block" style={{ zIndex: 1 }}>
-        <SplineScene scene="/scene.splinecode" className="h-full w-full" />
-      </div>
+      {/* Layer 1: Spline 3D brain scene (desktop only — not rendered on mobile) */}
+      {isDesktop && (
+        <div className="absolute inset-0" style={{ zIndex: 1 }}>
+          <SplineScene scene="/scene.splinecode" className="h-full w-full" />
+        </div>
+      )}
 
       {/* Grain overlay */}
       <div
@@ -109,21 +122,23 @@ export default function LandingHero() {
 
         {/* ─── CTA: Floating buttons ─── */}
         <div
-          className="pointer-events-auto absolute bottom-[7vh] flex flex-row items-center gap-3"
+          className="pointer-events-auto absolute bottom-[7vh] flex flex-col items-center gap-3"
           style={{ zIndex: 20, animation: 'heroFadeSlideUp 0.5s ease-out 0.3s both' }}
         >
-          <Link
-            href="/analysis/new"
-            className="inline-flex items-center justify-center gap-2.5 rounded-xl px-8 py-3.5 font-mono text-[0.82rem] font-bold uppercase tracking-[0.08em] text-white"
-          >
-            Inicjuj analizę
-          </Link>
-          <a
-            href="#demo"
-            className="inline-flex items-center justify-center rounded-xl border border-white/10 px-7 py-3.5 font-mono text-[0.78rem] uppercase tracking-[0.08em] text-white/40 transition-colors duration-300 hover:border-white/20 hover:text-white/60"
-          >
-            Zobacz demo
-          </a>
+          <div className="flex flex-row items-center gap-3">
+            <Link
+              href="/analysis/new"
+              className="inline-flex items-center justify-center gap-2.5 rounded-xl px-8 py-3.5 font-mono text-[0.82rem] font-bold uppercase tracking-[0.08em] text-white"
+            >
+              Inicjuj analizę
+            </Link>
+            <a
+              href="#demo"
+              className="inline-flex items-center justify-center rounded-xl border border-white/10 px-7 py-3.5 font-mono text-[0.78rem] uppercase tracking-[0.08em] text-white/40 transition-colors duration-300 hover:border-white/20 hover:text-white/60"
+            >
+              Zobacz demo
+            </a>
+          </div>
         </div>
       </div>
 

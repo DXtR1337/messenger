@@ -1,0 +1,69 @@
+% ============================================================
+% PodTeksT — Wstęp (Preface)
+% ============================================================
+
+\chapter*{Wstęp}
+\addcontentsline{toc}{chapter}{Wstęp}
+\markboth{Wstęp}{Wstęp}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Twoje rozmowy mówią więcej niż myślisz.''
+\end{center}
+
+\vspace{12pt}
+
+\podtekst to aplikacja SaaS nowej generacji, która przekształca surowe eksporty rozmów z~komunikatorów w~głęboką analizę psychologiczną i~komunikacyjną. Użytkownik wrzuca pliki z~Messengera (JSON), WhatsAppa (TXT), Instagrama (JSON), Telegrama (JSON) lub bezpośrednio z~Discorda (Bot API) --- a~w~zamian otrzymuje ponad 60~metryk ilościowych, profil osobowości oparty na Big~Five i~MBTI, analizę stylu przywiązania, mapę dynamiki relacji i~konkretne, oparte na danych wskazówki.
+
+\section*{Dla kogo jest ten dokument}
+
+Ta dokumentacja jest kompletnym kompendium produktu \podtekst --- od wizji marki, przez każdy algorytm i~interfejs TypeScript, aż po konfigurację deploymentu.
+
+\begin{description}
+  \item[Inwestorzy i partnerzy biznesowi] znajdą tu pełną propozycję wartości, model cenowy, pozycjonowanie marki i~mapę rozwoju produktu (Rozdziały 1--2, 13).
+
+  \item[Deweloperzy i architekci] znajdą kompletną specyfikację techniczną: stos technologiczny, architekturę systemu, definicje wszystkich typów danych, dokumentację każdej funkcji silnika analitycznego oraz diagramy przepływu danych (Rozdziały 3--12).
+
+  \item[Projektanci UX/UI] znajdą system projektowy, paletę kolorów, typografię, inwentarz 40+ komponentów interfejsu oraz opis wszystkich animacji i~interakcji (Rozdziały 1, 8).
+
+  \item[Specjaliści ds.\ bezpieczeństwa] znajdą opis zabezpieczeń, politykę prywatności, mechanizmy rate limitingu i~ochronę przed prompt injection (Rozdział 11).
+\end{description}
+
+\section*{Struktura dokumentu}
+
+\begin{itemize}
+  \item \textbf{Część I: Marka} (Rozdziały 1--2) --- Tożsamość marki, przegląd produktu, ścieżka użytkownika, model cenowy.
+  \item \textbf{Część II: Architektura} (Rozdziały 3--7) --- Stos technologiczny, parsery, silnik analizy ilościowej, silnik AI, wynik zdrowia relacji.
+  \item \textbf{Część III: Interfejs i API} (Rozdziały 8--9) --- System projektowy, komponenty UI, endpointy API.
+  \item \textbf{Część IV: Operacje} (Rozdziały 10--11) --- Docker, Firebase, bezpieczeństwo, prywatność, RODO.
+  \item \textbf{Część V: Referencja} (Rozdziały 12--13) --- Kompletna referencja typów danych, mapa rozwoju.
+\end{itemize}
+
+\section*{Konwencje}
+
+W~całym dokumencie stosujemy następujące konwencje:
+
+\begin{itemize}
+  \item \tstype{NazwaTypu} --- typ lub interfejs TypeScript
+  \item \tsfunc{nazwaFunkcji()} --- funkcja lub metoda
+  \item \tskey{słowo kluczowe} --- słowo kluczowe języka
+  \item \filepath{ścieżka/do/pliku.ts} --- ścieżka pliku w~projekcie
+  \item \personA{Osoba A} / \personB{Osoba B} --- uczestnicy rozmowy (kolor niebieski / fioletowy)
+  \item Wartości \score{pozytywne}, \warn{neutralne/ostrzegawcze} i~\danger{negatywne} są kolorowane kontekstowo
+\end{itemize}
+
+\begin{infobox}[title=Nota informacyjna]
+Niebieskie ramki zawierają dodatkowe wyjaśnienia, kontekst lub ciekawostki techniczne.
+\end{infobox}
+
+\begin{warningbox}[title=Ważne zastrzeżenie]
+Żółte ramki zawierają ostrzeżenia, ograniczenia techniczne lub istotne zastrzeżenia dotyczące interpretacji wyników.
+\end{warningbox}
+
+\vfill
+
+\begin{center}
+\small\color{PodTextMuted}
+Dokument wygenerowany z~kodu źródłowego projektu \podtekst\\
+Stan na: luty 2026 • Next.js 16 • React 19 • TypeScript 5
+\end{center}

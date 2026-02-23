@@ -1,0 +1,653 @@
+% ============================================================
+% Rozdział 13: Mapa rozwoju
+% ============================================================
+
+\chapter{Mapa rozwoju}
+\label{ch:rozwoj}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Produkt nigdy nie jest skończony --- jest jedynie wystarczająco dobry na dzisiaj.''
+\end{center}
+
+\vspace{8pt}
+
+Rozwój \podtekst jest podzielony na pięć faz, od MVP przez pełne SaaS aż po ekspansję międzynarodową. Ten rozdział dokumentuje aktualny stan projektu, zrealizowane funkcjonalności oraz szczegółową mapę rozwoju na najbliższe 12--18 miesięcy.
+
+% ============================================================
+\section{Stan aktualny --- MVP}
+\label{sec:stan-aktualny}
+% ============================================================
+
+Na dzień publikacji tego dokumentu (luty 2026) \podtekst dysponuje w~pełni funkcjonalnym MVP, który obejmuje parsowanie, analizę ilościową, analizę AI, tryby prezentacji i~mechaniki viralowe.
+
+\subsection{Parsery wiadomości}
+
+\begin{table}[H]
+\centering
+\caption{Status parserów komunikatorów}
+\label{tab:parsery-status}
+\begin{tabularx}{\textwidth}{L{3cm}C{2cm}X}
+\toprule
+\textbf{Platforma} & \textbf{Status} & \textbf{Uwagi} \\
+\midrule
+\messenger & \score{Gotowy} & Pełna obsługa JSON, dekodowanie unicode Facebook, reakcje, zdjęcia, naklejki, linki, połączenia, wiadomości usunięte \\
+\whatsapp & \score{Gotowy} & Parser TXT z~obsługą formatów 12h/24h, wielu języków systemowych, multimediów, statusów, ankiet \\
+Instagram DM & \score{Gotowy} & Parser JSON zaimplementowany, pełna obsługa formatu Meta, reakcje, łączenie plików \\
+Telegram & \score{Gotowy} & Parser JSON z~obsługą mieszanego tekstu, reakcji z~timestampem, wiadomości serwisowych \\
+Discord & \score{Gotowy} & Parser API-based (Bot token + Channel ID), import SSE, 11 slash commands \\
+Microsoft Teams & \danger{Planowany} & Faza 5 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Silnik analizy ilościowej}
+
+Silnik analizy ilościowej oblicza 28+ metryk bez użycia AI, w~całości po stronie klienta (przeglądarka). Pełna lista metryk z~dokumentacją techniczną znajduje się w~\secref{ch:analiza-ilosciowa} (Rozdział~5).
+
+\begin{metricbox}
+\textbf{Zrealizowane kategorie metryk:}
+\begin{itemize}
+  \item Metryki wolumenowe --- łączna liczba wiadomości, wiadomości per osoba, stosunek, średnia długość, najdłuższa wiadomość
+  \item Metryki czasowe --- czas odpowiedzi (mediana, średnia), inicjacja rozmów, godziny aktywności, heatmapa godzina$\times$dzień tygodnia, wzorce nocne
+  \item Metryki zaangażowania --- reakcje (częstość, typy), emoji (top per osoba), pytania, double-texting, udostępniane linki i~zdjęcia
+  \item Metryki wzorców --- kto kończy rozmowy, burst detection, trendy miesięczne, weekday vs weekend, sezonowość
+  \item Metryki zaawansowane --- frazy-klucze (catchphrases), najlepszy czas na SMS, prognoza ghostingu, wyniki wiralne
+\end{itemize}
+\end{metricbox}
+
+\subsection{Silnik analizy AI}
+
+Analiza jakościowa oparta na modelu \gemini realizowana jest w~5~przejściach streamowanych przez SSE:
+
+\begin{enumerate}
+  \item \textbf{Przegląd} --- ogólny ton, styl komunikacji, typ relacji, podsumowanie
+  \item \textbf{Dynamika} --- równowaga władzy, praca emocjonalna, wzajemność, wzorce unikania
+  \item \textbf{Profile indywidualne} --- Big Five, MBTI, styl przywiązania, potrzeby komunikacyjne per osoba
+  \item \textbf{Synteza} --- Wynik Zdrowia Relacji (CPS), punkty zwrotne, red flagi, rekomendacje
+  \item \textbf{Roast} --- humorystyczna, prowokująca analiza wzorców komunikacyjnych
+\end{enumerate}
+
+\subsection{Tryby prezentacji}
+
+\begin{description}
+  \item[Dashboard klasyczny] Pełen przegląd analityczny z~kartami KPI, wykresami Recharts, profilami osobowości, sekcjami dynamiki i~raportem końcowym.
+
+  \item[Tryb Story] Narracyjna prezentacja wyników inspirowana Spotify Wrapped --- pełnoekranowe slajdy z~animacjami, gradientami i~efektami wizualnymi. Czcionki Syne + Space Grotesk. Slajdy: intro, liczby, heatmapa, reakcje, osobowość, podsumowanie.
+
+  \item[Tryb Roast] Prowokacyjna, humorystyczna sekcja generowana przez AI, która ,,hejtuje'' wzorce komunikacyjne użytkownika. Zawiera generowanie obrazu roast (API generowania obrazów) z~memicznym formatem.
+
+  \item[Tryb Porównanie] Analiza porównawcza dwóch rozmów --- radar, timeline, tabela porównawcza, wyniki CPS obok siebie.
+\end{description}
+
+\subsection{Mechaniki viralowe i~społecznościowe}
+
+\begin{itemize}
+  \item \textbf{System odznak} --- 20+ automatycznych odznak przyznawanych na podstawie metryk ilościowych (np.~,,Nocna Sowa'', ,,Duch Czatu'', ,,Bombardier Miłosny'', ,,Mistrzowie Emoji'')
+  \item \textbf{Wyniki wiralne} --- metryki zaprojektowane pod udostępnianie: Ghost Forecast, Drama Score, Cling Score, Relationship Age
+  \item \textbf{Karty do udostępniania} --- generowane grafiki w~formacie Stories/Reels z~kluczowymi statystykami, gotowe do wrzucenia na Instagram/TikTok
+  \item \textbf{Screening CPS (SCID-II)} --- kliniczny screening zaburzeń osobowości (z~wyraźnymi disclaimerami), generujący prowokacyjne wyniki
+  \item \textbf{Eksport PDF} --- kompletny raport w~formacie PDF z~wszystkimi wykresami i~analizami
+\end{itemize}
+
+\subsection{Stack technologiczny MVP}
+
+\begin{table}[H]
+\centering
+\caption{Aktualny stos technologiczny \podtekst}
+\label{tab:stack-mvp}
+\begin{tabularx}{\textwidth}{L{3cm}L{3.5cm}X}
+\toprule
+\textbf{Warstwa} & \textbf{Technologia} & \textbf{Uwagi} \\
+\midrule
+Framework & Next.js 16 (App Router) & React 19, Server Components \\
+Język & TypeScript 5 (strict) & Zero \texttt{any}, pełne typowanie \\
+Styl & Tailwind CSS v4 & Zmienne CSS, brak CSS modules \\
+UI & shadcn/ui & Radix primitives, dostosowane \\
+Wykresy & Recharts & Bazowane na D3, responsywne \\
+Animacje & Framer Motion & Staggered reveals, page transitions \\
+3D & Spline & Scena na stronie głównej \\
+AI & Gemini API & 5 przejść, streaming SSE \\
+Przechowywanie & localStorage + IndexedDB & Brak backendu w~MVP \\
+Package manager & pnpm & Monorepo-ready \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Faza 2: Autoryzacja i~płatności}
+\label{sec:faza2}
+% ============================================================
+
+Faza 2 transformuje \podtekst z~lokalnego narzędzia w~pełnoprawną aplikację SaaS z~kontami użytkowników, trwałym przechowywaniem danych i~modelem subskrypcyjnym.
+
+\subsection{Autoryzacja --- Supabase Auth}
+
+\begin{itemize}
+  \item \textbf{Metody logowania:}
+  \begin{itemize}
+    \item Google OAuth 2.0 (główna metoda, minimalne tarcie)
+    \item Email + hasło (alternatywa)
+    \item Magic link (opcjonalnie, w~przyszłości Apple Sign-In)
+  \end{itemize}
+
+  \item \textbf{Zarządzanie sesją:}
+  \begin{itemize}
+    \item JWT tokeny z~automatycznym odświeżaniem
+    \item Middleware Next.js sprawdzający sesję na serwerze
+    \item Klient Supabase z~SSR (Server-Side Rendering) --- \tsfunc{createServerClient()}
+    \item Cookie-based session storage
+  \end{itemize}
+
+  \item \textbf{Profil użytkownika:}
+  \begin{itemize}
+    \item Avatar, nazwa wyświetlana, email (z~Google lub ręcznie)
+    \item Strefa czasowa (dla poprawnych oznaczeń czasowych w~analizie)
+    \item Język interfejsu (PL/EN)
+    \item Preferencje powiadomień
+  \end{itemize}
+\end{itemize}
+
+\subsection{Baza danych --- Supabase PostgreSQL}
+
+Kluczowe tabele:
+
+\begin{description}
+  \item[\tstype{users}] Profil użytkownika, plan subskrypcji, limity.
+  \item[\tstype{analyses}] Metadata analiz --- data, platforma, liczba wiadomości, uczestnicy (zanonimizowani), CPS.
+  \item[\tstype{analysis\_results}] Wyniki analiz --- metryki ilościowe (JSON), wyniki AI (JSON), odznaki, wyniki wiralne.
+  \item[\tstype{shared\_reports}] Anonimizowane raporty udostępnione publicznie --- bez cytatów, bez prawdziwych imion.
+  \item[\tstype{subscriptions}] Dane subskrypcji Stripe --- plan, status, data odnowienia.
+\end{description}
+
+\begin{warningbox}[title=Prywatność: surowe wiadomości NIE są przechowywane]
+Baza danych \textbf{nigdy} nie przechowuje treści wiadomości. Przechowywane są wyłącznie zagregowane metryki i~wyniki analizy AI. Plik uploadu jest usuwany z~Supabase Storage w~ciągu 1~godziny od zakończenia analizy.
+\end{warningbox}
+
+\subsection{Płatności --- Stripe}
+
+\begin{table}[H]
+\centering
+\caption{Model cenowy \podtekst}
+\label{tab:pricing-roadmap}
+\begin{tabularx}{\textwidth}{L{3cm}C{2cm}X}
+\toprule
+\textbf{Plan} & \textbf{Cena} & \textbf{Funkcjonalności} \\
+\midrule
+Free & 0~zł/mies. & 1~analiza/mies., tylko metryki ilościowe, brak AI, brak eksportu \\
+Pro & 9,99~\$/mies. & 10~analiz/mies., pełna analiza AI, eksport PDF, linki do udostępniania \\
+Unlimited & 24,99~\$/mies. & Bez limitu analiz, porównanie rozmów, dostęp API, priorytetowe przetwarzanie \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Implementacja Stripe obejmuje:
+\begin{itemize}
+  \item Stripe Checkout --- hosted payment page (minimalna integracja)
+  \item Stripe Customer Portal --- zarządzanie subskrypcją, anulowanie, zmiana planu
+  \item Webhook \filepath{/api/webhooks/stripe} --- obsługa zdarzeń: \texttt{checkout.session.completed}, \texttt{customer.subscription.updated}, \texttt{customer.subscription.deleted}, \texttt{invoice.payment\_failed}
+  \item Automatyczne przypisanie planu po płatności
+  \item Graceful degradation --- jeśli webhook nie dojdzie, polling Stripe API co 5~minut
+\end{itemize}
+
+\subsection{Limity i~rate limiting}
+
+\begin{itemize}
+  \item Rate limiting per user: max 5~analiz na godzinę (nawet w~planie Unlimited)
+  \item Rate limiting per IP: max 20~requestów/minutę na endpointy API
+  \item Maksymalny rozmiar pliku: 500~MB (z~ostrzeżeniem powyżej 200~MB)
+  \item Minimalna liczba wiadomości: 100 (z~ostrzeżeniem poniżej 500)
+  \item Timeout analizy AI: 5~minut na przejście, 20~minut łącznie
+\end{itemize}
+
+% ============================================================
+\section{Faza 3: Nowe platformy}
+\label{sec:faza3}
+% ============================================================
+
+Faza 3 rozszerza \podtekst o~parsery dla kolejnych platform komunikacyjnych, zwiększając rynek adresowalny.
+
+\subsection{Instagram DM}
+
+\begin{description}
+  \item[Status] \score{Gotowe}
+  \item[Format] JSON (eksport z~Centrum Kont Meta / Twoje Informacje)
+  \item[Parser] \filepath{src/lib/parsers/instagram.ts} --- pełna obsługa formatu Meta, dekodowanie Unicode, reakcje, łączenie wielu plików.
+\end{description}
+
+\subsection{Telegram}
+
+\begin{description}
+  \item[Status] \score{Gotowe}
+  \item[Format] JSON (eksport z~Telegram Desktop)
+  \item[Parser] \filepath{src/lib/parsers/telegram.ts} --- obsługa mieszanego tekstu (string/tablica), reakcji z~timestampem, wiadomości serwisowych, forwarded messages, sticker packs.
+\end{description}
+
+\subsection{Discord}
+
+\begin{description}
+  \item[Status] \score{Gotowe}
+  \item[Format] JSON z~Discord API (Bot token + Channel ID)
+  \item[Parser] \filepath{src/lib/parsers/discord.ts} --- parser API-based, import przez SSE z~paginacją, filtrowanie botów i~wiadomości systemowych. Dodatkowo 11~komend slash w~interaktywnym bocie.
+\end{description}
+
+\subsection{Microsoft Teams}
+
+\begin{description}
+  \item[Status] \danger{Planowany (Faza 5)}
+  \item[Format] JSON/HTML (eksport przez Teams admin lub GDPR request)
+  \item[Wyzwania] Kontekst korporacyjny wymaga innego podejścia do analizy --- mniej psychologicznej, bardziej ,,productivity-focused''. Spotkania, pliki, integracje z~innymi apkami Microsoft.
+  \item[Rynek] Segment B2B --- firmy analizujące komunikację zespołową.
+\end{description}
+
+% ============================================================
+\section{Faza 4: Funkcje społeczności}
+\label{sec:faza4}
+% ============================================================
+
+Faza 4 wprowadza mechaniki wieloosobowe, które transformują \podtekst z~narzędzia indywidualnego w~platformę społecznościową.
+
+\subsection{Couple Mode --- tryb pary}
+
+Najbardziej oczekiwana funkcja: oboje partnerzy analizują \textbf{tę samą rozmowę} i~widzą, jak ich perspektywy się różnią.
+
+\begin{itemize}
+  \item Partner A~uploaduje rozmowę i~generuje ,,invite link''
+  \item Partner B~klika link, uploaduje \textbf{swoją kopię tej samej rozmowy} (weryfikacja: porównanie hash'y timeline'u)
+  \item System generuje analizę porównawczą: jak każda strona widzi relację
+  \item Wspólny dashboard z~dwoma perspektywami
+  \item Opcjonalnie: wspólne ,,cele komunikacyjne'' oparte na wynikach analizy
+\end{itemize}
+
+\begin{infobox}[title=Wartość terapeutyczna]
+Couple Mode ma potencjał na integrację z~terapią par --- terapeuta może poprosić oboje partnerów o~analizę rozmowy przed sesją, a~wyniki \podtekst stają się punktem wyjścia do dyskusji. Wymaga to osobnej ścieżki ,,terapeuta'' z~dostępem do obu perspektyw.
+\end{infobox}
+
+\subsection{Team Features --- funkcje zespołowe}
+
+Rozszerzenie na kontekst grupowy i~organizacyjny:
+
+\begin{itemize}
+  \item \textbf{Analiza czatu grupowego z~perspektywą per osoba} --- każdy uczestnik widzi swoją rolę w~grupie, swoje metryki vs średnia grupy
+  \item \textbf{Network graph} --- wizualizacja, kto z~kim rozmawia najczęściej w~grupie, kliki, pomosty między podgrupami
+  \item \textbf{Team health score} --- odpowiednik CPS dla grup: równomierność udziału, inkluzywność, health of discussion patterns
+  \item \textbf{Group awards} --- rozbudowane odznaki grupowe: ,,CEO Czatu'', ,,Lurker'', ,,Peacemaker'', ,,Drama Queen''
+\end{itemize}
+
+\subsection{Shared Analyses --- współdzielone analizy}
+
+\begin{itemize}
+  \item Publiczne linki do zanonimizowanych raportów (imiona zastąpione przez ,,Osoba A'' / ,,Osoba B'')
+  \item Embedowalne widgety --- wynik CPS, radar osobowości, heatmapa --- do wstawienia na stronę lub blog
+  \item Porównanie anonimowe --- ,,Jak Twoja relacja wypada na tle 10,000 innych?'' (aggregate benchmarking)
+  \item Eksport do social media --- optymalizowane grafiki w~formacie 1080$\times$1920 (Stories), 1080$\times$1080 (post), 1920$\times$1080 (desktop)
+\end{itemize}
+
+% ============================================================
+\section{Faza 5: API i~enterprise}
+\label{sec:faza5}
+% ============================================================
+
+Faza 5 otwiera \podtekst dla deweloperów i~klientów biznesowych.
+
+\subsection{Public Developer API}
+
+\begin{description}
+  \item[Endpointy]
+  \begin{itemize}
+    \item \texttt{POST /api/v1/analyze} --- analiza pełna (upload + przetwarzanie)
+    \item \texttt{GET /api/v1/analysis/:id} --- pobranie wyników
+    \item \texttt{POST /api/v1/parse} --- samo parsowanie (bez AI)
+    \item \texttt{GET /api/v1/metrics/:id} --- same metryki ilościowe
+    \item \texttt{POST /api/v1/compare} --- analiza porównawcza dwóch rozmów
+  \end{itemize}
+
+  \item[Autentykacja] API key (bearer token), rate limiting per key.
+
+  \item[Formaty odpowiedzi] JSON, z~opcjonalnym \texttt{Accept: text/csv} dla surowych metryk.
+
+  \item[Webhooks] Powiadomienie na URL klienta po zakończeniu analizy (analiza AI trwa 1--5~minut).
+
+  \item[SDK] Oficjalne biblioteki klienckie: TypeScript/JavaScript (npm), Python (pip).
+\end{description}
+
+\subsection{Bulk Analysis}
+
+\begin{itemize}
+  \item Upload wielu rozmów w~jednym requeście (ZIP z~wieloma plikami JSON/TXT)
+  \item Kolejka przetwarzania z~priorytetyzacją
+  \item Eksport wyników jako CSV/Excel dla dalszej analizy
+  \item Dedykowany dashboard do śledzenia statusu przetwarzania wsadowego
+\end{itemize}
+
+\subsection{White-label}
+
+Oferta white-label dla firm i~instytucji:
+
+\begin{itemize}
+  \item Własne branding (logo, kolory, domena)
+  \item Dostosowane prompty AI (np.~focus na komunikację profesjonalną zamiast romantycznej)
+  \item Dedykowana instancja z~izolowanymi danymi
+  \item SLA (Service Level Agreement) z~gwarantowanym uptime i~czasem odpowiedzi
+  \item Integracja z~systemami HR (dla analizy komunikacji zespołowej)
+\end{itemize}
+
+% ============================================================
+\section{Internacjonalizacja}
+\label{sec:i18n}
+% ============================================================
+
+\subsection{Języki interfejsu}
+
+Planowana kolejność wdrażania lokalizacji:
+
+\begin{table}[H]
+\centering
+\caption{Harmonogram lokalizacji interfejsu}
+\label{tab:i18n-plan}
+\begin{tabularx}{\textwidth}{C{1cm}L{2.5cm}L{2cm}X}
+\toprule
+\textbf{Faza} & \textbf{Język} & \textbf{Termin} & \textbf{Uwagi} \\
+\midrule
+1 & Polski (PL) & \score{Gotowy} & Język domyślny MVP \\
+2 & Angielski (EN) & Q2 2026 & Kluczowy dla ekspansji, \#1 priorytet \\
+3 & Niemiecki (DE) & Q3 2026 & Duży rynek, diaspora polska \\
+4 & Hiszpański (ES) & Q4 2026 & Największy rynek latynoamerykański \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Implementacja techniczna i18n}
+
+\begin{itemize}
+  \item Framework: \texttt{next-intl} z~Server Components
+  \item Routing: \texttt{/pl/dashboard}, \texttt{/en/dashboard} --- locale w~URL
+  \item Pliki tłumaczeń: JSON w~\filepath{src/messages/\{locale\}.json}
+  \item Fallback: angielski, jeśli klucz tłumaczenia nie istnieje
+  \item Detekcja języka: \texttt{Accept-Language} header + manual override
+  \item Formatowanie dat, liczb, walut: \texttt{Intl} API z~locale-aware formatting
+\end{itemize}
+
+\subsection{Lokalizacja promptów AI}
+
+Kluczowe wyzwanie: prompty AI muszą być dostosowane do języka analizowanej rozmowy, nie do języka interfejsu. Użytkownik z~polskim UI może analizować rozmowę po angielsku i~odwrotnie.
+
+\begin{description}
+  \item[Detekcja języka] Automatyczna detekcja języka rozmowy na podstawie próbki 100~wiadomości (biblioteka \texttt{franc} lub analiza n-gramów).
+
+  \item[Prompty wielojęzyczne] Osobne wersje promptów systemowych dla każdego obsługiwanego języka rozmowy. Prompt instruuje model AI, by:
+  \begin{itemize}
+    \item Analizował w~języku rozmowy
+    \item Odpowiadał w~języku interfejsu użytkownika
+    \item Cytował oryginalne fragmenty w~języku źródłowym
+  \end{itemize}
+
+  \item[Kontekst kulturowy] Prompty uwzględniają różnice kulturowe w~komunikacji --- np.~polska bezpośredniość vs angielska grzeczność, hiszpańska ekspresyjność vs niemiecka formalność. To wpływa na interpretację tonu i~stylu.
+\end{description}
+
+\subsection{Wyzwania lokalizacyjne}
+
+\begin{warningbox}[title=Znane wyzwania]
+\begin{itemize}
+  \item \textbf{Nazwy odznak} --- humorystyczne odznaki (,,Duch Czatu'', ,,Nocna Sowa'') wymagają kreatywnego tłumaczenia, nie dosłownego. Każdy język potrzebuje native speakera do lokalizacji.
+  \item \textbf{Tryb Roast} --- humor jest kulturowo specyficzny. Roast po polsku brzmi inaczej niż po angielsku. Wymagane osobne prompty per język.
+  \item \textbf{Tytuły sekcji} --- np.~,,Wynik Zdrowia Relacji'' --- muszą być zwięzłe i~zrozumiałe w~każdym języku.
+  \item \textbf{Formaty dat i~walut} --- parser musi obsługiwać lokalne formaty dat w~eksportach (DD.MM.YYYY vs MM/DD/YYYY vs YYYY-MM-DD).
+\end{itemize}
+\end{warningbox}
+
+\subsection{Mapa rozwoju --- podsumowanie wizualne}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  phase/.style={
+    draw=PodBlue!60,
+    fill=PodBlue!8,
+    rounded corners=6pt,
+    minimum height=1.4cm,
+    minimum width=3.2cm,
+    align=center,
+    font=\small\bfseries,
+    text=PodBlueDark,
+  },
+  phase done/.style={
+    phase,
+    draw=PodSuccess!60,
+    fill=PodSuccess!8,
+    text=PodSuccess!80!black,
+  },
+  phase active/.style={
+    phase,
+    draw=PodWarning!60,
+    fill=PodWarning!8,
+    text=PodWarning!80!black,
+  },
+]
+  % Phase boxes
+  \node[phase done] (p1) at (0, 0) {Faza 1\\MVP};
+  \node[phase active] (p2) at (3.8, 0) {Faza 2\\Auth + Pay};
+  \node[phase] (p3) at (7.6, 0) {Faza 3\\Platformy};
+  \node[phase] (p4) at (3.8, -2.5) {Faza 4\\Społeczność};
+  \node[phase] (p5) at (7.6, -2.5) {Faza 5\\API + B2B};
+  \node[phase] (i18n) at (0, -2.5) {i18n\\Lokalizacja};
+
+  % Arrows
+  \draw[podarrow] (p1) -- (p2);
+  \draw[podarrow] (p2) -- (p3);
+  \draw[podarrow] (p3) -- (p5);
+  \draw[podarrow] (p2) -- (p4);
+  \draw[podarrow] (p4) -- (p5);
+  \draw[podarrow] (p1) -- (i18n);
+  \draw[podarrow dashed] (i18n) -- (p4);
+
+  % Status labels
+  \node[font=\scriptsize, text=PodSuccess, anchor=north] at (p1.south) {\score{Ukończona}};
+  \node[font=\scriptsize, text=PodWarning, anchor=north] at (p2.south) {\warn{W toku}};
+  \node[font=\scriptsize, text=PodTextMuted, anchor=north] at (p3.south) {Q2--Q3 2026};
+  \node[font=\scriptsize, text=PodTextMuted, anchor=south] at (p4.north) {Q3--Q4 2026};
+  \node[font=\scriptsize, text=PodTextMuted, anchor=south] at (p5.north) {2027};
+  \node[font=\scriptsize, text=PodTextMuted, anchor=north] at (i18n.south) {Ciągły};
+
+\end{tikzpicture}
+\caption{Mapa rozwoju \podtekst --- fazy i~zależności}
+\label{fig:roadmap}
+\end{figure}
+
+\section{Zrealizowane funkcje (Faza 19--20)}
+\label{sec:faza-19-20}
+% ============================================================
+
+Fazy 19--20 wprowadzają nowe tryby rozrywkowe oparte na AI, walidację runtime'ową oraz hardening bezpieczeństwa. Poniżej podsumowanie czterech kluczowych dostarczeń.
+
+\subsection{Dekoder Podtekstów (Subtext Decoder)}
+
+Moduł analizy AI dekodujący ukryte znaczenia w~wiadomościach. System identyfikuje 12~kategorii podtekstów (\secref{subsec:subtext-category}) i~prezentuje wyniki w~karuzeli interaktywnych kart z~podsumowaniem statystycznym.
+
+\begin{description}
+  \item[Architektura] Ekstrakcja okien kontekstowych (\tstype{ExchangeWindow}) z~rozmowy $\rightarrow$ przetwarzanie wsadowe przez \gemini $\rightarrow$ agregacja w~\tstype{SubtextResult}. Wiadomości dobierane na podstawie długości, obecności reakcji i~zmian tonu.
+
+  \item[Zakres implementacji] 6~plików, $\sim$1840~LOC łącznie:
+  \begin{itemize}
+    \item \filepath{src/lib/analysis/subtext.ts} --- logika ekstrakcji okien, sampling, typy
+    \item \filepath{src/app/api/analyze/subtext/route.ts} --- endpoint API ze streamingiem SSE
+    \item \filepath{src/components/analysis/SubtextDecoder.tsx} --- komponent UI (karuzela + podsumowanie)
+    \item \filepath{src/hooks/useSubtextAnalysis.ts} --- hook React do zarządzania stanem analizy
+    \item Integracja z~istniejącym pipeline'em na stronie analizy
+  \end{itemize}
+
+  \item[Cechy kluczowe] 12~kategorii podtekstów, wskaźnik pewności AI (0--100), ranking ,,największe odkrycie'', bilans ukrytych emocji per osoba, wynik ,,zwodniczości'' (deception score).
+\end{description}
+
+\subsection{Twój Chat w~Sądzie (Chat Court)}
+
+Tryb satyryczny generujący pełny proces sądowy na podstawie wzorców komunikacyjnych. AI pełni rolę prokuratora, obrońcy i~sędziego.
+
+\begin{description}
+  \item[Architektura] Endpoint API przyjmuje sparametryzowane dane rozmowy $\rightarrow$ \gemini generuje zarzuty, mowy stron i~wyrok w~formacie JSON $\rightarrow$ frontend renderuje jako stylizowany dokument sądowy.
+
+  \item[Zakres implementacji] 2~pliki główne:
+  \begin{itemize}
+    \item \filepath{src/app/api/analyze/court/route.ts} --- endpoint API
+    \item \filepath{src/components/analysis/ChatCourt.tsx} --- komponent UI z~animacjami
+  \end{itemize}
+
+  \item[Cechy kluczowe] Fikcyjne artykuły ,,Kodeksu Komunikacji'', trzy poziomy powagi (wykroczenie, występek, zbrodnia), mugshot labels, wyroki z~satyrycznymi karami.
+\end{description}
+
+\subsection{Walidacja Zod}
+
+Wdrożenie walidacji runtime'owej schematami Zod dla wszystkich 7~endpointów API (\secref{sec:zod-types}). Schematy walidują zarówno dane wejściowe od klienta, jak i~(opcjonalnie) strukturę wyjścia z~modelu AI.
+
+\begin{itemize}
+  \item Zamknięcie wektora prompt injection --- pole \texttt{relationshipContext} akceptuje wyłącznie wartości z~enumeracji (\texttt{romantic}, \texttt{friendship}, itd.), eliminując dowolne ciągi tekstowe
+  \item Walidacja limitów: \texttt{windowCount} 1--20, \texttt{messages} z~limitem długości
+  \item Czytelne komunikaty błędów zwracane jako HTTP 400 z~opisem naruszonych reguł
+\end{itemize}
+
+\subsection{Security Hardening}
+
+Uzupełniające zmiany bezpieczeństwa:
+
+\begin{itemize}
+  \item Walidacja enum-only dla \texttt{relationshipContext} na wszystkich endpointach
+  \item Usunięcie \tsfunc{console.error()} z~kodu produkcyjnego --- zastąpione przez strukturowane logowanie z~filtrowaniem treści wiadomości
+  \item Sanityzacja danych wejściowych przed przekazaniem do promptów AI
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Status funkcji --- Fazy 19--20}
+\label{tab:faza-19-20-status}
+\begin{tabularx}{\textwidth}{L{4.5cm}C{1.5cm}C{1.5cm}X}
+\toprule
+\textbf{Funkcja} & \textbf{LOC} & \textbf{Status} & \textbf{Uwagi} \\
+\midrule
+Dekoder Podtekstów & $\sim$1840 & \score{Gotowe} & 6~plików, 12~kategorii, streaming SSE \\
+Chat Court & $\sim$620 & \score{Gotowe} & 2~pliki, pełny pipeline API$\rightarrow$UI \\
+Walidacja Zod & $\sim$280 & \score{Gotowe} & 7~schematów, 7~endpointów \\
+Security Hardening & $\sim$150 & \score{Gotowe} & Enum validation, console cleanup \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Zrealizowane funkcje rozrywkowe (Faza 20)}
+\label{sec:faza-20-plus}
+% ============================================================
+
+\begin{description}
+  \item[Status] \score{Zrealizowane} (luty 2026)
+\end{description}
+
+Trzy tryby rozrywkowe zaimplementowane w~ramach Fazy~20. Wszystkie wykorzystują istniejące dane z~\tstype{QuantitativeAnalysis} i/lub model \gemini. Każdy tryb posiada dedykowany endpoint API, komponent UI oraz kartę do udostępniania.
+
+\subsection{Stawiam Zakład (Delusion Quiz)}
+
+Quiz składający się z~15~pytań o~własną rozmowę --- użytkownik zgaduje swoje statystyki, a~system porównuje odpowiedzi z~rzeczywistością. Zrealizowano w~568~LOC.
+
+\begin{description}
+  \item[Przykładowe pytania] ,,Ile procent rozmów inicjujesz?'', ,,Jaki jest Twój średni czas odpowiedzi?'', ,,Kto wysyła więcej emoji?''
+  \item[Wyniki] Self-Awareness Score (0--100, jak dobrze znasz swoją rozmowę) + Delusion Index (0--100, jak bardzo się mylisz)
+  \item[Architektura] \textbf{Zero AI} --- 100\% client-side, bazuje wyłącznie na istniejących danych z~\tstype{QuantitativeAnalysis}. Nie wymaga wywołań API.
+  \item[Status] \score{Gotowe}
+  \item[Pliki] \filepath{src/components/analysis/DelusionQuiz.tsx}, \filepath{src/lib/analysis/delusion-quiz.ts}, \filepath{src/components/share-cards/DelusionCard.tsx}
+\end{description}
+
+\subsection{Symulator Odpowiedzi (Reply Simulator)}
+
+AI odpowiada w~stylu drugiej osoby --- użytkownik pisze wiadomość, a~model generuje odpowiedź naśladującą słownictwo, długość wiadomości, użycie emoji i~czas odpowiedzi partnera. Zrealizowano w~358~LOC.
+
+\begin{description}
+  \item[Mechanika] Maksymalnie 5~wymian zdań. Model otrzymuje profil komunikacyjny osoby (z~Pass~3) + próbkę jej wiadomości jako few-shot examples.
+  \item[Dane wejściowe] Vocabulary profile, średnia długość wiadomości, top emoji, catchphrases, styl komunikacji z~\tstype{CommunicationProfile}.
+  \item[Architektura] Dedykowany endpoint \filepath{/api/analyze/simulate} ze streamingiem odpowiedzi, limit 5~tur konwersacji.
+  \item[Status] \score{Gotowe}
+  \item[Pliki] \filepath{src/components/analysis/ReplySimulator.tsx}, \filepath{src/lib/analysis/simulator-prompts.ts}, \filepath{src/components/share-cards/SimulatorCard.tsx}
+\end{description}
+
+\subsection{Szczery Profil Randkowy (Honest Dating Profile)}
+
+AI generuje brutalnie szczery profil na Tinder/Hinge na podstawie wzorców komunikacyjnych --- kontrast między tym, co osoba napisałaby sama, a~tym, co mówią dane. Zrealizowano w~253~LOC.
+
+\begin{description}
+  \item[Sekcje profilu] Bio (3 zdania), ,,Szukam'' (3 bullet pointy), ,,Moje red flagi'' (z~analizy), ,,Moje green flagi'' (z~analizy), ,,Prawdopodobieństwo odpowiedzi'' (z~timing metrics).
+  \item[Dane wejściowe] Wyniki Pass~1--4, ViralScores (ghostRisk, interestScores), PersonProfile (attachment style, communication needs), PatternMetrics (initiation ratio, response time).
+  \item[Architektura] Endpoint \filepath{/api/analyze/dating-profile} z~jednym przejściem \gemini, wynik renderowany jako karta w~stylu aplikacji randkowej.
+  \item[Status] \score{Gotowe}
+  \item[Pliki] \filepath{src/components/analysis/DatingProfileButton.tsx}, \filepath{src/components/analysis/DatingProfileResult.tsx}, \filepath{src/lib/analysis/dating-profile-prompts.ts}, \filepath{src/components/share-cards/DatingProfileCard.tsx}
+\end{description}
+
+\begin{table}[H]
+\centering
+\caption{Zrealizowane funkcje rozrywkowe --- zestawienie}
+\label{tab:faza-20-plus-plan}
+\begin{tabularx}{\textwidth}{L{3.5cm}C{1.2cm}C{1.5cm}C{1.5cm}C{1.5cm}X}
+\toprule
+\textbf{Funkcja} & \textbf{AI?} & \textbf{Status} & \textbf{LOC} & \textbf{Priorytet} & \textbf{Zależności} \\
+\midrule
+Stawiam Zakład & Nie & \score{Gotowe} & 568 & \score{Wysoki} & QuantitativeAnalysis \\
+Symulator Odpowiedzi & Tak & \score{Gotowe} & 358 & \warn{Średni} & Pass~3, CommunicationProfile \\
+Szczery Profil Randkowy & Tak & \score{Gotowe} & 253 & \score{Wysoki} & Pass~1--4, ViralScores \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+% ============================================================
+\section{Faza 21: Polish \& Deploy}
+\label{sec:faza-21}
+
+\begin{description}
+  \item[Status] \score{Zrealizowane} (luty 2026)
+\end{description}
+
+\begin{itemize}
+  \item Mobile landing page --- diagonalny hero text z~animacją skew, CTA przypiętym do dołu
+  \item ScrollProgress bar --- gradientowy pasek postępu (blue→purple→green) na górze strony
+  \item Fix overflow w~Timeline (LandingHowItWorks mobile)
+  \item Deploy na Google Cloud Run (europe-west1, Docker standalone)
+\end{itemize}
+
+\section{Faza 22--23: Discord Bot}
+\label{sec:faza-22-23}
+
+\begin{description}
+  \item[Status] \score{Zrealizowane} (luty 2026)
+\end{description}
+
+\begin{itemize}
+  \item Discord Bot API --- import wiadomości z~kanału przez token bota
+  \item Parser Discord --- \filepath{src/lib/parsers/discord.ts} (API $\to$ \tstype{ParsedConversation})
+  \item 11 slash commands: \texttt{stats}, \texttt{versus}, \texttt{whosimps}, \texttt{ghostcheck}, \texttt{besttime}, \texttt{catchphrase}, \texttt{emoji}, \texttt{nightowl}, \texttt{ranking}, \texttt{roast}, \texttt{personality}
+  \item HTTP interactions z~weryfikacją Ed25519 (bez WebSocket)
+  \item In-memory channel cache (1h TTL, 50 wpisów LRU)
+  \item Komendy AI z~deferred response + webhook follow-up
+  \item Server View (5+ uczestników) --- PersonNavigator, ServerLeaderboard, PairwiseComparison, ServerOverview
+\end{itemize}
+
+
+% ============================================================
+\section{TIER Improvements}
+\label{sec:tier-improvements}
+% ============================================================
+
+Seria usprawnień jakościowych zrealizowanych w~ramach audytu technicznego. Każdy TIER obejmuje zestaw powiązanych zmian poprawiających bezpieczeństwo, udostępnianie, analitykę, testowanie lub architekturę kodu.
+
+\begin{table}[H]
+\centering
+\caption{Zrealizowane usprawnienia TIER}
+\label{tab:tier-improvements}
+\begin{tabularx}{\textwidth}{C{1.8cm}L{4.5cm}C{1.8cm}X}
+\toprule
+\textbf{TIER} & \textbf{Opis} & \textbf{Status} & \textbf{Kluczowe pliki} \\
+\midrule
+1.3--1.6 & Nagłówki CSP, optymalizacja wydajności & \score{Gotowe} & \filepath{next.config.ts}, \filepath{middleware.ts} \\
+2.1--2.3 & Publiczne linki share, social sharing & \score{Gotowe} & \filepath{src/lib/share/encode.ts}, \filepath{/share/[data]/page.tsx} \\
+2.4--2.6 & Percentyle, viral CTA, referral tracking & \score{Gotowe} & \filepath{src/lib/analytics/events.ts} \\
+3.1+3.4 & Vitest test suite + CI/CD pipeline & \score{Gotowe} & \filepath{vitest.config.ts}, \filepath{.github/workflows/} \\
+3.3 & Refaktoryzacja \filepath{quantitative.ts} na submoduły & \score{Gotowe} & \filepath{src/lib/analysis/quant/} \\
+\bottomrule
+\end{tabularx}
+\end{table}

@@ -16,6 +16,7 @@ import type {
     RoastResult,
     StandUpRoastResult,
     MegaRoastResult,
+    CwelTygodniaResult,
 } from './types';
 import {
     PASS_1_SYSTEM,
@@ -27,6 +28,7 @@ import {
     ENHANCED_ROAST_SYSTEM,
     STANDUP_ROAST_SYSTEM,
     MEGA_ROAST_SYSTEM,
+    CWEL_TYGODNIA_SYSTEM,
     formatMessagesForAnalysis,
     SUBTEXT_SYSTEM,
     formatWindowsForSubtext,
@@ -336,24 +338,34 @@ export async function runAnalysisPasses(
         result.pass2 = pass2;
         result.currentPass = 3;
 
-        // Pass 3: Individual profiles — all participants in parallel
+        // Pass 3: Individual profiles — only for participants with sampled messages
+        // For large groups, perPerson is already capped to top 8 by sampleMessages()
         onProgress(3, 'Building individual personality profiles...');
-        const pass3Entries = await Promise.all(
-            participants.map(async (name) => {
-                const personMessages = samples.perPerson[name];
-                if (!personMessages || personMessages.length === 0) return [name, null] as const;
+        const profilingNames = participants.filter(name => samples.perPerson[name]?.length > 0);
 
-                const pass3Input = buildRelationshipPrefix(relationshipContext) + formatMessagesForAnalysis(personMessages);
-                const pass3Raw = await callGeminiWithRetry(
-                    PASS_3_SYSTEM,
-                    `Analyze messages from: ${name}\n\n${pass3Input}`,
-                );
-                return [name, parseGeminiJSON<PersonProfile>(pass3Raw)] as const;
-            })
-        );
+        // Batch pass3 calls in groups of 4 to avoid Gemini rate limits
+        const BATCH_SIZE = 4;
         const pass3: Record<string, PersonProfile> = {};
-        for (const [name, profile] of pass3Entries) {
-            if (profile) pass3[name] = profile;
+        for (let i = 0; i < profilingNames.length; i += BATCH_SIZE) {
+            const batch = profilingNames.slice(i, i + BATCH_SIZE);
+            const settled = await Promise.allSettled(
+                batch.map(async (name) => {
+                    const personMessages = samples.perPerson[name];
+                    const pass3Input = buildRelationshipPrefix(relationshipContext) + formatMessagesForAnalysis(personMessages);
+                    const pass3Raw = await callGeminiWithRetry(
+                        PASS_3_SYSTEM,
+                        `Analyze messages from: ${name}\n\n${pass3Input}`,
+                    );
+                    return [name, parseGeminiJSON<PersonProfile>(pass3Raw)] as const;
+                })
+            );
+            for (const entry of settled) {
+                if (entry.status === 'fulfilled') {
+                    const [name, profile] = entry.value;
+                    if (profile) pass3[name] = profile;
+                }
+                // Rejected entries are silently skipped — partial profiles OK
+            }
         }
         result.pass3 = pass3;
         result.currentPass = 4;
@@ -484,6 +496,34 @@ ${formatMessagesForAnalysis(samples.overview)}`;
 
     const raw = await callGeminiWithRetry(MEGA_ROAST_SYSTEM, input, 3, 8192);
     return parseGeminiJSON<MegaRoastResult>(raw);
+}
+
+// ============================================================
+// Public: Cwel Tygodnia — AI-first group chat award ceremony
+// ============================================================
+
+export async function runCwelTygodnia(
+    samples: AnalysisSamples,
+    participants: string[],
+    quantitativeContext: string,
+): Promise<CwelTygodniaResult> {
+    const perPersonSections = participants.map(name => {
+        const msgs = samples.perPerson[name] ?? [];
+        if (msgs.length === 0) return '';
+        return `\n=== WIADOMOŚCI: ${name} (${msgs.length} próbek) ===\n${formatMessagesForAnalysis(msgs)}`;
+    }).filter(Boolean).join('\n');
+
+    const input = `PARTICIPANTS: ${participants.join(', ')}
+
+=== WIADOMOŚCI GRUPOWE (czytaj uważnie — z tego oceniasz) ===
+${formatMessagesForAnalysis(samples.overview)}
+${perPersonSections}
+
+=== DANE ILOŚCIOWE (kontekst wspierający) ===
+${quantitativeContext}`;
+
+    const raw = await callGeminiWithRetry(CWEL_TYGODNIA_SYSTEM, input, 3, 8192);
+    return parseGeminiJSON<CwelTygodniaResult>(raw);
 }
 
 // ============================================================

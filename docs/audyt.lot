@@ -1,0 +1,64 @@
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {1.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Metryki strony analizy --- stan obecny}}{2}{table.caption.3}%
+\contentsline {table}{\numberline {1.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Proponowana architektura tabowa strony analizy}}{3}{table.caption.5}%
+\contentsline {table}{\numberline {1.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Model cenowy --- porównanie tierów}}{4}{table.caption.11}%
+\contentsline {table}{\numberline {1.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Strategia wiralowa --- karty share}}{6}{table.caption.18}%
+\contentsline {table}{\numberline {1.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Projekcja przychodów (12 miesięcy)}}{7}{table.caption.19}%
+\contentsline {table}{\numberline {1.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kanały akwizycji --- charakterystyka i~szacunkowy CAC}}{8}{table.caption.21}%
+\contentsline {table}{\numberline {1.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Trzy scenariusze wzrostu --- budżet, kanały, prognoza MAU}}{9}{table.caption.23}%
+\contentsline {table}{\numberline {1.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Prognoza biznesowa --- scenariusz B (Lean Startup, 2\,000--5\,000~PLN/mies)}}{10}{table.caption.25}%
+\contentsline {table}{\numberline {1.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Porównanie: projekcja modelowa vs prognoza ze strategią}}{11}{table.caption.27}%
+\contentsline {table}{\numberline {1.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Macierz ryzyk strategii akwizycji}}{11}{table.caption.29}%
+\contentsline {table}{\numberline {1.11}{\ignorespaces \xpg@aux {}{polish}\ignorespaces IntersectionObserver --- rozkład instancji}}{13}{table.caption.34}%
+\contentsline {table}{\numberline {1.12}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komponenty wymagające React.memo}}{13}{table.caption.39}%
+\contentsline {table}{\numberline {1.13}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Konfiguracja modelu Gemini w~\textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{15}{table.caption.46}%
+\contentsline {table}{\numberline {1.14}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Szacunkowa liczba tokenów promptów systemowych}}{16}{table.caption.47}%
+\contentsline {table}{\numberline {1.15}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wywołania API Gemini per scenariusz analizy}}{16}{table.caption.48}%
+\contentsline {table}{\numberline {1.16}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Cennik Gemini API w~\textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace (PLN, luty 2026)}}{17}{table.caption.49}%
+\contentsline {table}{\numberline {1.17}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Koszt API per analiza --- scenariusze (PLN)}}{17}{table.caption.50}%
+\contentsline {table}{\numberline {1.18}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Analiza marginu per tier i~scenariusz użycia (PLN)}}{18}{table.caption.51}%
+\contentsline {table}{\numberline {1.19}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kontekst cenowy --- polski rynek consumer SaaS}}{18}{table.caption.52}%
+\contentsline {table}{\numberline {1.20}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Break-even: maksymalna liczba analiz per tier przy 0\% marginu (PLN)}}{19}{table.caption.54}%
+\contentsline {table}{\numberline {1.21}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wpływ prompt cachingu na koszt podstawowej analizy (PLN)}}{19}{table.caption.55}%
+\contentsline {table}{\numberline {1.22}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Rekomendowane limity tierów (PLN)}}{21}{table.caption.61}%
+\contentsline {table}{\numberline {1.23}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Projekcja przychodów --- scenariusz modelowy, niewalidowany (PLN)}}{21}{table.caption.62}%
+\contentsline {table}{\numberline {1.24}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Priorytety optymalizacji kosztów AI}}{22}{table.caption.63}%
+\contentsline {table}{\numberline {1.25}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Inwentarz walidacji Zod per endpoint --- problemy}}{24}{table.caption.66}%
+\contentsline {table}{\numberline {1.26}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Nagłówki bezpieczeństwa --- obecne vs brakujące}}{25}{table.caption.67}%
+\contentsline {table}{\numberline {1.27}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Checklist zgodności z~RODO --- stan na luty 2026}}{28}{table.caption.75}%
+\contentsline {table}{\numberline {1.28}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Podatności jsPDF 4.1.0}}{29}{table.caption.77}%
+\contentsline {table}{\numberline {1.29}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Priorytety napraw bezpieczeństwa}}{31}{table.caption.82}%
+\contentsline {table}{\numberline {1.30}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Breakpointy Tailwind v4 --- wykorzystanie w~projekcie}}{32}{table.caption.83}%
+\contentsline {table}{\numberline {1.31}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Dopasowanie tabow na ekranie 375\,px}}{32}{table.caption.85}%
+\contentsline {table}{\numberline {1.32}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Audyt celow dotykowych --- zgodnosc z~WCAG~2.5.8}}{33}{table.caption.86}%
+\contentsline {table}{\numberline {1.33}{\ignorespaces \xpg@aux {}{polish}\ignorespaces IntersectionObserver --- rozklad na stronie analizy (wszystkie zrodla)}}{34}{table.caption.88}%
+\contentsline {table}{\numberline {1.34}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Znane problemy html2canvas na Safari/iOS}}{35}{table.caption.90}%
+\contentsline {table}{\numberline {1.35}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kompatybilnosc uploadu na platformach mobilnych}}{35}{table.caption.91}%
+\contentsline {table}{\numberline {1.36}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Ocena nawigacji mobilnej}}{36}{table.caption.92}%
+\contentsline {table}{\numberline {1.37}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Dane demo --- zawartosc i~wykorzystanie}}{38}{table.caption.97}%
+\contentsline {table}{\numberline {1.38}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Stany ladowania analizy AI}}{39}{table.caption.100}%
+\contentsline {table}{\numberline {1.39}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Brakujace elementy onboardingu --- checklist}}{39}{table.caption.101}%
+\contentsline {table}{\numberline {1.40}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Mechanizmy retencji --- stan obecny vs idealny}}{40}{table.caption.103}%
+\contentsline {table}{\numberline {1.41}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Punkty tarcia uszeregowane wg wplywu na konwersje}}{41}{table.caption.106}%
+\contentsline {table}{\numberline {1.42}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Scorecard jakości kodu \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{42}{table.caption.107}%
+\contentsline {table}{\numberline {1.43}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Istniejące pliki testowe}}{44}{table.caption.110}%
+\contentsline {table}{\numberline {1.44}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Moduły bez testów --- analiza luk}}{44}{table.caption.112}%
+\contentsline {table}{\numberline {1.45}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Podatności bezpieczeństwa --- \texttt {pnpm audit}}}{45}{table.caption.114}%
+\contentsline {table}{\numberline {1.46}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wzorce obsługi błędów w~\textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{46}{table.caption.116}%
+\contentsline {table}{\numberline {1.47}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Rozkład \texttt {\textcolor {CodeType}{console.error}} po plikach}}{46}{table.caption.118}%
+\contentsline {table}{\numberline {1.48}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Porównanie parserów --- architektura i~metryki}}{47}{table.caption.119}%
+\contentsline {table}{\numberline {1.49}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Konwencje nazewnicze --- audyt spójności}}{48}{table.caption.121}%
+\contentsline {table}{\numberline {1.50}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Audyt metadanych SEO --- \texttt {\small \add@extra@listi {sml}\color {PodTextSecondary}layout.tsx}}}{49}{table.caption.122}%
+\contentsline {table}{\numberline {1.51}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Strony w~sitemap.xml}}{50}{table.caption.125}%
+\contentsline {table}{\numberline {1.52}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Fonty ładowane w~\texttt {\small \add@extra@listi {sml}\color {PodTextSecondary}layout.tsx} --- analiza rozmiaru}}{51}{table.caption.126}%
+\contentsline {table}{\numberline {1.53}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Audyt użycia obrazów --- \texttt {\textcolor {CodeType}{next/image}} vs \texttt {\textcolor {CodeType}{<img>}}}}{52}{table.caption.129}%
+\contentsline {table}{\numberline {1.54}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Proporcja Client vs Server Components}}{52}{table.caption.130}%
+\contentsline {table}{\numberline {1.55}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Optymalizacje bundla --- stan obecny}}{53}{table.caption.133}%
+\contentsline {table}{\numberline {1.56}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Rekomendacje SEO i~performance --- uporządkowane wg wpływu}}{55}{table.caption.136}%
+\contentsline {table}{\numberline {1.57}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Skonsolidowane metryki docelowe --- wszystkie 9 osi audytu}}{56}{table.caption.137}%
+\contentsline {table}{\numberline {1.58}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Sprint 0 --- naprawy bezpieczeństwa (P0, bez zmian architektonicznych)}}{57}{table.caption.138}%
+\contentsline {table}{\numberline {1.59}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Sprint 1 --- przebudowa architektury strony analizy}}{57}{table.caption.139}%
+\contentsline {table}{\numberline {1.60}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Sprint 2 --- zadania P1 (ważne)}}{58}{table.caption.140}%
+\contentsline {table}{\numberline {1.61}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Sprint 3 --- zadania P1/P2 (wydajność i~jakość kodu)}}{58}{table.caption.141}%
+\contentsline {table}{\numberline {1.62}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Sprint 4 --- zadania P2 (optymalizacja zaawansowana)}}{59}{table.caption.142}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

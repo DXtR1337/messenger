@@ -1,0 +1,202 @@
+% ============================================================
+% AKTUALIZACJA: Rozdział 8 — nowe komponenty interfejsu
+% Wstawić po sekcji Dostępność (linia ~899 ch08-interfejs.tex)
+% ============================================================
+
+\section{Nowe komponenty: Translator Podtekstów}
+\label{sec:subtext-decoder-ui}
+
+Translator Podtekstów to moduł analizy AI dekodujący ukryte znaczenia wiadomości. Składa się z~dwóch komponentów: interaktywnego dekodera (\texttt{SubtextDecoder}) osadzonego w~stronie analizy oraz karty udostępniania (\texttt{SubtextCard}) w~galerii Share Cards.
+
+\subsection{SubtextDecoder.tsx}
+\label{subsec:subtext-decoder}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/SubtextDecoder.tsx} (339~LOC)
+  \item[Typ propsów] \tstype{SubtextDecoderProps}:
+\end{description}
+
+\begin{lstlisting}[style=podcode]
+interface SubtextDecoderProps {
+  subtextResult?: SubtextResult;
+  onRunSubtext: () => Promise<void>;
+  isLoading: boolean;
+  progress: number;
+  canRun: boolean;
+  error?: string | null;
+}
+\end{lstlisting}
+
+Komponent działa w~trzech stanach: \textbf{(1)}~przycisk uruchomienia (gdy analiza nie została jeszcze wykonana), \textbf{(2)}~pasek postępu z~animacją gradientową \texttt{purple-600}$\to$\texttt{pink-500}, \textbf{(3)}~pełne wyniki z~listą zdekodowanych wiadomości.
+
+\subsubsection{Sub-komponenty}
+
+\begin{description}
+  \item[\tsfunc{CategoryBadge()}] Kolorowa pigułka (\textit{pill}) z~emoji i~polską etykietą kategorii. Kolory tła i~obramowania generowane dynamicznie z~palety \tstype{CATEGORY\_META} --- 12~kategorii: \textit{deflection}, \textit{hidden\_anger}, \textit{seeking\_validation}, \textit{power\_move}, \textit{genuine}, \textit{testing}, \textit{guilt\_trip}, \textit{passive\_aggressive}, \textit{love\_signal}, \textit{insecurity}, \textit{distancing}, \textit{humor\_shield}.
+
+  \item[\tsfunc{SubtextItemCard()}] Rozwijalna karta prezentująca parę: oryginalna wiadomość $\to$ zdekodowany podtekst. Nagłówek zawiera nadawcę, timestamp, badge kategorii oraz opcjonalny marker \texttt{WOW} (dla \tskey{isHighlight = true}). Sekcja kontekstu jest składana --- kliknięcie rozwija listę okolicznych wiadomości (\tskey{surroundingMessages}). Animacja wejścia: \texttt{framer-motion} z~opóźnieniem \tskey{delay = min(index * 0.05, 1s)} --- efekt kaskadowego pojawiania się kart.
+
+  \item[\tsfunc{SummaryStrip()}] Pasek podsumowania nad listą wyników. Zawiera:
+    \begin{itemize}
+      \item \textbf{Deception score} per osoba --- animowany pasek postępu z~kolorami: \score{$\leq$40\%}, \warn{40--60\%}, \danger{$>$60\%}.
+      \item \textbf{Top 5 kategorii} --- lista badges z~liczbą wystąpień.
+      \item \textbf{Biggest Reveal} --- wyróżniona karta z~obramowaniem \tskey{amber-500/30} prezentująca najbardziej zaskakujące odkrycie.
+    \end{itemize}
+\end{description}
+
+Domyślnie wyświetlanych jest 10~elementów; przycisk ,,Pokaż wszystkie'' rozwija pełną listę. Pod wynikami wyświetlany jest \tskey{disclaimer} z~informacją o~rozrywkowym charakterze analizy.
+
+\subsection{SubtextCard.tsx}
+\label{subsec:subtext-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/share-cards/SubtextCard.tsx} (177~LOC)
+  \item[Typ propsów] \tstype{SubtextCardProps}: \tskey{subtextResult: SubtextResult}, \tskey{participants: string[]}
+\end{description}
+
+Karta udostępniania osadzona w~\tsfunc{ShareCardShell()} z~gradientem:
+
+\begin{lstlisting}[style=podcode]
+gradient="linear-gradient(160deg, #0a0a1a 0%,
+  #1a0528 30%, #0d0b2e 60%, #080818 100%)"
+\end{lstlisting}
+
+\noindent Struktura wizualna:
+
+\begin{enumerate}
+  \item \textbf{Tytuł} --- ,,Translator Podtekstów'' z~gradientem tekstowym \tskey{purple $\to$ pink} (font Syne, 800 weight).
+  \item \textbf{Top 4 elementy} --- wybierane priorytetowo: najpierw \tskey{isHighlight}, potem najwyższy \tskey{confidence}. Każdy element to zaokrąglona karta z~obramowaniem w~kolorze kategorii, zawierająca: nadawcę, badge kategorii, oryginalną wiadomość (max 2~linie, \tskey{-webkit-line-clamp}), strzałkę~$\blacktriangledown$ oraz zdekodowany podtekst (pogrubiony, 0.9~opacity).
+  \item \textbf{Stopka} --- \tskey{deceptionScore} per uczestnik: wartość procentowa w~kolorze \score{zielonym}/\warn{pomarańczowym}/\danger{czerwonym} z~podpisem ,,ukrytych emocji''.
+\end{enumerate}
+
+Przycisk ,,Pobierz PNG'' pod kartą korzysta z~hooka \tsfunc{useCardDownload()} z~argumentem \tskey{'podtekst-translator'}.
+
+
+% ============================================================
+% AKTUALIZACJA: Rozdział 11 — walidacja Zod + security fix
+% Wstawić po infobox CSP (linia ~483 ch11-prywatnosc.tex)
+% ============================================================
+
+\section{Walidacja danych wejściowych (Zod)}
+\label{sec:zod-validation}
+
+Każdy endpoint API w~\podtekst przyjmuje złożone obiekty JSON z~klienta. Bez walidacji serwer jest podatny na: (1)~nieoczekiwane typy danych powodujące runtime crash, (2)~brakujące pola propagujące \tskey{undefined} do promptów Gemini, (3)~prompt injection przez pola tekstowe wstrzykiwane bezpośrednio do system promptów. Warstwa walidacji oparta na bibliotece \textbf{Zod v4} eliminuje te trzy wektory.
+
+\subsection{Architektura schematów}
+\label{subsec:zod-schemas}
+
+\begin{description}
+  \item[Plik] \filepath{src/lib/validation/schemas.ts} (103~LOC)
+  \item[Import] \tskey{import \{ z \} from 'zod/v4'}
+  \item[Eksport] 7~schematów + helper \tsfunc{formatZodError()} + 7~typów inferowanych
+\end{description}
+
+\subsubsection{Bloki wspólne}
+
+Dwa schematy bazowe współdzielone przez większość endpointów:
+
+\begin{lstlisting}[style=podcode]
+const samplesSchema = z.object({}).passthrough();
+const participantsSchema = z.array(z.string().min(1))
+  .min(1, 'participants must contain at least one entry');
+\end{lstlisting}
+
+\noindent \tskey{samplesSchema} używa \tsfunc{passthrough()} --- struktura próbek jest głęboko zagnieżdżona i~zmienna między endpointami, więc walidujemy jedynie, że jest to niepusty obiekt. \tskey{participantsSchema} wymaga co najmniej jednego niepustego stringa.
+
+\subsubsection{Inwentarz schematów}
+
+\begin{table}[H]
+\caption{Schematy walidacji Zod}
+\label{tab:zod-schemas}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l X @{}}
+\toprule
+\textbf{Schema} & \textbf{Endpoint} & \textbf{Kluczowe pola} \\
+\midrule
+\tstype{analyzeRequestSchema} & \texttt{/api/analyze} & \tskey{samples}, \tskey{participants}, \tskey{relationshipContext?} (\texttt{enum}), \tskey{mode?} (\texttt{enum}) \\
+\tstype{cpsRequestSchema} & \texttt{/api/analyze/cps} & \tskey{samples}, \tskey{participantName} (min 1 char) \\
+\tstype{standUpRequestSchema} & \texttt{/api/analyze/standup} & \tskey{samples}, \tskey{participants}, \tskey{quantitativeContext} \\
+\tstype{enhancedRoastRequestSchema} & \texttt{/api/analyze} (roast) & j.w. + \tskey{qualitative} z~4~passami (\tskey{pass1..4}) \\
+\tstype{imageRequestSchema} & \texttt{/api/analyze/image} & \tskey{participants}, \tskey{conversationExcerpt[]} (\tskey{sender}+\tskey{content}), \tskey{healthScore?} \\
+\tstype{subtextRequestSchema} & \texttt{/api/analyze/subtext} & \tskey{messages[]} (min 100, schema: \tskey{SimplifiedMsg}), \tskey{participants} \\
+\tstype{courtRequestSchema} & \texttt{/api/analyze/court} & \tskey{samples}, \tskey{participants}, \tskey{existingAnalysis?} (pass1/2/4) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Kluczowy schemat: analyzeRequestSchema}
+
+\begin{lstlisting}[style=podcode]
+export const analyzeRequestSchema = z.object({
+  samples: samplesSchema,
+  participants: participantsSchema,
+  relationshipContext: z.optional(
+    z.enum(['romantic', 'friendship', 'colleague',
+            'professional', 'family', 'other'])
+  ),
+  mode: z.optional(z.enum(['standard', 'roast'])),
+  quantitativeContext: z.optional(z.string()),
+});
+\end{lstlisting}
+
+\noindent Pole \tskey{relationshipContext} jest kluczowe z~perspektywy bezpieczeństwa --- jego wartość trafia bezpośrednio do system promptu Gemini (sekcja~\ref{subsec:relationship-context-fix}).
+
+\subsubsection{Helper formatZodError()}
+
+\begin{lstlisting}[style=podcode]
+export function formatZodError(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.length > 0
+        ? `"${issue.path.join('.')}"` : '(root)';
+      return `${path}: ${issue.message}`;
+    })
+    .join('; ');
+}
+\end{lstlisting}
+
+\noindent Funkcja łączy ścieżki błędów z~komunikatami w~czytelny string, np.: \texttt{"participants": must contain at least one entry; "mode": invalid enum value}.
+
+\subsection{Zamknięcie wektora prompt injection: relationshipContext}
+\label{subsec:relationship-context-fix}
+
+Funkcja \tsfunc{getRelationshipContextBlock()} w~pliku \filepath{src/lib/analysis/gemini.ts} generuje blok kontekstu relacji wstrzykiwany do system promptu każdego przebiegu analizy. Przed wprowadzeniem walidacji Zod, pole \tskey{relationshipContext} pochodziło bezpośrednio z~danych użytkownika bez sanityzacji.
+
+\begin{warningbox}[title=Wektor ataku: Prompt injection przez relationshipContext]
+Pole \tskey{relationshipContext} jest stringiem przesyłanym przez klienta HTTP. Atakujący mógł wysłać dowolną wartość --- np. instrukcję w~języku naturalnym --- która zostałaby wstrzyknięta do system promptu Gemini, potencjalnie modyfikując zachowanie modelu AI.
+\end{warningbox}
+
+\subsubsection{Kod przed poprawką (\danger{podatny})}
+
+\begin{lstlisting}[style=podcode]
+// PRZED: wartosc uzytkownika trafiala do lookupa, a fallback
+// zwracal ja jako-is — prompt injection possible
+const label = labels[relationshipContext]
+  ?? relationshipContext; // <-- dowolny string!
+\end{lstlisting}
+
+\noindent Jeśli \tskey{relationshipContext} nie istniało w~mapie \tskey{labels}, operator \tskey{??} zwracał oryginalną wartość użytkownika --- ta trafiała następnie do promptu: \texttt{IMPORTANT CONTEXT --- USER-DECLARED RELATIONSHIP TYPE: \{label\}}.
+
+\subsubsection{Kod po poprawce (\score{bezpieczny})}
+
+\begin{lstlisting}[style=podcode]
+// PO: tylko znane wartosci enum przechodza;
+// nieznane -> fallback 'other'
+const safeContext = labels[relationshipContext]
+  ? relationshipContext : 'other';
+const label = labels[safeContext] ?? labels['other'];
+const baseline = baselines[safeContext] ?? '';
+\end{lstlisting}
+
+\noindent Poprawka działa na dwóch poziomach:
+
+\begin{enumerate}
+  \item \textbf{Zod (warstwa wejścia)} --- schemat \tstype{analyzeRequestSchema} definiuje \tskey{relationshipContext} jako \tskey{z.enum([...])}, co odrzuca nieznane wartości na poziomie walidacji HTTP z~kodem 400.
+
+  \item \textbf{Defense-in-depth (warstwa logiki)} --- nawet jeśli walidacja zostanie obejśta (np. przez bezpośrednie wywołanie funkcji), \tsfunc{getRelationshipContextBlock()} sprawdza, czy klucz istnieje w~mapie \tskey{labels}, i~w~przeciwnym razie wymusza \tskey{'other'}.
+\end{enumerate}
+
+\begin{infobox}[title=Defense-in-depth]
+Połączenie walidacji Zod na wejściu z~wewnętrznym fallbackiem w~logice biznesowej to klasyczny wzorzec \textit{defense-in-depth}. Pierwsza warstwa (Zod) chroni przed złośliwym inputem HTTP. Druga warstwa (fallback) chroni przed regresją w~kodzie --- nawet jeśli ktoś w~przyszłości wywoła \tsfunc{getRelationshipContextBlock()} z~niezwalidowanym stringiem, prompt injection nie nastąpi.
+\end{infobox}

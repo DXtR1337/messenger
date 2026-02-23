@@ -232,6 +232,10 @@ export default function LabelCard({ qualitative, participants }: LabelCardProps)
               borderRadius: 6,
               background: `${colors.accent}10`,
               border: `1px solid ${colors.accent}25`,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: 300,
             }}
           >
             {label.name}
@@ -253,6 +257,12 @@ export default function LabelCard({ qualitative, participants }: LabelCardProps)
             position: 'relative',
             zIndex: 1,
             textShadow: `0 0 30px ${colors.accent}40, 0 0 60px ${colors.accent}20`,
+            maxWidth: 320,
+            margin: '0 auto 8px',
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 1,
+            WebkitBoxOrient: 'vertical' as const,
           }}
         >
           {label.attachment}

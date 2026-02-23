@@ -1,11 +1,36 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/shared/SidebarContext';
 import PTLogo from '@/components/shared/PTLogo';
 import BrandP from '@/components/shared/BrandP';
+import {
+  LayoutDashboard,
+  BarChart3,
+  Brain,
+  Gamepad2,
+  Share2,
+  Activity,
+  Shield,
+  Trophy,
+  MessageSquare,
+  Clock,
+  Flame,
+  Sparkles,
+  Heart,
+  Zap,
+  Laugh,
+  Scale,
+  Search,
+  Image,
+  FileText,
+  Lock,
+  Settings,
+} from 'lucide-react';
+import { useTier } from '@/lib/tiers/tier-context';
+import UserMenu from '@/components/auth/UserMenu';
 
 /* ------------------------------------------------------------------ */
 /*  Nav item definitions                                               */
@@ -57,6 +82,71 @@ function CloseIcon() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Analysis tab definitions                                           */
+/* ------------------------------------------------------------------ */
+
+interface AnalysisTab {
+  id: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  color: string;
+  bgColor: string;
+  subcategories: Array<{ icon: typeof Activity; label: string; anchorId: string; locked?: boolean }>;
+}
+
+const ANALYSIS_TABS: AnalysisTab[] = [
+  {
+    id: 'overview', label: 'Przegląd', icon: LayoutDashboard,
+    color: 'text-blue-400', bgColor: 'bg-blue-500/10',
+    subcategories: [
+      { icon: Activity, label: 'Health Score', anchorId: 'section-health-score' },
+      { icon: Shield, label: 'Flagi & Odznaki', anchorId: 'section-badges' },
+      { icon: Trophy, label: 'Ranking', anchorId: 'section-ranking' },
+    ],
+  },
+  {
+    id: 'metrics', label: 'Metryki', icon: BarChart3,
+    color: 'text-emerald-400', bgColor: 'bg-emerald-500/10',
+    subcategories: [
+      { icon: MessageSquare, label: 'Wiadomości & Słowa', anchorId: 'section-messages' },
+      { icon: Clock, label: 'Czas odpowiedzi', anchorId: 'section-response-time' },
+      { icon: Flame, label: 'Aktywność & Heatmapa', anchorId: 'section-activity' },
+    ],
+  },
+  {
+    id: 'ai', label: 'AI Insights', icon: Brain,
+    color: 'text-purple-400', bgColor: 'bg-purple-500/10',
+    subcategories: [
+      { icon: Sparkles, label: 'Profile psychologiczne', anchorId: 'section-profiles', locked: true },
+      { icon: Heart, label: 'Dynamika relacji', anchorId: 'section-dynamics', locked: true },
+      { icon: Zap, label: 'Synteza & Prognozy', anchorId: 'section-synthesis', locked: true },
+    ],
+  },
+  {
+    id: 'entertainment', label: 'Rozrywka', icon: Gamepad2,
+    color: 'text-orange-400', bgColor: 'bg-orange-500/10',
+    subcategories: [
+      { icon: Laugh, label: 'Roast & Stand-Up', anchorId: 'section-viral' },
+      { icon: Scale, label: 'Sąd & Profil randkowy', anchorId: 'section-court', locked: true },
+      { icon: Search, label: 'CPS & Podteksty', anchorId: 'section-cps', locked: true },
+    ],
+  },
+  {
+    id: 'share', label: 'Udostępnij', icon: Share2,
+    color: 'text-cyan-400', bgColor: 'bg-cyan-500/10',
+    subcategories: [
+      { icon: Image, label: 'Karty do udostępnienia', anchorId: 'section-cards' },
+      { icon: FileText, label: 'Eksport PDF', anchorId: 'section-export', locked: true },
+    ],
+  },
+];
+
+/** Returns true when the user is viewing a specific analysis result page */
+function isAnalysisPage(pathname: string): boolean {
+  return /^\/analysis\/[^/]+$/.test(pathname) && pathname !== '/analysis/new' && pathname !== '/analysis/compare';
+}
+
+/* ------------------------------------------------------------------ */
 /*  Section definitions                                                */
 /* ------------------------------------------------------------------ */
 
@@ -76,7 +166,8 @@ const sections: NavSection[] = [
   {
     label: 'NARZĘDZIA',
     items: [
-      { href: '/dashboard', label: 'Historia analiz', icon: <FileIcon /> },
+      { href: '/analysis/compare', label: 'Porównanie analiz', icon: <FileIcon /> },
+      { href: '/settings', label: 'Ustawienia', icon: <Settings className="size-[18px]" /> },
     ],
   },
 ];
@@ -149,6 +240,20 @@ function SidebarContent({
   showClose?: boolean;
   onClose?: () => void;
 }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { tier } = useTier();
+  const showAnalysisTabs = isAnalysisPage(pathname);
+  const activeTab = searchParams.get('tab') || 'overview';
+
+  const handleTabClick = (tabId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tabId);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onNavigate?.();
+  };
+
   return (
     <>
       {/* ---- Brand ---- */}
@@ -218,29 +323,82 @@ function SidebarContent({
             </ul>
           </div>
         ))}
+
+        {/* ---- Analysis Tabs — only on analysis result pages ---- */}
+        {showAnalysisTabs && (
+          <div className="mt-5">
+            {!collapsed && (
+              <span className="block px-2 pb-2 font-display text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-[#555555] select-none">
+                Sekcje
+              </span>
+            )}
+            <ul className="flex flex-col gap-0.5">
+              {ANALYSIS_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <li key={tab.id}>
+                    <button
+                      onClick={() => handleTabClick(tab.id)}
+                      className={cn(
+                        'group relative flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors text-left',
+                        collapsed && 'justify-center px-0',
+                        isActive
+                          ? `${tab.bgColor} ${tab.color}`
+                          : 'text-[#888888] hover:bg-white/[0.04] hover:text-[#fafafa]',
+                      )}
+                    >
+                      {isActive && (
+                        <span
+                          className={cn(
+                            'absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full',
+                            tab.color.replace('text-', 'bg-'),
+                          )}
+                        />
+                      )}
+                      <Icon className={cn('size-[18px] shrink-0', isActive ? tab.color : 'text-[#888888] group-hover:text-[#fafafa]')} />
+                      {!collapsed && <span className="truncate">{tab.label}</span>}
+                    </button>
+                    {/* Subcategories — visible when active & sidebar not collapsed */}
+                    {isActive && !collapsed && tab.subcategories.length > 0 && (
+                      <ul className="ml-[21px] mt-0.5 space-y-px border-l border-white/10 pl-3 pb-1">
+                        {tab.subcategories.map((sub) => {
+                          const SubIcon = sub.icon;
+                          return (
+                            <li key={sub.label}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const el = document.getElementById(sub.anchorId);
+                                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  onNavigate?.();
+                                }}
+                                className={cn(
+                                  'flex w-full items-center gap-2 rounded px-1.5 py-1 text-[11px] text-left transition-colors',
+                                  tab.color, 'opacity-60 hover:opacity-100 hover:bg-white/[0.04]',
+                                )}
+                              >
+                                <SubIcon className="size-3 shrink-0" />
+                                <span className="truncate">{sub.label}</span>
+                                {sub.locked && tier === 'free' && <Lock className="size-2.5 text-muted-foreground/40" />}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </nav>
 
-      {/* ---- Footer — user card ---- */}
+      {/* ---- Footer — user menu ---- */}
       <div className="border-t border-[#1a1a1a] px-3 py-3">
-        <div
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.04]',
-            collapsed && 'justify-center px-0'
-          )}
-        >
-          <span
-            className="flex shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white"
-            style={{ width: 34, height: 34, background: 'linear-gradient(135deg, var(--chart-a), var(--chart-b))' }}
-          >
-            MK
-          </span>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-[#fafafa]">Użytkownik</p>
-              <p className="truncate text-xs text-[#555555]">Plan darmowy</p>
-            </div>
-          )}
-        </div>
+        <UserMenu collapsed={collapsed} />
       </div>
     </>
   );

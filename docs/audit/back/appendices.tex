@@ -1,0 +1,129 @@
+% ============================================================
+% Appendices — Pełna tabela problemów
+% ============================================================
+
+\chapter*{Dodatki}
+\addcontentsline{toc}{chapter}{Dodatki}
+
+\section*{A. Kompletna tabela wszystkich znalezionych problemów}
+\addcontentsline{toc}{section}{A. Kompletna tabela problemów}
+
+\begin{longtable}{l l l L{5.5cm} l}
+\caption{Pełna lista problemów --- wszystkie agenty}
+\label{tab:pelna-lista}\\
+\toprule
+\textbf{ID} & \textbf{Waga} & \textbf{Plik} & \textbf{Opis} & \textbf{Agent} \\
+\midrule
+\endfirsthead
+\multicolumn{5}{l}{\emph{Kontynuacja tabeli z~poprzedniej strony}}\\
+\toprule
+\textbf{ID} & \textbf{Waga} & \textbf{Plik} & \textbf{Opis} & \textbf{Agent} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\emph{Kontynuacja na następnej stronie}}\\
+\endfoot
+\bottomrule
+\endlastfoot
+
+% === KRYTYCZNE ===
+\rowcolor{PodDanger!8}
+\bugid{QUANT-01} & \critical{Kryt.} & viral-scores.ts & reactionRate dzielony przez messagesReceived & 1 \\
+\rowcolor{PodDanger!8}
+\bugid{QUANT-02} & \critical{Kryt.} & viral-scores.ts & responseSymmetry zwraca 100 gdy brak danych & 1 \\
+\rowcolor{PodDanger!8}
+\bugid{QUANT-03} & \critical{Kryt.} & wrapped-data.ts & Procent response time > 100 bez clamp & 1 \\
+\rowcolor{PodDanger!8}
+\bugid{QUANT-04} & \critical{Kryt.} & viral-scores.ts & delusionHolder semantycznie odwrócony & 1 \\
+\rowcolor{PodDanger!8}
+\bugid{QUANT-05} & \critical{Kryt.} & reciprocity.ts & Jednostronny RT=0 cicho zwraca 50 (brak else) & 1 \\
+\rowcolor{PodDanger!8}
+\bugid{AI-01} & \critical{Kryt.} & gemini.ts & Gemini safety BLOCK\_NONE na wszystkich & 2 \\
+\rowcolor{PodDanger!8}
+\bugid{AI-02} & \critical{Kryt.} & gemini.ts & Prompt injection defense niewystarczający & 2 \\
+\rowcolor{PodDanger!8}
+\bugid{INFRA-01} & \critical{Kryt.} & rate-limit.ts & Rate limiting wyłączony na produkcji & 3 \\
+\rowcolor{PodDanger!8}
+\bugid{AI-05} & \critical{Kryt.} & subtext.ts & Subtext scoring bez podstawy psychologicznej & 2 \\
+
+% === ISTOTNE ===
+\rowcolor{PodWarning!8}
+\issueid{ENG-01} & \major{Istotn.} & viral-scores.ts & Hardcoded slope normalization (1200) & 1 \\
+\rowcolor{PodWarning!8}
+\issueid{ENG-02} & \major{Istotn.} & viral-scores.ts & Message length multiplier (25) unjustified & 1 \\
+\rowcolor{PodWarning!8}
+\issueid{ENG-03} & \major{Istotn.} & viral-scores.ts & Engagement balance multiplier (500) extreme & 1 \\
+\rowcolor{PodWarning!8}
+\issueid{ENG-04} & \major{Istotn.} & badges.ts & Early Bird: absolute zamiast percentage & 1 \\
+\rowcolor{PodWarning!8}
+\issueid{ENG-05} & \major{Istotn.} & catchphrases.ts & Uniqueness threshold 0.6 za niski & 1 \\
+\rowcolor{PodWarning!8}
+\issueid{ENG-06} & \major{Istotn.} & trends.ts & Message length trend: mean zamiast median & 1 \\
+\rowcolor{PodWarning!8}
+\issueid{ENG-07} & \major{Istotn.} & bursts.ts & Burst threshold (3x) arbitralny & 1 \\
+\rowcolor{PodWarning!8}
+\issueid{ENG-08} & \major{Istotn.} & catchphrases.ts & Peak hour window: hour 23 nie wraps & 1 \\
+\rowcolor{PodWarning!8}
+\issueid{AI-03} & \major{Istotn.} & schemas.ts & relationshipContext bez walidacji enum & 2 \\
+\rowcolor{PodWarning!8}
+\issueid{AI-04} & \major{Istotn.} & UI & Brak wyraźnych disclaimerów na Health Score & 2 \\
+\rowcolor{PodWarning!8}
+\issueid{AI-06} & \major{Istotn.} & prompts.ts & Health Score arbitralne wagi 25/20/20/20/15 & 2 \\
+\rowcolor{PodWarning!8}
+\issueid{AI-07} & \major{Istotn.} & delusion-quiz.ts & Delusion Quiz brak kalibracji & 2 \\
+\rowcolor{PodWarning!8}
+\issueid{PARSE-01} & \major{Istotn.} & detect.ts & Instagram vs Messenger nierozróżnialne & 3 \\
+\rowcolor{PodWarning!8}
+\issueid{UI-01} & \major{Istotn.} & page.tsx & Strona wyników 985 LOC --- do dekompozycji & 3 \\
+\rowcolor{PodWarning!8}
+\issueid{UI-02} & \major{Istotn.} & discord.ts & Reakcje Discord bez danych actor & 3 \\
+
+% === DROBNE ===
+\rowcolor{black!3}
+MIN-01 & \minor{Drobny} & quantitative.ts & Shortest message: Infinity init & 1 \\
+\rowcolor{black!3}
+MIN-02 & \minor{Drobny} & viral-scores.ts & Discord reaction rate fallback inverted & 1 \\
+\rowcolor{black!3}
+MIN-03 & \minor{Drobny} & network.ts & Density ignores edge weights & 1 \\
+\rowcolor{black!3}
+MIN-04 & \minor{Drobny} & constants.ts & Linear regression: equidistant x-axis & 1 \\
+\rowcolor{black!3}
+MIN-05 & \minor{Drobny} & wrapped-data.ts & Book equivalents: 50k zamiast 70--100k & 1 \\
+\rowcolor{black!3}
+MIN-06 & \minor{Drobny} & gemini.ts & Preview model (niestabilny) & 2 \\
+\rowcolor{black!3}
+MIN-07 & \minor{Drobny} & gemini.ts & Temperature settings niekalibrowane & 2 \\
+\rowcolor{black!3}
+MIN-08 & \minor{Drobny} & UI & Canvas confetti niedostępne dla screen readers & 3 \\
+\rowcolor{black!3}
+MIN-09 & \minor{Drobny} & SectionNavigator & Unicode symbols nieczytelne dla screen readers & 3 \\
+\rowcolor{black!3}
+MIN-10 & \minor{Drobny} & whatsapp.ts & DD/MM heurystyka: dwuznaczne daty & 3 \\
+
+\end{longtable}
+
+\section*{B. Metodologia ocen}
+\addcontentsline{toc}{section}{B. Metodologia ocen}
+
+Oceny poszczególnych obszarów (skala 0--10) zostały ustalone na podstawie następujących kryteriów:
+
+\begin{description}
+  \item[9--10] Wzorcowa implementacja, brak istotnych problemów, gotowa do produkcji bez zmian.
+  \item[7--8] Solidna implementacja z~drobnymi problemami. Gotowa do produkcji po minor fixes.
+  \item[5--6] Funkcjonalna implementacja z~istotnymi problemami. Wymaga pracy przed produkcją.
+  \item[3--4] Poważne problemy strukturalne lub koncepcyjne. Wymaga redesignu.
+  \item[0--2] Niefunkcjonalna lub brak implementacji.
+\end{description}
+
+Wagi per obszar w~ocenie ogólnej:
+\begin{itemize}
+  \item Jakość kodu: 15\%
+  \item Parsery: 10\%
+  \item Pipeline AI: 15\%
+  \item Interfejs: 10\%
+  \item Schematy/walidacja: 10\%
+  \item Obsługa błędów: 10\%
+  \item Walidacja psychologiczna: 15\%
+  \item Bezpieczeństwo: 10\%
+  \item Rozrywka vs nauka: 5\%
+\end{itemize}

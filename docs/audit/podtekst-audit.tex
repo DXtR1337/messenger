@@ -1,0 +1,66 @@
+% ============================================================
+% PodTeksT — Raport Audytu Eksperckiego
+% Kompilacja: xelatex -shell-escape podtekst-audit.tex
+% ============================================================
+
+\input{../preamble}
+\input{audit-preamble}
+
+\begin{document}
+
+% ---- Front Matter ----
+\frontmatter
+
+% Title page
+\input{front/audit-titlepage}
+
+% Copyright
+\thispagestyle{empty}
+\vspace*{\fill}
+\begin{center}
+\small\color{PodTextSecondary}
+\textcopyright\ 2026 PodTeksT. Wszelkie prawa zastrzeżone.\\[4pt]
+Raport Audytu Eksperckiego --- wersja 1.0, luty 2026\\[4pt]
+Wygenerowany wieloagentowo przez Claude Opus 4.6.\\[4pt]
+Zsyntetyzowany z~raportów 3~niezależnych agentów analitycznych.\\[8pt]
+\textcolor{PodBlue}{Pod}\textcolor{PodPurple}{TeksT} --- audyt jakości, algorytmów i~walidacji psychologicznej.
+\end{center}
+\vspace*{\fill}
+\cleardoublepage
+
+% Table of Contents
+{
+  \hypersetup{linkcolor=PodBlueDark}
+  \tableofcontents
+}
+\cleardoublepage
+
+% List of Tables
+\listoftables
+\cleardoublepage
+
+% Preface
+\input{front/audit-preface}
+\cleardoublepage
+
+% ---- Main Matter ----
+\mainmatter
+
+\input{chapters/ch01-streszczenie}
+\input{chapters/ch02-silnik-ilosciowy}
+\input{chapters/ch03-pipeline-ai}
+\input{chapters/ch04-parsery-ui}
+\input{chapters/ch05-synteza}
+\input{chapters/ch06-rekomendacje}
+
+% ---- Back Matter ----
+\backmatter
+
+\input{back/appendices}
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Indeks}
+\printindex
+
+\end{document}

@@ -1,0 +1,664 @@
+% ============================================================
+% Rozdział 2 — Przegląd Produktu
+% ============================================================
+
+\chapter{Przegląd Produktu}
+\label{ch:produkt}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Twoje rozmowy mówią więcej niż myślisz.''
+\end{center}
+
+\vspace{8pt}
+
+Ten rozdział stanowi kompletny przegląd produktu \podtekst --- od jego definicji i~propozycji wartości, przez szczegółową matrycę ponad 60~funkcji, obsługiwane platformy komunikacyjne, pełną ścieżkę użytkownika (zilustrowaną diagramem TikZ), aż po trzypoziomowy model cenowy. Celem jest dostarczenie czytelnikowi --- niezależnie od jego roli --- pełnego obrazu tego, \emph{czym} jest \podtekst, \emph{co} oferuje i~\emph{jak} z~niego korzystać.
+
+
+% ============================================================
+% 2.1 Czym jest PodTeksT
+% ============================================================
+\section{Czym jest PodTeksT}
+\label{sec:czym-jest}
+
+\podtekst to aplikacja SaaS typu \emph{conversational analytics}, która przekształca surowe eksporty rozmów z~najpopularniejszych komunikatorów w~wielowymiarową analizę ilościową i~jakościową. Użytkownik przesyła plik eksportu (JSON z~Messengera, TXT z~WhatsAppa, JSON z~Instagrama lub Telegrama) i~w~ciągu kilku sekund otrzymuje dashboard z~ponad 60~metrykami obliczanymi lokalnie w~przeglądarce. Opcjonalnie może uruchomić analizę AI --- wieloprzebiegowy system oparty na Google Gemini API (\texttt{gemini-3-flash-preview}), który generuje profile psychologiczne, diagnozę dynamiki relacji, styl przywiązania, język miłości i~szereg wskaźników klinicznych.
+
+\subsection{Propozycja wartości}
+
+\podtekst odpowiada na fundamentalną ludzką potrzebę: \textbf{zrozumienia swoich relacji}. Każdego dnia ludzie na całym świecie wymieniają miliardy wiadomości --- ale nigdy się nie zatrzymują, by spojrzeć na wzorce, które te wiadomości tworzą. Kto inicjuje kontakt? Kto odpowiada szybciej? Kto zadaje więcej pytań? Jak zmienił się ton rozmowy na przestrzeni miesięcy? Czy wzajemne zaangażowanie jest zbalansowane, czy jedna strona wkłada znacznie więcej wysiłku?
+
+\podtekst odpowiada na te pytania danymi --- nie spekulacjami.
+
+\begin{featurebox}[title=Kluczowe wyróżniki]
+\begin{itemize}
+  \item \textbf{Prywatność na pierwszym miejscu} --- parsowanie odbywa się \emph{wyłącznie} w~przeglądarce (client-side). Surowe wiadomości nigdy nie opuszczają urządzenia użytkownika. Do serwera trafia jedynie losowa próbka 200--500 wiadomości na potrzeby analizy AI.
+  \item \textbf{60+ metryk bez AI} --- silnik ilościowy oblicza pełen zestaw metryk: od liczby wiadomości przez czasy odpowiedzi, heatmapy aktywności, po detekcję burstów i~analizę słownictwa. Zero kosztów API.
+  \item \textbf{Wieloprzebiegowa analiza AI} --- Google Gemini API (\texttt{gemini-3-flash-preview}) przetwarza próbki wiadomości w~wielu specjalizowanych przebiegach: Overview, Dynamics, Profiles, Synthesis oraz tryby rozrywkowe (Roast, Stand-Up, Subtext Decoder, Court Trial, Dating Profile, Reply Simulator).
+  \item \textbf{Tryby rozrywkowe} --- Roast Mode, Enhanced Roast, Stand-Up Comedy (7 aktów + PDF), Subtext Decoder (12 kategorii ukrytych znaczeń), Court Trial (satyryczny proces sądowy), Dating Profile, Reply Simulator, Delusion Quiz, Ghost Forecast, Compatibility Score, Delusion Score, 15+ odznak osiągnięć, Story Mode (Spotify Wrapped), 23+ typów Share Cards.
+  \item \textbf{6 platform} --- Messenger (JSON), WhatsApp (TXT), Instagram (JSON), Telegram (JSON), Discord (Bot API) z~pełnym dekodowaniem Unicode i~auto-detekcją formatu.
+\end{itemize}
+\end{featurebox}
+
+\subsection{Architektura przetwarzania danych}
+
+Fundamentalną decyzją architektoniczną \podtekst jest \textbf{rozdzielenie parsowania i~analizy ilościowej (client-side) od analizy AI (server-side)}. Takie podejście gwarantuje:
+
+\begin{enumerate}
+  \item \textbf{Ochronę prywatności} --- surowy plik z~rozmową nigdy nie jest przesyłany na serwer.
+  \item \textbf{Natychmiastowy feedback} --- 60+ metryk pojawia się w~ciągu 2--5 sekund, zanim jeszcze uruchomiona zostanie analiza AI.
+  \item \textbf{Optymalizację kosztów} --- koszty API (Google Gemini) ponoszone są wyłącznie dla analizy jakościowej, która jest opcjonalna.
+  \item \textbf{Skalowalność} --- ciężkie obliczenia (parsowanie, agregacja metryk) wykonywane są na urządzeniu klienta, co redukuje obciążenie serwera.
+\end{enumerate}
+
+\begin{infobox}[title=Przepływ danych]
+\begin{enumerate}
+  \item Użytkownik wrzuca plik \texttt{.json} lub \texttt{.txt} do strefy drop-zone.
+  \item Przeglądarka parsuje plik (dekodowanie Unicode, normalizacja, walidacja).
+  \item Silnik ilościowy oblicza 60+ metryk lokalnie (pure TypeScript, zero zależności).
+  \item Wyniki zapisywane są do IndexedDB (offline-first).
+  \item \emph{Opcjonalnie}: klient dokonuje samplingu (200--500 wiadomości, $\sim$70\,KB) i~wysyła do API route \filepath{/api/analyze}.
+  \item Serwer wykonuje 5 przebiegów AI i~streamuje wyniki via SSE.
+  \item Klient odbiera wyniki i~aktualizuje IndexedDB + UI.
+\end{enumerate}
+\end{infobox}
+
+\subsection{Grupy docelowe}
+
+\podtekst adresuje szerokie spektrum użytkowników:
+
+\begin{description}
+  \item[Pary i osoby w~związkach] Chcą zrozumieć dynamikę swojej relacji, znaleźć wzorce, zidentyfikować nierówności w~zaangażowaniu. Najbardziej popularny use case.
+
+  \item[Osoby po rozstaniu] Szukają obiektywnego spojrzenia na zakończoną relację --- ,,Czy to naprawdę ja byłem/byłam odpowiedzialny/a za ochłodzenie?'' Analiza trendów czasowych daje twardą odpowiedź.
+
+  \item[Przyjaciele] Analiza grupowa (czaty grupowe) z~uwzględnieniem Network Graph i~Group Chat Awards.
+
+  \item[Terapeuci i coachowie] Narzędzie wspierające terapię par --- obiektywne metryki komunikacji jako punkt wyjścia do rozmowy.
+
+  \item[Twórcy TikTok/Instagram] Treści viralowe --- Share Cards, Roast Mode, Story Mode. \podtekst jest zaprojektowany, by generować content warty udostępniania.
+
+  \item[Ciekawscy] Osoby, które po prostu chcą zobaczyć fascynujące statystyki swoich rozmów --- ile wiadomości wysłali, o~której godzinie są najbardziej aktywni, jakie są ich ulubione frazy.
+\end{description}
+
+
+% ============================================================
+% 2.2 Kluczowe funkcje
+% ============================================================
+\section{Kluczowe funkcje}
+\label{sec:kluczowe-funkcje}
+
+\podtekst oferuje ponad 60~indywidualnych funkcji analitycznych, które można podzielić na cztery kategorie: metryki ilościowe (obliczane lokalnie, bez AI), analiza AI (pięcioprzebiegowa, server-side), funkcje rozrywkowe i~narzędzia eksportu/udostępniania.
+
+\subsection{Metryki ilościowe}
+\label{subsec:metryki-ilosciowe}
+
+Wszystkie metryki ilościowe obliczane są po stronie klienta (w~przeglądarce), za pomocą czystych funkcji TypeScript, bez jakiegokolwiek udziału AI. Wyniki dostępne są natychmiast po parsowaniu pliku (2--5 sekund dla typowej rozmowy z~5\,000--50\,000 wiadomości).
+
+\begin{table}[H]
+\caption{Metryki ilościowe --- kompletna matryca funkcji}
+\label{tab:metryki-ilosciowe}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l X @{}}
+\toprule
+\textbf{Kategoria} & \textbf{Metryka} & \textbf{Opis} \\
+\midrule
+\multirow{6}{*}{\rotatebox[origin=c]{90}{\textbf{Wolumen}}}
+& Wiadomości per osoba & Łączna liczba wiadomości wysłanych przez każdego uczestnika \\
+& Średnia długość wiadomości & W~znakach i~słowach, osobno dla każdego uczestnika \\
+& Łączna liczba słów & Suma wszystkich słów per osoba \\
+& Najdłuższa wiadomość & Najdłuższa wiadomość (w~znakach) z~treścią \\
+& Proporcja wiadomości & Stosunek wiadomości między uczestnikami (np. 62:38) \\
+& Bogactwo słownictwa & TTR (type-token ratio) --- unikalne słowa / łączna liczba słów \\
+\midrule
+\multirow{8}{*}{\rotatebox[origin=c]{90}{\textbf{Timing}}}
+& Czas odpowiedzi (mediana) & Mediana czasu odpowiedzi per osoba, bardziej miarodajna niż średnia \\
+& Czas odpowiedzi (średnia) & Średnia arytmetyczna czasu odpowiedzi \\
+& Trend czasu odpowiedzi & Zmiana mediany odpowiedzi w~kolejnych miesiącach (regresja liniowa) \\
+& Inicjacje rozmów & Kto wysyła pierwszą wiadomość po przerwie $\geq$6 godzin \\
+& Heatmapa aktywności & Macierz $7 \times 24$ (dzień tygodnia $\times$ godzina) per osoba \\
+& Wiadomości nocne & Procent wiadomości wysłanych 22:00--04:00 \\
+& Najdłuższa cisza & Maksymalny odstęp czasowy między kolejnymi wiadomościami \\
+& Kto kończy rozmowy & Ostatnia wiadomość przed przerwą $\geq$6 godzin \\
+\midrule
+\multirow{7}{*}{\rotatebox[origin=c]{90}{\textbf{Zaangażowanie}}}
+& Reakcje & Częstotliwość per osoba + ranking typów ({\small\emoji{red-heart}} vs {\small\emoji{rolling-on-the-floor-laughing}} vs {\small\emoji{thumbs-up}}) \\
+& Emoji & Top 10 emoji per osoba, częstotliwość użycia \\
+& Pytania & Częstotliwość znaków zapytania per osoba \\
+& Double texting & 2+ wiadomości z~rzędu bez odpowiedzi drugiej strony \\
+& Media/linki & Liczba zdjęć, filmów, linków, stickerów per osoba \\
+& Catchphrases & Najczęstsze frazy (n-gramy) unikalne dla każdego uczestnika \\
+& Top słowa & 20 najczęstszych słów (z~filtrowaniem stop-words) per osoba \\
+\midrule
+\multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{Wzorce}}}
+& Trendy miesięczne & Liczba wiadomości per miesiąc z~wykresem trendu \\
+& Weekday vs Weekend & Porównanie aktywności w~dni robocze vs weekendy \\
+& Detekcja burstów & Automatyczne wykrywanie klastrów szybkiej wymiany zdań \\
+& Długość konwersacji & Średnia liczba wiadomości per sesja (między przerwami $\geq$6h) \\
+& Best Time to Text & Optymalna godzina, w~której odpowiedź jest najszybsza \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Analiza AI}
+\label{subsec:analiza-ai}
+
+Analiza AI to opcjonalny komponent \podtekst. Wykorzystuje model Google Gemini (\texttt{gemini-3-flash-preview}) via server-side API routes. System wykonuje cztery podstawowe przebiegi analityczne oraz liczne tryby rozrywkowe, z~których każdy koncentruje się na innym aspekcie rozmowy.
+
+\begin{table}[H]
+\caption{Przebiegi analizy AI}
+\label{tab:przebiegi-ai}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} c l X @{}}
+\toprule
+\textbf{Przebieg} & \textbf{Nazwa} & \textbf{Zakres analizy} \\
+\midrule
+1 & Overview & Ton emocjonalny, styl komunikacji, typ relacji, ogólna dynamika \\
+2 & Dynamics & Balans władzy, praca emocjonalna, wzorce konfliktu, intymność, unikanie tematów \\
+3 & Profiles & Big Five, MBTI, styl przywiązania, język miłości, inteligencja emocjonalna \\
+4 & Synthesis & Synteza przebiegów 1--3, czerwone/zielone flagi, punkty zwrotne, raport końcowy \\
+5 & CPS & Conversation Personality Score --- ekwiwalent osobowościowy konwersacji \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Szczegółowa matryca funkcji AI}
+
+\begin{table}[H]
+\caption{Funkcje analizy AI --- kompletna matryca}
+\label{tab:funkcje-ai}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l X @{}}
+\toprule
+\textbf{Funkcja} & \textbf{Opis} \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Ton i styl}} \\
+Ton emocjonalny & Primarny ton per osoba (ciepły, neutralny, dystansowy, lękowy, zabawowy, sarkastyczny) \\
+Warmth / Formality & Skale 0--100: ciepłota emocjonalna i~poziom formalności per osoba \\
+Styl humoru & self-deprecating, teasing, absurdist, sarcastic, wordplay, absent \\
+Radar tonów & 6-osiowy chart canvas: warmth, humor, vulnerability, assertiveness, playfulness, depth \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Profil osobowości}} \\
+Big Five & Otwartość, sumienność, ekstrawersja, ugodowość, neurotyczność (0--100 + confidence) \\
+MBTI & 4-literowy typ z~procentowym rozkładem na każdej osi (np. E72/I28) \\
+Styl przywiązania & Bezpieczny, lękowy, unikający, zdezorganizowany --- z~pewnością i~dowodami \\
+Język miłości & Słowa afirmacji, czas, prezenty, usługi, dotyk --- ranking top~3 per osoba \\
+Inteligencja emocjonalna & Samoświadomość, samoregulacja, empatia, umiejętności społeczne (0--100) \\
+Rozwiązywanie konfliktów & Styl: bezpośredni, unikający, eksplozywny, pasywno-agresywny \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Dynamika relacji}} \\
+Balans władzy & Skala $-100$ do $+100$ (kto adaptuje język/ton do kogo) \\
+Praca emocjonalna & Kto pocieszanie, sprawdzanie, pamiętanie, zarządzanie nastrojem --- dystrybucja \\
+Wrażliwość (vulnerability) & Głębokość self-disclosure per osoba (0--100) \\
+Wspólny język & Rozwój inside jokes, shared language na przestrzeni czasu \\
+Czerwone flagi & Guilt-tripping, gaslighting, love-bombing, naruszanie granic \\
+Zielone flagi & Zdrowa komunikacja, walidacja, wsparcie, szacunek granic \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Raport końcowy}} \\
+Punkty zwrotne & AI-identified moments that shifted the relationship trajectory \\
+Health Score & Wynik zdrowia relacji 0--100 (ważona kombinacja 12 sub-wskaźników) \\
+Raport końcowy & 3--5 zdań syntezy, najważniejsze obserwacje, actionable insights \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Funkcje rozrywkowe}
+\label{subsec:fun-features}
+
+Funkcje rozrywkowe to element \podtekst zaprojektowany z~myślą o~viralowości i~udostępnianiu w~mediach społecznościowych. Wszystkie obliczane są na podstawie danych ilościowych (bez AI), z~wyjątkiem trybów AI (Roast, Stand-Up, Subtext Decoder, Court Trial, Dating Profile, Reply Simulator), które wykorzystują dedykowane prompty do modelu Gemini.
+
+\begin{table}[H]
+\caption{Funkcje rozrywkowe}
+\label{tab:fun-features}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l l X @{}}
+\toprule
+\textbf{Funkcja} & \textbf{Źródło} & \textbf{Opis} \\
+\midrule
+Roast Mode & AI & Bezlitosny, zabawny roast każdego uczestnika oparty na jego wzorcach komunikacji \\
+Enhanced Roast & AI & Pogłębiony roast z~pełnym kontekstem psychologicznym z~Pass 1--4 \\
+Stand-Up Comedy & AI & 7-aktowy komediowy roast z~generowaniem PDF \\
+Subtext Decoder & AI & Dekodowanie ukrytych znaczeń w~wiadomościach --- 12~kategorii podtekstów \\
+Court Trial & AI & Satyryczny proces sądowy --- zarzuty, mowy stron, wyrok, mugshot cards \\
+Dating Profile & AI & Brutalnie szczery profil randkowy na podstawie wzorców komunikacji \\
+Reply Simulator & AI & Symulacja odpowiedzi drugiej osoby w~jej stylu komunikacji \\
+Delusion Quiz & Ilościowe & Test samoświadomości --- zgaduj vs dane, Delusion Index 0--100 \\
+Ghost Forecast & Ilościowe & Prognoza ghostingu w~motywach pogodowych (☀️ → 🌪️), oparta na trendach odpowiedzi \\
+Compatibility Score & Ilościowe & Wynik kompatybilności 0--100, bazujący na activity overlap, response balance, engagement \\
+Interest Score & Ilościowe & Kto jest bardziej zainteresowany --- per osoba, na podstawie inicjacji i~zaangażowania \\
+Delusion Score & Ilościowe & Wskaźnik samooszukiwania się --- gdy osoba pisze znacznie więcej niż otrzymuje \\
+Achievement Badges & Ilościowe & 15+ odznak (np. Nocny Marek 🦉, Ranny Ptaszek 🐤, Spammer 📢, Ghost 👻) \\
+Best Time to Text & Ilościowe & Optymalna pora dnia na wysłanie wiadomości (najkrótszy oczekiwany czas odpowiedzi) \\
+Catchphrases & Ilościowe & Automatycznie wykryte charakterystyczne frazy (n-gramy) per osoba \\
+Story Mode & Ilościowe + AI & 12-scenowy experience w~stylu Spotify Wrapped z~animacjami full-screen \\
+Group Chat Awards & Ilościowe & Nagrody dla czatów grupowych (Most Active, Link Lord, Emoji King, etc.) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Odznaki osiągnięć (Achievement Badges)}
+
+System odznak automatycznie analizuje wzorce komunikacyjne i~przyznaje humorystyczne tytuły. Każda odznaka ma polską nazwę, emoji i~opis dowodowy.
+
+\begin{table}[H]
+\caption{12 odznak osiągnięć}
+\label{tab:badges-overview}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} c l l X @{}}
+\toprule
+\textbf{Emoji} & \textbf{ID} & \textbf{Nazwa PL} & \textbf{Kryterium} \\
+\midrule
+🦉 & night-owl & Nocny Marek & Najwyższy \% wiadomości 22:00--4:00 \\
+🐤 & early-bird & Ranny Ptaszek & Najwięcej wiadomości przed 8:00 \\
+⚡ & speed-demon & Błyskawica & Najkrótszy medianowy czas odpowiedzi \\
+📢 & chatterbox & Gaduła & Najwięcej wysłanych wiadomości \\
+📝 & novelist & Pisarz & Najwyższa średnia długość wiadomości \\
+❤️ & love-bomber & Bombardier Serc & Najwięcej wysłanych reakcji \\
+😂 & comedian & Stand-Up & Najwięcej reakcji śmiechu otrzymanych \\
+👻 & ghost & Zjawa & Najdłuższa seria bez odpowiedzi \\
+🔥 & streak-master & Strażnik Passji & Najdłuższa seria dni z~wiadomościami \\
+📱 & double-texter & Double-Texter & Najczęstsze wysyłanie 2+ wiadomości z~rzędu \\
+❓ & interrogator & Przesłuchujący & Najwyższy \% wiadomości z~pytajnikiem \\
+🔗 & link-lord & Link Lord & Najwięcej udostępnionych linków \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Share Cards}
+\label{subsec:share-cards}
+
+Share Cards to graficzne karty (format 1080$\times$1350 lub 1080$\times$1080 px) zaprojektowane do udostępniania na TikToku, Instagramie i~innych platformach społecznościowych. Użytkownik może wygenerować dowolną kartę jednym kliknięciem i~pobrać ją jako PNG.
+
+\begin{table}[H]
+\caption{23+ typów Share Cards}
+\label{tab:share-cards}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} c l l X @{}}
+\toprule
+\textbf{Emoji} & \textbf{ID} & \textbf{Nazwa} & \textbf{Wymagania} \\
+\midrule
+🧾 & receipt & Paragon & Tylko ilościowe \\
+⚡ & versus-v2 & Versus V2 & Tylko ilościowe, 2 osoby \\
+🚩 & redflag & Czerwona flaga & Tylko ilościowe \\
+👻 & ghost-forecast & Prognoza ghostingu & Tylko ilościowe \\
+💕 & compatibility-v2 & Match & Tylko ilościowe \\
+🏷️ & label & Etykietka & AI wymagane \\
+🛂 & passport & Paszport osobowości & AI wymagane \\
+📊 & stats & Statystyki & Tylko ilościowe \\
+⚔️ & versus & Versus & Tylko ilościowe \\
+💚 & health & Wynik zdrowia & AI wymagane \\
+🚩 & flags & Flagi & AI wymagane \\
+🧠 & personality & Osobowość & AI wymagane \\
+🔥 & scores & Wyniki viralowe & Tylko ilościowe \\
+🏆 & badges & Osiągnięcia & Tylko ilościowe \\
+🧬 & mbti & MBTI & AI wymagane \\
+\addlinespace
+\multicolumn{4}{@{}l}{\textbf{Nowe karty (Faza 19--22):}} \\
+\addlinespace
+🔮 & subtext & Translator Podtekstów & AI (Subtext Decoder) \\
+📸 & mugshot & Mugshot sądowy & AI (Court Trial) \\
+💘 & dating-profile & Profil randkowy & AI (Dating Profile) \\
+🤡 & delusion & Indeks Deluzji & Ilościowe (Delusion Quiz) \\
+💬 & simulator & Symulator odpowiedzi & AI (Reply Simulator) \\
+📖 & story-share & Karta Story & Ilościowe + AI \\
+🛂 & personality-passport & Paszport osobowości V2 & AI wymagane \\
+💕 & compatibility-v2 & Kompatybilność V2 & Tylko ilościowe \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Narzędzia eksportu i~udostępniania}
+
+\begin{description}
+  \item[Eksport PDF] Pełny raport analizy w~formacie PDF z~branding \podtekst, generowany client-side za pomocą \texttt{jsPDF} (z~osadzonymi fontami). Dostępny również eksport Stand-Up Comedy w~osobnym PDF.
+  \item[Share Cards] 23+ typów kart graficznych do pobrania jako PNG (opisane powyżej).
+  \item[Share Caption Modal] Generator podpisów pod posty z~hashtagami i~emoji.
+  \item[Porównanie rozmów] Porównanie dwóch analiz side-by-side: radar chart, tabela metrykowa, timeline overlay.
+  \item[Network Graph] Graf sieciowy dla czatów grupowych --- wizualizacja siły połączeń między uczestnikami oparta na liczbie interakcji.
+\end{description}
+
+
+% ============================================================
+% 2.3 Obsługiwane platformy
+% ============================================================
+\section{Obsługiwane platformy}
+\label{sec:platformy}
+
+\podtekst obsługuje cztery najpopularniejsze platformy komunikacyjne. Każda z~nich wymaga innego formatu eksportu i~procesu pozyskiwania danych.
+
+\begin{table}[H]
+\caption{Obsługiwane platformy komunikacyjne}
+\label{tab:platformy}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l c c X @{}}
+\toprule
+\textbf{Platforma} & \textbf{Format} & \textbf{Status} & \textbf{Uwagi} \\
+\midrule
+Facebook Messenger & JSON & \score{Pełne wsparcie} & Wymaga dekodowania Unicode (latin-1 escaped). Obsługa reakcji, zdjęć, stickerów, linków, połączeń. \\
+\addlinespace
+WhatsApp & TXT & \score{Pełne wsparcie} & Parser wyrażeń regularnych dla formatów 12h/24h, wieloliniowych wiadomości, mediów. \\
+\addlinespace
+Instagram DM & JSON & \warn{W~przygotowaniu} & Format zbliżony do Messengera (Meta). Parser w~fazie rozwoju. \\
+\addlinespace
+Telegram & JSON & \warn{W~przygotowaniu} & Eksport via Telegram Desktop. Parser w~fazie rozwoju. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Messenger --- proces eksportu}
+\label{subsec:messenger-eksport}
+
+Facebook Messenger jest główną i~najlepiej obsługiwaną platformą. Poniżej przedstawiono krok po kroku proces pozyskiwania eksportu:
+
+\begin{enumerate}
+  \item Otwórz \textbf{Facebook} → Ustawienia → Twoje informacje → \textbf{Pobierz swoje dane}.
+  \item W~sekcji ,,Twoje informacje'' zaznacz \textbf{tylko} ,,Wiadomości'' (odznacz wszystko inne).
+  \item Ustaw zakres dat (opcjonalnie) i~format: \textbf{JSON}.
+  \item Kliknij ,,Utwórz plik'' i~poczekaj na powiadomienie od Facebooka.
+  \item Pobierz archiwum \texttt{.zip} i~rozpakuj je.
+  \item Znajdź folder \filepath{messages/inbox/NazwaRozmówcy\_abc123/}.
+  \item Wrzuć plik \texttt{message\_1.json} (lub wiele plików) do \podtekst.
+\end{enumerate}
+
+\begin{warningbox}[title=Problem kodowania Unicode]
+Facebook eksportuje tekst w~kodowaniu latin-1 escaped Unicode. Oznacza to, że polskie znaki diakrytyczne (ą, ę, ś, ć, ź, ż, ó, ł, ń) oraz emoji będą zepsuty w~surowym pliku. \podtekst automatycznie dekoduje wszystkie stringi za pomocą funkcji \tsfunc{decodeFBString()}, która konwertuje każdy bajt z~latin-1 do prawidłowego UTF-8.
+
+Parser dekoduje \textbf{wszystkie} pola: \tstype{sender\_name}, \tstype{content}, \tstype{participants[].name}, \tstype{reactions[].reaction}, \tstype{reactions[].actor}, \tstype{title}.
+\end{warningbox}
+
+\subsection{WhatsApp --- proces eksportu}
+\label{subsec:whatsapp-eksport}
+
+\begin{enumerate}
+  \item Otwórz \textbf{WhatsApp} na telefonie → wybierz rozmowę.
+  \item Kliknij menu (⋮) → \textbf{Więcej} → \textbf{Eksportuj czat}.
+  \item Wybierz \textbf{Bez multimediów} (mniejszy plik, szybsze przetwarzanie).
+  \item Udostępnij plik \texttt{.txt} do komputera (e-mail, chmura, kabel).
+  \item Wrzuć plik \texttt{.txt} do \podtekst.
+\end{enumerate}
+
+Format WhatsApp to plain text z~timestampami w~różnych formatach regionalnych:
+
+\begin{lstlisting}[style=podcodeBash, caption={Przykład formatu WhatsApp}]
+15.01.2024, 14:23 - Jan Kowalski: Czesc, co tam?
+15.01.2024, 14:25 - Anna Nowak: Hej! Wszystko dobrze, a u Ciebie?
+15.01.2024, 14:25 - Jan Kowalski: Super, planuje cos na weekend
+\end{lstlisting}
+
+Parser \podtekst obsługuje formaty 12h (AM/PM) i~24h, separatory daty ,,/'' i~,,.'' oraz wieloliniowe wiadomości.
+
+\subsection{Instagram DM --- proces eksportu}
+
+\begin{enumerate}
+  \item Otwórz \textbf{Instagram} → Ustawienia → Twoja aktywność → \textbf{Pobierz swoje dane}.
+  \item Wybierz format \textbf{JSON} i~zakres dat.
+  \item Pobierz archiwum i~znajdź folder \filepath{messages/inbox/}.
+  \item Wrzuć plik \texttt{message\_1.json} do \podtekst.
+\end{enumerate}
+
+\begin{infobox}[title=Format Instagram vs Messenger]
+Instagram DM i~Messenger (oba należą do Meta) używają bardzo zbliżonego formatu JSON. Różnice dotyczą głównie nazw pól i~struktury metadanych. Parser Instagram jest w~dużej mierze rozszerzeniem parsera Messenger.
+\end{infobox}
+
+\subsection{Telegram --- proces eksportu}
+
+\begin{enumerate}
+  \item Otwórz \textbf{Telegram Desktop} (wymagany --- eksport nie jest dostępny z~aplikacji mobilnej).
+  \item Kliknij menu (≡) → Ustawienia → \textbf{Eksportuj dane z~Telegrama}.
+  \item Zaznacz ,,Osobiste rozmowy'' i~wybierz format \textbf{JSON}.
+  \item Pobierz archiwum i~znajdź plik \texttt{result.json}.
+  \item Wrzuć plik JSON do \podtekst.
+\end{enumerate}
+
+
+% ============================================================
+% 2.4 Ścieżka użytkownika
+% ============================================================
+\section{Ścieżka użytkownika}
+\label{sec:user-journey}
+
+Ścieżka użytkownika w~\podtekst jest celowo krótka i~linearna. Od wejścia na stronę do pełnego raportu dzieli użytkownika maksymalnie 5~kliknięć. Nie ma wymogu rejestracji ani logowania --- analiza jest dostępna natychmiast.
+
+\subsection{Diagram przepływu}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.4cm and 0.5cm,
+  every node/.style={font=\small},
+  flowstep/.style={
+    rectangle,
+    draw=PodBlue!60,
+    fill=PodBlue!8,
+    rounded corners=6pt,
+    minimum height=1.2cm,
+    minimum width=3.8cm,
+    align=center,
+    font=\small\bfseries,
+    text=PodBlueDark,
+    inner sep=6pt,
+  },
+  flowstep purple/.style={
+    flowstep,
+    draw=PodPurple!60,
+    fill=PodPurple!8,
+    text=PodPurpleDark,
+  },
+  flowstep green/.style={
+    flowstep,
+    draw=PodSuccess!60,
+    fill=PodSuccess!8,
+    text=PodSuccess!80!black,
+  },
+  flowstep amber/.style={
+    flowstep,
+    draw=PodWarning!60,
+    fill=PodWarning!8,
+    text=PodWarning!80!black,
+  },
+  flowdecision/.style={
+    diamond,
+    draw=PodPurple!60,
+    fill=PodPurple!8,
+    minimum width=2.2cm,
+    minimum height=1.6cm,
+    align=center,
+    font=\small,
+    inner sep=2pt,
+    aspect=2.2,
+    text=PodPurpleDark,
+  },
+  flowarrow/.style={
+    ->,
+    >=Stealth[length=6pt],
+    line width=1pt,
+    color=PodBlue!60,
+  },
+  flowlabel/.style={
+    font=\scriptsize\color{PodTextSecondary},
+    fill=white,
+    inner sep=1pt,
+  },
+]
+% ── Row 1 ──
+\node[startstop] (start) {Strona lądowania};
+\node[flowstep, right=2.5cm of start] (upload) {Wrzuć plik\\(.json / .txt)};
+\node[flowstep purple, right=2.5cm of upload] (reltype) {Wybierz typ\\relacji};
+
+% ── Row 2 ──
+\node[flowstep amber, below=1.8cm of reltype] (parsing) {Parsowanie\\i~walidacja};
+\node[flowstep, below=1.8cm of parsing] (quant) {Analiza\\ilościowa};
+
+% ── Row 3 ──
+\node[flowstep green, left=2.5cm of quant] (viewmetrics) {Wyświetl\\60+ metryk};
+\node[flowdecision, left=2.5cm of viewmetrics] (aidecision) {Uruchomić\\AI?};
+
+% ── Row 4 ──
+\node[flowstep purple, below=1.8cm of aidecision] (aianalysis) {Analiza AI\\(5 przebiegów)};
+\node[flowstep green, right=2.5cm of aianalysis] (fullreport) {Pełny raport\\+ profile};
+\node[flowstep, right=2.5cm of fullreport] (export) {Eksport PDF\\/ Share Cards};
+
+% ── Arrows ──
+\draw[flowarrow] (start) -- (upload);
+\draw[flowarrow] (upload) -- (reltype);
+\draw[flowarrow] (reltype) -- (parsing);
+\draw[flowarrow] (parsing) -- (quant);
+\draw[flowarrow] (quant) -- (viewmetrics);
+\draw[flowarrow] (viewmetrics) -- (aidecision);
+\draw[flowarrow] (aidecision) -- node[flowlabel, left] {Tak} (aianalysis);
+\draw[flowarrow] (aianalysis) -- (fullreport);
+\draw[flowarrow] (fullreport) -- (export);
+
+% ── "No" branch ──
+\draw[flowarrow, color=PodWarning!60] (aidecision.south west) -- ++(-1.2, -0.8)
+  node[flowlabel, below left, pos=0.3] {Nie}
+  -| node[near start, flowlabel, above] {Tylko metryki} (export.south);
+
+\end{tikzpicture}
+\caption{Ścieżka użytkownika w~\podtekst --- od uploadu do raportu}
+\label{fig:user-journey}
+\end{figure}
+
+\subsection{Opis poszczególnych etapów}
+
+\subsubsection{Etap 1: Strona lądowania}
+
+Strona lądowania \podtekst to full-viewport, dark-theme experience z~animowaną sceną 3D (Spline) i~hasłem ,,Twoje rozmowy mówią więcej niż myślisz.'' Użytkownik widzi sekcje: Hero, Social Proof, How It Works (3 kroki), Feature Showcase, interaktywne demo z~preloadowaną przykładową analizą, FAQ i~footer. Główne CTA: ,,Analizuj za darmo'' prowadzi bezpośrednio do uploadu.
+
+\subsubsection{Etap 2: Upload pliku}
+
+Strefa drag-and-drop (\texttt{DropZone}) akceptuje pliki \texttt{.json} i~\texttt{.txt}. Obsługuje multi-file upload (np. \texttt{message\_1.json}, \texttt{message\_2.json} z~Messengera). Walidacja: limit 500\,MB per plik, ostrzeżenie powyżej 200\,MB o~dłuższym czasie przetwarzania. Niedozwolone formaty wyświetlają komunikat z~instrukcją eksportu.
+
+\subsubsection{Etap 3: Wybór typu relacji}
+
+Selektor sześciu typów relacji z~ikonami i~opisami:
+\begin{itemize}
+  \item 💑 \textbf{Romantyczna} --- pary, związki, ex-partnerzy
+  \item 👫 \textbf{Przyjaźń} --- bliscy przyjaciele
+  \item 💼 \textbf{Koleżeńska} --- znajomi z~pracy/szkoły
+  \item 🤝 \textbf{Profesjonalna} --- relacje biznesowe
+  \item 👨‍👩‍👧 \textbf{Rodzinna} --- rodzice, rodzeństwo, krewni
+  \item ❓ \textbf{Inna} --- dowolny inny typ
+\end{itemize}
+
+Typ relacji wpływa na kontekst promptów AI (np. analiza języka miłości jest uruchamiana tylko dla relacji romantycznych).
+
+\subsubsection{Etap 4: Parsowanie i~walidacja}
+
+Trzyetapowy \texttt{ProcessingState} z~paskami postępu:
+\begin{enumerate}
+  \item \textbf{Parsowanie} --- odczytywanie, dekodowanie Unicode, normalizacja do ujednoliconego formatu \tstype{ParsedConversation}.
+  \item \textbf{Obliczanie} --- pełny silnik ilościowy: 60+ metryk w~czyste TypeScript.
+  \item \textbf{Zapis} --- persystencja do IndexedDB (offline-first, bez serwera).
+\end{enumerate}
+
+\subsubsection{Etap 5: Wyświetlenie metryk}
+
+Dashboard z~pełnym zestawem metryk ilościowych, dostępny natychmiast (2--5 sekund). Komponent \texttt{AnalysisHeader} wyświetla tytuł rozmowy, okres, liczbę wiadomości. \texttt{KPICards} --- 4 karty z~animated count-up (czas odpowiedzi, wiadomości/dzień, reakcje, proporcja inicjacji). Dalej: wykresy, heatmapa, tabele, odznaki, viral scores.
+
+\subsubsection{Etap 6: Analiza AI (opcjonalna)}
+
+Przycisk \texttt{AIAnalysisButton} uruchamia 5-przebiegową analizę. Postęp streamowany via SSE --- użytkownik widzi w~real-time, który przebieg jest aktualnie wykonywany. Po zakończeniu: sekcje AI pojawiają się na stronie analizy z~animacjami fade-in.
+
+\subsubsection{Etap 7: Eksport i~udostępnianie}
+
+Użytkownik może:
+\begin{itemize}
+  \item Pobrać pełen raport PDF (\texttt{ExportPDFButton})
+  \item Wygenerować dowolną z~15 Share Cards do udostępnienia w~social mediach
+  \item Uruchomić Story Mode (12-scenowy experience w~stylu Spotify Wrapped)
+  \item Porównać z~inną analizą (Comparison View)
+\end{itemize}
+
+
+% ============================================================
+% 2.5 Model cenowy
+% ============================================================
+\section{Model cenowy}
+\label{sec:model-cenowy}
+
+\podtekst stosuje trzypoziomowy model subskrypcyjny typu SaaS, zintegrowany ze Stripe. Warstwa darmowa oferuje pełny dostęp do metryk ilościowych (bez limitu), natomiast analiza AI i~funkcje premium wymagają subskrypcji.
+
+\begin{table}[H]
+\caption{Model cenowy \podtekst}
+\label{tab:pricing}
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} l C{2.5cm} C{2.5cm} C{2.5cm} @{}}
+\toprule
+\textbf{Funkcja} & \textbf{Free} & \textbf{Pro (\$9.99/m)} & \textbf{Unlimited (\$24.99/m)} \\
+\midrule
+Analizy / miesiąc & 1 & 10 & Bez limitu \\
+\addlinespace
+Metryki ilościowe (60+) & \score{\checkmark} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Viral scores \& badges & \score{\checkmark} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Share Cards (ilościowe) & \score{\checkmark} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Analiza AI (5 przebiegów) & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Profile osobowości (Big Five, MBTI) & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Dynamika relacji & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Styl przywiązania & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Health Score & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Roast Mode & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Story Mode & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Share Cards (AI) & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Eksport PDF & \danger{---} & \score{\checkmark} & \score{\checkmark} \\
+\addlinespace
+Porównanie rozmów & \danger{---} & \danger{---} & \score{\checkmark} \\
+\addlinespace
+Dostęp API & \danger{---} & \danger{---} & \score{\checkmark} \\
+\addlinespace
+Priorytetowe przetwarzanie & \danger{---} & \danger{---} & \score{\checkmark} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Uzasadnienie cenowe}
+
+\begin{description}
+  \item[Free Tier] Strategia akwizycji: użytkownik widzi fascynujące metryki za darmo i~jest naturalnie zachęcony do odblokowania analizy AI. Brak wymogu rejestracji --- zero friction. Ograniczenie do 1~analizy/miesiąc zapobiega nadużyciom.
+
+  \item[Pro (\$9.99/mies.)] Sweet spot dla indywidualnych użytkowników. 10~analiz/miesiąc wystarczy do przeanalizowania najważniejszych rozmów. Pełen dostęp do AI, eksportu PDF i~Share Cards. Główny stream przychodów.
+
+  \item[Unlimited (\$24.99/mies.)] Tier dla power users, twórców contentu i~terapeutów. Nieograniczone analizy, porównanie rozmów, dostęp API. Priorytetowe przetwarzanie (dedykowane rate limits).
+\end{description}
+
+\subsection{Struktura kosztów}
+
+Kluczowy czynnik kosztowy to wywołania Google Gemini API. Przy optymalnej strategii samplingu (200--500 wiadomości, $\sim$70\,KB) koszt pojedynczej analizy (4 przebiegi + opcjonalne tryby) jest minimalny dzięki modelowi \texttt{gemini-3-flash-preview}.
+
+\begin{metricbox}
+\textbf{Ekonomia unit economics (Pro Tier):}
+\begin{itemize}
+  \item Przychód: \$9.99/mies.
+  \item Max koszt AI: 10 $\times$ \$0.15 = \$1.50/mies.
+  \item Infrastruktura (Vercel, Supabase): $\sim$\$0.10/user/mies.
+  \item Stripe fees: $\sim$\$0.60/mies.
+  \item \textbf{Marża brutto: $\sim$78\%}
+\end{itemize}
+\end{metricbox}
+
+\subsection{Przyszłe rozszerzenia modelu cenowego}
+
+\begin{itemize}
+  \item \textbf{Enterprise Tier} --- dla firm terapeutycznych, agencji marketingowych, badawczych. Custom pricing, white-label, dedykowany support.
+  \item \textbf{One-time purchase} --- jednorazowa analiza bez subskrypcji (\$2.99 per analiza) jako alternatywa dla użytkowników, którzy nie chcą abonamentu.
+  \item \textbf{Freemium AI preview} --- krótki fragment analizy AI (np. tylko ton emocjonalny) dostępny za darmo jako teaser.
+  \item \textbf{Referral program} --- darmowa analiza za każdego poleconego użytkownika, który wykupi Pro.
+\end{itemize}

@@ -1,0 +1,135 @@
+% ============================================================
+% Rozdział 1 — Streszczenie Wykonawcze
+% ============================================================
+
+\chapter{Streszczenie Wykonawcze}
+\label{ch:streszczenie}
+
+\begin{center}
+\Large\itshape\color{PodBlue}
+,,Audyt to nie szukanie winnych --- to szukanie lepszego kodu.''
+\end{center}
+
+\vspace{8pt}
+
+Niniejszy rozdział stanowi skondensowane podsumowanie wyników wieloagentowego audytu eksperckiego aplikacji \podtekst. Trzy niezależne agenty analityczne przeczytały \textbf{kompletny kod źródłowy} (65+ plików) i~wygenerowały szczegółowe raporty obejmujące algorytmy, psychologię, parsery, interfejs, bezpieczeństwo i~infrastrukturę.
+
+% ============================================================
+\section{Ogólna ocena systemu}
+\label{sec:ocena-ogolna}
+\index{ocena ogólna}
+
+\begin{table}[H]
+\centering
+\caption{Karta wynikowa audytu --- oceny per obszar}
+\label{tab:audit-scorecard}
+\begin{tabularx}{\textwidth}{L{4.2cm} C{1.8cm} C{2cm} X}
+\toprule
+\textbf{Obszar} & \textbf{Ocena} & \textbf{Status} & \textbf{Kluczowy wniosek} \\
+\midrule
+\rowcolor{PodSuccess!8}
+Jakość kodu & \scorehi{8.0/10} & Silny & TypeScript strict, czyste wzorce, O(n) silnik \\
+\rowcolor{PodSuccess!8}
+Parsery platform & \scorehi{7.5/10} & Silny & 5~parserów, solidna normalizacja, encoding fix \\
+\rowcolor{PodSuccess!8}
+Pipeline AI & \scoremed{6.5/10} & Dobry & 4~pasy, kalibracja kontekstu, ale brak walidacji psych. \\
+\rowcolor{PodWarning!8}
+Interfejs użytkownika & \scoremed{7.0/10} & Dobry & Bogaty, ale strona wyników 985~LOC \\
+\rowcolor{PodWarning!8}
+Schematy JSON \& walidacja & \scoremed{7.0/10} & Dobry & Zod schemas, ale rate limiting wyłączony \\
+\rowcolor{PodWarning!8}
+Obsługa błędów & \scorehi{8.5/10} & Silny & Retry, partial results, SSE heartbeat, abort \\
+\rowcolor{PodDanger!8}
+Walidacja psychologiczna & \scorelo{4.5/10} & Słaby & Brak walidacji, arbitralne wagi, ad-hoc scoring \\
+\rowcolor{PodDanger!8}
+Bezpieczeństwo AI & \scorelo{5.5/10} & Wymaga pracy & BLOCK\_NONE, prompt injection, brak rate limit \\
+\rowcolor{PodWarning!8}
+Rozrywka vs nauka & \scoremed{5.0/10} & Ryzykowny & Comedy framing minimalizuje red flags \\
+\midrule
+\textbf{Średnia ważona} & \scoremed{6.5/10} & & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Podsumowanie znalezionych problemów}
+\label{sec:podsumowanie-problemow}
+
+\begin{table}[H]
+\centering
+\caption{Macierz problemów --- liczba per kategoria i~waga}
+\label{tab:problem-matrix}
+\begin{tabularx}{\textwidth}{L{4cm} C{2.2cm} C{2.2cm} C{2.2cm}}
+\toprule
+\textbf{Źródło} & \textbf{\critical{Krytyczne}} & \textbf{\major{Istotne}} & \textbf{\minor{Drobne}} \\
+\midrule
+Silnik ilościowy & 5 & 8 & 5 \\
+Pipeline AI & 3 & 4 & 2 \\
+Parsery i~UI & 1 & 3 & 3 \\
+\midrule
+\textbf{Razem} & \textbf{9} & \textbf{15} & \textbf{10} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Top 10 priorytetów}
+\label{sec:top-priorytety}
+\index{priorytety}
+
+\begin{enumerate}
+  \item \critical{AI-01} --- Zmienić ustawienia Gemini Safety z~\texttt{BLOCK\_NONE} na \texttt{BLOCK\_ONLY\_HIGH} \hfill \filepath{gemini.ts}
+  \item \critical{QUANT-01} --- Naprawić dzielenie \texttt{reactionRate} przez \texttt{messagesReceived} zamiast poprawnej wartości \hfill \filepath{viral-scores.ts}
+  \item \critical{QUANT-04} --- Odwrócić semantykę \texttt{delusionHolder} (holder = niższy interest, nie wyższy) \hfill \filepath{viral-scores.ts}
+  \item \critical{INFRA-01} --- Włączyć rate limiting na produkcji (obecnie wyłączony!) \hfill \filepath{rate-limit.ts}
+  \item \critical{QUANT-02/05} --- Zwracać 50 (neutralne) zamiast 100 gdy brak danych w~response symmetry \hfill \filepath{viral-scores.ts}
+  \item \major{AI-03} --- Zwalidować \texttt{relationshipContext} przez Zod enum (nie passthrough) \hfill \filepath{schemas.ts}
+  \item \major{QUANT-03} --- Dodać \texttt{clamp} do procent w~wrapped-data (overflow > 100) \hfill \filepath{wrapped-data.ts}
+  \item \major{AI-04} --- Dodać wyraźne disclaimery do Health Score i~wyników wiralnych \hfill UI
+  \item \major{ENG-04} --- Zmienić badge Early Bird z~absolute na percentage \hfill \filepath{badges.ts}
+  \item \major{ENG-06} --- Zmienić trend message length z~mean na median \hfill \filepath{trends.ts}
+\end{enumerate}
+
+% ============================================================
+\section{Kluczowe mocne strony}
+\label{sec:mocne-strony}
+
+\begin{strengthbox}[title=Co działa dobrze]
+\begin{itemize}
+  \item \textbf{Architektura O(n)}: Silnik ilościowy przetwarza 50\,000 wiadomości w~$< 200$~ms, jednoprzebiegowy design z~akumulatorami.
+  \item \textbf{Kalibracja kontekstu relacji}: Pipeline AI dostosowuje oczekiwania do typu relacji (romantyczna vs przyjaźń vs zawodowa), minimalizując fałszywe alarmy.
+  \item \textbf{Manipulation Guard Rails}: Wymóg 3+ niezależnych wzorców dowodowych + próg ufności $< 70\%$ jako filtr fałszywych pozytywów.
+  \item \textbf{Prywatność}: Surowe wiadomości nigdy nie opuszczają przeglądarki (poza 200--500 próbkami do Gemini). Share URL anonimizuje dane.
+  \item \textbf{CPS Screener}: 63~pytania, 10~wzorców, próg 3+ instancji --- najsilniejszy komponent psychologiczny.
+  \item \textbf{Obsługa błędów}: Retry z~exponential backoff, SSE heartbeat 15s, partial results degradation, abort signal handling.
+  \item \textbf{Parsery}: 5~platform z~solidną normalizacją, Facebook Unicode fix, WhatsApp locale heuristic, multi-file merging.
+\end{itemize}
+\end{strengthbox}
+
+% ============================================================
+\section{Kluczowe słabości}
+\label{sec:slabosci}
+
+\begin{criticalbox}[title=Problemy wymagające natychmiastowej uwagi]
+\begin{itemize}
+  \item \textbf{5~bugów krytycznych w~silniku ilościowym}: reactionRate division error, zero-data returns 100, wrapped percent overflow, inverted delusion holder, reciprocity zero-data.
+  \item \textbf{Gemini BLOCK\_NONE}: Wszystkie filtry bezpieczeństwa wyłączone --- ryzyko generowania treści szkodliwych.
+  \item \textbf{Rate limiting wyłączony}: Brak ochrony przed nadużyciami API na produkcji.
+  \item \textbf{Health Score bez walidacji}: Arbitralne wagi 25/20/20/20/15, żadna korelacja z~ustalonymi miarami satysfakcji relacyjnej.
+  \item \textbf{Subtext scoring ad-hoc}: Punktacja wiadomości (,,ok'' = 5~pkt, ,,\ldots'' = 2~pkt) bez podstawy w~literaturze lingwistycznej.
+\end{itemize}
+\end{criticalbox}
+
+% ============================================================
+\section{Mapa rozdziałów}
+\label{sec:mapa-rozdzialow}
+
+Dalsze rozdziały tego raportu zawierają \textbf{pełne, nieskrócone} wyniki każdego z~trzech agentów analitycznych, a~następnie syntezę ekspercką i~rekomendacje:
+
+\begin{description}
+  \item[Rozdział~\ref{ch:audit-quant}] \textbf{Audyt Silnika Ilościowego} --- pełny output \agentone: 60+ metryk, 5~bugów krytycznych, analiza metryk wiralnych, system odznak, metryki sieci, CPS.
+  \item[Rozdział~\ref{ch:audit-ai}] \textbf{Audyt Pipeline AI i~Psychologii} --- pełny output \agenttwo: 4~pasy analizy, frameworki psychologiczne, moduły rozrywkowe, bezpieczeństwo AI.
+  \item[Rozdział~\ref{ch:audit-parsery}] \textbf{Audyt Parserów i~Interfejsu} --- pełny output \agentthree: 5~parserów, UI, eksport PDF, rate limiting, walidacja.
+  \item[Rozdział~\ref{ch:synteza}] \textbf{Synteza Ekspercka} --- wzorce przekrojowe, macierz ryzyk, sprzeczności między agentami, gotowość produkcyjna.
+  \item[Rozdział~\ref{ch:rekomendacje}] \textbf{Rekomendacje i~Mapa Drogowa} --- priorytetyzacja Tier~0--4, harmonogram wdrożenia, metryki sukcesu, przyszłe funkcje.
+\end{description}

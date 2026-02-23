@@ -22,6 +22,8 @@ import { handleRanking } from '../commands/ranking';
 import { handleRoast } from '../commands/roast';
 import { handleMegaroast } from '../commands/megaroast';
 import { handlePersonality } from '../commands/personality';
+import { handleCwel } from '../commands/cwel';
+import { handleSearchDeferred } from '../commands/search';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -83,7 +85,10 @@ export async function POST(request: Request): Promise<Response> {
     ]);
 
     // AI commands — always defer
-    const aiCommands = new Set(['roast', 'megaroast', 'personality']);
+    const aiCommands = new Set(['roast', 'megaroast', 'personality', 'cwel']);
+
+    // Search command — deferred but no AI needed
+    const searchCommands = new Set(['search']);
 
     // Website link button — appended to every command response
     const linkComponents = websiteLinkRow(channelId);
@@ -208,6 +213,9 @@ export async function POST(request: Request): Promise<Response> {
             case 'personality':
               await handlePersonality(interaction, data);
               break;
+            case 'cwel':
+              await handleCwel(interaction, data);
+              break;
           }
           // Send website link button as follow-up after AI response
           await sendFollowUp(interaction.token, undefined, undefined, linkComponents);
@@ -223,7 +231,24 @@ export async function POST(request: Request): Promise<Response> {
       return deferredResponse();
     }
 
-    return immediateResponse('Nieznana komenda. U\u017Cyj /stats, /roast, /personality, /versus, /whosimps, /ghostcheck, /besttime, /catchphrase, /emoji, /nightowl, /ranking lub /analyze.');
+    if (searchCommands.has(commandName)) {
+      // Search commands defer — search takes ~1-2s
+      (async () => {
+        try {
+          await handleSearchDeferred(interaction);
+        } catch (err) {
+          await editDeferredResponse(
+            interaction.token,
+            undefined,
+            [warningEmbed('Błąd', err instanceof Error ? err.message : 'Nieznany błąd')],
+          );
+        }
+      })();
+
+      return deferredResponse();
+    }
+
+    return immediateResponse('Nieznana komenda. Użyj /stats, /roast, /megaroast, /cwel, /personality, /versus, /whosimps, /ghostcheck, /besttime, /catchphrase, /emoji, /nightowl, /ranking, /search lub /analyze.');
   }
 
   return new Response('Unknown interaction type', { status: 400 });

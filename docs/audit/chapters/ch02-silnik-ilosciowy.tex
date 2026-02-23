@@ -1,0 +1,1223 @@
+% ============================================================
+% Rozdział 2 — Audyt Silnika Ilościowego
+% Agent 1: Analiza algorytmów kwantytatywnych
+% ============================================================
+
+\chapter{Audyt Silnika Ilościowego}
+\label{ch:audit-quant}
+
+\begin{quote}
+\textit{„Bez danych jesteś tylko kolejną osobą z~opinią."}\\
+\hfill --- W. Edwards Deming
+\end{quote}
+
+\vspace{8pt}
+
+Silnik ilościowy \podtekst stanowi fundament całej platformy analitycznej.
+To właśnie on~--- działając wyłącznie po stronie klienta, bez jakiegokolwiek udziału AI~---
+przetwarza surowe wiadomości na ponad 60~metryk statystycznych, od~prostych
+liczników po wielowymiarowe wskaźniki wzajemności i~wiralności.
+\index{silnik ilościowy}
+
+Niniejszy rozdział prezentuje kompletne wyniki audytu przeprowadzonego przez \agentone.
+Analiza obejmuje architekturę obliczeniową, poprawność matematyczną wzorów,
+trafność psychologiczną metryk wiralnych, system odznak, wykrywanie burstów,
+metryki sieciowe oraz moduł Communication Pattern Screening (CPS).
+
+Zidentyfikowano \critical{5~błędów krytycznych}, \major{8~problemów istotnych}
+oraz \minor{5~problemów drobnych}. Ocena końcowa silnika: \scoremed{6{,}5/10}.
+
+
+% ============================================================
+\section{Przegląd silnika}
+\label{sec:quant-overview}
+\index{architektura!silnik ilościowy}
+
+% ------------------------------------------------------------
+\subsection{Architektura single-pass O(n)}
+\label{subsec:quant-arch}
+
+Główna funkcja \tsfunc{computeQuantitativeAnalysis()} w~pliku
+\filepath{src/lib/analysis/quantitative.ts} realizuje przetwarzanie
+w~trzech fazach:
+
+\begin{enumerate}
+  \item \textbf{Inicjalizacja} --- tworzenie akumulatorów \tstype{PersonAccumulator}
+    dla każdego uczestnika, zerowanie struktur heatmapy, map miesięcznych
+    i~liczników sesji.
+  \item \textbf{Główna pętla O(n)} --- pojedyncze przejście po tablicy wiadomości.
+    Każda wiadomość aktualizuje: liczniki słów/znaków, emoji, reakcje, pytania,
+    linki, media, czasy odpowiedzi, sesje, double texting, heatmapę, wolumeny
+    miesięczne i~dzienne.
+  \item \textbf{Post-processing} --- obliczanie metryk końcowych z~akumulatorów:
+    mediany czasów odpowiedzi, trendy, bursts, viral scores, odznaki,
+    catchphrases, metryki sieci i~indeks wzajemności.
+\end{enumerate}
+
+\begin{infobox}[title={Cel wydajnościowy}]
+Deklarowany cel: \textbf{<200ms dla 50\,000 wiadomości}.
+Architektura O(n) z~pojedynczym przejściem po tablicy wiadomości
+jest właściwym wyborem. Operacje post-processingu (sortowanie, mediany,
+regresja liniowa) mają złożoność O(m\,\text{log}\,m) gdzie $m \ll n$.
+\end{infobox}
+
+% ------------------------------------------------------------
+\subsection{Platform-aware session gaps}
+\label{subsec:quant-sessions}
+
+Silnik rozróżnia platformy przy definiowaniu przerwy sesyjnej:
+
+\begin{lstlisting}[style=podcode, caption={Przerwa sesyjna zależna od~platformy}]
+function getSessionGapMs(platform: ParsedConversation['platform']): number {
+  return platform === 'discord' ? 2 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000;
+}
+\end{lstlisting}
+
+Discord otrzymuje 2-godzinną przerwę sesyjną (konwersacje na serwerach są
+bardziej rozproszone), pozostałe platformy~--- 6~godzin. To rozsądne
+rozróżnienie, choć warto rozważyć parametryzację na poziomie konfiguracji
+zamiast hardcoded wartości.
+
+% ------------------------------------------------------------
+\subsection{Moduły pomocnicze}
+\label{subsec:quant-submodules}
+
+Po refaktoryzacji TIER~3.3 silnik składa się z~następujących submodułów:
+
+\begin{tabularx}{\textwidth}{l X}
+  \toprule
+  \textbf{Moduł} & \textbf{Odpowiedzialność} \\
+  \midrule
+  \filepath{quant/helpers.ts} & Ekstrakcja emoji, tokenizacja, statystyki, daty \\
+  \filepath{quant/types.ts} & Typ \tstype{PersonAccumulator}, fabryka \\
+  \filepath{quant/bursts.ts} & Detekcja burstów (7-dniowa średnia krocząca) \\
+  \filepath{quant/trends.ts} & Trendy miesięczne (RT, długość wiad., inicjacje) \\
+  \filepath{quant/reciprocity.ts} & Indeks wzajemności (4~wymiary) \\
+  \filepath{viral-scores.ts} & Kompatybilność, zainteresowanie, ghost risk, delusion \\
+  \filepath{badges.ts} & 15~odznak behawioralnych \\
+  \filepath{catchphrases.ts} & Catchphrases (n-gramy) + Best Time to Text \\
+  \filepath{network.ts} & Metryki sieci (graf interakcji, centralność) \\
+  \filepath{constants.ts} & Stopwords, regresja liniowa \\
+  \bottomrule
+\end{tabularx}
+
+\vspace{4pt}
+Podział jest logiczny i~czytelny. Jedyny zarzut: \filepath{viral-scores.ts}
+powinna znajdować się w~katalogu \filepath{quant/}, analogicznie do~pozostałych
+submodułów.
+
+
+% ============================================================
+\section{Błędy krytyczne}
+\label{sec:quant-critical}
+\index{błędy krytyczne!silnik ilościowy}
+
+Zidentyfikowano 5~błędów krytycznych wpływających na~poprawność wyników
+prezentowanych użytkownikowi.
+
+% ------------------------------------------------------------
+\subsection{\bugid{QUANT-01}: Niepoprawna reactionRate}
+\label{subsec:quant-01}
+
+\begin{criticalbox}[title={\bugid{QUANT-01} --- Niepoprawny mianownik reactionRate}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/quantitative.ts}, linia~588--589
+
+\textbf{Opis:} Współczynnik \texttt{reactionRate} dzieli \texttt{reactionsGiven}
+przez \texttt{messagesReceived}. Semantycznie jest to stosunek
+\emph{„ile reakcji dała osoba A na wiadomości od~innych"}, co mierzy
+\textbf{aktywność reakcyjną} danej osoby, a~nie \textbf{otrzymany engagement}.
+
+\begin{lstlisting}[style=podcode, caption={Obliczanie reactionRate --- aktualny kod}]
+reactionRate[name] =
+  acc.messagesReceived > 0
+    ? acc.reactionsGiven / acc.messagesReceived
+    : 0;
+\end{lstlisting}
+
+\textbf{Problem:} W~czatach grupowych (3+ osób) \texttt{messagesReceived}
+obejmuje wiadomości od~\emph{wszystkich} pozostałych uczestników, podczas
+gdy \texttt{reactionsGiven} może dotyczyć reakcji na~wiadomości tylko
+wybranych osób. Powoduje to~sztuczne zaniżenie rate w~dużych grupach.
+
+Ponadto, termin \texttt{reactionRate} sugeruje, że~mierzy się \emph{stopień
+reagowania na~wiadomości danej osoby} (otrzymane reakcje / wysłane wiadomości),
+a~nie aktywność reakcyjną.
+
+\textbf{Wpływ:} Niepoprawne wartości \texttt{reactionRate} propagują się do:
+\begin{itemize}
+  \item \texttt{engagementBalanceScore()} w~viral scores (compatibility score)
+  \item \texttt{engagementScore} w~interest score (waga 20\%)
+  \item Porównania między osobami w~UI
+\end{itemize}
+
+\textbf{Rekomendacja:}
+\begin{lstlisting}[style=podcode, caption={Proponowana poprawka QUANT-01}]
+// Osobno: rate dawania i otrzymywania reakcji
+reactionGiveRate[name] = acc.totalMessages > 0
+  ? acc.reactionsGiven / acc.totalMessages : 0;
+reactionReceiveRate[name] = acc.totalMessages > 0
+  ? acc.reactionsReceived / acc.totalMessages : 0;
+\end{lstlisting}
+\end{criticalbox}
+
+% ------------------------------------------------------------
+\subsection{\bugid{QUANT-02}: responseSymmetry = 100 przy braku danych}
+\label{subsec:quant-02}
+
+\begin{criticalbox}[title={\bugid{QUANT-02} --- Brak danych interpretowany jako idealna kompatybilność}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/viral-scores.ts}, linia~103--104
+
+\begin{lstlisting}[style=podcode, caption={responseSymmetryScore --- aktualny kod}]
+function responseSymmetryScore(
+  timing: TimingMetrics, names: string[]
+): number {
+  // ...
+  const maxMed = Math.max(medA, medB);
+  if (maxMed === 0) return 100; // BUG: brak danych = perfekcja
+  // ...
+}
+\end{lstlisting}
+
+\textbf{Problem:} Gdy obie mediany czasu odpowiedzi wynoszą 0 (brak danych
+o~czasach odpowiedzi), funkcja zwraca 100~--- co jest interpretowane jako
+\emph{idealna symetria}. Brak danych nie powinien oznaczać perfekcyjnego
+dopasowania.
+
+\textbf{Wpływ:} Zawyżony \texttt{compatibilityScore} dla konwersacji
+z~niedostateczną ilością danych o~czasach odpowiedzi. Użytkownik widzi
+wysoką kompatybilność, której nie da~się uzasadnić danymi.
+
+\textbf{Rekomendacja:} Zwracać wartość neutralną 50 przy braku danych:
+\begin{lstlisting}[style=podcode, caption={Proponowana poprawka QUANT-02}]
+if (maxMed === 0) return 50; // neutral when no data
+\end{lstlisting}
+\end{criticalbox}
+
+% ------------------------------------------------------------
+\subsection{\bugid{QUANT-03}: Procent response time w~wrapped-data bez clampowania}
+\label{subsec:quant-03}
+
+\begin{criticalbox}[title={\bugid{QUANT-03} --- Procent przekraczający 100\% w~Wrapped Mode}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/wrapped-data.ts}, linia~230--231
+
+\begin{lstlisting}[style=podcode, caption={Wrapped slide --- response time percent}]
+personA: {
+  name: nameA,
+  value: formatMinutes(rtA),
+  percent: rtA <= rtB
+    ? 100
+    : Math.round((rtB / (rtA || 1)) * 100)
+},
+personB: {
+  name: nameB,
+  value: formatMinutes(rtB),
+  percent: rtB <= rtA
+    ? 100
+    : Math.round((rtA / (rtB || 1)) * 100)
+},
+\end{lstlisting}
+
+\textbf{Problem:} Gdy \texttt{rtB >> rtA}, wartość
+\texttt{Math.round((rtB / (rtA || 1)) * 100)} może znacznie przekroczyć
+100. Nie ma żadnego clampowania wyniku. Mimo że~szybsza osoba dostaje
+\texttt{percent: 100}, procent wolniejszej osoby jest obliczany jako
+stosunek odwrotny~--- i~tutaj logika jest poprawna (szybszy/wolniejszy
+daje wartość <100). Jednakże, gdyby obie wartości były bardzo zbliżone
+do~0, mogą pojawić się wartości >100 przez zaokrąglenia.
+
+\textbf{Wpływ:} Potencjalnie zniekształcony pasek postępu w~Wrapped Mode
+na slajdzie ``Kto odpowiada szybciej?''.
+
+\textbf{Rekomendacja:} Dodać \texttt{Math.min(..., 100)} do~obu obliczeń:
+\begin{lstlisting}[style=podcode, caption={Proponowana poprawka QUANT-03}]
+percent: Math.min(100, Math.round((rtB / (rtA || 1)) * 100))
+\end{lstlisting}
+\end{criticalbox}
+
+% ------------------------------------------------------------
+\subsection{\bugid{QUANT-04}: delusionHolder semantycznie odwrócony}
+\label{subsec:quant-04}
+
+\begin{criticalbox}[title={\bugid{QUANT-04} --- delusionHolder przypisany do~osoby z~WYŻSZYM zainteresowaniem}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/viral-scores.ts}, linie~421--428
+
+\begin{lstlisting}[style=podcode, caption={Obliczanie delusionHolder --- aktualny kod}]
+if (interestValues.length >= 2) {
+  const sorted = [...interestValues].sort((a, b) => b[1] - a[1]);
+  delusionScore = Math.abs(sorted[0][1] - sorted[1][1]);
+  delusionHolder = sorted[0][0]; // BUG: osoba z NAJWYZSZYM interest
+  if (delusionScore < 5) {
+    delusionHolder = undefined;
+  }
+}
+\end{lstlisting}
+
+\textbf{Problem:} Tablica jest sortowana malejąco (\texttt{b[1] - a[1]}),
+więc \texttt{sorted[0]} to~osoba z~\textbf{najwyższym} wynikiem Interest Score.
+\texttt{delusionHolder} jest przypisywany do~niej.
+
+Semantyka Delusion Score: powinna wskazywać osobę, która~\textbf{przecenia
+wzajemność} --- czyli osobę z~\emph{niższym} interest score od~drugiej strony,
+która (prawdopodobnie) żyje w~złudzeniu, że~zainteresowanie jest wzajemne.
+
+Osoba z~wyższym interest score jest bardziej zaangażowana \emph{i~świadoma tego}
+--- to~nie jest delusion. Delusion to~osoba z~niższym interest, która
+nie dostrzega asymetrii.
+
+\textbf{Wpływ:} Odwrócone wyniki na kartach Delusion Score --- użytkownik
+widzi ``X żyje w~złudzeniach'', ale to~tak naprawdę osoba Y jest
+mniej zaangażowana i~potencjalnie bardziej zdeluzjonowana.
+
+\textbf{Rekomendacja:}
+\begin{lstlisting}[style=podcode, caption={Proponowana poprawka QUANT-04}]
+delusionHolder = sorted[1][0]; // osoba z NIZSZYM interest score
+\end{lstlisting}
+
+\textbf{Uwaga:} Definicja ``delusion'' jest dyskusyjna i~zależy od~kontekstu.
+Alternatywna interpretacja: osoba z~wyższym interest jest~``zdeluzjonowana'',
+bo nadmiernie inwestuje emocjonalnie. W~takim wypadku obecna logika
+byłaby poprawna, ale wymaga wyraźnej dokumentacji decyzji projektowej.
+\end{criticalbox}
+
+% ------------------------------------------------------------
+\subsection{\bugid{QUANT-05}: reciprocity responseTimeSymmetry = 100 przy braku danych}
+\label{subsec:quant-05}
+
+\begin{criticalbox}[title={\bugid{QUANT-05} --- Brak danych RT = perfekcyjna synchronizacja w~ReciprocityIndex}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/quant/reciprocity.ts}, linie~62--70
+
+\begin{lstlisting}[style=podcode, caption={reciprocity responseTimeSymmetry --- aktualny kod}]
+let responseTimeSymmetry = 50;
+if (rtA > 0 && rtB > 0) {
+  const ratio = Math.min(rtA, rtB) / Math.max(rtA, rtB);
+  responseTimeSymmetry = Math.round(ratio * 100);
+} else if (rtA === 0 && rtB === 0) {
+  responseTimeSymmetry = 50; // poprawnie: neutral
+}
+\end{lstlisting}
+
+\textbf{Problem:} Na~pierwszy rzut oka kod wygląda poprawnie~--- zwraca 50 gdy
+oba RT wynoszą~0. Jednakże brakuje obsługi przypadku, gdy \textbf{tylko
+jedno} RT wynosi~0 (np.~osoba A~nigdy nie odpowiadała, ale osoba B~tak).
+W~takim wypadku \texttt{responseTimeSymmetry} pozostaje na~wartości
+domyślnej 50~--- co nie oddaje skrajnej asymetrii (jedna osoba odpowiada,
+druga nie).
+
+\textbf{Powiązanie z~\bugid{QUANT-02}:} Analogiczny wzorzec: brak danych
+traktowany nadmiernie optymistycznie. W~\filepath{viral-scores.ts}
+to~samo zjawisko daje wynik 100 zamiast 50.
+
+\textbf{Wpływ:} Zawyżony ReciprocityIndex w~konwersacjach, gdzie jedna
+osoba ma dane o~response time, a~druga nie.
+
+\textbf{Rekomendacja:}
+\begin{lstlisting}[style=podcode, caption={Proponowana poprawka QUANT-05}]
+if (rtA > 0 && rtB > 0) {
+  const ratio = Math.min(rtA, rtB) / Math.max(rtA, rtB);
+  responseTimeSymmetry = Math.round(ratio * 100);
+} else if (rtA === 0 && rtB === 0) {
+  responseTimeSymmetry = 50; // brak danych - neutral
+} else {
+  responseTimeSymmetry = 10; // skrajna asymetria
+}
+\end{lstlisting}
+\end{criticalbox}
+
+
+% ============================================================
+\section{Problemy istotne}
+\label{sec:quant-moderate}
+\index{problemy istotne!silnik ilościowy}
+
+Zidentyfikowano 8~problemów istotnych. Nie są to~błędy logiczne sensu stricto,
+ale unjustified magic numbers, nieoptymalne wybory miar statystycznych
+i~edge case'y wpływające na~jakość wyników.
+
+% ------------------------------------------------------------
+\subsection{\issueid{ENG-01}: Hardcoded slope normalization w~interest score}
+\label{subsec:eng-01}
+
+\begin{moderatebox}[title={\issueid{ENG-01} --- Magiczna stała 1200 w~normalizacji response time trend}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/viral-scores.ts}, linia~197
+
+\begin{lstlisting}[style=podcode, caption={Response time trend --- normalizacja}]
+// Normalize: negative slope is good.
+// A slope of -60000ms/month is very good.
+// Map range: slope <= -60000 -> 100, slope >= 60000 -> 0
+const rtScore = clamp(50 - safeDivide(rtSlope, 1200), 0, 100);
+\end{lstlisting}
+
+Stała \texttt{1200} wynika z~$60000 / 50 = 1200$. Komentarz wyjaśnia intencję,
+ale wartość 60\,000\,ms/miesiąc (1~minuta/miesiąc) jako ``bardzo dobra'' zmiana
+jest arbitralna i~nie została zwalidowana empirycznie.
+
+\textbf{Wpływ:} Normalizacja może być zbyt agresywna lub zbyt łagodna
+w~zależności od~charakterystyki konwersacji. Brak adaptacji do~baseline
+danej rozmowy.
+\end{moderatebox}
+
+% ------------------------------------------------------------
+\subsection{\issueid{ENG-02}: Mnożnik 25 w~trendzie długości wiadomości}
+\label{subsec:eng-02}
+
+\begin{moderatebox}[title={\issueid{ENG-02} --- Nieuzasadniony mnożnik w~message length trend}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/viral-scores.ts}, linia~206
+
+\begin{lstlisting}[style=podcode, caption={Message length trend score}]
+// Positive slope = longer messages = more engaged
+// Map: slope of +2 words/month -> 100, slope of -2 -> 0
+const mlScore = clamp(50 + mlSlope * 25, 0, 100);
+\end{lstlisting}
+
+Mnożnik \texttt{25} oznacza, że~zmiana o~$\pm2$ słowa/miesiąc daje wynik 0 lub 100.
+Nie ma uzasadnienia, dlaczego 2~słowa/miesiąc to~granica. W~krótkich konwersacjach
+(średnio 3--5~słów) zmiana o~2~słowa to~40--67\% zmiany, ale w~dłuższych
+(20+~słów) to~zaledwie 10\%.
+
+\textbf{Rekomendacja:} Normalizować slope względem baseline'owej średniej
+długości wiadomości danej osoby.
+\end{moderatebox}
+
+% ------------------------------------------------------------
+\subsection{\issueid{ENG-03}: Mnożnik 500 w~engagement balance}
+\label{subsec:eng-03}
+
+\begin{moderatebox}[title={\issueid{ENG-03} --- Zbyt ekstremalny mnożnik engagement balance}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/viral-scores.ts}, linia~144
+
+\begin{lstlisting}[style=podcode, caption={engagementBalanceScore --- mnożnik 500}]
+return clamp(100 - Math.abs(rateA - rateB) * 500, 0, 100);
+\end{lstlisting}
+
+Mnożnik 500 oznacza, że~różnica \texttt{reactionRate} wynosząca zaledwie 0{,}2
+(20~punktów procentowych) daje wynik 0. Typowe wartości \texttt{reactionRate}
+to~0{,}01--0{,}10, więc nawet niewielka różnica absolutna może spowodować
+zerowy wynik engagement balance.
+
+\textbf{Wpływ:} Compatibility score jest nadmiernie wrażliwy na~różnice
+w~częstości reakcji. Para, gdzie osoba A~reaguje na~5\% wiadomości,
+a~osoba B~na~7\%, otrzyma engagement balance = 90, ale para 5\% vs.~25\%
+otrzyma~0.
+
+\textbf{Rekomendacja:} Użyć normalizacji opartej na~stosunku
+(min/max) zamiast różnicy absolutnej z~mnożnikiem.
+\end{moderatebox}
+
+% ------------------------------------------------------------
+\subsection{\issueid{ENG-04}: Early Bird badge liczy wartości bezwzględne}
+\label{subsec:eng-04}
+
+\begin{moderatebox}[title={\issueid{ENG-04} --- Badge Early Bird faworyzuje osoby z~większą liczbą wiadomości}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/badges.ts}, linie~182--206
+
+\begin{lstlisting}[style=podcode, caption={Early Bird --- bezwzględna liczba wiadomości}]
+const earlyBirdCount: Record<string, number> = {};
+for (const name of names) {
+  let count = 0;
+  const matrix = heatmap.perPerson[name];
+  if (matrix) {
+    for (let day = 0; day < 7; day++) {
+      for (let hour = 0; hour < 8; hour++) {
+        count += matrix[day][hour];
+      }
+    }
+  }
+  earlyBirdCount[name] = count;
+}
+\end{lstlisting}
+
+Badge liczy bezwzględną liczbę wiadomości przed 8:00. Osoba wysyłająca
+10\,000 wiadomości (z~czego 200~przed 8:00 = 2\%) wygra nad osobą
+wysyłającą 1\,000 wiadomości (z~czego 150~przed 8:00 = 15\%).
+
+\textbf{Kontrast:} Night Owl poprawnie używa procentu:
+\begin{lstlisting}[style=podcode, caption={Night Owl --- poprawny procent}]
+lateNightPct[name] = total > 0 ? (lateNight / total) * 100 : 0;
+\end{lstlisting}
+
+\textbf{Rekomendacja:} Użyć analogicznego podejścia procentowego jak Night Owl.
+\end{moderatebox}
+
+% ------------------------------------------------------------
+\subsection{\issueid{ENG-05}: Próg unikalności catchphrase za niski}
+\label{subsec:eng-05}
+
+\begin{moderatebox}[title={\issueid{ENG-05} --- Catchphrase uniqueness threshold 0{,}6 za niski}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/catchphrases.ts}, linia~144
+
+\begin{lstlisting}[style=podcode, caption={Catchphrase uniqueness threshold}]
+if (uniqueness < 0.6) continue;
+\end{lstlisting}
+
+Próg 0{,}6 oznacza, że~fraza, która~jest używana w~60\% przez osobę A
+i~w~40\% przez osobę B, nadal kwalifikuje się jako ``catchphrase'' osoby~A.
+Tak niska unikalność podważa wiarygodność etykiety~--- fraza używana
+niemal równo przez obu rozmówców nie jest charakterystycznym zwrotem
+żadnego z~nich.
+
+\textbf{Rekomendacja:} Podnieść próg do~0{,}75 lub wyżej, aby catchphrases
+były naprawdę unikalne dla danej osoby.
+\end{moderatebox}
+
+% ------------------------------------------------------------
+\subsection{\issueid{ENG-06}: Trend message length używa mean zamiast median}
+\label{subsec:eng-06}
+
+\begin{moderatebox}[title={\issueid{ENG-06} --- Średnia arytmetyczna wrażliwa na~outliers w~trendzie długości}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/quant/trends.ts}, linie~43--50
+
+\begin{lstlisting}[style=podcode, caption={Message length trend --- mean}]
+// Message length trend: monthly average word count per person
+const messageLengthTrend = sortedMonths.map((month) => {
+  const pp: Record<string, number> = {};
+  for (const [name, acc] of accumulators) {
+    const words = acc.monthlyWordCounts.get(month);
+    if (words && words.length > 0) {
+      pp[name] = words.reduce((a, b) => a + b, 0) / words.length;
+    } else {
+      pp[name] = 0;
+    }
+  }
+  return { month, perPerson: pp };
+});
+\end{lstlisting}
+
+\textbf{Problem:} Trend response time poprawnie używa \textbf{mediany}
+(z~filtrowaniem outliers), ale trend długości wiadomości używa
+\textbf{średniej arytmetycznej}. Jedna bardzo długa wiadomość (np.~wklejony
+tekst, lista zakupów) może drastycznie zawyżyć średnią w~danym miesiącu
+i~zniekształcić trend.
+
+\textbf{Rekomendacja:} Użyć mediany, analogicznie do~response time trend.
+\end{moderatebox}
+
+% ------------------------------------------------------------
+\subsection{\issueid{ENG-07}: Arbitralny próg detekcji burstów}
+\label{subsec:eng-07}
+
+\begin{moderatebox}[title={\issueid{ENG-07} --- Próg 3$\times$ średnia krocząca bez walidacji}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/quant/bursts.ts}, linia~49
+
+\begin{lstlisting}[style=podcode, caption={Próg detekcji burstu}]
+if (dayValues[i].count > 3 * rollingAvg && rollingAvg > 0) {
+  burstDays.push(dayValues[i]);
+}
+\end{lstlisting}
+
+Próg $3\times$ 7-dniowej średniej kroczącej jest powszechnie stosowany,
+ale arbitralny. Nie uwzględnia:
+\begin{itemize}
+  \item Wariancji lokalnej --- w~aktywnej konwersacji z~dużą wariancją
+    dzienną, $3\times$ średnia może być standardowym dniem.
+  \item Dla konwersacji z~niską aktywnością (np.~2~wiadomości dziennie),
+    6~wiadomości w~ciągu dnia to~burst, choć merytorycznie to~nic nadzwyczajnego.
+\end{itemize}
+
+\textbf{Rekomendacja:} Rozważyć próg oparty na~odchyleniu standardowym
+($\mu + 2\sigma$) lub adaptywny próg uwzględniający skalę konwersacji.
+\end{moderatebox}
+
+% ------------------------------------------------------------
+\subsection{\issueid{ENG-08}: Peak hour window~--- edge case godziny 23}
+\label{subsec:eng-08}
+
+\begin{moderatebox}[title={\issueid{ENG-08} --- Okno Best Time to Text nie owijaj się wokół północy}]
+
+\textbf{Lokalizacja:} \filepath{src/lib/analysis/catchphrases.ts}, linie~215--217
+
+\begin{lstlisting}[style=podcode, caption={Best Time to Text --- window}]
+const windowStart = bestHour > 0 ? bestHour : 0;
+const windowEnd = Math.min(windowStart + 2, 24);
+\end{lstlisting}
+
+Gdy \texttt{bestHour = 23}, okno wynosi 23:00--24:00 (1~godzina zamiast 2).
+Ponadto warunek \texttt{bestHour > 0} powoduje, że~godzina~0 nie jest
+traktowana inaczej niż pozostałe, ale \texttt{windowStart} jest identyczny
+z~\texttt{bestHour} w~prawie wszystkich przypadkach.
+
+\textbf{Rekomendacja:} Okno powinno owijać się wokół północy:
+\begin{lstlisting}[style=podcode, caption={Proponowana poprawka ENG-08}]
+const windowStart = bestHour;
+const windowEnd = (windowStart + 2) % 24;
+const windowStr = windowEnd < windowStart
+  ? `${formatHour(windowStart)}-${formatHour(windowEnd)} (nast. dzien)`
+  : `${formatHour(windowStart)}-${formatHour(windowEnd)}`;
+\end{lstlisting}
+\end{moderatebox}
+
+
+% ============================================================
+\section{Problemy drobne}
+\label{sec:quant-minor}
+\index{problemy drobne!silnik ilościowy}
+
+Zidentyfikowano 5~problemów drobnych o~niskim wpływie na~użytkownika końcowego:
+
+\begin{enumerate}[label=\textcolor{PodTextSecondary}{\textbf{\arabic*.}}]
+
+  \item \minor{Shortest message inicjalizowane na~Infinity}
+    \hfill \filepath{quant/types.ts:60}\\
+    \texttt{shortestMessage.length = Infinity} jest poprawnie obsłużone
+    w~post-processingu (zamieniane na~0), ale wartość \texttt{Infinity}
+    w~akumulatorze jest nieintuicyjna i~może powodować problemy, jeśli
+    zostanie przypadkowo użyta przed post-processingiem.
+
+  \item \minor{Discord reaction rate fallback semantycznie odwrócony}
+    \hfill \filepath{viral-scores.ts:134--141}\\
+    Gdy \texttt{reactionRate} = 0 dla obu osób (Discord), fallback
+    używa \texttt{mentionRate + replyRate}. Mnożniki 500 i~200 są~takie
+    same jak dla standardowego engagement balance, ale mentions i~replies
+    mają inną skalę niż reakcje~--- mnożniki powinny być dostosowane.
+
+  \item \minor{Network density ignoruje wagi krawędzi}
+    \hfill \filepath{network.ts:96--97}\\
+    Density jest obliczane jako proporcja krawędzi o~wadze > 0 do~wszystkich
+    możliwych krawędzi. Nie uwzględnia to~wag~--- para z~1~interakcją
+    ma~taki sam wpływ jak para z~1\,000~interakcji.
+
+  \item \minor{Regresja liniowa zakłada równoodległy axis X}
+    \hfill \filepath{constants.ts:50}\\
+    Funkcja \tsfunc{linearRegressionSlope()} traktuje indeksy tablicy
+    jako wartości X (0, 1, 2, ...). Gdy brakuje miesięcy w~danych (np.~przerwa
+    w~konwersacji), regresja zakłada ciągłość, co~zniekształca nachylenie.
+
+  \item \minor{Wrapped mode ``book equivalents'' — 50k słów/książka}
+    \hfill \filepath{wrapped-data.ts:175}\\
+    \texttt{const books = (totalWords / 50\_000).toFixed(1)} --- typowa
+    książka ma~70\,000--100\,000~słów. Wartość 50\,000 zawyża liczbę
+    ``książek'' o~40--100\%.
+\end{enumerate}
+
+
+% ============================================================
+\section{Analiza metryk wiralnych}
+\label{sec:quant-viral}
+\index{metryki wiralne}
+
+Moduł \filepath{viral-scores.ts} oblicza cztery główne metryki
+przeznaczone do~udostępniania w~mediach społecznościowych. Każda
+została poddana szczegółowej analizie psychometrycznej i~matematycznej.
+
+% ------------------------------------------------------------
+\subsection{Compatibility Score (0--100)}
+\label{subsec:viral-compat}
+\index{Compatibility Score}
+
+Wynik kompatybilności jest średnią arytmetyczną pięciu pod-wyników:
+
+\begin{equation}
+  \label{eq:compatibility}
+  \text{compatibilityScore} = \frac{1}{5}\sum_{i=1}^{5} s_i
+\end{equation}
+
+\noindent gdzie:
+
+\begin{tabularx}{\textwidth}{l l X}
+  \toprule
+  \textbf{Pod-wynik $s_i$} & \textbf{Zakres} & \textbf{Opis} \\
+  \midrule
+  Activity Overlap & 0--100 & Nakładanie się dystrybucji godzinowej aktywności
+    (współczynnik Szymkiewicza-Simpsona\index{Szymkiewicz-Simpson}) \\
+  Response Symmetry & 0--100 & Symetria median czasu odpowiedzi \\
+  Message Balance & 0--100 & Równomierność podziału wiadomości \\
+  Engagement Balance & 0--100 & Symetria rate'ów reakcji \\
+  Length Match & 0--100 & Podobieństwo średnich długości wiadomości \\
+  \bottomrule
+\end{tabularx}
+
+\vspace{6pt}
+
+\subsubsection{Activity Overlap}
+
+Implementacja poprawnie oblicza nakładanie się rozkładów godzinowych:
+
+\begin{equation}
+  \text{overlap} = \sum_{h=0}^{23} \min\!\left(\frac{A_h}{\sum A}, \frac{B_h}{\sum B}\right) \cdot 100
+\end{equation}
+
+Jest to~wariant współczynnika Szymkiewicza-Simpsona na~rozkładach dyskretnych.
+\scorehi{Poprawna implementacja.}
+
+\subsubsection{Response Symmetry}
+
+\begin{equation}
+  \text{responseSymmetry} = 100 - \frac{|\text{med}_A - \text{med}_B|}{\max(\text{med}_A, \text{med}_B)} \cdot 100
+\end{equation}
+
+Poprawna formuła, ale z~bugiem \bugid{QUANT-02} (zwraca 100 przy braku danych).
+
+\subsubsection{Ocena psychologiczna}
+
+\begin{warningbox}[title={Ważenie równomierne jest naiwne}]
+Traktowanie wszystkich 5~pod-wyników z~jednakową wagą ($\frac{1}{5}$) nie
+ma uzasadnienia psychologicznego. Response Symmetry i~Message Balance mają
+silniejszy związek z~postrzeganą jakością relacji niż Length Match.
+
+\textbf{Brakujące wymiary:}
+\begin{itemize}
+  \item Analiza sentymentu / tonu emocjonalnego
+  \item Wspólne tematy (topic overlap)
+  \item Wzajemność pytań i~odpowiedzi
+  \item Spójność w~czasie (stabilność kompatybilności)
+\end{itemize}
+
+\textbf{Werdykt:} \scorelo{Psychologicznie słaby.} Mierzy podobieństwo
+zachowań, nie kompatybilność relacyjną.
+\end{warningbox}
+
+% ------------------------------------------------------------
+\subsection{Interest Score (0--100)}
+\label{subsec:viral-interest}
+\index{Interest Score}
+
+Interest Score mierzy ``zainteresowanie'' danej osoby rozmową
+za~pomocą 6~komponentów z~wagami:
+
+\begin{equation}
+  \label{eq:interest}
+  \text{interestScore} = \sum_{j=1}^{6} w_j \cdot c_j
+\end{equation}
+
+\begin{table}[H]
+  \caption{Komponenty Interest Score z~wagami}
+  \label{tab:interest-components}
+  \centering
+  \begin{tabularx}{\textwidth}{l c X l}
+    \toprule
+    \textbf{Komponent $c_j$} & \textbf{Waga $w_j$} & \textbf{Co mierzy} & \textbf{Normalizacja} \\
+    \midrule
+    Initiation ratio & 25\% & Odsetek rozpoczętych rozmów & Liniowa \\
+    RT trend & 20\% & Nachylenie trendu czasu odpowiedzi & $50 - \frac{\text{slope}}{1200}$ \\
+    Msg length trend & 15\% & Nachylenie trendu długości wiad. & $50 + \text{slope} \cdot 25$ \\
+    Engagement & 20\% & Częstość reakcji / mentions & $\text{rate} \cdot 500$ \\
+    Double texting & 10\% & Częstość double textów & $\frac{\text{dt} \cdot 1000}{\text{total}} \cdot 2$ \\
+    Late night ratio & 10\% & Odsetek wiadomości nocnych & $\frac{\text{late}}{\text{total}} \cdot 1000$ \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsubsection{Problemy z~komponentami}
+
+\begin{itemize}
+  \item \textbf{Late night jako sygnał zainteresowania} jest kulturowo
+    stronniczy. W~wielu kulturach i~grupach wiekowych pisanie w~nocy
+    wynika z~trybu życia (praca zmianowa, studenci), nie z~romantycznego
+    zainteresowania.
+  \item \textbf{Double texting} jako wskaźnik zainteresowania: w~literaturze
+    z~zakresu komunikacji cyfrowej double texting koreluje zarówno
+    z~zaangażowaniem, jak i~z~niepokojem (anxiety). Nie jest jednoznaczny.
+  \item \textbf{Behavioral proxies $\neq$ romantic interest}: wszystkie
+    komponenty mierzą zachowania komunikacyjne, które mogą wynikać
+    z~wielu przyczyn (zawodowych, towarzyskich, lękowych), nie~tylko
+    z~romantycznego zainteresowania.
+\end{itemize}
+
+\textbf{Werdykt:} \scoremed{Umiarkowana trafność.} Przydatny jako
+wskaźnik asymetrii zaangażowania, ale etykieta ``Interest Score''
+sugeruje romantyczne zainteresowanie, którego metryki nie mierzą.
+
+% ------------------------------------------------------------
+\subsection{Ghost Risk (0--100)}
+\label{subsec:viral-ghost}
+\index{Ghost Risk}
+
+Ghost Risk mierzy prawdopodobieństwo ``ghostingu'' na~podstawie
+4~czynników:
+
+\begin{equation}
+  \label{eq:ghost}
+  \text{ghostRisk} = 0{,}30 \cdot r_{\text{RT}} + 0{,}25 \cdot r_{\text{ML}} + 0{,}25 \cdot r_{\text{init}} + 0{,}20 \cdot r_{\text{vol}}
+\end{equation}
+
+\begin{table}[H]
+  \caption{Czynniki Ghost Risk}
+  \label{tab:ghost-factors}
+  \centering
+  \begin{tabularx}{\textwidth}{l c X}
+    \toprule
+    \textbf{Czynnik} & \textbf{Waga} & \textbf{Opis} \\
+    \midrule
+    RT increasing & 30\% & Rosnący czas odpowiedzi (ostatnie 3 mies. vs wcześniej) \\
+    Msg length decreasing & 25\% & Malejąca długość wiadomości \\
+    Initiation decreasing & 25\% & Malejąca częstość inicjowania rozmów \\
+    Volume declining & 20\% & Malejący wolumen wiadomości \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsubsection{Mocne strony}
+\begin{itemize}
+  \item Wymaga minimum 6~miesięcy danych (\texttt{months.length >= 3}
+    z~podziałem recent/earlier) --- rozsądne minimum.
+  \item Porównanie recent (3~mies.) vs earlier to~sensowna heurystyka.
+  \item 4~czynniki mają logiczny związek z~wycofywaniem się z~konwersacji.
+\end{itemize}
+
+\subsubsection{Słabości}
+\begin{itemize}
+  \item Nie rozróżnia między ghostingiem a~zewnętrznymi czynnikami
+    (stres zawodowy, choroba, wakacje).
+  \item Brak sezonowości~--- spadek aktywności latem może nie oznaczać
+    ghostingu.
+  \item Wymaga 6+ miesięcy, co~eliminuje wiele par.
+\end{itemize}
+
+\textbf{Werdykt:} \scoremed{Umiarkowana trafność.} Najlepszy z~czterech
+viral scores pod~względem konstrukcji, ale z~ważnymi confounders.
+
+% ------------------------------------------------------------
+\subsection{Delusion Score}
+\label{subsec:viral-delusion}
+\index{Delusion Score}
+
+\begin{equation}
+  \label{eq:delusion}
+  \text{delusionScore} = |\text{interest}_{\text{top}} - \text{interest}_{\text{second}}|
+\end{equation}
+
+Delusion Score jest prostą różnicą bezwzględną dwóch najwyższych
+Interest Scores. Próg istotności wynosi 5~punktów.
+
+\begin{warningbox}[title={Metryka wymaga redesignu}]
+\begin{enumerate}
+  \item \textbf{Semantycznie odwrócony holder} (\bugid{QUANT-04})~---
+    przypisuje delusion do~osoby z~wyższym, nie niższym interestem.
+  \item \textbf{Arbitralny próg 5~punktów}~--- brak uzasadnienia
+    statystycznego. Różnica 5~vs~6~punktów Interest Score (skala 0--100)
+    mieści się w~szumie pomiarowym.
+  \item \textbf{Brak normalizacji}~--- różnica 5~przy wynikach 90~vs~85
+    ma~inne znaczenie niż przy 55~vs~50.
+  \item \textbf{Metryka pochodna metryki}~--- opiera się na~Interest Score,
+    który sam ma ograniczoną trafność. Propagacja błędów.
+\end{enumerate}
+
+\textbf{Werdykt:} \scorelo{Wymaga redesignu.} W~obecnej formie
+generuje więcej szumu niż sygnału.
+\end{warningbox}
+
+
+% ============================================================
+\section{Indeks Wzajemności (ReciprocityIndex)}
+\label{sec:quant-reciprocity}
+\index{ReciprocityIndex}
+
+Moduł \filepath{quant/reciprocity.ts} oblicza 4-wymiarowy indeks
+wzajemności konwersacji.
+
+\subsection{Wymiary i~formuły}
+
+\begin{enumerate}
+  \item \textbf{Message Balance:}
+  \begin{equation}
+    \text{messageBalance} = 100 \cdot (1 - 2\,|\text{ratioA} - 0{,}5|)
+  \end{equation}
+  Gdzie \text{ratioA} = $\frac{\text{msg}_A}{\text{msg}_A + \text{msg}_B}$.
+  Wynik 100 przy idealnym podziale 50/50, 0 przy 100/0.
+
+  \item \textbf{Initiation Balance:}
+  \begin{equation}
+    \text{initiationBalance} = 100 \cdot \left(1 - 2\,\left|\frac{\text{init}_A}{\text{init}_A + \text{init}_B} - 0{,}5\right|\right)
+  \end{equation}
+
+  \item \textbf{Response Time Symmetry:}
+  \begin{equation}
+    \text{responseTimeSymmetry} = \frac{\min(\text{rt}_A, \text{rt}_B)}{\max(\text{rt}_A, \text{rt}_B)} \cdot 100
+  \end{equation}
+  Stosunek min/max, 100 przy identycznych czasach. Bug~\bugid{QUANT-05}
+  dotyczy obsługi zerowych wartości.
+
+  \item \textbf{Reaction Balance:}
+  \begin{equation}
+    \text{reactionBalance} = 100 \cdot \left(1 - 2\,\left|\frac{\text{react}_A}{\text{react}_A + \text{react}_B} - 0{,}5\right|\right)
+  \end{equation}
+  Z~Discord fallback na~\texttt{mentionsReceived + repliesReceived}.
+\end{enumerate}
+
+\subsection{Wynik ogólny}
+
+\begin{equation}
+  \text{overall} = \frac{1}{4}\sum_{d=1}^{4} d_i
+\end{equation}
+
+Równe wagi dla wszystkich 4~wymiarów.
+
+\subsection{Ocena}
+
+\begin{strengthbox}[title={Mocne strony ReciprocityIndex}]
+\begin{itemize}
+  \item Prostota i~interpretowalność~--- każdy pod-wynik ma~jasne znaczenie.
+  \item Formuły $1 - 2|x - 0{,}5|$ są~eleganckie i~poprawne matematycznie.
+  \item Discord fallback z~mentions/replies to~rozsądny proxy.
+\end{itemize}
+\end{strengthbox}
+
+\begin{moderatebox}[title={Słabości ReciprocityIndex}]
+\begin{itemize}
+  \item Równe ważenie 4~wymiarów~--- Message Balance i~Response Time Symmetry
+    mają prawdopodobnie większy wpływ na~percypowaną wzajemność niż
+    Reaction Balance.
+  \item Brak wymiaru ``inicjowania tematów'' (kto wprowadza nowe wątki).
+  \item Skala 0--100 z~równym ważeniem: wynik 75 może oznaczać np.~100/100/100/0
+    (perfekcja w~3 wymiarach, katastrofa w~1)~--- to~nie jest ``dobra'' wzajemność.
+\end{itemize}
+\end{moderatebox}
+
+
+% ============================================================
+\section{System odznak}
+\label{sec:quant-badges}
+\index{odznaki}
+
+Moduł \filepath{badges.ts} przyznaje 15~odznak behawioralnych.
+Poniższa tabela podsumowuje logikę, progi i~zidentyfikowane problemy:
+
+\begin{table}[H]
+  \caption{System 15~odznak behawioralnych}
+  \label{tab:badges}
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{l l l X}
+    \toprule
+    \textbf{ID} & \textbf{Nazwa} & \textbf{Kryterium} & \textbf{Uwagi} \\
+    \midrule
+    night-owl & Nocny Marek & Max \% wiad. 22--4 & \scorehi{Poprawnie (procent)} \\
+    early-bird & Ranny Ptaszek & Max wiad. przed 8:00 & \scorelo{\issueid{ENG-04}: bezwzgl. nie \%} \\
+    ghost-champion & Ghosting Champion & Ostatni przed ciszą & Poprawne \\
+    double-texter & Double Texter & Max double textów & Bezwzgl. wartość, ok \\
+    novelist & Powieściopisarz & Max śr. dł. wiad. & Poprawne \\
+    speed-demon & Speed Demon & Min mediana RT & Poprawne \\
+    emoji-monarch & Emoji King/Queen & Max emoji/wiad. & \scorehi{Poprawnie (rate)} \\
+    initiator & Inicjator & Max inicjacji & Bezwzgl., ale z~\% w~evidence \\
+    heart-bomber & Heart Bomber & Max reakcji serduszkowych & Poprawne, skip Discord \\
+    link-lord & Link Lord & Max linków & Bezwzględne, ok \\
+    streak-master & Streak Master & Max dni z~rzędu & Poprawne \\
+    question-master & Detektyw & Max pytań & Bezwzgl., ok \\
+    mention-magnet & Magnes na @ & Max mentions recv >5 & Discord only, próg ok \\
+    reply-king & Król Odpowiedzi & Max replies sent >10 & Discord only, próg ok \\
+    edit-lord & Perfekcjonista & Max edits >5 & Discord only, próg ok \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\vspace{4pt}
+
+Ogólna ocena systemu odznak: \scoremed{7/10}. Dobrze zaimplementowany,
+zabawny i~angażujący. Główny problem to~\issueid{ENG-04} (Early Bird
+bezwzględnie zamiast procentowo) oraz brak normalizacji niektórych
+wartości do~rozmiaru konwersacji.
+
+
+% ============================================================
+\section{Wykrywanie burstów i~trendy}
+\label{sec:quant-bursts-trends}
+\index{burst detection}
+\index{trendy}
+
+% ------------------------------------------------------------
+\subsection{Detekcja burstów}
+\label{subsec:quant-bursts}
+
+Algorytm w~\filepath{quant/bursts.ts}:
+
+\begin{enumerate}
+  \item Oblicza 7-dniową średnią kroczącą (rolling average) dla dziennych
+    liczników wiadomości.
+  \item Dla pierwszych 7~dni używa średniej globalnej jako baseline.
+  \item Dni, w~których liczba wiadomości przekracza $3\times$ rolling average,
+    są~oznaczane jako burst.
+  \item Kolejne dni burstowe są~łączone w~okresy burstowe.
+\end{enumerate}
+
+\begin{moderatebox}[title={Ocena algorytmu detekcji burstów}]
+\textbf{Zalety:}
+\begin{itemize}
+  \item Prosta, czytelna implementacja.
+  \item Łączenie kolejnych dni burstowych w~okresy~--- trafne.
+  \item Wymaga minimum 8~dni danych (\texttt{sortedDays.length < 8}).
+\end{itemize}
+
+\textbf{Wady} (\issueid{ENG-07}):
+\begin{itemize}
+  \item Próg $3\times$ jest arbitralny i~nie uwzględnia lokalnej wariancji.
+  \item Fallback na~średnią globalną dla pierwszych 7~dni może generować
+    fałszywe alarmy na~początku konwersacji.
+  \item Brak walidacji minimalnej liczby wiadomości dziennych~---
+    burst przy baseline 1~wiad./dzień to~zaledwie 4~wiadomości.
+\end{itemize}
+\end{moderatebox}
+
+% ------------------------------------------------------------
+\subsection{System trendów}
+\label{subsec:quant-trends}
+
+Moduł \filepath{quant/trends.ts} oblicza 3~serie czasowe (miesięczne):
+
+\begin{table}[H]
+  \caption{Trendy miesięczne~--- miary statystyczne}
+  \label{tab:trends}
+  \centering
+  \begin{tabularx}{\textwidth}{l l l X}
+    \toprule
+    \textbf{Trend} & \textbf{Miara} & \textbf{Ocena} & \textbf{Komentarz} \\
+    \midrule
+    Response time & Mediana (z~filtrem outliers) & \scorehi{Poprawna} & Robustna miara \\
+    Message length & Średnia arytmetyczna & \scorelo{\issueid{ENG-06}} & Wrażliwa na~outliers \\
+    Initiation count & Wartość bezwzgl./miesiąc & \scoremed{Akceptowalna} & Powinna normalizować do~\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\textbf{Regresja liniowa} (\filepath{constants.ts}):
+Funkcja \tsfunc{linearRegressionSlope()} jest poprawna matematycznie,
+ale zakłada równoodległy axis X (problem drobny nr~4). W~praktyce
+brakujące miesiące są~pomijane, a~nie interpolowane, co~zniekształca
+nachylenie w~konwersacjach z~przerwami.
+
+
+% ============================================================
+\section{Metryki sieci (NetworkMetrics)}
+\label{sec:quant-network}
+\index{NetworkMetrics}
+\index{centralność}
+
+Moduł \filepath{network.ts} buduje graf interakcji dla czatów grupowych.
+\index{graf interakcji}
+
+\subsection{Konstrukcja macierzy interakcji}
+
+Krawędzie budowane są~z~sekwencyjnych wiadomości:
+jeśli osoba~A~wysyła wiadomość, a~następna (w~tej samej sesji)
+pochodzi od~osoby~B, to~tworzona jest krawędź $A \to B$.
+Graf jest następnie konwertowany na~nieskierowany (obie kierunki sumowane).
+
+\begin{lstlisting}[style=podcode, caption={Budowanie krawędzi grafu interakcji}]
+for (let i = 1; i < messages.length; i++) {
+  const prev = messages[i - 1];
+  const curr = messages[i];
+  if (prev.sender === curr.sender) continue;
+  if (curr.timestamp - prev.timestamp > SESSION_GAP_MS) continue;
+  interactions[prev.sender][curr.sender]++;
+}
+\end{lstlisting}
+
+\subsection{Metryki}
+
+\begin{itemize}
+  \item \textbf{Degree centrality:} $\frac{\text{unikalne połączenia}}{n - 1}$
+    gdzie $n$ = liczba uczestników.
+  \item \textbf{Density:} $\frac{\text{krawędzie o~wadze} > 0}{\binom{n}{2}}$
+  \item \textbf{Most connected:} Osoba z~najwyższą centrality (tiebreak: msg count).
+\end{itemize}
+
+\subsection{Ocena}
+
+\begin{moderatebox}[title={Problemy z~metrykami sieciowymi}]
+\begin{itemize}
+  \item \minor{Density ignoruje wagi krawędzi}~--- para z~1~interakcją
+    liczy się tak samo jak para z~500. Prawdziwa gęstość sieci
+    powinna uwzględniać siłę połączeń.
+  \item \textbf{Brak weighted centrality}~--- degree centrality
+    liczy tylko \emph{czy} połączenie istnieje, nie \emph{jak silne} jest.
+    Weighted degree centrality ($\sum_j w_{ij}$) byłaby znacznie
+    bardziej informatywna.
+  \item \textbf{Brak clustering coefficient}~--- nie mierzy się,
+    czy~osoby tworzą podgrupy (cliki).
+  \item \textbf{Brak betweenness centrality}~--- nie wiadomo, kto
+    jest ``łącznikiem'' między podgrupami.
+\end{itemize}
+\end{moderatebox}
+
+
+% ============================================================
+\section{CPS --- Communication Pattern Screening}
+\label{sec:quant-cps}
+\index{CPS}
+\index{Communication Pattern Screening}
+
+Moduł \filepath{communication-patterns.ts} definiuje 63~pytania
+w~10~wzorcach komunikacyjnych. Jest to~\textbf{najsilniejszy
+komponent psychologiczny} silnika ilościowego, choć technicznie
+odpowiedzi generuje AI (Gemini), nie algorytmy kwantytatywne.
+
+\subsection{Architektura}
+
+\begin{tabularx}{\textwidth}{l c c X}
+  \toprule
+  \textbf{Wzorzec} & \textbf{Pytań} & \textbf{Próg} & \textbf{Opis} \\
+  \midrule
+  Unikanie bliskości & 6 & 4 & Dystans emocjonalny \\
+  Nadmierna zależność & 7 & 4 & Lęk przed autonomią \\
+  Kontrola i~perfekcjonizm & 6 & 4 & Sztywne standardy \\
+  Podejrzliwość i~nieufność & 7 & 4 & Szukanie ukrytych znaczeń \\
+  Egocentryzm komunikacyjny & 6 & 4 & Skupienie na~sobie \\
+  Intensywność emocjonalna & 7 & 4 & Silne reakcje, splitting \\
+  Dramatyzacja & 6 & 4 & Teatralność, hiperbole \\
+  Manipulacja i~brak empatii & 6 & 3 & Gaslighting, guilt-tripping \\
+  Emocjonalny dystans & 6 & 4 & Obojętność, brak ciepła \\
+  Pasywna agresja & 6 & 3 & Sarkazm, milczenie \\
+  \bottomrule
+\end{tabularx}
+
+\subsection{Wymagania}
+
+\begin{itemize}
+  \item Minimum 2\,000 wiadomości
+  \item Minimum 6~miesięcy danych
+  \item Ukończony co~najmniej Pass~1 analizy AI
+\end{itemize}
+
+\subsection{Logika obliczania ryzyka}
+
+\begin{lstlisting}[style=podcode, caption={getOverallRiskLevel --- logika OR}]
+function getOverallRiskLevel(results: Record<string, CPSPatternResult>) {
+  const thresholdMet = Object.values(results)
+    .filter((r) => r.meetsThreshold).length;
+  const highPercentage = Object.values(results)
+    .filter((r) => r.percentage >= 75).length;
+
+  if (thresholdMet >= 2 || highPercentage >= 3) return 'wysoki';
+  if (thresholdMet === 1 || highPercentage >= 2) return 'podwyzszony';
+  if (highPercentage >= 1)                       return 'umiarkowany';
+  return 'niski';
+}
+\end{lstlisting}
+
+\subsection{Ocena CPS}
+
+\begin{strengthbox}[title={Mocne strony CPS}]
+\begin{itemize}
+  \item 63~pytania pokrywają szerokie spektrum wzorców komunikacyjnych.
+  \item Każde pytanie ma~\texttt{messageSignals}~--- konkretne wskazówki
+    dla AI, czego szukać w~wiadomościach.
+  \item Rozsądne wymagania minimalne (2\,000~wiadomości, 6~miesięcy).
+  \item Jasny disclaimer: ``NIE stanowi diagnozy psychologicznej''.
+  \item Polskojęzyczne pytania i~rekomendacje.
+\end{itemize}
+\end{strengthbox}
+
+\begin{moderatebox}[title={Problemy CPS}]
+\begin{itemize}
+  \item \textbf{Logika OR w~poziomach ryzyka:} \texttt{thresholdMet >= 2 || highPercentage >= 3}
+    łączy dwa różne kryteria operatorem OR. Można jednocześnie mieć
+    0~progów przekroczonych, ale 3~wzorce na~75\%~--- to~daje ``wysoki''
+    ryzyko, choć żaden wzorzec nie przekroczył progu klinicznego.
+  \item \textbf{Brak wagi na~ważność wzorca:} Manipulacja i~brak empatii
+    (próg 3) ma~taki sam wpływ na~ogólny wynik jak Dramatyzacja (próg 4),
+    mimo że~psychologicznie manipulacja jest poważniejsza.
+  \item \textbf{Brak interakcji między wzorcami:} Kombinacja np.~intensywności
+    emocjonalnej + manipulacji ma~inną dynamikę niż suma obu oddzielnie.
+\end{itemize}
+\end{moderatebox}
+
+
+% ============================================================
+\section{Brakujące metryki}
+\label{sec:quant-missing}
+\index{brakujące metryki}
+
+\begin{featurebox}[title={Metryki nieobecne w~silniku ilościowym}]
+Następujące metryki zostały zidentyfikowane jako wartościowe uzupełnienie
+istniejącego zestawu:
+
+\begin{enumerate}
+  \item \textbf{Analiza sentymentu / emocji}~--- nawet prosty lexicon-based
+    sentiment (bez AI) mógłby wzbogacić Compatibility Score i~Interest Score.
+    Biblioteki takie jak AFINN czy Sentimentr mają polskie warianty.
+    \index{sentiment analysis}
+
+  \item \textbf{Topic modeling / wspólne tematy}~--- TF-IDF na~bigramach
+    z~podziałem na~osoby pozwoliłoby mierzyć overlap tematyczny.
+    To~naturalny komponent kompatybilności.
+    \index{topic modeling}
+
+  \item \textbf{Wzorce konfliktowe}~--- detekcja sekwencji: eskalacja
+    (rosnąca intensywność), stonewalling (nagłe milczenie po~wymianie),
+    repair attempts (przeprosiny, pojednanie). Kluczowe w~analizie
+    dynamiki relacyjnej (model Gottmana).
+    \index{wzorce konfliktowe}
+
+  \item \textbf{Progresja wrażliwości / intymności}~--- czy~osoby dzielą
+    się coraz bardziej osobistymi informacjami? Leksykon intymności
+    (skala od~logistyki po~głębokie emocje) mógłby mierzyć ten wymiar.
+    \index{progresja intymności}
+
+  \item \textbf{Weighted network centrality}~--- obecna degree centrality
+    ignoruje wagi krawędzi. Weighted degree, betweenness i~clustering
+    coefficient wzbogaciłyby analizę grup.
+    \index{centralność ważona}
+
+  \item \textbf{Normalizacja trendów inicjacji}~--- obecny trend liczy
+    bezwzględne inicjacje/miesiąc. Powinien normalizować do~proporcji
+    (np.~\% inicjacji danej osoby), aby nie mylić spadku aktywności
+    z~brakiem inicjatywy.
+    \index{normalizacja trendów}
+\end{enumerate}
+\end{featurebox}
+
+
+% ============================================================
+\section{Podsumowanie rozdziału}
+\label{sec:quant-summary}
+
+\begin{scorebox}[title={Ocena końcowa silnika ilościowego: \scoremed{6{,}5/10}}]
+
+\textbf{Metodologia oceny:} Analiza kodu źródłowego wszystkich modułów
+silnika ilościowego, weryfikacja matematyczna wzorów, ocena trafności
+psychologicznej metryk, identyfikacja edge case'ów i~błędów logicznych.
+
+\vspace{8pt}
+
+\begin{tabularx}{\textwidth}{l c X}
+  \toprule
+  \textbf{Kategoria} & \textbf{Ocena} & \textbf{Komentarz} \\
+  \midrule
+  Architektura & \scorehi{8/10} & O(n) single-pass, modularna struktura \\
+  Poprawność matematyczna & \scoremed{6/10} & 5~błędów krytycznych, 8~istotnych \\
+  Trafność psychologiczna & \scorelo{5/10} & Behavioral proxies $\neq$ psychologia \\
+  Kompletność metryk & \scoremed{6/10} & Brak sentymentu, tematów, konfliktów \\
+  Jakość kodu & \scorehi{8/10} & Czytelny, dobrze typowany, modularny \\
+  Obsługa edge case'ów & \scoremed{5/10} & Brak clampowania, złe domyślne \\
+  \bottomrule
+\end{tabularx}
+\end{scorebox}
+
+\begin{strengthbox}[title={Kluczowe mocne strony}]
+\begin{itemize}
+  \item \textbf{Architektura O(n) single-pass}~--- wydajna, czytelna,
+    z~jasnym podziałem na~inicjalizację, pętlę główną i~post-processing.
+  \item \textbf{60+ metryk}~--- imponujące pokrycie behawioralne
+    bez żadnego udziału AI.
+  \item \textbf{Platform-aware}~--- osobne session gaps dla Discord,
+    fallbacki na~mentions/replies.
+  \item \textbf{CPS (63~pytania)}~--- solidna baza do~screeningu wzorców
+    komunikacyjnych.
+  \item \textbf{Modularny kod TypeScript}~--- dobrze typowany,
+    czytelny, z~komentarzami ``why''.
+  \item \textbf{ReciprocityIndex}~--- eleganckie formuły $1 - 2|x - 0{,}5|$,
+    łatwe do~interpretacji.
+\end{itemize}
+\end{strengthbox}
+
+\begin{criticalbox}[title={Kluczowe problemy do~naprawienia}]
+\begin{itemize}
+  \item \bugid{QUANT-01}: Niepoprawny mianownik reactionRate w~grupach.
+  \item \bugid{QUANT-02} + \bugid{QUANT-05}: Brak danych $\to$ ``perfekcja''
+    zamiast wartości neutralnej.
+  \item \bugid{QUANT-04}: delusionHolder semantycznie odwrócony.
+  \item Metryki wiralne (Compatibility, Interest, Delusion) wymagają
+    walidacji psychometrycznej i~uzupełnienia o~wymiary sentymentalne.
+  \item 8~magic numbers bez uzasadnienia empirycznego (1200, 25, 500, 0{,}6 itp.).
+\end{itemize}
+\end{criticalbox}

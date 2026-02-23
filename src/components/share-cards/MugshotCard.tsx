@@ -330,6 +330,9 @@ export default function MugshotCard({ personVerdict, caseNumber, cardRef: extern
                 color: '#111111',
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
               {personVerdict.name}
@@ -433,6 +436,11 @@ export default function MugshotCard({ personVerdict, caseNumber, cardRef: extern
                   color: '#ef4444',
                   lineHeight: 1.3,
                   flex: 1,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical' as const,
+                  wordBreak: 'break-word' as const,
                 }}
               >
                 {personVerdict.mainCharge}
@@ -499,6 +507,11 @@ export default function MugshotCard({ personVerdict, caseNumber, cardRef: extern
                   color: 'rgba(255,255,255,0.6)',
                   lineHeight: 1.35,
                   flex: 1,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical' as const,
+                  wordBreak: 'break-word' as const,
                 }}
               >
                 {personVerdict.sentence}

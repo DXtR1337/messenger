@@ -82,6 +82,12 @@ export default function DashboardPage() {
     );
   }
 
+  // Re-engagement banner: show if user has analyses but none in last 7 days
+  const hasOldAnalyses = analyses.length > 0;
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const hasRecentAnalysis = analyses.some(a => a.createdAt > sevenDaysAgo);
+  const showReengagement = hasOldAnalyses && !hasRecentAnalysis;
+
   if (analyses.length === 0) {
     return (
       <div className="space-y-6">
@@ -149,6 +155,35 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {showReengagement && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex items-center justify-between gap-4 rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 via-blue-500/5 to-transparent px-5 py-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-purple-500/15">
+              <MessageSquareText className="size-4 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Masz nowe rozmowy do przeanalizowania?
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Ostatnia analiza ponad 7 dni temu — sprawd{'\u017A'}, co si{'\u0119'} zmieni{'\u0142'}o.
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" className="shrink-0 gap-1.5 rounded-lg">
+            <Link href="/analysis/new">
+              Nowa analiza
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </Button>
+        </motion.div>
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold">Twoje analizy</h1>
         <div className="flex items-center gap-2">

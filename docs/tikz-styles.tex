@@ -1,0 +1,248 @@
+% ============================================================
+% PodTeksT — Reusable TikZ Styles
+% ============================================================
+
+% --- Node styles ---
+\tikzset{
+  % Architecture boxes
+  podbox/.style={
+    draw=PodBorder,
+    fill=white,
+    rounded corners=4pt,
+    minimum height=1cm,
+    minimum width=2.5cm,
+    align=center,
+    font=\small\bfseries,
+    inner sep=8pt,
+  },
+  podbox blue/.style={
+    podbox,
+    draw=PodBlue!60,
+    fill=PodBlue!8,
+    text=PodBlueDark,
+  },
+  podbox purple/.style={
+    podbox,
+    draw=PodPurple!60,
+    fill=PodPurple!8,
+    text=PodPurpleDark,
+  },
+  podbox green/.style={
+    podbox,
+    draw=PodSuccess!60,
+    fill=PodSuccess!8,
+    text=PodSuccess!80!black,
+  },
+  podbox red/.style={
+    podbox,
+    draw=PodDanger!60,
+    fill=PodDanger!8,
+    text=PodDanger!80!black,
+  },
+  podbox amber/.style={
+    podbox,
+    draw=PodWarning!60,
+    fill=PodWarning!8,
+    text=PodWarning!80!black,
+  },
+  podbox dark/.style={
+    podbox,
+    draw=PodBorder,
+    fill=PodCard,
+    text=PodText,
+  },
+  % Container / group box
+  podgroup/.style={
+    draw=PodBorder,
+    fill=black!2,
+    rounded corners=6pt,
+    inner sep=12pt,
+    dashed,
+  },
+  podgroup blue/.style={
+    podgroup,
+    draw=PodBlue!40,
+    fill=PodBlue!3,
+  },
+  podgroup purple/.style={
+    podgroup,
+    draw=PodPurple!40,
+    fill=PodPurple!3,
+  },
+  % Labels
+  podlabel/.style={
+    font=\scriptsize\bfseries,
+    text=PodTextSecondary,
+    fill=white,
+    inner sep=2pt,
+  },
+  podlabel blue/.style={
+    podlabel,
+    text=PodBlue,
+    fill=PodBlue!5,
+  },
+  % Pipeline nodes
+  pipeline/.style={
+    draw=PodBlue,
+    fill=PodBlue!10,
+    rounded corners=6pt,
+    minimum height=1.2cm,
+    minimum width=3cm,
+    align=center,
+    font=\small\bfseries,
+    text=PodBlueDark,
+  },
+  pipeline active/.style={
+    pipeline,
+    draw=PodPurple,
+    fill=PodPurple!10,
+    text=PodPurpleDark,
+  },
+  % Flowchart
+  decision/.style={
+    diamond,
+    draw=PodBlue!60,
+    fill=PodBlue!8,
+    minimum width=2cm,
+    minimum height=1.5cm,
+    align=center,
+    font=\small,
+    inner sep=2pt,
+    aspect=2,
+  },
+  process/.style={
+    rectangle,
+    draw=PodBlue!60,
+    fill=PodBlue!8,
+    rounded corners=3pt,
+    minimum height=0.8cm,
+    minimum width=2cm,
+    align=center,
+    font=\small,
+    inner sep=6pt,
+  },
+  startstop/.style={
+    rectangle,
+    draw=PodSuccess!60,
+    fill=PodSuccess!8,
+    rounded corners=8pt,
+    minimum height=0.8cm,
+    minimum width=2cm,
+    align=center,
+    font=\small\bfseries,
+    inner sep=6pt,
+  },
+  % UML-like
+  umlclass/.style={
+    rectangle split,
+    rectangle split parts=2,
+    draw=PodBlue!50,
+    fill=white,
+    rounded corners=2pt,
+    font=\small,
+    align=left,
+    inner sep=6pt,
+    every text node part/.style={font=\small\bfseries\color{PodBlueDark}},
+  },
+  % Sequence diagram
+  seqparticipant/.style={
+    draw=PodBorder,
+    fill=PodBlue!8,
+    rounded corners=3pt,
+    minimum height=0.8cm,
+    minimum width=2.5cm,
+    align=center,
+    font=\small\bfseries,
+  },
+  % Badge
+  badge/.style={
+    circle,
+    draw=PodPurple!50,
+    fill=PodPurple!8,
+    minimum size=1.2cm,
+    align=center,
+    font=\large,
+    inner sep=0pt,
+  },
+  % Color swatch
+  swatch/.style={
+    rectangle,
+    minimum width=2cm,
+    minimum height=0.8cm,
+    rounded corners=2pt,
+    inner sep=0pt,
+  },
+  % Heatmap cell
+  heatcell/.style={
+    rectangle,
+    minimum width=0.55cm,
+    minimum height=0.35cm,
+    inner sep=0pt,
+  },
+  % Gauge component
+  gaugebar/.style={
+    rectangle,
+    minimum height=0.4cm,
+    rounded corners=2pt,
+    inner sep=0pt,
+  },
+}
+
+% --- Arrow styles ---
+\tikzset{
+  podarrow/.style={
+    ->,
+    >=stealth,
+    thick,
+    color=PodBlue!60,
+  },
+  podarrow purple/.style={
+    ->,
+    >=stealth,
+    thick,
+    color=PodPurple!60,
+  },
+  podarrow dashed/.style={
+    ->,
+    >=stealth,
+    dashed,
+    color=PodTextMuted,
+  },
+  dataarrow/.style={
+    ->,
+    >={Stealth[length=6pt]},
+    line width=1.2pt,
+    color=PodBlue,
+  },
+  bidiarrow/.style={
+    <->,
+    >={Stealth[length=5pt]},
+    thick,
+    color=PodBlue!60,
+  },
+}
+
+% --- Gradient helper (fake via stripes) ---
+\newcommand{\podgradientbar}[4]{%
+  % #1 = x, #2 = y, #3 = width, #4 = height
+  \foreach \i in {0,...,19} {
+    \pgfmathsetmacro{\ratio}{\i/19}
+    \pgfmathsetmacro{\xpos}{#1 + \ratio*#3}
+    \definecolor{gradstep}{rgb}{%
+      {0.231 + \ratio*(0.659-0.231)},%
+      {0.510 + \ratio*(0.333-0.510)},%
+      {0.965 + \ratio*(0.969-0.965)}%
+    }
+    \fill[gradstep] (\xpos, #2) rectangle +({#3/20}, #4);
+  }
+}
+
+% --- Swatch command ---
+\newcommand{\colorswatch}[3]{%
+  % #1 = color name, #2 = hex, #3 = description
+  \begin{tikzpicture}[baseline=-0.5ex]
+    \fill[#1, rounded corners=2pt] (0,0) rectangle (1.8, 0.6);
+    \node[anchor=west, font=\ttfamily\small] at (2.1, 0.3) {\##2};
+    \node[anchor=west, font=\small\color{PodTextSecondary}] at (4.5, 0.3) {#3};
+  \end{tikzpicture}%
+}

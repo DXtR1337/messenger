@@ -255,8 +255,17 @@ export function sampleMessages(
   const dynamics = inflectionSample(eligible, conversation.messages, quantitative, 200);
 
   // Per person: 150 per participant, stratified
+  // For large groups (8+), only profile top 8 participants by message count
+  // to keep payload size and Gemini API call count manageable
+  const MAX_PROFILED_PARTICIPANTS = 8;
+  const participantsToProfile = conversation.participants.length > MAX_PROFILED_PARTICIPANTS
+    ? [...conversation.participants]
+        .sort((a, b) => (quantitative.perPerson[b.name]?.totalMessages ?? 0) - (quantitative.perPerson[a.name]?.totalMessages ?? 0))
+        .slice(0, MAX_PROFILED_PARTICIPANTS)
+    : conversation.participants;
+
   const perPerson: Record<string, SimplifiedMessage[]> = {};
-  for (const participant of conversation.participants) {
+  for (const participant of participantsToProfile) {
     const personMessages = eligible.filter(m => m.sender === participant.name);
     perPerson[participant.name] = stratifiedSample(personMessages, 150);
   }
@@ -284,6 +293,25 @@ export function buildQuantitativeContext(
 ): string {
   const lines: string[] = ['QUANTITATIVE METRICS SUMMARY:', ''];
   const names = participants.map(p => p.name);
+
+  // Date range — derived from monthly volume, critical for AI to generate correct dates
+  const monthlyVolume = quantitative.patterns.monthlyVolume;
+  if (monthlyVolume.length > 0) {
+    const firstMonth = monthlyVolume[0].month;
+    const lastMonth = monthlyVolume[monthlyVolume.length - 1].month;
+    lines.push(`CONVERSATION DATE RANGE: ${firstMonth} to ${lastMonth}`);
+    lines.push('IMPORTANT: All inflection_points approximate_date values MUST fall within this date range. Do NOT generate dates outside this range.');
+    lines.push('');
+  }
+
+  // Monthly volume breakdown — helps AI place events in time
+  if (monthlyVolume.length > 0) {
+    lines.push('MONTHLY MESSAGE VOLUME:');
+    for (const mv of monthlyVolume) {
+      lines.push(`  ${mv.month}: ${mv.total} messages`);
+    }
+    lines.push('');
+  }
 
   // Volume
   lines.push('MESSAGE VOLUME:');

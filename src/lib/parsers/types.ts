@@ -62,6 +62,8 @@ export interface ParsedConversation {
     isGroup: boolean;
     /** Duration of conversation in days */
     durationDays: number;
+    /** Discord channel ID (set during Discord import) */
+    discordChannelId?: string;
   };
 }
 
@@ -371,6 +373,8 @@ export interface Badge {
   id: string;
   name: string;
   emoji: string;
+  /** Optional custom icon filename (in /icons/badges/) */
+  icon?: string;
   description: string;
   /** Who earned this badge */
   holder: string;

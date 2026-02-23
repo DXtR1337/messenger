@@ -2,18 +2,22 @@
 
 import { motion, useInView } from 'framer-motion';
 import { useRef, useState, useCallback } from 'react';
-import { Flame, Award, MessageCircle, Skull, Share2, Check } from 'lucide-react';
+import { Flame, Award, MessageCircle, Skull, Share2, Check, Loader2 } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import type { MegaRoastResult } from '@/lib/analysis/types';
 
 interface MegaRoastSectionProps {
   result: MegaRoastResult;
+  discordChannelId?: string;
 }
 
-export default function MegaRoastSection({ result }: MegaRoastSectionProps) {
+export default function MegaRoastSection({ result, discordChannelId }: MegaRoastSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
   const [linkCopied, setLinkCopied] = useState(false);
+  const [discordSending, setDiscordSending] = useState(false);
+  const [discordSent, setDiscordSent] = useState(false);
+  const [discordError, setDiscordError] = useState<string | null>(null);
 
   const shareRoast = useCallback(() => {
     const data = {
@@ -44,6 +48,29 @@ export default function MegaRoastSection({ result }: MegaRoastSectionProps) {
       setTimeout(() => setLinkCopied(false), 2000);
     }
   }, [result]);
+
+  const sendToDiscord = useCallback(async () => {
+    if (!discordChannelId) return;
+    setDiscordSending(true);
+    setDiscordError(null);
+    try {
+      const res = await fetch('/api/discord/send-roast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: discordChannelId, megaRoast: result }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `HTTP ${res.status}`);
+      }
+      setDiscordSent(true);
+      setTimeout(() => setDiscordSent(false), 3000);
+    } catch (err) {
+      setDiscordError(err instanceof Error ? err.message : 'Nieznany blad');
+    } finally {
+      setDiscordSending(false);
+    }
+  }, [discordChannelId, result]);
 
   return (
     <motion.div
@@ -235,8 +262,8 @@ export default function MegaRoastSection({ result }: MegaRoastSectionProps) {
             Tryb rozrywkowy — nie stanowi analizy psychologicznej ani profesjonalnej oceny
           </p>
 
-          {/* Share button */}
-          <div className="flex justify-center border-t border-border pt-4">
+          {/* Share buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-3 border-t border-border pt-4">
             <button
               onClick={shareRoast}
               className="flex items-center gap-2 rounded-lg border border-orange-500/20 bg-orange-500/10 px-4 py-2.5 text-sm font-medium text-orange-400 transition-colors hover:bg-orange-500/20"
@@ -253,6 +280,36 @@ export default function MegaRoastSection({ result }: MegaRoastSectionProps) {
                 </>
               )}
             </button>
+
+            {discordChannelId && (
+              <button
+                onClick={sendToDiscord}
+                disabled={discordSending}
+                className="flex items-center gap-2 rounded-lg border border-[#5865F2]/30 bg-[#5865F2]/10 px-4 py-2.5 text-sm font-medium text-[#5865F2] transition-colors hover:bg-[#5865F2]/20 disabled:opacity-50"
+              >
+                {discordSending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Wysylanie...
+                  </>
+                ) : discordSent ? (
+                  <>
+                    <Check className="size-4" />
+                    Wyslano na Discord!
+                  </>
+                ) : (
+                  <>
+                    <svg className="size-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
+                    </svg>
+                    Wyslij na Discord
+                  </>
+                )}
+              </button>
+            )}
+            {discordError && (
+              <p className="w-full text-center text-xs text-red-400">{discordError}</p>
+            )}
           </div>
         </div>
       </div>

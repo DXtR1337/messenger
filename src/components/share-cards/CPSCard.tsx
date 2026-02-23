@@ -174,6 +174,11 @@ export default function CPSCard({ cpsResult }: CPSCardProps) {
                 fontSize: '0.63rem',
                 color: 'rgba(0,212,255,0.5)',
                 letterSpacing: '0.12em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: 280,
+                margin: '0 auto',
               }}
             >
               PACJENT: {cpsResult.participantName.toUpperCase()} | PROBKA: WIADOMOSCI | DATA: {today}

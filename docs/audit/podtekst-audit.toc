@@ -1,0 +1,193 @@
+\xpg@aux {}{polish}
+\contentsline {chapter}{Wstęp}{xi}{chapter*.3}%
+\contentsline {chapter}{\numberline {1}Streszczenie Wykonawcze}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Ogólna ocena systemu}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Podsumowanie znalezionych problemów}{2}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Top 10 priorytetów}{2}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Kluczowe mocne strony}{2}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Kluczowe słabości}{3}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Mapa rozdziałów}{3}{section.1.6}%
+\contentsline {chapter}{\numberline {2}Audyt Silnika Ilościowego}{5}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Przegląd silnika}{5}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Architektura single-pass O(n)}{5}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Platform-aware session gaps}{5}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}Moduły pomocnicze}{6}{subsection.2.1.3}%
+\contentsline {section}{\numberline {2.2}Błędy krytyczne}{6}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}\texttt {\textcolor {PodDanger}{\bfseries QUANT-01}}: Niepoprawna reactionRate}{6}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}\texttt {\textcolor {PodDanger}{\bfseries QUANT-02}}: responseSymmetry = 100 przy braku danych}{7}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}\texttt {\textcolor {PodDanger}{\bfseries QUANT-03}}: Procent response time w~wrapped-data bez clampowania}{8}{subsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.2.4}\texttt {\textcolor {PodDanger}{\bfseries QUANT-04}}: delusionHolder semantycznie odwrócony}{8}{subsection.2.2.4}%
+\contentsline {subsection}{\numberline {2.2.5}\texttt {\textcolor {PodDanger}{\bfseries QUANT-05}}: reciprocity responseTimeSymmetry = 100 przy braku danych}{9}{subsection.2.2.5}%
+\contentsline {section}{\numberline {2.3}Problemy istotne}{10}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}\texttt {\textcolor {PodWarning}{\bfseries ENG-01}}: Hardcoded slope normalization w~interest score}{10}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}\texttt {\textcolor {PodWarning}{\bfseries ENG-02}}: Mnożnik 25 w~trendzie długości wiadomości}{10}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}\texttt {\textcolor {PodWarning}{\bfseries ENG-03}}: Mnożnik 500 w~engagement balance}{11}{subsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.3.4}\texttt {\textcolor {PodWarning}{\bfseries ENG-04}}: Early Bird badge liczy wartości bezwzględne}{11}{subsection.2.3.4}%
+\contentsline {subsection}{\numberline {2.3.5}\texttt {\textcolor {PodWarning}{\bfseries ENG-05}}: Próg unikalności catchphrase za niski}{12}{subsection.2.3.5}%
+\contentsline {subsection}{\numberline {2.3.6}\texttt {\textcolor {PodWarning}{\bfseries ENG-06}}: Trend message length używa mean zamiast median}{12}{subsection.2.3.6}%
+\contentsline {subsection}{\numberline {2.3.7}\texttt {\textcolor {PodWarning}{\bfseries ENG-07}}: Arbitralny próg detekcji burstów}{13}{subsection.2.3.7}%
+\contentsline {subsection}{\numberline {2.3.8}\texttt {\textcolor {PodWarning}{\bfseries ENG-08}}: Peak hour window~--- edge case godziny 23}{13}{subsection.2.3.8}%
+\contentsline {section}{\numberline {2.4}Problemy drobne}{13}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Analiza metryk wiralnych}{14}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Compatibility Score (0--100)}{14}{subsection.2.5.1}%
+\contentsline {subsubsection}{Activity Overlap}{14}{subsubsection*.7}%
+\contentsline {subsubsection}{Response Symmetry}{15}{subsubsection*.8}%
+\contentsline {subsubsection}{Ocena psychologiczna}{15}{subsubsection*.9}%
+\contentsline {subsection}{\numberline {2.5.2}Interest Score (0--100)}{15}{subsection.2.5.2}%
+\contentsline {subsubsection}{Problemy z~komponentami}{15}{subsubsection*.11}%
+\contentsline {subsection}{\numberline {2.5.3}Ghost Risk (0--100)}{16}{subsection.2.5.3}%
+\contentsline {subsubsection}{Mocne strony}{16}{subsubsection*.13}%
+\contentsline {subsubsection}{Słabości}{16}{subsubsection*.14}%
+\contentsline {subsection}{\numberline {2.5.4}Delusion Score}{16}{subsection.2.5.4}%
+\contentsline {section}{\numberline {2.6}Indeks Wzajemności (ReciprocityIndex)}{17}{section.2.6}%
+\contentsline {subsection}{\numberline {2.6.1}Wymiary i~formuły}{17}{subsection.2.6.1}%
+\contentsline {subsection}{\numberline {2.6.2}Wynik ogólny}{17}{subsection.2.6.2}%
+\contentsline {subsection}{\numberline {2.6.3}Ocena}{17}{subsection.2.6.3}%
+\contentsline {section}{\numberline {2.7}System odznak}{18}{section.2.7}%
+\contentsline {section}{\numberline {2.8}Wykrywanie burstów i~trendy}{18}{section.2.8}%
+\contentsline {subsection}{\numberline {2.8.1}Detekcja burstów}{18}{subsection.2.8.1}%
+\contentsline {subsection}{\numberline {2.8.2}System trendów}{19}{subsection.2.8.2}%
+\contentsline {section}{\numberline {2.9}Metryki sieci (NetworkMetrics)}{19}{section.2.9}%
+\contentsline {subsection}{\numberline {2.9.1}Konstrukcja macierzy interakcji}{19}{subsection.2.9.1}%
+\contentsline {subsection}{\numberline {2.9.2}Metryki}{20}{subsection.2.9.2}%
+\contentsline {subsection}{\numberline {2.9.3}Ocena}{20}{subsection.2.9.3}%
+\contentsline {section}{\numberline {2.10}CPS --- Communication Pattern Screening}{20}{section.2.10}%
+\contentsline {subsection}{\numberline {2.10.1}Architektura}{20}{subsection.2.10.1}%
+\contentsline {subsection}{\numberline {2.10.2}Wymagania}{20}{subsection.2.10.2}%
+\contentsline {subsection}{\numberline {2.10.3}Logika obliczania ryzyka}{20}{subsection.2.10.3}%
+\contentsline {subsection}{\numberline {2.10.4}Ocena CPS}{21}{subsection.2.10.4}%
+\contentsline {section}{\numberline {2.11}Brakujące metryki}{21}{section.2.11}%
+\contentsline {section}{\numberline {2.12}Podsumowanie rozdziału}{22}{section.2.12}%
+\contentsline {chapter}{\numberline {3}Pipeline AI i~Audyt Psychologiczny}{23}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Architektura pipeline AI}{23}{section.3.1}%
+\contentsline {subsection}{\numberline {3.1.1}Diagram przepływu}{24}{subsection.3.1.1}%
+\contentsline {section}{\numberline {3.2}Tabela ocen komponentów}{24}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Integracja z~Google Gemini}{24}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Model i~konfiguracja}{24}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Ustawienia bezpieczeństwa: BLOCK\_NONE}{25}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Strategia retry}{25}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Parsowanie JSON z~odpowiedzi}{26}{subsection.3.3.4}%
+\contentsline {section}{\numberline {3.4}Strategia próbkowania wiadomości}{26}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Budżety próbkowania}{26}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Stratyfikacja wg czasu}{26}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Próbkowanie punktów przegięcia}{27}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}Kalibracja kontekstu relacji}{27}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Cztery pasy analizy}{28}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}Pas~1 --- Przegląd}{28}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}Pas~2 --- Dynamika relacji}{28}{subsection.3.6.2}%
+\contentsline {subsubsection}{Manipulation Guard Rails}{28}{subsubsection*.22}%
+\contentsline {subsubsection}{Kontekst fazy relacji}{29}{subsubsection*.23}%
+\contentsline {subsection}{\numberline {3.6.3}Pas~3 --- Profile osobowości}{29}{subsection.3.6.3}%
+\contentsline {subsection}{\numberline {3.6.4}Pas~4 --- Synteza}{29}{subsection.3.6.4}%
+\contentsline {subsubsection}{Formuła Health Score}{29}{subsubsection*.24}%
+\contentsline {section}{\numberline {3.7}Bezpieczeństwo AI}{30}{section.3.7}%
+\contentsline {subsection}{\numberline {3.7.1}\texttt {\textcolor {PodDanger}{\bfseries AI-01}}: Filtry BLOCK\_NONE}{30}{subsection.3.7.1}%
+\contentsline {subsection}{\numberline {3.7.2}\texttt {\textcolor {PodDanger}{\bfseries AI-02}}: Obrona przed prompt injection}{30}{subsection.3.7.2}%
+\contentsline {subsection}{\numberline {3.7.3}\texttt {\textcolor {PodWarning}{\bfseries AI-03}}: Walidacja relationshipContext}{30}{subsection.3.7.3}%
+\contentsline {section}{\numberline {3.8}Walidacja frameworków psychologicznych}{30}{section.3.8}%
+\contentsline {subsection}{\numberline {3.8.1}Big Five}{30}{subsection.3.8.1}%
+\contentsline {subsection}{\numberline {3.8.2}Teoria przywiązania}{31}{subsection.3.8.2}%
+\contentsline {subsection}{\numberline {3.8.3}MBTI}{31}{subsection.3.8.3}%
+\contentsline {subsection}{\numberline {3.8.4}Języki miłości}{31}{subsection.3.8.4}%
+\contentsline {subsection}{\numberline {3.8.5}Health Score}{32}{subsection.3.8.5}%
+\contentsline {section}{\numberline {3.9}Moduły rozrywkowe}{32}{section.3.9}%
+\contentsline {subsection}{\numberline {3.9.1}Roast / Enhanced Roast / Stand-Up}{32}{subsection.3.9.1}%
+\contentsline {subsection}{\numberline {3.9.2}Twój Chat w~Sądzie (Court Trial)}{32}{subsection.3.9.2}%
+\contentsline {subsection}{\numberline {3.9.3}Profil Randkowy (Dating Profile)}{33}{subsection.3.9.3}%
+\contentsline {subsection}{\numberline {3.9.4}Symulator Odpowiedzi (Reply Simulator)}{33}{subsection.3.9.4}%
+\contentsline {subsection}{\numberline {3.9.5}Dekoder Podtekstów (Subtext Decoder)}{33}{subsection.3.9.5}%
+\contentsline {subsubsection}{Kategorie podtekstu}{34}{subsubsection*.25}%
+\contentsline {subsubsection}{Algorytm scoringowy}{34}{subsubsection*.27}%
+\contentsline {subsection}{\numberline {3.9.6}Stawiam Zakład (Delusion Quiz)}{35}{subsection.3.9.6}%
+\contentsline {section}{\numberline {3.10}CPS --- Communication Pattern Screening}{35}{section.3.10}%
+\contentsline {subsection}{\numberline {3.10.1}Parametry}{35}{subsection.3.10.1}%
+\contentsline {subsection}{\numberline {3.10.2}Wzorce komunikacyjne}{35}{subsection.3.10.2}%
+\contentsline {section}{\numberline {3.11}Obsługa błędów i~streaming}{36}{section.3.11}%
+\contentsline {subsection}{\numberline {3.11.1}SSE z~heartbeatem}{36}{subsection.3.11.1}%
+\contentsline {subsection}{\numberline {3.11.2}Abort signal}{36}{subsection.3.11.2}%
+\contentsline {subsection}{\numberline {3.11.3}Strategia retry}{36}{subsection.3.11.3}%
+\contentsline {subsection}{\numberline {3.11.4}Naprawa JSON}{36}{subsection.3.11.4}%
+\contentsline {subsection}{\numberline {3.11.5}Hierarchia degradacji}{36}{subsection.3.11.5}%
+\contentsline {section}{\numberline {3.12}Bilans: rozrywka a~nauka}{37}{section.3.12}%
+\contentsline {section}{\numberline {3.13}Podsumowanie rozdziału}{37}{section.3.13}%
+\contentsline {chapter}{\numberline {4}Parsery i~interfejs użytkownika}{39}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Zunifikowany format wiadomości}{39}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Tabela ocen parserów}{40}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Parser Facebook Messenger}{40}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Format danych}{40}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}Krytyczne wyzwanie: kodowanie Unicode}{40}{subsection.4.3.2}%
+\contentsline {subsection}{\numberline {4.3.3}Klasyfikacja typów wiadomości}{41}{subsection.4.3.3}%
+\contentsline {subsection}{\numberline {4.3.4}Obsługa wielu plików}{41}{subsection.4.3.4}%
+\contentsline {section}{\numberline {4.4}Parser WhatsApp}{41}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Format danych}{41}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Parsowanie dat}{42}{subsection.4.4.2}%
+\contentsline {subsection}{\numberline {4.4.3}Obsługa wiadomości wieloliniowych}{42}{subsection.4.4.3}%
+\contentsline {subsection}{\numberline {4.4.4}Detekcja wiadomości systemowych}{42}{subsection.4.4.4}%
+\contentsline {subsection}{\numberline {4.4.5}Detekcja mediów}{43}{subsection.4.4.5}%
+\contentsline {section}{\numberline {4.5}Parser Instagram DM}{43}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Parser Telegram}{43}{section.4.6}%
+\contentsline {subsection}{\numberline {4.6.1}Format danych}{43}{subsection.4.6.1}%
+\contentsline {subsection}{\numberline {4.6.2}Zagnieżdżony format tekstu}{44}{subsection.4.6.2}%
+\contentsline {subsection}{\numberline {4.6.3}Reakcje}{44}{subsection.4.6.3}%
+\contentsline {subsection}{\numberline {4.6.4}Pozostałe aspekty}{44}{subsection.4.6.4}%
+\contentsline {section}{\numberline {4.7}Parser Discord}{44}{section.4.7}%
+\contentsline {subsection}{\numberline {4.7.1}Źródło danych}{45}{subsection.4.7.1}%
+\contentsline {subsection}{\numberline {4.7.2}Identyfikacja użytkowników}{45}{subsection.4.7.2}%
+\contentsline {subsection}{\numberline {4.7.3}Filtrowanie typów wiadomości}{45}{subsection.4.7.3}%
+\contentsline {subsection}{\numberline {4.7.4}Ograniczenie danych o~reakcjach}{45}{subsection.4.7.4}%
+\contentsline {subsection}{\numberline {4.7.5}Załączniki i~linki}{45}{subsection.4.7.5}%
+\contentsline {subsection}{\numberline {4.7.6}Mentions i~reply chains}{45}{subsection.4.7.6}%
+\contentsline {subsection}{\numberline {4.7.7}Metryki specyficzne dla Discorda}{45}{subsection.4.7.7}%
+\contentsline {subsection}{\numberline {4.7.8}Pobieranie wiadomości z~API}{46}{subsection.4.7.8}%
+\contentsline {section}{\numberline {4.8}Auto-detekcja formatu}{46}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Tabela porównawcza parserów}{46}{section.4.9}%
+\contentsline {section}{\numberline {4.10}Interfejs użytkownika}{47}{section.4.10}%
+\contentsline {subsection}{\numberline {4.10.1}Ekran uploadu}{47}{subsection.4.10.1}%
+\contentsline {subsection}{\numberline {4.10.2}Strona wyników}{47}{subsection.4.10.2}%
+\contentsline {subsection}{\numberline {4.10.3}SectionNavigator}{47}{subsection.4.10.3}%
+\contentsline {subsection}{\numberline {4.10.4}StatsGrid}{48}{subsection.4.10.4}%
+\contentsline {section}{\numberline {4.11}Rate limiting}{48}{section.4.11}%
+\contentsline {section}{\numberline {4.12}Kodowanie URL do udostępniania}{49}{section.4.12}%
+\contentsline {section}{\numberline {4.13}Eksport PDF}{49}{section.4.13}%
+\contentsline {subsection}{\numberline {4.13.1}Standardowy PDF analizy}{49}{subsection.4.13.1}%
+\contentsline {subsection}{\numberline {4.13.2}Stand-Up PDF}{49}{subsection.4.13.2}%
+\contentsline {section}{\numberline {4.14}Walidacja danych wejściowych (Zod)}{50}{section.4.14}%
+\contentsline {section}{\numberline {4.15}Analityka (GA4)}{50}{section.4.15}%
+\contentsline {section}{\numberline {4.16}Dostępność}{51}{section.4.16}%
+\contentsline {section}{\numberline {4.17}Podsumowanie rozdziału}{51}{section.4.17}%
+\contentsline {chapter}{\numberline {5}Synteza Ekspercka}{53}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Metodologia syntezy}{53}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Wzorce przekrojowe}{53}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Wzorzec 1: Brak walidacji na wielu poziomach}{53}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Wzorzec 2: Napięcie rozrywka--nauka}{54}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Wzorzec 3: Architektura dojrzała, infrastruktura niedojrzała}{54}{subsection.5.2.3}%
+\contentsline {subsection}{\numberline {5.2.4}Wzorzec 4: Doskonała separacja klient--serwer}{54}{subsection.5.2.4}%
+\contentsline {section}{\numberline {5.3}Sprzeczności między agentami}{55}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}CPS: ,,Strong'' vs ,,6/10 frameworks''}{55}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Parsery ,,7--8.5/10'' vs ,,5 critical bugs''}{55}{subsection.5.3.2}%
+\contentsline {section}{\numberline {5.4}Gotowość produkcyjna}{55}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Dług techniczny}{55}{section.5.5}%
+\contentsline {section}{\numberline {5.6}Co warto dodać --- analiza przyszłościowa}{56}{section.5.6}%
+\contentsline {subsection}{\numberline {5.6.1}Nowe metryki analityczne}{56}{subsection.5.6.1}%
+\contentsline {subsection}{\numberline {5.6.2}Nowe funkcje rozrywkowe}{56}{subsection.5.6.2}%
+\contentsline {subsection}{\numberline {5.6.3}Walidacja naukowa}{57}{subsection.5.6.3}%
+\contentsline {section}{\numberline {5.7}Podsumowanie syntezy}{57}{section.5.7}%
+\contentsline {chapter}{\numberline {6}Rekomendacje i~Mapa Drogowa}{59}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Tier 0 --- Bezpieczeństwo (natychmiast)}{59}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Tier 1 --- Bugi krytyczne (1--2 dni)}{59}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Tier 2 --- Jakość psychologiczna (1--2 tygodnie)}{60}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Redesign Health Score}{60}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Subtext Decoder --- scoring oparty na LIWC}{60}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}Kalibracja Delusion Quiz}{60}{subsection.6.3.3}%
+\contentsline {subsection}{\numberline {6.3.4}Wyraźne disclaimery}{60}{subsection.6.3.4}%
+\contentsline {section}{\numberline {6.4}Tier 2b --- Problemy inżynieryjne (1--2 tygodnie)}{61}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Tier 3 --- Infrastruktura (2--4 tygodnie)}{61}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Tier 4 --- Przyszłość (kwartały)}{62}{section.6.6}%
+\contentsline {section}{\numberline {6.7}Harmonogram wdrożenia}{62}{section.6.7}%
+\contentsline {section}{\numberline {6.8}Metryki sukcesu}{63}{section.6.8}%
+\contentsline {section}{\numberline {6.9}Podsumowanie rekomendacji}{63}{section.6.9}%
+\contentsline {chapter}{Dodatki}{65}{chapter*.40}%
+\contentsline {section}{A. Kompletna tabela problemów}{65}{chapter*.40}%
+\contentsline {section}{B. Metodologia ocen}{66}{table.6.5}%
+\contentsline {chapter}{Indeks}{69}{section*.41}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 
