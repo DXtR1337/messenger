@@ -88,9 +88,12 @@ export function computeReciprocityIndex(
       : 50;
   }
 
-  // Overall: equal weight average of all 4 sub-scores
+  // Overall: weighted average — RT symmetry weighted lower (min/max ratio is disproportionately harsh)
   const overall = Math.round(
-    (messageBalance + initiationBalance + responseTimeSymmetry + reactionBalance) / 4,
+    messageBalance * 0.30 +
+    initiationBalance * 0.25 +
+    responseTimeSymmetry * 0.15 +
+    reactionBalance * 0.30,
   );
 
   return {

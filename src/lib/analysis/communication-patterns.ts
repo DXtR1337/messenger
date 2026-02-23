@@ -139,9 +139,9 @@ export const CPS_PATTERNS: CPSPattern[] = [
   },
   {
     key: 'manipulation_low_empathy',
-    name: 'Manipulacja i brak empatii',
-    nameEn: 'Manipulation & Low Empathy',
-    description: 'Instrumentalne traktowanie rozmówcy, brak współczucia i zrozumienia.',
+    name: 'Instrumentalna komunikacja',
+    nameEn: 'Instrumental Communication & Low Empathy',
+    description: 'Wzorzec komunikacji skoncentrowany na własnych celach, ograniczone współczucie i zrozumienie potrzeb rozmówcy.',
     color: '#1e293b',
     threshold: 3,
     questions: [46, 47, 48, 49, 50, 51],
@@ -405,7 +405,7 @@ export const CPS_QUESTIONS: CPSQuestion[] = [
     id: 37,
     text: 'Czy osoba idealizuje rozmówcę a potem gwałtownie go krytykuje?',
     pattern: 'emotional_intensity',
-    messageSignals: 'Splitting — cycling between idealization ("jesteś najlepszy") and devaluation ("jesteś okropny"), black-and-white view of person',
+    messageSignals: 'Polaryzacja (czarno-białe myślenie) — cycling between idealization ("jesteś najlepszy") and devaluation ("jesteś okropny"), black-and-white view of person',
   },
   {
     id: 38,
@@ -458,7 +458,7 @@ export const CPS_QUESTIONS: CPSQuestion[] = [
     messageSignals: 'Exaggerating stories for effect, embellishing details, making ordinary events sound extraordinary, storytelling for impact rather than accuracy',
   },
 
-  // ── MANIPULATION & LOW EMPATHY (46-51) ──
+  // ── INSTRUMENTAL COMMUNICATION & LOW EMPATHY (46-51) ──
   {
     id: 46,
     text: 'Czy osoba używa poczucia winy jako narzędzia wpływu?',
@@ -481,7 +481,7 @@ export const CPS_QUESTIONS: CPSQuestion[] = [
     id: 49,
     text: 'Czy osoba przekręca słowa rozmówcy lub zaprzecza temu co powiedziała?',
     pattern: 'manipulation_low_empathy',
-    messageSignals: 'Gaslighting patterns — "nigdy tak nie powiedziałem", twisting previous statements, denying what is visible in chat history',
+    messageSignals: 'Zaprzeczanie i przekręcanie — "nigdy tak nie powiedziałem", twisting previous statements, contradicting what is visible in chat history',
   },
   {
     id: 50,
@@ -639,7 +639,7 @@ export function calculatePatternResults(
 
     const avgConfidence = answerCount > 0 ? Math.round(totalConfidence / answerCount) : 0;
     const percentage =
-      pattern.threshold > 0 ? Math.min(Math.round((yesCount / pattern.threshold) * 100), 100) : 0;
+      totalAnswerable > 0 ? Math.round((yesCount / totalAnswerable) * 100) : 0;
 
     results[pattern.key] = {
       yesCount,
@@ -705,19 +705,19 @@ export function getOverallRiskLevel(results: Record<string, CPSPatternResult>): 
   const thresholdMet = Object.values(results).filter((r) => r.meetsThreshold).length;
   const highPercentage = Object.values(results).filter((r) => r.percentage >= 75).length;
 
-  if (thresholdMet >= 2 || highPercentage >= 3) {
+  if (thresholdMet >= 4 || highPercentage >= 5) {
     return {
       level: 'wysoki',
       description: 'Wiele wzorców komunikacyjnych przekracza progi — warto przyjrzeć się dynamice relacji.',
     };
   }
-  if (thresholdMet === 1 || highPercentage >= 2) {
+  if (thresholdMet >= 2 || highPercentage >= 3) {
     return {
       level: 'podwyższony',
       description: 'Wykryto wyraźne wzorce komunikacyjne wymagające uwagi.',
     };
   }
-  if (highPercentage >= 1) {
+  if (thresholdMet >= 1 || highPercentage >= 1) {
     return {
       level: 'umiarkowany',
       description: 'Niektóre wzorce komunikacyjne mogą wymagać obserwacji.',

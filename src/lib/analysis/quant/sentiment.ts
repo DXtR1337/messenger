@@ -50,15 +50,15 @@ export interface SentimentAnalysis {
 // ============================================================
 
 const DIACRITICS_MAP: Record<string, string> = {
-  '\u0105': 'a', // ą
-  '\u0107': 'c', // ć
-  '\u0119': 'e', // ę
-  '\u0142': 'l', // ł
-  '\u0144': 'n', // ń
-  '\u00f3': 'o', // ó
-  '\u015b': 's', // ś
-  '\u017a': 'z', // ź
-  '\u017c': 'z', // ż
+  'ą': 'a', // ą
+  'ć': 'c', // ć
+  'ę': 'e', // ę
+  'ł': 'l', // ł
+  'ń': 'n', // ń
+  'ó': 'o', // ó
+  'ś': 's', // ś
+  'ź': 'z', // ź
+  'ż': 'z', // ż
 };
 
 /** Strip Polish diacritics from a string. */
@@ -147,7 +147,7 @@ const POSITIVE_WORDS_RAW = [
   'odpał', 'odpal', 'odjazd', 'odjazdowy', 'odjazdowa',
   'niezły', 'niezła', 'niezle', 'niezłe',
   'zarąbisty', 'zarąbista', 'zarabisty', 'zarabista',
-  'ale', 'wow', 'łał', 'lal',
+  'wow', 'łał', 'lal',
 
   // --- Polish: emotional engagement ---
   'cieszę', 'ciesze', 'cieszysz', 'cieszymy', 'cieszę się',
@@ -179,13 +179,7 @@ const POSITIVE_WORDS_RAW = [
   'goat', 'based', 'bussin', 'vibes', 'slay',
   'iconic', 'legendary', 'insane', 'unreal', 'godly',
   'nice', 'cool', 'sweet', 'chill', 'solid',
-  'good', 'best', 'better', 'fine', 'okay',
-  'yes', 'yep', 'yeah', 'absolutely', 'definitely',
-  'exactly', 'agreed', 'true', 'right',
-
-  // --- English: emotional engagement ---
-  'lol', 'lmao', 'haha', 'hahaha', 'hehe',
-  'xd', 'xdd', 'xddd',
+  'best',
 ];
 
 const NEGATIVE_WORDS_RAW = [
@@ -244,7 +238,7 @@ const NEGATIVE_WORDS_RAW = [
   // --- Polish: guilt, shame ---
   'wstyd', 'wina', 'winny', 'winna',
   'żal', 'zal', 'żałuję', 'zaluję', 'zaluje',
-  'przepraszam', 'przepraszam', 'sorry',
+  // 'przepraszam' and 'sorry' removed — apologies are repair behaviors (Gottman), not negative sentiment
 
   // --- Polish: negative social ---
   'toksyczny', 'toksyczna', 'toksyczne',
@@ -264,7 +258,7 @@ const NEGATIVE_WORDS_RAW = [
   'chuj', 'chujowy', 'chujowa',
 
   // --- Polish: negation markers ---
-  'brak', 'nigdy', 'niestety', 'nie',
+  'brak', 'nigdy', 'niestety',
   'rozpacz', 'bezsens', 'bezsensu',
   'frustracja', 'frustrujące', 'frustrujace',
   'zgnilizna',
@@ -318,6 +312,8 @@ const NEGATIVE_DICT = buildDictionary(NEGATIVE_WORDS_RAW);
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
+    // Normalize English contractions before splitting on apostrophes
+    .replace(/\b(don|can|won|isn|aren|wasn|weren|hasn|haven|doesn|didn|couldn|wouldn|shouldn)'t\b/g, '$1t')
     .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
     .split(/[\s.,!?;:()\[\]{}"'\-\/\\<>@#$%^&*+=|~`]+/)
     .filter((w) => w.length >= 2);
@@ -327,20 +323,71 @@ function tokenize(text: string): string[] {
 // Core Scoring
 // ============================================================
 
+// Negation particles — 2-token lookahead flips positive → negative
+const NEGATION_PARTICLES = new Set([
+  // Polish
+  'nie', 'bez', 'ani',
+  // English (tokenizer normalizes "don't"→"dont", "can't"→"cant", etc.)
+  'not', 'dont', 'cant', 'wont', 'isnt', 'arent', 'wasnt',
+  'werent', 'hasnt', 'havent', 'doesnt', 'didnt', 'couldnt',
+  'wouldnt', 'shouldnt', 'never', 'no',
+]);
+const NEGATION_WINDOW = 2; // look ahead up to 2 tokens ("nie jestem szczęśliwy", "not really happy")
+
 /**
  * Compute sentiment score for a single text string.
  *
  * Tokenizes to lowercase words, counts positive and negative
  * dictionary matches, returns normalized score.
+ *
+ * Negation handling: Polish (nie, bez, ani) and English (not, don't, never, etc.)
+ * particles followed by a positive word within 2 tokens flip that positive → negative.
  */
 export function computeSentimentScore(text: string): SentimentScore {
   const tokens = tokenize(text);
   let positive = 0;
   let negative = 0;
 
-  for (const token of tokens) {
-    if (POSITIVE_DICT.has(token)) positive++;
-    if (NEGATIVE_DICT.has(token)) negative++;
+  // First pass: mark negated indices (positive→negative and negative→positive)
+  const negatedIndices = new Set<number>();    // positive words flipped to negative
+  const negatedNegIndices = new Set<number>(); // negative words flipped to positive
+  const consumedNegations = new Set<number>();
+
+  for (let i = 0; i < tokens.length; i++) {
+    if (!NEGATION_PARTICLES.has(tokens[i])) continue;
+
+    // Look ahead up to NEGATION_WINDOW tokens for a sentiment word to flip
+    for (let j = 1; j <= NEGATION_WINDOW && i + j < tokens.length; j++) {
+      const ahead = tokens[i + j];
+      if (POSITIVE_DICT.has(ahead)) {
+        negatedIndices.add(i + j);    // positive → negative ("nie lubię")
+        consumedNegations.add(i);
+        break;
+      }
+      if (NEGATIVE_DICT.has(ahead)) {
+        negatedNegIndices.add(i + j); // negative → positive ("nie mam problemu")
+        consumedNegations.add(i);
+        break;
+      }
+    }
+  }
+
+  // Second pass: score tokens with negation awareness
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (consumedNegations.has(i)) continue; // skip consumed negation particle
+
+    if (negatedIndices.has(i)) {
+      // Positive word flipped by negation → count as negative
+      negative++;
+    } else if (negatedNegIndices.has(i)) {
+      // Negative word flipped by negation → count as positive
+      positive++;
+    } else if (POSITIVE_DICT.has(token)) {
+      positive++;
+    } else if (NEGATIVE_DICT.has(token)) {
+      negative++;
+    }
   }
 
   const total = positive + negative;

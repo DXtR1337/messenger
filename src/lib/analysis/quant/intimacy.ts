@@ -110,13 +110,13 @@ function countEmotionalWords(text: string): number {
 
 /**
  * Compute informality score for a single message.
- * Exclamation marks (+1 each), emoji (+2 each), question marks (-1 each).
+ * Exclamation marks (+1 each), emoji (+2 each).
+ * Questions are NOT penalized — they indicate engagement, not formality.
  */
 function computeMessageInformalityScore(text: string): number {
   const exclamations = (text.match(/!/g) ?? []).length;
-  const questions = (text.match(/\?/g) ?? []).length;
   const emojis = extractEmojis(text).length;
-  return exclamations * 1 + emojis * 2 - questions * 1;
+  return exclamations * 1 + emojis * 2;
 }
 
 /** Safely normalize a value: (value / max) * 100, returning 0 if max is 0. */
@@ -229,17 +229,12 @@ export function computeIntimacyProgression(
   const maxInformality = Math.max(...monthlyAvgInformality, 0.001);
   const maxLateNightPct = Math.max(...monthlyLateNightPct, 0.001);
 
-  // Handle informality: we need to handle negative values gracefully.
-  // Shift so the minimum becomes 0, then normalize to the shifted max.
-  const minInformality = Math.min(...monthlyAvgInformality);
-  const shiftedInformality = monthlyAvgInformality.map(v => v - minInformality);
-  const maxShiftedInformality = Math.max(...shiftedInformality, 0.001);
-
   // --- Build data points ---
   const trend: IntimacyDataPoint[] = sortedMonths.map((month, i) => {
     const messageLengthFactor = normalize(monthlyAvgLength[i], maxAvgLength);
     const emotionalWordsFactor = normalize(monthlyAvgEmotionalDensity[i], maxEmotionalDensity);
-    const informalityFactor = normalize(shiftedInformality[i], maxShiftedInformality);
+    // Use consistent value/max normalization — same as other 3 components (no min-shift)
+    const informalityFactor = normalize(monthlyAvgInformality[i], maxInformality);
     const lateNightFactor = normalize(monthlyLateNightPct[i], maxLateNightPct);
 
     // Weighted composite

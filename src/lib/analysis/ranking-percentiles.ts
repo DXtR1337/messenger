@@ -36,6 +36,12 @@ export function computeRankingPercentiles(quant: QuantitativeAnalysis): RankingP
   const maxInitRatio = totalInit > 0 ? Math.max(...initVals) / totalInit : 0.5;
   const asymmetry = Math.abs(maxInitRatio - 0.5) * 200; // 0-100 scale
 
+  // HEURISTIC MEDIANS — calibrated from informal estimates of typical chat conversations.
+  // These are NOT derived from empirical population data. Percentiles are approximate.
+  //   3000 msgs   = ~6 months of active daily conversations
+  //   480s (8min) = typical casual conversation median response time
+  //   12h silence = typical overnight gap in active relationships
+  //   20 asymmetry = ~60/40 initiation split (moderate imbalance)
   const rankings: RankingPercentile[] = [
     {
       metric: 'message_volume',

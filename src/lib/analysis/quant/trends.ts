@@ -113,8 +113,13 @@ export function computeYearMilestones(
     return `${MONTH_NAMES_PL[monthIdx]} ${year}`;
   };
 
-  // YoY: compare recent half vs older half
-  const mid = Math.floor(monthlyVolume.length / 2);
+  // YoY: split by actual date midpoint (not month count) for accurate temporal comparison
+  const firstDate = new Date(monthlyVolume[0].month + '-01');
+  const lastDate = new Date(monthlyVolume[monthlyVolume.length - 1].month + '-01');
+  const midDate = new Date((firstDate.getTime() + lastDate.getTime()) / 2);
+  const midMonth = `${midDate.getFullYear()}-${String(midDate.getMonth() + 1).padStart(2, '0')}`;
+  const midIdx = monthlyVolume.findIndex(m => m.month >= midMonth);
+  const mid = midIdx >= 1 ? midIdx : Math.floor(monthlyVolume.length / 2); // fallback to count-split
   const olderHalf = monthlyVolume.slice(0, mid).reduce((s, v) => s + v.total, 0);
   const recentHalf = monthlyVolume.slice(mid).reduce((s, v) => s + v.total, 0);
   const yoyTrend = olderHalf > 0 ? (recentHalf / olderHalf) - 1 : 0;

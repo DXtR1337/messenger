@@ -141,7 +141,7 @@ export function computeCatchphrases(
         if (count < 3) continue;
         const globalCount = globalPhraseCount.get(phrase) ?? count;
         const uniqueness = globalCount > 0 ? count / globalCount : 0;
-        if (uniqueness < 0.75) continue;
+        if (uniqueness < 0.5) continue;
         candidates.push({
           phrase,
           count,
@@ -156,7 +156,7 @@ export function computeCatchphrases(
         if (count < 3) continue;
         const globalCount = globalPhraseCount.get(phrase) ?? count;
         const uniqueness = globalCount > 0 ? count / globalCount : 0;
-        if (uniqueness < 0.75) continue;
+        if (uniqueness < 0.5) continue;
         candidates.push({
           phrase,
           count,

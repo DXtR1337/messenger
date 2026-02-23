@@ -262,7 +262,8 @@ function computeGhostRisk(
 
   const months = patterns.monthlyVolume;
   if (months.length < 3) {
-    return { score: 0, factors: ['Za mało danych'] };
+    // Return neutral score — insufficient data to assess ghost risk
+    return { score: 50, factors: ['Za mało danych — neutralna ocena'] };
   }
 
   // Split into recent (last 3 months) and earlier
@@ -270,7 +271,7 @@ function computeGhostRisk(
   const earlierMonths = months.slice(0, -3);
 
   if (earlierMonths.length === 0) {
-    return { score: 0, factors: ['Za mało danych'] };
+    return { score: 50, factors: ['Za mało danych — neutralna ocena'] };
   }
 
   const factors: string[] = [];
@@ -431,9 +432,9 @@ export function computeViralScores(
   if (interestValues.length >= 2) {
     const sorted = [...interestValues].sort((a, b) => b[1] - a[1]);
     delusionScore = Math.abs(sorted[0][1] - sorted[1][1]);
-    // Delusion holder = person with LOWER interest score — they don't see the asymmetry
-    // (the more invested person is aware of their investment; the less invested one is oblivious)
-    delusionHolder = sorted[1][0];
+    // Delusion holder = person with HIGHER interest score — they may not see the asymmetry
+    // (the more invested person tends to overestimate mutual engagement)
+    delusionHolder = sorted[0][0];
     if (delusionScore < 5) {
       delusionHolder = undefined;
     }

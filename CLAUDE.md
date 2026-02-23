@@ -168,6 +168,8 @@ src/
 │   │   ├── RankingBadges.tsx        # Heuristic percentile rankings
 │   │   ├── AIPredictions.tsx        # AI-generated predictions with confidence
 │   │   ├── GottmanHorsemen.tsx      # Gottman Four Horsemen visualization
+│   │   ├── LSMCard.tsx             # Language Style Matching visualization
+│   │   ├── PronounCard.tsx         # Pronoun I/We/You analysis card
 │   │   ├── ShareCaptionModal.tsx
 │   │   ├── AnalysisImageCard.tsx
 │   │   ├── RoastImageCard.tsx
@@ -208,6 +210,7 @@ src/
 │       ├── BrandLogo.tsx             # PodTeksT logo component
 │       ├── PTLogo.tsx               # SVG "PT" logo with gradient
 │       ├── BrandP.tsx               # Brand P component
+│       ├── PsychDisclaimer.tsx      # Reusable psych disclaimer with citations
 │       ├── Navigation.tsx
 │       ├── SidebarContext.tsx
 │       ├── ConditionalAnalytics.tsx
@@ -234,7 +237,9 @@ src/
 │   │   │   ├── conflicts.ts          # detectConflicts()
 │   │   │   ├── intimacy.ts           # computeIntimacyProgression()
 │   │   │   ├── pursuit-withdrawal.ts # detectPursuitWithdrawal()
-│   │   │   └── response-time-distribution.ts # computeResponseTimeDistribution()
+│   │   │   ├── response-time-distribution.ts # computeResponseTimeDistribution()
+│   │   │   ├── lsm.ts              # computeLSM() — Language Style Matching
+│   │   │   └── pronouns.ts         # computePronounAnalysis() — I/We/You rates
 │   │   ├── threat-meters.ts          # Codependency/Manipulation/Trust indexes
 │   │   ├── damage-report.ts          # Emotional damage + communication grade
 │   │   ├── cognitive-functions.ts     # MBTI → cognitive functions derivation
@@ -248,6 +253,7 @@ src/
 │   │   ├── catchphrases.ts           # Per-person catchphrase detection
 │   │   ├── constants.ts
 │   │   ├── viral-scores.ts           # Compatibility, Interest, Delusion scores
+│   │   ├── citations.ts              # Academic citation constants (Gottman, Bowlby, etc.)
 │   │   ├── communication-patterns.ts
 │   │   ├── wrapped-data.ts           # Data aggregation for Wrapped mode
 │   │   ├── subtext.ts               # Subtext types + exchange window extraction
@@ -303,7 +309,7 @@ Apply to EVERY string field: `sender_name`, `content`, `participants[].name`, `r
 - Decode Facebook unicode encoding
 
 ### Stage 2: Quantitative Analysis (client-side, no AI)
-80+ metrics: volume, timing, engagement, patterns, sentiment, conflicts, intimacy, pursuit-withdrawal, threat meters, damage report, ranking percentiles. Pure math, free, fast.
+80+ metrics: volume, timing, engagement, patterns, sentiment, conflicts, intimacy, pursuit-withdrawal, threat meters, damage report, ranking percentiles, Language Style Matching (LSM), pronoun analysis (I/We/You). Pure math, free, fast.
 
 ### Stage 3: Qualitative Analysis (server-side, Gemini API via SSE)
 - **Pass 1 — Overview:** Tone, style, relationship type
@@ -467,6 +473,36 @@ Danger:      #ef4444
 - **User profile:** `/profile` — avatar, tier badge, local stats (analyses, messages, platforms)
 - **Navigation:** UserMenu component replaces hardcoded user card, Settings link in sidebar
 - **Requires setup:** Supabase project + env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) to activate auth
+
+### Faza 26 — Psychological Hardening ✅
+- **Manipulation → Power Imbalance:** Renamed "Manipulacja" to "Nierównowaga Wpływu" across all user-facing UI (ThreatMeters, PersonalityDeepDive, LandingDemo, CPS display names). Internal keys (`manipulation_low_empathy`) preserved for IndexedDB compatibility.
+- **Therapy → Benefit scale:** Replaced binary "Terapia potrzebna: TAK/NIE" with gradient "Korzyść z konsultacji: WYSOKA/UMIARKOWANA/NISKA" (`therapyBenefit` field in DamageReportResult)
+- **Trust Index formula:** Explicit named weights (reciprocity 0.40, responseConsistency 0.40, ghostRisk 0.20)
+- **PsychDisclaimer component:** Reusable `src/components/shared/PsychDisclaimer.tsx` — consistent disclaimers with optional academic citations and generic footer
+- **Academic citations:** `src/lib/analysis/citations.ts` — Gottman, Bowlby, Ainsworth, Costa & McCrae, Christensen & Heavey, Jung, Myers-Briggs, Nielsen (AFINN)
+- **Disclaimers on all 8 clinical-adjacent components:** ThreatMeters, DamageReport, PursuitWithdrawalCard, DelusionQuiz, CognitiveFunctionsClash, RankingBadges, GottmanHorsemen, AIPredictions
+- **Tab disclaimers upgraded:** AIInsightsTab + EntertainmentTab now use PsychDisclaimer with academic citations
+- **CPS terminology:** "Splitting" → "Polaryzacja (czarno-białe myślenie)", "Gaslighting patterns" → "Zaprzeczanie i przekręcanie"
+- **Pursuit-withdrawal thresholds raised:** 2h→4h withdrawal, 3→4 consecutive messages (reduces false positives)
+- **Sentiment negation handling:** 2-token lookahead for Polish negation particles (nie, bez, ani) flips positive→negative. Standalone "nie" removed from negative dictionary.
+- **ThreatMeters renamed:** "Wskaźniki Zagrożeń" → "Wskaźniki Dynamiki"
+
+### Faza 27 — Deep Psychological Validation ✅
+- **Codependency weights fix:** Sum normalized from 1.55 to 1.0 (0.45 + 0.22 + 0.33). Label: "Współuzależnienie" → "Intensywność Przywiązania"
+- **CPS percentage fix:** Denominator changed from `threshold` to `totalAnswerable` for true percentage
+- **Delusion attribution fix:** Now labels MORE invested person as "delulu" (was backwards)
+- **Intimacy informality fix:** Removed question mark penalty (questions = engagement, not formality)
+- **Sentiment dictionary cleanup:** Removed false positives (ale, yes, yeah, okay, lol, haha, xd, good, fine). Removed "przepraszam"/"sorry" from negatives (Gottman repair behaviors). Added English negation handling with contraction normalization.
+- **Language Style Matching (LSM):** New module `src/lib/analysis/quant/lsm.ts` — Ireland & Pennebaker (2010). 9 function word categories (PL+EN), adaptation asymmetry detection ("kameleon"). UI: `src/components/analysis/LSMCard.tsx`
+- **Pronoun Analysis:** New module `src/lib/analysis/quant/pronouns.ts` — Pennebaker (2011). Full Polish declension (ja/mnie/mi/mną/mój etc.). I/We/You rates, relationship orientation. UI: `src/components/analysis/PronounCard.tsx`
+- **AI prompt improvements:** Big Five behavioral anchors (1-10 scale calibration), Health Score operational definitions (5 components with specific criteria)
+- **Clinical → Frequency labels:** `severity: none|mild|moderate|significant` → `frequency: not_observed|occasional|recurring|pervasive` in prompts + types + UI (backward compat preserved)
+- **Big Five range bars:** Shows [low, high] range instead of midpoint in PersonalityDeepDive
+- **Header renames:** "Pełen profil psychologiczny" → "Profil komunikacyjny", "obserwacje kliniczne" → "wzorce behawioralne"
+- **PsychDisclaimer added to:** ViralScoresSection, PersonalityDeepDive
+- **Codependency renamed in LandingDemo:** "współuzależnienie" → "intensywne przywiązanie", "Codependency" → "Attachment Intensity"
+- **Conflict detection bigrams:** Added accusatory bigram detection (PL: "ty zawsze", "ty nigdy", "dlaczego ty"; EN: "you always", "you never") — boosts escalation severity when co-occurring with timing spikes
+- **New citations:** Ireland & Pennebaker 2010 (LSM), Pennebaker 2011 (Pronouns), Gottman & Levenson 2000 (Conflict Escalation)
 
 ### Future (not started)
 - Supabase PostgreSQL (`profiles` table + RLS policies + trigger)

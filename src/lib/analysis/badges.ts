@@ -162,7 +162,8 @@ export function computeBadges(
     for (const name of names) {
       const total = perPerson[name]?.totalMessages ?? 0;
       const lateNight = timing.lateNightMessages[name] ?? 0;
-      lateNightPct[name] = total > 0 ? (lateNight / total) * 100 : 0;
+      // Require minimum 20 total messages AND 10 late-night messages to qualify
+      lateNightPct[name] = total >= 20 && lateNight >= 10 ? (lateNight / total) * 100 : 0;
     }
     const winner = findWinner(lateNightPct);
     if (winner && winner.value > 0) {
@@ -192,7 +193,8 @@ export function computeBadges(
           }
         }
       }
-      earlyBirdPct[name] = total > 0 ? (earlyCount / total) * 100 : 0;
+      // Require minimum 20 total messages AND 10 early messages to qualify
+      earlyBirdPct[name] = total >= 20 && earlyCount >= 10 ? (earlyCount / total) * 100 : 0;
     }
     const winner = findWinner(earlyBirdPct);
     if (winner && winner.value > 0) {
@@ -386,7 +388,7 @@ export function computeBadges(
   {
     const streaks = computeStreaks(conversation);
     const winner = findWinner(streaks);
-    if (winner && winner.value > 1) {
+    if (winner && winner.value > 14) {
       badges.push({
         id: 'streak-master',
         name: 'Streak Master',
@@ -426,7 +428,7 @@ export function computeBadges(
       mentionCounts[name] = perPerson[name]?.mentionsReceived ?? 0;
     }
     const winner = findWinner(mentionCounts);
-    if (winner && winner.value > 5) {
+    if (winner && winner.value > 20) {
       badges.push({
         id: 'mention-magnet',
         name: 'Magnes na @',
@@ -446,7 +448,7 @@ export function computeBadges(
       replyCounts[name] = perPerson[name]?.repliesSent ?? 0;
     }
     const winner = findWinner(replyCounts);
-    if (winner && winner.value > 10) {
+    if (winner && winner.value > 50) {
       badges.push({
         id: 'reply-king',
         name: 'Król odpowiedzi',
@@ -466,7 +468,7 @@ export function computeBadges(
       editCounts[name] = perPerson[name]?.editedMessages ?? 0;
     }
     const winner = findWinner(editCounts);
-    if (winner && winner.value > 5) {
+    if (winner && winner.value > 20) {
       badges.push({
         id: 'edit-lord',
         name: 'Perfekcjonista',
