@@ -48,6 +48,7 @@ dashboard-charts.js
 
 # screenshots
 *.png
+!public/**/*.png
 
 # misc artifacts
 nul

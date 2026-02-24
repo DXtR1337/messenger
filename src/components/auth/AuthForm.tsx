@@ -37,6 +37,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   const supabase = createClient();
 
+  // Supabase not configured — show a message
+  if (!supabase) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050505] px-4">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Autoryzacja nie jest jeszcze skonfigurowana.</p>
+          <a href="/" className="mt-4 inline-block text-sm text-blue-400 hover:text-blue-300">← Wróć do strony głównej</a>
+        </div>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);

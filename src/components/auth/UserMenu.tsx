@@ -20,6 +20,7 @@ export default function UserMenu({ collapsed = false }: UserMenuProps) {
 
   useEffect(() => {
     const supabase = createClient();
+    if (!supabase) { setLoading(false); return; }
 
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
@@ -48,7 +49,7 @@ export default function UserMenu({ collapsed = false }: UserMenuProps) {
 
   const handleLogout = async () => {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    if (supabase) await supabase.auth.signOut();
     setMenuOpen(false);
     router.push('/');
     router.refresh();

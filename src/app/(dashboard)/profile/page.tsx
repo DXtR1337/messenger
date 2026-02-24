@@ -67,32 +67,61 @@ const PLATFORM_LABELS: Record<string, string> = {
 // Profile page
 // -------------------------------------------------------------------
 
+interface DbProfile {
+  tier: string;
+  is_admin: boolean;
+}
+
 export default function ProfilePage() {
   const { tier } = useTier();
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [dbProfile, setDbProfile] = useState<DbProfile | null>(null);
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
 
-    // Use getSession (reads local storage, no network request) + onAuthStateChange
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    }).catch(() => {});
+    if (supabase) {
+      // Use getSession (reads local storage, no network request) + onAuthStateChange
+      supabase.auth.getSession().then(({ data }) => {
+        const u = data.session?.user ?? null;
+        setUser(u);
+        if (u) fetchProfile(supabase, u.id);
+      }).catch(() => { });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const u = session?.user ?? null;
+        setUser(u);
+        if (u) fetchProfile(supabase, u.id);
+      });
 
-    // Load local stats
-    listAnalyses().then((analyses) => {
-      setStats(computeStats(analyses));
-      setLoaded(true);
-    });
+      // Load local stats
+      listAnalyses().then((analyses) => {
+        setStats(computeStats(analyses));
+        setLoaded(true);
+      });
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    } else {
+      // Supabase not configured — load local stats only
+      listAnalyses().then((analyses) => {
+        setStats(computeStats(analyses));
+        setLoaded(true);
+      });
+    }
   }, []);
+
+  async function fetchProfile(supabase: NonNullable<ReturnType<typeof createClient>>, userId: string) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('tier, is_admin')
+      .eq('id', userId)
+      .single();
+    if (error) console.warn('[profile] fetch error:', error.message, error.code);
+    if (data) setDbProfile(data as DbProfile);
+    else console.warn('[profile] no data for user', userId);
+  }
 
   if (!loaded) {
     return (
@@ -112,10 +141,12 @@ export default function ProfilePage() {
   const createdAt = user?.created_at ? new Date(user.created_at) : null;
   const initials = displayName.slice(0, 2).toUpperCase();
 
-  const tierLabel = tier === 'free' ? 'Darmowy' : tier === 'pro' ? 'Pro' : 'Unlimited';
-  const tierColor = tier === 'free'
+  const effectiveTier = dbProfile?.tier || tier;
+  const isAdmin = dbProfile?.is_admin ?? false;
+  const tierLabel = effectiveTier === 'free' ? 'Darmowy' : effectiveTier === 'pro' ? 'Pro' : 'Unlimited';
+  const tierColor = effectiveTier === 'free'
     ? 'bg-muted-foreground/20 text-muted-foreground'
-    : tier === 'pro'
+    : effectiveTier === 'pro'
       ? 'bg-blue-500/20 text-blue-400'
       : 'bg-purple-500/20 text-purple-400';
 
@@ -150,6 +181,9 @@ export default function ProfilePage() {
                   {initials}
                 </div>
                 <Badge className={tierColor}>{tierLabel}</Badge>
+                {isAdmin && (
+                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Admin</Badge>
+                )}
               </div>
 
               {/* Info */}
