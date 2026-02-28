@@ -55,6 +55,16 @@ import {
   detectConflicts,
   computeIntimacyProgression,
   detectPursuitWithdrawal,
+  computeLSM,
+  computePronounAnalysis,
+  computeChronotypeCompatibility,
+  computeShiftSupportRatio,
+  computeEmotionalGranularity,
+  computeBidResponseRatio,
+  computeIntegrativeComplexity,
+  computeTemporalFocus,
+  computeRepairPatterns,
+  computeConflictFingerprint,
   createPersonAccumulator,
 } from './quant';
 import type { PersonAccumulator } from './quant';
@@ -80,6 +90,14 @@ export function computeQuantitativeAnalysis(
   const accumulators = new Map<string, PersonAccumulator>();
   for (const name of participantNames) {
     accumulators.set(name, createPersonAccumulator());
+  }
+
+  // Normalized lookup for reaction actors: handles FB encoding quirks where
+  // the actor name in reactions may differ from participants by whitespace,
+  // NFC/NFD form, or minor encoding inconsistencies (e.g. ł, ą, ę).
+  const normalizedActorLookup = new Map<string, string>();
+  for (const name of accumulators.keys()) {
+    normalizedActorLookup.set(name.trim().normalize('NFC').toLowerCase(), name);
   }
 
   // ── Timing / session accumulators ──────────────────────────
@@ -231,15 +249,24 @@ export function computeQuantitativeAnalysis(
     // ── Reactions ────────────────────────────────────────────
     // Reactions on this message: the actors gave reactions, this sender received them
     for (const reaction of msg.reactions) {
-      acc.reactionsReceived++;
+      // Discord aggregates reactions into a single entry with count field
+      const reactionCount = reaction.count ?? 1;
+      acc.reactionsReceived += reactionCount;
 
-      // Credit the actor who gave the reaction
-      const actorAcc = accumulators.get(reaction.actor);
+      // Credit the actor who gave the reaction.
+      // Try exact match first; fall back to normalized lookup to handle FB
+      // encoding quirks where reaction.actor may differ from the participant
+      // name by whitespace, NFC/NFD form, or latin-1 decoding inconsistencies.
+      const resolvedActorName =
+        accumulators.has(reaction.actor)
+          ? reaction.actor
+          : normalizedActorLookup.get(reaction.actor.trim().normalize('NFC').toLowerCase());
+      const actorAcc = resolvedActorName ? accumulators.get(resolvedActorName) : undefined;
       if (actorAcc) {
-        actorAcc.reactionsGiven++;
+        actorAcc.reactionsGiven += reactionCount;
         actorAcc.reactionsGivenFreq.set(
           reaction.emoji,
-          (actorAcc.reactionsGivenFreq.get(reaction.emoji) ?? 0) + 1,
+          (actorAcc.reactionsGivenFreq.get(reaction.emoji) ?? 0) + reactionCount,
         );
       }
     }
@@ -473,11 +500,41 @@ export function computeQuantitativeAnalysis(
   // -- Conflict Analysis --
   const conflictAnalysis = detectConflicts(messages, participantNames);
 
+  // -- Conflict Fingerprint (per-person conflict behavior profiles) --
+  const conflictFingerprint = computeConflictFingerprint(messages, participantNames, conflictAnalysis.events);
+
   // -- Intimacy Progression --
   const intimacyProgression = computeIntimacyProgression(messages, participantNames, heatmap);
 
   // -- Pursuit-Withdrawal Detection --
   const pursuitWithdrawal = detectPursuitWithdrawal(messages, participantNames);
+
+  // -- Language Style Matching (Ireland & Pennebaker, 2010) --
+  const lsm = computeLSM(messages, participantNames);
+
+  // -- Pronoun Analysis (Pennebaker, 2011) --
+  const pronounAnalysis = computePronounAnalysis(messages, participantNames);
+
+  // -- Chronotype Compatibility (Aledavood 2018; Jarmolowicz 2022) --
+  const chronotypeCompatibility = computeChronotypeCompatibility(messages, participantNames);
+
+  // -- Shift-Support Ratio (Derber 1979; Vangelisti 1990) --
+  const shiftSupportResult = computeShiftSupportRatio(messages, participantNames);
+
+  // -- Emotional Granularity (Vishnubhotla 2024) --
+  const emotionalGranularity = computeEmotionalGranularity(messages, participantNames);
+
+  // -- Bid-Response Ratio (Gottman 1999) --
+  const bidResponseResult = computeBidResponseRatio(messages, participantNames);
+
+  // -- Integrative Complexity (Suedfeld & Tetlock 1977, Conway AutoIC 2014) --
+  const integrativeComplexity = computeIntegrativeComplexity(messages, participantNames);
+
+  // -- Temporal Focus / Future Orientation (Pennebaker LIWC 2007) --
+  const temporalFocus = computeTemporalFocus(messages, participantNames);
+
+  // -- Conversational Repair Patterns (Schegloff, Jefferson & Sacks 1977) --
+  const repairPatterns = computeRepairPatterns(messages, participantNames);
 
   // Build base result for ranking percentiles
   const baseResult: QuantitativeAnalysis = {
@@ -497,8 +554,18 @@ export function computeQuantitativeAnalysis(
     yearMilestones,
     sentimentAnalysis,
     conflictAnalysis,
+    conflictFingerprint,
     intimacyProgression,
     pursuitWithdrawal,
+    lsm,
+    pronounAnalysis,
+    chronotypeCompatibility,
+    shiftSupportResult,
+    emotionalGranularity,
+    bidResponseResult,
+    integrativeComplexity,
+    temporalFocus,
+    repairPatterns,
   };
 
   // -- Ranking Percentiles (needs full result) --
@@ -507,6 +574,7 @@ export function computeQuantitativeAnalysis(
   return {
     ...baseResult,
     rankingPercentiles,
+    _version: 2,
   };
 }
 

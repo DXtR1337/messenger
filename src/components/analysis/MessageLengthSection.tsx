@@ -14,25 +14,17 @@ import { formatNumber } from '@/lib/utils';
 import type { QuantitativeAnalysis } from '@/lib/parsers/types';
 import {
   CHART_HEIGHT,
-  CHART_TOOLTIP_STYLE,
-  CHART_TOOLTIP_LABEL_STYLE,
   CHART_AXIS_TICK,
   CHART_GRID_PROPS,
   PERSON_COLORS_HEX,
-  MONTHS_PL,
   useAxisWidth,
-  monthYearLabelFormatter,
+  ChartTooltipContent,
+  formatMonthSmart,
 } from './chart-config';
 
 interface MessageLengthSectionProps {
   quantitative: QuantitativeAnalysis;
   participants: string[];
-}
-
-function formatMonth(ym: string): string {
-  const parts = ym.split('-');
-  const m = parseInt(parts[1] ?? '0', 10);
-  return MONTHS_PL[m - 1] ?? parts[1] ?? '';
 }
 
 function truncateContent(content: string, maxLength = 100): string {
@@ -57,10 +49,12 @@ export default function MessageLengthSection({
   const axisWidth = useAxisWidth();
 
   const chartData: ChartDataPoint[] = useMemo(() => {
-    return quantitative.trends.messageLengthTrend.map((entry) => {
+    const trend = quantitative.trends.messageLengthTrend;
+    const allMonths = trend.map((e) => e.month);
+    return trend.map((entry) => {
       const point: ChartDataPoint = {
         month: entry.month,
-        label: formatMonth(entry.month),
+        label: formatMonthSmart(entry.month, allMonths),
       };
       for (const name of participants) {
         point[name] = entry.perPerson[name] ?? 0;
@@ -82,12 +76,12 @@ export default function MessageLengthSection({
           return (
             <div
               key={person}
-              className="overflow-hidden rounded-xl border border-border bg-card"
-              style={{ borderLeftColor: color, borderLeftWidth: 3 }}
+              className="overflow-hidden rounded-xl border border-white/[0.05] bg-white/[0.02] p-0"
+              style={{ borderLeftColor: color, borderLeftWidth: 3, boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.06)' }}
             >
               <div className="px-3 sm:px-5 pt-4 pb-2">
                 <h3
-                  className="text-[15px] font-bold"
+                  className="font-[family-name:var(--font-syne)] text-sm font-semibold"
                   style={{ color }}
                 >
                   {person}
@@ -134,13 +128,13 @@ export default function MessageLengthSection({
       </div>
 
       {/* Bottom section: message length trend chart */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between px-3 sm:px-5 pt-4">
+      <div className="overflow-hidden">
+        <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-display text-[15px] font-bold">
+            <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">
               Długość wiadomości w czasie
             </h3>
-            <p className="mt-0.5 text-xs text-text-muted">
+            <p className="mt-0.5 text-xs text-white/50">
               Średnia liczba słów na wiadomość miesięcznie
             </p>
           </div>
@@ -148,10 +142,10 @@ export default function MessageLengthSection({
             {participants.map((name, i) => (
               <span
                 key={name}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                className="flex items-center gap-1.5 text-xs text-white/50"
               >
                 <span
-                  className="inline-block h-2 w-2 rounded-sm"
+                  className="inline-block size-2 rounded-[3px]"
                   style={{ backgroundColor: PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0] }}
                 />
                 {name}
@@ -159,7 +153,7 @@ export default function MessageLengthSection({
             ))}
           </div>
         </div>
-        <div className="px-3 sm:px-5 py-4">
+        <div className="pt-4">
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid {...CHART_GRID_PROPS} />
@@ -177,14 +171,7 @@ export default function MessageLengthSection({
                 width={axisWidth}
                 tickFormatter={(value: number) => `${Math.round(value)}`}
               />
-              <Tooltip
-                contentStyle={CHART_TOOLTIP_STYLE}
-                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-                labelFormatter={monthYearLabelFormatter}
-                formatter={(value?: number | string) => [
-                  `${Number(value ?? 0).toFixed(1)} słów`,
-                ]}
-              />
+              <Tooltip content={<ChartTooltipContent />} />
               {participants.map((name, i) => {
                 const color = PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0];
                 return (

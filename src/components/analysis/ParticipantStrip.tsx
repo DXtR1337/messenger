@@ -44,17 +44,17 @@ export default function ParticipantStrip({
       <div className="flex flex-col items-center gap-4 md:flex-row">
         {/* Person A */}
         {personA && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div
-              className={`flex h-[38px] w-[38px] items-center justify-center rounded-lg text-sm font-bold text-white ${PERSON_BG_CLASSES[0]}`}
+              className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white ${PERSON_BG_CLASSES[0]}`}
             >
               {personA.charAt(0).toUpperCase()}
             </div>
-            <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-foreground">
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-[15px] font-bold text-foreground">
                 {personA}
               </span>
-              <span className="text-xs text-text-muted">
+              <span className="truncate text-xs text-text-muted">
                 {formatCount(metricsA?.totalMessages ?? 0)} wiadomości &middot; śr.{' '}
                 {avgWordsA} słów
               </span>
@@ -82,17 +82,17 @@ export default function ParticipantStrip({
 
         {/* Person B (mirrored) */}
         {personB && (
-          <div className="flex items-center gap-3 md:flex-row-reverse">
+          <div className="flex items-center gap-3 min-w-0 md:flex-row-reverse">
             <div
-              className={`flex h-[38px] w-[38px] items-center justify-center rounded-lg text-sm font-bold text-white ${PERSON_BG_CLASSES[1]}`}
+              className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white ${PERSON_BG_CLASSES[1]}`}
             >
               {personB.charAt(0).toUpperCase()}
             </div>
-            <div className="flex flex-col md:text-right">
-              <span className="text-[15px] font-bold text-foreground">
+            <div className="flex min-w-0 flex-col md:text-right">
+              <span className="truncate text-[15px] font-bold text-foreground">
                 {personB}
               </span>
-              <span className="text-xs text-text-muted">
+              <span className="truncate text-xs text-text-muted">
                 {formatCount(metricsB?.totalMessages ?? 0)} wiadomości &middot; śr.{' '}
                 {avgWordsB} słów
               </span>

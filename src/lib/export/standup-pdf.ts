@@ -1171,43 +1171,46 @@ function drawPsychReportPage(
     y += 17;
 
     // Big Five
-    doc.setFontSize(8);
-    textC(doc, SC.mutedGold);
-    doc.text('BIG FIVE', colX + 2, y);
-    y += 5;
+    if (profile.big_five_approximation) {
+      doc.setFontSize(8);
+      textC(doc, SC.mutedGold);
+      doc.text('BIG FIVE', colX + 2, y);
+      y += 5;
 
-    const traits = [
-      { label: 'Otwartość', value: profile.big_five_approximation.openness },
-      {
-        label: 'Sumienność',
-        value: profile.big_five_approximation.conscientiousness,
-      },
-      {
-        label: 'Ekstrawersja',
-        value: profile.big_five_approximation.extraversion,
-      },
-      {
-        label: 'Ugodowość',
-        value: profile.big_five_approximation.agreeableness,
-      },
-      { label: 'Neurotyzm', value: profile.big_five_approximation.neuroticism },
-    ];
+      const traits = [
+        { label: 'Otwartość', value: profile.big_five_approximation.openness },
+        {
+          label: 'Sumienność',
+          value: profile.big_five_approximation.conscientiousness,
+        },
+        {
+          label: 'Ekstrawersja',
+          value: profile.big_five_approximation.extraversion,
+        },
+        {
+          label: 'Ugodowość',
+          value: profile.big_five_approximation.agreeableness,
+        },
+        { label: 'Neurotyzm', value: profile.big_five_approximation.neuroticism },
+      ];
 
-    traits.forEach(({ label, value }) => {
-      const avg = (value.range[0] + value.range[1]) / 2;
-      const score = avg * 10;
-      toNormal(doc);
-      doc.setFontSize(7);
-      textC(doc, SC.dimWhite);
-      doc.text(pdfSafe(label), colX + 2, y + 3);
-      drawProgressBar(doc, colX + 28, y, colW - 32, 4, score, SC.purple);
-      doc.setFontSize(7);
-      textC(doc, SC.white);
-      doc.text(`${avg.toFixed(1)}`, colX + colW - 1, y + 3, {
-        align: 'right',
+      traits.forEach(({ label, value }) => {
+        if (!value?.range) return;
+        const avg = (value.range[0] + value.range[1]) / 2;
+        const score = avg * 10;
+        toNormal(doc);
+        doc.setFontSize(7);
+        textC(doc, SC.dimWhite);
+        doc.text(pdfSafe(label), colX + 2, y + 3);
+        drawProgressBar(doc, colX + 28, y, colW - 32, 4, score, SC.purple);
+        doc.setFontSize(7);
+        textC(doc, SC.white);
+        doc.text(`${avg.toFixed(1)}`, colX + colW - 1, y + 3, {
+          align: 'right',
+        });
+        y += 7;
       });
-      y += 7;
-    });
+    }
 
     y += 3;
 
@@ -1233,7 +1236,7 @@ function drawPsychReportPage(
     toNormal(doc);
     doc.setFontSize(8.5);
     textC(doc, SC.white);
-    const att = profile.attachment_indicators.primary_style;
+    const att = profile.attachment_indicators?.primary_style ?? 'insufficient_data';
     doc.text(
       pdfSafe(tr(att)),
       colX + 2,
@@ -1258,47 +1261,53 @@ function drawPsychReportPage(
     }
 
     // EI
-    doc.setFontSize(8);
-    textC(doc, SC.mutedGold);
-    doc.text('INTELIGENCJA EMOCJONALNA', colX + 2, y);
-    y += 5;
-    drawProgressBar(
-      doc,
-      colX + 2,
-      y,
-      colW - 4,
-      4,
-      profile.emotional_intelligence.overall,
-      SC.neonBlue,
-    );
-    doc.setFontSize(7);
-    textC(doc, SC.white);
-    doc.text(
-      `${profile.emotional_intelligence.overall}/100`,
-      colX + colW - 2,
-      y + 3,
-      { align: 'right' },
-    );
+    if (profile.emotional_intelligence?.overall != null) {
+      doc.setFontSize(8);
+      textC(doc, SC.mutedGold);
+      doc.text('INTELIGENCJA EMOCJONALNA', colX + 2, y);
+      y += 5;
+      drawProgressBar(
+        doc,
+        colX + 2,
+        y,
+        colW - 4,
+        4,
+        profile.emotional_intelligence.overall,
+        SC.neonBlue,
+      );
+      doc.setFontSize(7);
+      textC(doc, SC.white);
+      doc.text(
+        `${profile.emotional_intelligence.overall}/100`,
+        colX + colW - 2,
+        y + 3,
+        { align: 'right' },
+      );
+    }
     y += 10;
 
     // Communication
-    doc.setFontSize(8);
-    textC(doc, SC.mutedGold);
-    doc.text('KOMUNIKACJA', colX + 2, y);
-    y += 5;
-    doc.setFontSize(7.5);
-    textC(doc, SC.dimWhite);
-    doc.text(
-      `Styl: ${tr(profile.communication_profile.style)}`,
-      colX + 2,
-      y + 2,
-    );
-    y += 6;
-    doc.text(
-      `Potrzeba: ${tr(profile.communication_needs.primary)}`,
-      colX + 2,
-      y + 2,
-    );
+    if (profile.communication_profile) {
+      doc.setFontSize(8);
+      textC(doc, SC.mutedGold);
+      doc.text('KOMUNIKACJA', colX + 2, y);
+      y += 5;
+      doc.setFontSize(7.5);
+      textC(doc, SC.dimWhite);
+      doc.text(
+        `Styl: ${tr(profile.communication_profile.style)}`,
+        colX + 2,
+        y + 2,
+      );
+      y += 6;
+      if (profile.communication_needs) {
+        doc.text(
+          `Potrzeba: ${tr(profile.communication_needs.primary)}`,
+          colX + 2,
+          y + 2,
+        );
+      }
+    }
   });
 
   drawFooter(doc);
@@ -1824,7 +1833,7 @@ export function generateStandUpPdf(
   registerFonts(doc);
 
   // Page 1: Cover
-  onProgress?.({ stage: 'Ok\u0142adka...', percent: 3 });
+  onProgress?.({ stage: 'Okładka...', percent: 3 });
   drawCoverPage(doc, result, analysis, images);
 
   // Page 2: Character Cards
@@ -1851,7 +1860,7 @@ export function generateStandUpPdf(
 
   // Page 11: Destruction Chart (conditional)
   if (analysis.qualitative?.pass4) {
-    onProgress?.({ stage: 'Wykres zniszcze\u0144...', percent: 85 });
+    onProgress?.({ stage: 'Wykres zniszczeń...', percent: 85 });
     doc.addPage();
     drawDestructionPage(doc, analysis, images);
   }
@@ -1864,7 +1873,7 @@ export function generateStandUpPdf(
   }
 
   // Page 13: Closing Credits
-  onProgress?.({ stage: 'Napisy ko\u0144cowe...', percent: 93 });
+  onProgress?.({ stage: 'Napisy końcowe...', percent: 93 });
   doc.addPage();
   drawClosingCreditsPage(doc, result, analysis, images);
 

@@ -31,10 +31,10 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
   const dtB = q.engagement?.doubleTexts?.[b] ?? 0;
   if (dtA + dtB > 5) {
     cats.push({
-      question: 'KTO JEST BARDZIEJ NATR\u0118TNY?',
+      question: 'KTO JEST BARDZIEJ NATRĘTNY?',
       valuesA: dtA + pa.totalMessages,
       valuesB: dtB + pb.totalMessages,
-      evidence: `${dtA > dtB ? a.split(' ')[0] : b.split(' ')[0]} wys\u0142a\u0142(a) ${Math.max(dtA, dtB)} double tekst\u00F3w`,
+      evidence: `${dtA > dtB ? a.split(' ')[0] : b.split(' ')[0]} wysłał(a) ${Math.max(dtA, dtB)} double tekstów`,
       emoji: '\u{1FAE0}',
     });
   }
@@ -44,7 +44,7 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
   const nightB = q.timing?.lateNightMessages?.[b] ?? 0;
   if (nightA + nightB > 10) {
     cats.push({
-      question: 'KTO JEST NOCN\u0104 SOW\u0104?',
+      question: 'KTO JEST NOCNĄ SOWĄ?',
       valuesA: nightA,
       valuesB: nightB,
       evidence: `${nightA > nightB ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(nightA, nightB)} wiad. po 22:00`,
@@ -68,7 +68,7 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
   // Emoji addict
   if (pa.emojiCount + pb.emojiCount > 50) {
     cats.push({
-      question: 'KTO JEST UZALE\u017BNIONY OD EMOJI?',
+      question: 'KTO JEST UZALEŻNIONY OD EMOJI?',
       valuesA: pa.emojiCount,
       valuesB: pb.emojiCount,
       evidence: `${pa.emojiCount > pb.emojiCount ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.emojiCount, pb.emojiCount)} emoji`,
@@ -82,7 +82,7 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
       question: 'KTO BARDZIEJ OVERTHINKUJE?',
       valuesA: pa.questionsAsked,
       valuesB: pb.questionsAsked,
-      evidence: `${pa.questionsAsked > pb.questionsAsked ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.questionsAsked, pb.questionsAsked)} pyta\u0144`,
+      evidence: `${pa.questionsAsked > pb.questionsAsked ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.questionsAsked, pb.questionsAsked)} pytań`,
       emoji: '\u{1F914}',
     });
   }
@@ -102,7 +102,7 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
 
   // Message volume
   cats.push({
-    question: 'KTO WI\u0118CEJ GADA?',
+    question: 'KTO WIĘCEJ GADA?',
     valuesA: pa.totalMessages,
     valuesB: pb.totalMessages,
     evidence: `${pa.totalMessages > pb.totalMessages ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.totalMessages, pb.totalMessages).toLocaleString('pl-PL')} wiad.`,
@@ -438,7 +438,7 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
         disabled={isDownloading}
         className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-card-hover hover:text-foreground disabled:opacity-50"
       >
-        {isDownloading ? 'Pobieranie...' : '\u{1F4E5} Pobierz kart\u0119'}
+        {isDownloading ? 'Pobieranie...' : '\u{1F4E5} Pobierz kartę'}
       </button>
     </div>
   );

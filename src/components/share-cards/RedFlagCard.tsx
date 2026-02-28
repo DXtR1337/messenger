@@ -112,7 +112,7 @@ export default function RedFlagCard({ quantitative, qualitative, participants }:
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: '#0c0c0c',
           borderRadius: 4,

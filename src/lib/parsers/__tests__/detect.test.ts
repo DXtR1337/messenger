@@ -51,19 +51,45 @@ describe('detectFormat', () => {
   // Messenger detection
   // ============================================================
 
-  it('detects Messenger JSON by participants + messages arrays', () => {
+  it('detects Messenger JSON by participants + messages arrays with thread_path', () => {
     const messengerData = {
       participants: [{ name: 'Alice' }, { name: 'Bob' }],
       messages: [
         { sender_name: 'Alice', timestamp_ms: 1700000000000, content: 'Hi', type: 'Generic' },
       ],
       title: 'Alice and Bob',
+      thread_path: 'inbox/AliceBob_abc123',
+      is_still_participant: true,
     };
     expect(detectFormat('message_1.json', messengerData)).toBe('messenger');
   });
 
-  it('detects Instagram JSON as messenger (same Meta format)', () => {
-    // Instagram DMs have the same structure as Messenger
+  it('detects Messenger E2EE format (e2ee_cutover thread_path)', () => {
+    const messengerData = {
+      participants: [{ name: 'Alice' }, { name: 'Bob' }],
+      messages: [
+        { sender_name: 'Alice', timestamp_ms: 1700000000000, content: 'Hi', type: 'Generic' },
+      ],
+      title: 'Alice and Bob',
+      thread_path: 'e2ee_cutover/AliceBob_abc123',
+      is_still_participant: true,
+    };
+    expect(detectFormat('message_1.json', messengerData)).toBe('messenger');
+  });
+
+  it('detects Messenger with is_still_participant but no thread_path', () => {
+    const messengerData = {
+      participants: [{ name: 'Alice' }, { name: 'Bob' }],
+      messages: [
+        { sender_name: 'Alice', timestamp_ms: 1700000000000, content: 'Hi', type: 'Generic' },
+      ],
+      title: 'Alice and Bob',
+      is_still_participant: true,
+    };
+    expect(detectFormat('message_1.json', messengerData)).toBe('messenger');
+  });
+
+  it('detects Instagram JSON (no thread_path, no is_still_participant)', () => {
     const instagramData = {
       participants: [{ name: 'User1' }, { name: 'User2' }],
       messages: [
@@ -71,8 +97,7 @@ describe('detectFormat', () => {
       ],
       title: 'User1 and User2',
     };
-    // detectFormat returns 'messenger' for Instagram too (same parser)
-    expect(detectFormat('instagram.json', instagramData)).toBe('messenger');
+    expect(detectFormat('instagram.json', instagramData)).toBe('instagram');
   });
 
   // ============================================================

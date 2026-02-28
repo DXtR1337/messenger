@@ -4,6 +4,7 @@
  */
 
 import type { StoredAnalysis, AnalysisIndexEntry } from '@/lib/analysis/types';
+import { logger } from '@/lib/logger';
 
 // -------------------------------------------------------------------
 // Constants
@@ -169,15 +170,43 @@ export async function importData(file: File): Promise<{ analysesImported: number
   const db = await openDB();
 
   // Import analyses
+  let validAnalysesCount = 0;
   if (data.analyses?.length) {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_ANALYSES, 'readwrite');
       const store = tx.objectStore(STORE_ANALYSES);
       for (const analysis of data.analyses) {
-        store.put(analysis);
+        // Validate each analysis has required shape before import
+        if (
+          !analysis ||
+          typeof analysis !== 'object' ||
+          typeof (analysis as unknown as Record<string, unknown>).id !== 'string' ||
+          typeof (analysis as unknown as Record<string, unknown>).title !== 'string'
+        ) {
+          logger.warn('[ImportData] Pominięto nieprawidłową analizę:', analysis);
+          continue;
+        }
+        try {
+          store.put(analysis);
+          validAnalysesCount++;
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+            tx.abort();
+            reject(new Error('Brak miejsca w przeglądarce. Wyczyść stare analizy w Ustawieniach.'));
+            return;
+          }
+          throw err;
+        }
       }
       tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+      tx.onerror = () => {
+        const txError = tx.error;
+        if (txError && txError.name === 'QuotaExceededError') {
+          reject(new Error('Brak miejsca w przeglądarce. Wyczyść stare analizy w Ustawieniach.'));
+        } else {
+          reject(txError);
+        }
+      };
     });
   }
 
@@ -187,10 +216,35 @@ export async function importData(file: File): Promise<{ analysesImported: number
       const tx = db.transaction(STORE_INDEX, 'readwrite');
       const store = tx.objectStore(STORE_INDEX);
       for (const entry of data.index) {
-        store.put(entry);
+        // Validate each index entry has required shape before import
+        if (
+          !entry ||
+          typeof entry !== 'object' ||
+          typeof (entry as unknown as Record<string, unknown>).id !== 'string'
+        ) {
+          logger.warn('[ImportData] Pominięto nieprawidłowy wpis indeksu:', entry);
+          continue;
+        }
+        try {
+          store.put(entry);
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+            tx.abort();
+            reject(new Error('Brak miejsca w przeglądarce. Wyczyść stare analizy w Ustawieniach.'));
+            return;
+          }
+          throw err;
+        }
       }
       tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+      tx.onerror = () => {
+        const txError = tx.error;
+        if (txError && txError.name === 'QuotaExceededError') {
+          reject(new Error('Brak miejsca w przeglądarce. Wyczyść stare analizy w Ustawieniach.'));
+        } else {
+          reject(txError);
+        }
+      };
     });
   }
 
@@ -201,7 +255,7 @@ export async function importData(file: File): Promise<{ analysesImported: number
     }
   }
 
-  return { analysesImported: data.analyses?.length ?? 0 };
+  return { analysesImported: validAnalysesCount };
 }
 
 // -------------------------------------------------------------------

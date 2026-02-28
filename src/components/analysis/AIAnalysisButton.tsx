@@ -8,8 +8,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { sampleMessages } from '@/lib/analysis/qualitative';
 import { trackEvent } from '@/lib/analytics/events';
+import { useAnalysis } from '@/lib/analysis/analysis-context';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 import type { QualitativeAnalysis, RoastResult } from '@/lib/analysis/types';
+
+export interface AIProgressInfo {
+  state: 'idle' | 'running' | 'complete' | 'error';
+  currentPass: number;
+  roastState: 'idle' | 'running' | 'complete' | 'error';
+}
 
 interface AIAnalysisButtonProps {
   analysisId: string;
@@ -17,6 +24,7 @@ interface AIAnalysisButtonProps {
   quantitative: QuantitativeAnalysis;
   onComplete: (qualitative: QualitativeAnalysis) => void;
   onRoastComplete?: (roast: RoastResult) => void;
+  onProgressChange?: (progress: AIProgressInfo) => void;
   relationshipContext?: string;
 }
 
@@ -46,8 +54,10 @@ export default function AIAnalysisButton({
   quantitative,
   onComplete,
   onRoastComplete,
+  onProgressChange,
   relationshipContext,
 }: AIAnalysisButtonProps) {
+  const { startOperation, updateOperation, stopOperation } = useAnalysis();
   const [state, setState] = useState<AnalysisState>('idle');
   const [roastState, setRoastState] = useState<RoastState>('idle');
   const [currentPass, setCurrentPass] = useState(0);
@@ -62,6 +72,11 @@ export default function AIAnalysisButton({
   const analysisControllerRef = useRef<AbortController | null>(null);
   const roastControllerRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
+
+  // Report progress to parent so it can show floating indicator across tabs
+  useEffect(() => {
+    onProgressChange?.({ state, currentPass, roastState });
+  }, [state, currentPass, roastState, onProgressChange]);
 
   // Track mount state — do NOT abort requests on unmount so analysis continues
   useEffect(() => {
@@ -112,6 +127,7 @@ export default function AIAnalysisButton({
     setState('running');
     setCurrentPass(1);
     setError(null);
+    startOperation('ai-analysis', 'AI Deep Dive', PASS_LABELS[0]);
     trackEvent({ name: 'analysis_start', params: { mode: 'standard' } });
 
     // Create AbortController for this analysis request
@@ -174,8 +190,31 @@ export default function AIAnalysisButton({
 
             if (event.type === 'progress' && event.pass) {
               if (mountedRef.current) setCurrentPass(event.pass);
+              updateOperation('ai-analysis', {
+                progress: event.pass * 20,
+                status: PASS_LABELS[event.pass - 1] ?? `Pass ${event.pass}...`,
+              });
             } else if (event.type === 'complete' && event.result) {
               finalResult = event.result;
+              // Debug: log pass3 completeness
+              const p3 = event.result.pass3;
+              if (p3) {
+                const p3Names = Object.keys(p3);
+                console.log('[AI Debug] pass3 participants:', p3Names);
+                for (const n of p3Names) {
+                  const pf = p3[n];
+                  console.log(`[AI Debug] ${n}:`, {
+                    hasAttachment: !!pf?.attachment_indicators?.primary_style,
+                    attachmentStyle: pf?.attachment_indicators?.primary_style,
+                    hasBigFive: !!pf?.big_five_approximation,
+                    hasMBTI: !!pf?.mbti?.type,
+                    hasLoveLang: !!pf?.love_language,
+                    keys: pf ? Object.keys(pf) : [],
+                  });
+                }
+              } else {
+                console.warn('[AI Debug] pass3 is empty/undefined in result!');
+              }
             } else if (event.type === 'error') {
               throw new Error(event.error ?? 'Unknown analysis error');
             }
@@ -211,13 +250,15 @@ export default function AIAnalysisButton({
         setError(err instanceof Error ? err.message : String(err));
       }
     } finally {
+      stopOperation('ai-analysis');
       analysisControllerRef.current = null;
     }
-  }, [analysisId, conversation, quantitative, onComplete, relationshipContext]);
+  }, [analysisId, conversation, quantitative, onComplete, relationshipContext, startOperation, updateOperation, stopOperation]);
 
   const handleRunRoast = useCallback(async () => {
     setRoastState('running');
     setRoastError(null);
+    startOperation('ai-roast', 'Roast', 'Prześwietlam wasze profile...');
     trackEvent({ name: 'analysis_start', params: { mode: 'roast' } });
 
     // Create AbortController for this roast request
@@ -307,9 +348,10 @@ export default function AIAnalysisButton({
         setRoastError(err instanceof Error ? err.message : String(err));
       }
     } finally {
+      stopOperation('ai-roast');
       roastControllerRef.current = null;
     }
-  }, [analysisId, conversation, quantitative, onRoastComplete]);
+  }, [analysisId, conversation, quantitative, onRoastComplete, startOperation, stopOperation]);
 
   if (state === 'idle') {
     return (
@@ -361,7 +403,7 @@ export default function AIAnalysisButton({
             onClick={() => setShowRoastWarning(true)}
             disabled={roastState === 'running' || !aiConsent}
             className={cn(
-              'mt-2 gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-400',
+              'mt-2 gap-2 border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/10 hover:text-fuchsia-300',
               !aiConsent && 'opacity-50 cursor-not-allowed',
             )}
           >
@@ -376,10 +418,10 @@ export default function AIAnalysisButton({
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-md rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm"
+              className="w-full max-w-md rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/[0.06] p-4 text-sm"
             >
-              <p className="font-medium text-amber-400">Najpierw analiza, potem roast</p>
-              <p className="mt-1 text-xs text-amber-400/70">
+              <p className="font-medium text-fuchsia-300">Najpierw analiza, potem roast</p>
+              <p className="mt-1 text-xs text-fuchsia-300/70">
                 Roast jest trafniejszy po pełnej analizie AI. Zalecamy najpierw uruchomić analizę jakościową.
               </p>
               <div className="mt-3 flex gap-2">
@@ -402,7 +444,7 @@ export default function AIAnalysisButton({
                     setShowRoastWarning(false);
                     handleRunRoast();
                   }}
-                  className="gap-1.5 border-red-500/30 text-red-500 hover:bg-red-500/10"
+                  className="gap-1.5 border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/10"
                 >
                   <Flame className="size-3.5" />
                   Roast i tak
@@ -539,9 +581,9 @@ export default function AIAnalysisButton({
                       className={cn(
                         'flex size-7 items-center justify-center rounded-full border text-xs font-mono font-medium transition-all',
                         step.status === 'complete' &&
-                        'border-red-500/30 bg-red-500/10 text-red-500',
+                        'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400',
                         step.status === 'running' &&
-                        'border-orange-500/30 bg-orange-500/10 text-orange-500',
+                        'border-purple-500/30 bg-purple-500/10 text-purple-300',
                         step.status === 'pending' &&
                         'border-border bg-secondary text-muted-foreground',
                       )}
@@ -602,7 +644,7 @@ export default function AIAnalysisButton({
                 size="sm"
                 variant="outline"
                 onClick={handleRunRoast}
-                className="gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                className="gap-2 border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/10 hover:text-fuchsia-300"
               >
                 <Flame className="size-3.5" />
                 Tryb Roast

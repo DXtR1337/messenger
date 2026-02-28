@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { sampleMessages } from '@/lib/analysis/qualitative';
 import { trackEvent } from '@/lib/analytics/events';
+import { useAnalysis } from '@/lib/analysis/analysis-context';
 import SimulatorCard from '@/components/share-cards/SimulatorCard';
 import type { SimulatorExchange } from '@/components/share-cards/SimulatorCard';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
@@ -87,6 +88,7 @@ export default function ReplySimulator({
   qualitative,
   participants,
 }: ReplySimulatorProps) {
+  const { startOperation, updateOperation, stopOperation } = useAnalysis();
   // ── State ─────────────────────────────────────────────────
   const [phase, setPhase] = useState<SimulatorPhase>('select');
   const [targetPerson, setTargetPerson] = useState<string>('');
@@ -99,14 +101,15 @@ export default function ReplySimulator({
   const [showShareCard, setShowShareCard] = useState(false);
 
   const controllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
 
+  // Do NOT abort SSE on unmount — let it finish in the background
   useEffect(() => {
-    return () => {
-      controllerRef.current?.abort();
-    };
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
   }, []);
 
   useEffect(() => {
@@ -144,8 +147,9 @@ export default function ReplySimulator({
     setExchangeCount(0);
     setError(null);
     setStyleNotes('');
+    startOperation('simulator', 'Symulator', `Symulacja z ${name}...`);
     trackEvent({ name: 'analysis_start', params: { mode: 'standard' } });
-  }, []);
+  }, [startOperation]);
 
   // ── Cancel handler ────────────────────────────────────────
 
@@ -263,12 +267,21 @@ export default function ReplySimulator({
                 timestamp: Date.now(),
                 confidence: event.confidence,
               };
-              setMessages((prev) => [...prev, targetMsg]);
-              setExchangeCount((prev) => prev + 1);
+              if (mountedRef.current) {
+                setMessages((prev) => [...prev, targetMsg]);
+                setExchangeCount((prev) => {
+                  const next = prev + 1;
+                  updateOperation('simulator', {
+                    progress: Math.round((next / MAX_EXCHANGES) * 100),
+                    status: `Wymiana ${next}/${MAX_EXCHANGES}`,
+                  });
+                  return next;
+                });
+              }
             } else if (event.type === 'meta' && event.styleNotes) {
-              setStyleNotes(event.styleNotes);
+              if (mountedRef.current) setStyleNotes(event.styleNotes);
             } else if (event.type === 'error') {
-              throw new Error(event.error ?? 'Nieznany blad symulacji');
+              throw new Error(event.error ?? 'Nieznany błąd symulacji');
             }
           } catch (parseError) {
             if (parseError instanceof SyntaxError) continue;
@@ -279,24 +292,27 @@ export default function ReplySimulator({
     } catch (err) {
       await reader?.cancel();
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setError(err instanceof Error ? err.message : String(err));
+      if (mountedRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setIsTyping(false);
+      if (mountedRef.current) {
+        setIsTyping(false);
+        setExchangeCount((current) => {
+          if (current >= MAX_EXCHANGES) {
+            setPhase('summary');
+            stopOperation('simulator');
+          }
+          return current;
+        });
+      }
       controllerRef.current = null;
-
-      setExchangeCount((current) => {
-        if (current >= MAX_EXCHANGES) {
-          setPhase('summary');
-        }
-        return current;
-      });
     }
-  }, [inputText, isTyping, exchangeCount, messages, conversation, quantitative, qualitative, targetPerson, participants]);
+  }, [inputText, isTyping, exchangeCount, messages, conversation, quantitative, qualitative, targetPerson, participants, updateOperation, stopOperation]);
 
   // ── Reset handler ─────────────────────────────────────────
 
   const handleReset = useCallback(() => {
     controllerRef.current?.abort();
+    stopOperation('simulator');
     setPhase('select');
     setTargetPerson('');
     setMessages([]);
@@ -306,7 +322,7 @@ export default function ReplySimulator({
     setStyleNotes('');
     setIsTyping(false);
     setShowShareCard(false);
-  }, []);
+  }, [stopOperation]);
 
   // ── Key handler ───────────────────────────────────────────
 
@@ -337,8 +353,8 @@ export default function ReplySimulator({
               Wybierz cel symulacji
             </h3>
             <p className="max-w-sm text-xs text-muted-foreground/60">
-              AI wciela sie w styl pisania wybranej osoby. {participants.length} uczestnikow.
-              Wymaga min. {MIN_MESSAGES_REQUIRED} wiadomosci do nauki wzorcow.
+              AI wciela się w styl pisania wybranej osoby. {participants.length} uczestników.
+              Wymaga min. {MIN_MESSAGES_REQUIRED} wiadomości do nauki wzorców.
             </p>
           </div>
 
@@ -373,7 +389,7 @@ export default function ReplySimulator({
                     </div>
                     {!hasEnoughMessages && (
                       <span className="font-mono text-[10px] text-[#EF4444]/70">
-                        min. {MIN_MESSAGES_REQUIRED} wiadomosci
+                        min. {MIN_MESSAGES_REQUIRED} wiadomości
                       </span>
                     )}
                   </div>
@@ -408,7 +424,7 @@ export default function ReplySimulator({
               SYMULACJA ZAKONCZONA
             </span>
             <span className="font-mono text-xs text-muted-foreground/40">
-              {exchangeCount} wymian | AI-{targetPerson} | {targetTotalMessages.toLocaleString('pl-PL')} wiadomosci bazowych
+              {exchangeCount} wymian | AI-{targetPerson} | {targetTotalMessages.toLocaleString('pl-PL')} wiadomości bazowych
             </span>
           </div>
 
@@ -427,7 +443,7 @@ export default function ReplySimulator({
               {averageConfidence}%
             </span>
             <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40">
-              pewnosc symulacji
+              pewność symulacji
             </span>
           </div>
 
@@ -465,7 +481,7 @@ export default function ReplySimulator({
               className="gap-2 border-border text-xs"
             >
               <Share2 className="size-3" />
-              {showShareCard ? 'Ukryj karte' : 'Share card'}
+              {showShareCard ? 'Ukryj kartę' : 'Share card'}
             </Button>
 
             <AnimatePresence>
@@ -547,7 +563,7 @@ export default function ReplySimulator({
           {messages.length === 0 && !isTyping && (
             <div className="flex flex-1 flex-col items-center justify-center gap-1 py-8">
               <span className="font-mono text-xs text-muted-foreground/40">
-                Napisz cos. AI-{targetPerson} odpowie.
+                Napisz coś. AI-{targetPerson} odpowie.
               </span>
               <span className="font-mono text-[10px] text-muted-foreground/20">
                 mediana odpowiedzi z danych: {formatResponseTime(medianResponseTimeMs)}
@@ -585,7 +601,7 @@ export default function ReplySimulator({
                 </div>
                 {msg.role === 'target' && msg.confidence !== undefined && (
                   <span className="mt-0.5 pl-3 font-mono text-[9px] text-muted-foreground/25">
-                    ~{formatResponseTime(medianResponseTimeMs)} | {msg.confidence}% pewnosci
+                    ~{formatResponseTime(medianResponseTimeMs)} | {msg.confidence}% pewności
                   </span>
                 )}
               </motion.div>
@@ -623,7 +639,7 @@ export default function ReplySimulator({
                 setInputText(e.target.value.slice(0, MAX_MESSAGE_LENGTH))
               }
               onKeyDown={handleKeyDown}
-              placeholder={`Wiadomosc do ${targetPerson}...`}
+              placeholder={`Wiadomość do ${targetPerson}...`}
               disabled={isTyping}
               className={cn(
                 'flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm',

@@ -5,10 +5,17 @@ import { sampleMessages } from '@/lib/analysis/qualitative';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 import type { CPSResult } from '@/lib/analysis/communication-patterns';
 
+interface OperationCallbacks {
+  startOperation: (id: string, label: string, status?: string) => void;
+  updateOperation: (id: string, patch: { progress?: number; status?: string }) => void;
+  stopOperation: (id: string) => void;
+}
+
 interface UseCPSAnalysisOptions {
   conversation: ParsedConversation;
   quantitative: QuantitativeAnalysis;
   participantName: string;
+  ops?: OperationCallbacks;
 }
 
 interface UseCPSAnalysisReturn {
@@ -52,6 +59,7 @@ export function useCPSAnalysis({
   conversation,
   quantitative,
   participantName,
+  ops,
 }: UseCPSAnalysisOptions): UseCPSAnalysisReturn {
   const [state, setState] = useState<CPSState>('idle');
   const [progress, setProgress] = useState(0);
@@ -59,6 +67,7 @@ export function useCPSAnalysis({
   const [error, setError] = useState<string | null>(null);
   const ceilingRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Smooth progress interpolation — creeps toward ceiling between SSE events
   useEffect(() => {
@@ -83,6 +92,7 @@ export function useCPSAnalysis({
   }, [state]);
 
   const reset = useCallback(() => {
+    abortRef.current?.abort();
     setState('idle');
     setProgress(0);
     ceilingRef.current = 0;
@@ -91,9 +101,14 @@ export function useCPSAnalysis({
   }, []);
 
   const runCPS = useCallback(async () => {
+    if (state === 'running') return;
     setState('running');
     setProgress(0);
     setError(null);
+    ops?.startOperation('cps', 'CPS', 'Przygotowuję screening...');
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const samples = sampleMessages(conversation, quantitative);
@@ -105,6 +120,7 @@ export function useCPSAnalysis({
           samples,
           participantName,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -147,6 +163,7 @@ export function useCPSAnalysis({
               if (phase) {
                 setProgress(phase.start);
                 ceilingRef.current = phase.ceiling;
+                ops?.updateOperation('cps', { progress: phase.start, status: event.status });
               }
             } else if (event.type === 'complete' && event.result) {
               finalResult = event.result;
@@ -169,10 +186,13 @@ export function useCPSAnalysis({
         throw new Error('CPS analysis completed without results');
       }
     } catch (err) {
+      if (controller.signal.aborted) return;
       setState('error');
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      ops?.stopOperation('cps');
     }
-  }, [conversation, quantitative, participantName]);
+  }, [state, conversation, quantitative, participantName, ops]);
 
   return {
     runCPS,

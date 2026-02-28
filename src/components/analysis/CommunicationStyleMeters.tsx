@@ -150,7 +150,7 @@ function StyleMeter({
           transition={{ duration: 0.7, delay: delay + 0.08, ease: 'easeOut' }}
         />
       </div>
-      <div className="flex justify-between text-[10px] text-text-muted">
+      <div className="flex justify-between text-[11px] text-text-muted">
         <span>{leftLabel}</span>
         <span>{rightLabel}</span>
       </div>
@@ -199,12 +199,12 @@ export default function CommunicationStyleMeters({
         })}
       </div>
       <div className="flex gap-4 px-5 pb-3 mt-1">
-        <span className="flex items-center gap-1.5 text-[10px] text-text-muted">
+        <span className="flex items-center gap-1.5 text-[11px] text-text-muted">
           <span className="inline-block h-2 w-2 rounded-full bg-chart-a" />
           {personA}
         </span>
         {personB && (
-          <span className="flex items-center gap-1.5 text-[10px] text-text-muted">
+          <span className="flex items-center gap-1.5 text-[11px] text-text-muted">
             <span className="inline-block h-2 w-2 rounded-full bg-chart-b" />
             {personB}
           </span>

@@ -262,8 +262,8 @@ function computeGhostRisk(
 
   const months = patterns.monthlyVolume;
   if (months.length < 3) {
-    // Return neutral score — insufficient data to assess ghost risk
-    return { score: 50, factors: ['Za mało danych — neutralna ocena'] };
+    // Return neutral score (50) — insufficient data to assess ghost risk
+    return { score: 50, factors: ['Za mało danych (< 3 miesiące) — ryzyko nieoznaczone'] };
   }
 
   // Split into recent (last 3 months) and earlier
@@ -271,7 +271,8 @@ function computeGhostRisk(
   const earlierMonths = months.slice(0, -3);
 
   if (earlierMonths.length === 0) {
-    return { score: 50, factors: ['Za mało danych — neutralna ocena'] };
+    // Neutral fallback when all months are "recent" (exactly 3 months of data)
+    return { score: 50, factors: ['Za mało danych (< 3 miesiące) — ryzyko nieoznaczone'] };
   }
 
   const factors: string[] = [];

@@ -20,7 +20,7 @@ import {
   CHART_TOOLTIP_LABEL_STYLE,
   CHART_AXIS_TICK,
   CHART_GRID_PROPS,
-  MONTHS_PL,
+  formatMonthSmart,
 } from './chart-config';
 
 interface ComparisonTimelineProps {
@@ -35,17 +35,10 @@ interface TimelineDataPoint {
   B: number | undefined;
 }
 
-function formatMonth(ym: string): string {
-  const parts = ym.split('-');
-  const m = parseInt(parts[1] ?? '0', 10);
-  const y = parts[0]?.slice(2) ?? '';
-  const monthName = MONTHS_PL[m - 1] ?? parts[1] ?? '';
-  return `${monthName} '${y}`;
-}
-
 export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonTimelineProps) {
   const axisWidth = useAxisWidth();
   const { data, titleA, titleB } = useMemo(() => {
+    if (!analysisA || !analysisB) return { data: [], titleA: '', titleB: '' };
     const volA = analysisA.quantitative.patterns.monthlyVolume;
     const volB = analysisB.quantitative.patterns.monthlyVolume;
 
@@ -61,7 +54,7 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
 
     const chartData: TimelineDataPoint[] = allMonths.map((month) => ({
       month,
-      label: formatMonth(month),
+      label: formatMonthSmart(month, allMonths),
       A: mapA.get(month),
       B: mapB.get(month),
     }));
@@ -75,6 +68,14 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
 
     return { data: chartData, titleA: tA, titleB: tB };
   }, [analysisA, analysisB]);
+
+  if (!analysisA || !analysisB || data.length === 0) {
+    return (
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 text-center text-sm text-zinc-500">
+        Brak danych do wyświetlenia
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -132,7 +133,7 @@ export default function ComparisonTimeline({ analysisA, analysisB }: ComparisonT
             <Tooltip
               contentStyle={CHART_TOOLTIP_STYLE}
               labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-              formatter={(value: number | string | ReadonlyArray<number | string> | undefined, name: string | number | undefined) => {
+              formatter={(value, name) => {
                 const label = name === 'A' ? titleA : titleB;
                 const num = typeof value === 'number' ? value.toLocaleString('pl-PL') : '\u2014';
                 return [num, label] as [string, string];

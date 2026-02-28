@@ -85,32 +85,32 @@ export default function TopWordsCard({
             whileInView={{ opacity: 1 }}
             viewport={{ once: true, margin: '-50px' }}
             transition={{ duration: 0.5 }}
-            className="overflow-hidden rounded-xl border border-border bg-card"
+            className="overflow-hidden"
         >
             {/* Header */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-5 pt-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 pt-4">
                 <div>
-                    <h3 className="font-display text-[15px] font-bold">Top słowa</h3>
-                    <p className="mt-0.5 text-xs text-text-muted">
+                    <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">Top słowa</h3>
+                    <p className="mt-0.5 text-xs text-white/50">
                         Najczęściej używane słowa i frazy (bez stopwords)
                     </p>
                 </div>
                 {/* Tabs */}
-                <div className="flex gap-1 rounded-lg bg-muted p-0.5">
+                <div className="flex gap-1 rounded-lg bg-white/[0.03] p-0.5">
                     <button
                         onClick={() => setActiveTab('words')}
-                        className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${activeTab === 'words'
-                                ? 'bg-secondary text-white'
-                                : 'text-text-muted hover:text-muted-foreground'
+                        className={`rounded-md px-3 py-1 text-[11px] font-medium transition-colors ${activeTab === 'words'
+                                ? 'bg-white/[0.06] text-white/70'
+                                : 'text-white/50 hover:text-white/60'
                             }`}
                     >
                         Słowa
                     </button>
                     <button
                         onClick={() => setActiveTab('phrases')}
-                        className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${activeTab === 'phrases'
-                                ? 'bg-secondary text-white'
-                                : 'text-text-muted hover:text-muted-foreground'
+                        className={`rounded-md px-3 py-1 text-[11px] font-medium transition-colors ${activeTab === 'phrases'
+                                ? 'bg-white/[0.06] text-white/70'
+                                : 'text-white/50 hover:text-white/60'
                             }`}
                     >
                         Frazy
@@ -119,31 +119,39 @@ export default function TopWordsCard({
             </div>
 
             {/* Word list */}
-            <div className="flex flex-col gap-2 px-3 sm:px-5 py-4">
-                {items.map((entry, i) => {
+            <div className="flex flex-col gap-2 px-4 sm:px-6 py-4">
+                {items.map((entry) => {
                     const label = 'word' in entry ? entry.word : entry.phrase;
                     const pctA = maxCount > 0 ? (entry.a / maxCount) * 100 : 0;
                     const pctB = maxCount > 0 ? (entry.b / maxCount) * 100 : 0;
 
                     return (
                         <div key={label} className="flex items-center gap-2.5">
-                            <span className="hidden sm:inline w-5 text-right font-display text-xs text-text-muted">
-                                {i + 1}
-                            </span>
-                            <span className="w-[55px] sm:w-[70px] lg:w-[100px] truncate text-[12px] sm:text-[13px] font-medium">
+                            <span className="w-[55px] sm:w-[70px] lg:w-[100px] truncate text-[11px] text-white/60 font-medium">
                                 {label}
                             </span>
-                            <div className="flex h-2.5 flex-1 overflow-hidden rounded-sm bg-muted">
+                            <div
+                                className="flex h-[5px] flex-1 overflow-hidden rounded-full bg-white/[0.04]"
+                                style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3)' }}
+                            >
                                 <div
-                                    className="bg-chart-a transition-all duration-500"
-                                    style={{ width: `${pctA}%` }}
+                                    className="transition-all duration-500 rounded-full"
+                                    style={{
+                                        width: `${pctA}%`,
+                                        background: 'linear-gradient(90deg, #3b82f690, #3b82f6)',
+                                        boxShadow: '0 0 8px #3b82f625',
+                                    }}
                                 />
                                 <div
-                                    className="bg-chart-b transition-all duration-500"
-                                    style={{ width: `${pctB}%` }}
+                                    className="transition-all duration-500 rounded-full"
+                                    style={{
+                                        width: `${pctB}%`,
+                                        background: 'linear-gradient(90deg, #a855f790, #a855f7)',
+                                        boxShadow: '0 0 8px #a855f725',
+                                    }}
                                 />
                             </div>
-                            <span className="w-8 sm:w-14 text-right font-display text-[11px] sm:text-xs text-text-muted">
+                            <span className="w-8 sm:w-14 text-right font-display text-[11px] text-white/50">
                                 {entry.total}×
                             </span>
                         </div>
@@ -152,11 +160,11 @@ export default function TopWordsCard({
             </div>
 
             {/* Vocabulary stats footer */}
-            <div className="border-t border-border px-3 sm:px-5 py-3">
+            <div className="border-t border-white/[0.04] px-4 sm:px-6 py-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6 text-xs">
                     {personA && metricsA && (
                         <div className="flex items-center gap-1.5">
-                            <span className="inline-block h-2 w-2 rounded-sm bg-chart-a" />
+                            <span className="inline-block size-2.5 rounded-[3px] bg-chart-a" />
                             <span className="text-text-muted">{personA}</span>
                             <span className="ml-1 font-display text-white">
                                 {metricsA.uniqueWords.toLocaleString()}
@@ -169,7 +177,7 @@ export default function TopWordsCard({
                     )}
                     {personB && metricsB && (
                         <div className="flex items-center gap-1.5">
-                            <span className="inline-block h-2 w-2 rounded-sm bg-chart-b" />
+                            <span className="inline-block size-2.5 rounded-[3px] bg-chart-b" />
                             <span className="text-text-muted">{personB}</span>
                             <span className="ml-1 font-display text-white">
                                 {metricsB.uniqueWords.toLocaleString()}

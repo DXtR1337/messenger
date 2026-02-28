@@ -139,8 +139,8 @@ function subtextScore(msg: SimplifiedMsg, prev: SimplifiedMsg | undefined, next:
   if (prev) {
     const gapMs = msg.timestamp - prev.timestamp;
     const gapMinutes = gapMs / 60_000;
-    if (gapMinutes > 15 && gapMinutes < 360 && prev.sender !== msg.sender) score += 3;
-    if (gapMinutes > 60 && gapMinutes < 360) score += 2;
+    if (gapMinutes > 120 && gapMinutes < 360 && prev.sender !== msg.sender) score += 3;
+    if (gapMinutes > 240 && gapMinutes < 360) score += 2;
   }
 
   // Message right after a long silence (>24h)

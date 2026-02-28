@@ -353,11 +353,7 @@ function AboutSection() {
       <div className="space-y-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <span className="w-24 shrink-0 text-right font-medium text-foreground/60">AI analiza</span>
-          <span>Google Gemini API (gemini-3-flash-preview)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-24 shrink-0 text-right font-medium text-foreground/60">Development</span>
-          <span>Claude Opus 4.6</span>
+          <span>Google Gemini API (gemini-3-flash)</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-24 shrink-0 text-right font-medium text-foreground/60">Framework</span>

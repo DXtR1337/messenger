@@ -101,7 +101,7 @@ export function computeVersusCards(
   return [
     {
       emoji: '📱',
-      label: 'Clingy',
+      label: 'Niestrudzony',
       labelPl: 'Przylepiec',
       personAPercent: dblPctA,
       personBPercent: dblPctB,
@@ -280,7 +280,7 @@ export function computeCharacterData(
   quantitative: QuantitativeAnalysis,
   colorIndex: number,
 ): CharacterCardData {
-  const attachmentStyle = profile.attachment_indicators.primary_style;
+  const attachmentStyle = profile.attachment_indicators?.primary_style ?? 'insufficient_data';
   const className = ATTACHMENT_CLASS_MAP[attachmentStyle] ?? 'Mystery';
 
   const eiOverall = profile.emotional_intelligence.overall;

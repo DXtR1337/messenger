@@ -5,6 +5,9 @@ import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { Pass2Result, Pass4Result } from '@/lib/analysis/types';
 
+// Skip ALL Framer Motion work on mobile — JS animations cause flickering
+const MOBILE = typeof window !== 'undefined' && window.innerWidth < 768;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -210,99 +213,306 @@ function buildTimelineEntries(
 }
 
 // ---------------------------------------------------------------------------
-// Styling constants
+// Styling constants — purple-dominant palette
 // ---------------------------------------------------------------------------
 
-const DOT_STYLES: Record<Significance, string> = {
-  positive: 'bg-success shadow-[0_0_8px_rgba(16,185,129,0.3)]',
-  negative: 'bg-danger shadow-[0_0_8px_rgba(239,68,68,0.3)]',
-  neutral: 'bg-accent shadow-[0_0_8px_rgba(59,130,246,0.3)]',
+const DOT_CONFIG: Record<Significance, { bg: string; ring: string; glow: string; color: string }> = {
+  positive: {
+    bg: 'bg-violet-300',
+    ring: 'ring-violet-400/30',
+    glow: 'rgba(192,132,252,0.6)',
+    color: 'rgba(192,132,252,0.5)',
+  },
+  negative: {
+    bg: 'bg-fuchsia-400',
+    ring: 'ring-fuchsia-400/30',
+    glow: 'rgba(232,121,249,0.5)',
+    color: 'rgba(232,121,249,0.4)',
+  },
+  neutral: {
+    bg: 'bg-purple-400',
+    ring: 'ring-purple-400/30',
+    glow: 'rgba(168,85,247,0.5)',
+    color: 'rgba(168,85,247,0.4)',
+  },
 };
 
 const SOURCE_LABELS: Record<EntrySource, string> = {
   inflection: 'Punkt zwrotny',
-  finding: 'Kluczowe odkrycie',
+  finding: 'Odkrycie',
   flag: 'Flaga',
   insight: 'Wgląd',
 };
 
+const SOURCE_ICONS: Record<EntrySource, React.ReactNode> = {
+  inflection: (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+      <path d="M5 1L9 5L5 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M1 5H9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  ),
+  finding: (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+      <circle cx="5" cy="4" r="3" stroke="currentColor" strokeWidth="1" />
+      <path d="M7 7L9 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  ),
+  flag: (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+      <path d="M2 1V9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+      <path d="M2 1.5L8 3L2 5" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" fill="currentColor" fillOpacity="0.2" />
+    </svg>
+  ),
+  insight: (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+      <path d="M5 1L6.5 3.5L9.5 4L7.2 6.2L7.8 9.2L5 7.7L2.2 9.2L2.8 6.2L0.5 4L3.5 3.5L5 1Z" stroke="currentColor" strokeWidth="0.8" fill="currentColor" fillOpacity="0.15" />
+    </svg>
+  ),
+};
+
 const SOURCE_BADGE_STYLES: Record<EntrySource, string> = {
-  inflection: 'bg-accent/10 text-accent border-accent/20',
-  finding: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  flag: 'bg-warning/10 text-warning border-warning/20',
-  insight: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+  inflection: 'bg-purple-500/15 text-purple-300 border-purple-500/25',
+  finding: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
+  flag: 'bg-fuchsia-500/12 text-fuchsia-300 border-fuchsia-500/20',
+  insight: 'bg-indigo-500/12 text-indigo-300 border-indigo-500/20',
 };
 
 // ---------------------------------------------------------------------------
-// Timeline item component
+// Timeline node — the dot + pulse ring on the vertical line
+// ---------------------------------------------------------------------------
+
+function TimelineNode({ significance, index, isInView }: { significance: Significance; index: number; isInView: boolean }) {
+  const config = DOT_CONFIG[significance];
+
+  // Mobile: static dot, no pulse rings, no spring physics
+  if (MOBILE) {
+    return (
+      <div className="relative flex shrink-0 items-center justify-center" style={{ width: 24, height: 24 }}>
+        <div
+          className={cn('h-3 w-3 rounded-full', config.bg)}
+          style={{ boxShadow: `0 0 8px ${config.glow}` }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex shrink-0 items-center justify-center" style={{ width: 24, height: 24 }}>
+      {/* Outer pulse ring — double sonar */}
+      <motion.div
+        className={cn('absolute inset-0 rounded-full ring-2', config.ring)}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={isInView ? { scale: [0, 2, 2.5], opacity: [0, 0.5, 0] } : { scale: 0, opacity: 0 }}
+        transition={{ duration: 1.8, delay: 0.3 + index * 0.1, repeat: 0 }}
+      />
+      <motion.div
+        className={cn('absolute inset-0 rounded-full ring-1', config.ring)}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={isInView ? { scale: [0, 1.8, 2.2], opacity: [0, 0.3, 0] } : { scale: 0, opacity: 0 }}
+        transition={{ duration: 1.8, delay: 0.5 + index * 0.1, repeat: 0 }}
+      />
+      {/* Inner glowing dot */}
+      <motion.div
+        className={cn('h-3 w-3 rounded-full', config.bg)}
+        style={{ boxShadow: `0 0 12px ${config.glow}, 0 0 24px ${config.glow}, 0 0 4px rgba(255,255,255,0.3)` }}
+        initial={{ scale: 0 }}
+        animate={isInView ? { scale: 1 } : { scale: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 + index * 0.1, type: 'spring', stiffness: 300, damping: 15 }}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Timeline item component — premium purple glass card
 // ---------------------------------------------------------------------------
 
 function TimelineItem({
   entry,
   isLast,
   index,
+  total,
 }: {
   entry: TimelineEntry;
   isLast: boolean;
   index: number;
+  total: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true });
+  // Still call hook (React rules) but force true on mobile to skip animation work
+  const isInViewRaw = useInView(ref, { once: true, margin: MOBILE ? '9999px' : '-40px' });
+  const isInView = MOBILE ? true : isInViewRaw;
 
-  const dotStyle = DOT_STYLES[entry.significance];
   const hasDate = entry.date.length > 0;
+  const config = DOT_CONFIG[entry.significance];
+
+  // Mobile: fully static render — no motion.div, no animations, no filters
+  if (MOBILE) {
+    return (
+      <div ref={ref} className={cn('tp-entry relative flex gap-4', isLast && 'pb-0')}>
+        <div className="flex shrink-0 flex-col items-center" style={{ width: 24 }}>
+          <TimelineNode significance={entry.significance} index={index} isInView />
+          {!isLast && (
+            <div
+              className="tp-connector w-px flex-1"
+              style={{
+                background: `linear-gradient(180deg, ${config.color} 0%, rgba(168,85,247,0.15) 50%, rgba(168,85,247,0.04) 100%)`,
+                minHeight: 24,
+              }}
+            />
+          )}
+        </div>
+        <div
+          className={cn(
+            'tp-card relative mb-6 flex-1 overflow-hidden rounded-xl',
+            'border border-purple-500/[0.08] bg-purple-950/[0.15]',
+            isLast && 'mb-0',
+          )}
+        >
+          <div
+            className="absolute left-0 top-0 bottom-0 w-[2px]"
+            style={{ background: `linear-gradient(180deg, ${config.glow} 0%, ${config.color} 60%, transparent 100%)` }}
+          />
+          <div className="relative px-4 py-3.5">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              {hasDate && (
+                <span className="font-mono text-[11px] font-semibold tracking-wider text-purple-200/80">
+                  {entry.date}
+                </span>
+              )}
+              <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider', SOURCE_BADGE_STYLES[entry.source])}>
+                {SOURCE_ICONS[entry.source]}
+                {SOURCE_LABELS[entry.source]}
+              </span>
+            </div>
+            <h4 className="text-sm font-semibold leading-snug text-purple-50/90">{entry.title}</h4>
+            {entry.detail && <p className="mt-1.5 text-[12px] leading-relaxed text-purple-200/50">{entry.detail}</p>}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      ref={ref}
-      className={cn('flex gap-4 mb-5 relative', isLast && 'mb-0')}
-      initial={{ opacity: 0, x: -12 }}
-      animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -12 }}
-      transition={{ duration: 0.4, delay: index * 0.08, ease: 'easeOut' }}
-    >
-      {/* Connecting line */}
-      {!isLast && (
-        <div className="absolute -left-3.5 top-6 bottom-[-20px] w-px bg-border" />
-      )}
+    <div ref={ref} className={cn('tp-entry relative flex gap-4 sm:gap-5', isLast && 'pb-0')}>
+      {/* ── Left column: node + connector ── */}
+      <div className="flex shrink-0 flex-col items-center" style={{ width: 24 }}>
+        <TimelineNode significance={entry.significance} index={index} isInView={isInView} />
 
-      {/* Date or source badge — fixed-width column */}
-      <div className="w-24 shrink-0 pt-0.5">
-        {hasDate ? (
-          <span className="font-display text-xs text-text-muted">
-            {entry.date}
-          </span>
-        ) : (
-          <span
-            className={cn(
-              'inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border',
-              SOURCE_BADGE_STYLES[entry.source],
-            )}
+        {/* Vertical connector line — glowing gradient */}
+        {!isLast && (
+          <motion.div
+            className="tp-connector relative w-px flex-1"
+            style={{
+              background: `linear-gradient(180deg, ${config.color} 0%, rgba(168,85,247,0.15) 50%, rgba(168,85,247,0.04) 100%)`,
+              minHeight: 24,
+              transformOrigin: 'top',
+            }}
+            initial={{ scaleY: 0, opacity: 0 }}
+            animate={isInView ? { scaleY: 1, opacity: 1 } : { scaleY: 0, opacity: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 + index * 0.1, ease: [0.22, 1, 0.36, 1] }}
           >
-            {SOURCE_LABELS[entry.source]}
-          </span>
+            {/* Traveling energy pulse on the connector */}
+            <motion.div
+              className="absolute left-1/2 top-0 h-6 w-px -translate-x-1/2"
+              style={{
+                background: `linear-gradient(180deg, transparent, ${config.glow}, transparent)`,
+                filter: 'blur(0.5px)',
+              }}
+              initial={{ top: '0%', opacity: 0 }}
+              animate={isInView ? { top: ['0%', '100%'], opacity: [0, 0.8, 0] } : { opacity: 0 }}
+              transition={{ duration: 1.2, delay: 0.8 + index * 0.15, ease: 'easeInOut' }}
+            />
+          </motion.div>
         )}
       </div>
 
-      {/* Dot */}
-      <div
+      {/* ── Right column: content card ── */}
+      <motion.div
         className={cn(
-          'w-2.5 h-2.5 rounded-full shrink-0 mt-1 border-2 border-card',
-          dotStyle,
+          'tp-card group relative mb-6 flex-1 overflow-hidden rounded-xl',
+          'border border-purple-500/[0.08] bg-purple-950/[0.15]',
+          'transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          'hover:bg-purple-900/[0.12] hover:border-purple-400/20 hover:shadow-[0_4px_24px_-4px_rgba(168,85,247,0.15)]',
+          isLast && 'mb-0',
         )}
-      />
+        initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30, scale: 0.96 }}
+        animate={isInView ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: index % 2 === 0 ? -30 : 30, scale: 0.96 }}
+        transition={{ duration: 0.6, delay: 0.15 + index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {/* Left accent stripe — glowing edge */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-[2px]"
+          style={{
+            background: `linear-gradient(180deg, ${config.glow} 0%, ${config.color} 60%, transparent 100%)`,
+            boxShadow: `2px 0 12px ${config.color}`,
+          }}
+        />
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="font-bold text-sm mb-0.5 leading-snug">
-          {entry.title}
+        {/* Top shimmer line — draws on entry */}
+        <motion.div
+          className="absolute inset-x-0 top-0 h-px"
+          style={{
+            background: `linear-gradient(90deg, transparent 10%, ${config.color} 30%, ${config.glow} 50%, ${config.color} 70%, transparent 90%)`,
+            transformOrigin: 'left',
+          }}
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={isInView ? { scaleX: 1, opacity: 0.6 } : { scaleX: 0, opacity: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 + index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+        />
+
+        {/* Background glow gradient — significance-tinted */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-xl opacity-40"
+          style={{
+            background: `linear-gradient(135deg, ${config.color.replace('0.4', '0.06').replace('0.5', '0.06')} 0%, transparent 50%)`,
+          }}
+        />
+
+        <div className="relative px-4 py-3.5 sm:px-5 sm:py-4">
+          {/* Top row: date/badge + source */}
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            {hasDate && (
+              <span
+                className="font-mono text-[11px] font-semibold tracking-wider text-purple-200/80"
+                style={{ textShadow: '0 0 8px rgba(168,85,247,0.3)' }}
+              >
+                {entry.date}
+              </span>
+            )}
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider',
+                SOURCE_BADGE_STYLES[entry.source],
+              )}
+            >
+              {SOURCE_ICONS[entry.source]}
+              {SOURCE_LABELS[entry.source]}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h4 className="text-sm font-semibold leading-snug text-purple-50/90">
+            {entry.title}
+          </h4>
+
+          {/* Detail */}
+          {entry.detail && (
+            <p className="mt-1.5 text-[12px] leading-relaxed text-purple-200/50">
+              {entry.detail}
+            </p>
+          )}
         </div>
-        {entry.detail && (
-          <p className="text-[13px] text-muted-foreground leading-relaxed">
-            {entry.detail}
-          </p>
-        )}
-      </div>
-    </motion.div>
+
+        {/* Hover glow — mouse-responsive radial */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+          style={{
+            background: `radial-gradient(ellipse 70% 100% at 5% 50%, ${config.color.replace(')', ',0.12)')}, transparent 60%)`,
+          }}
+        />
+      </motion.div>
+    </div>
   );
 }
 
@@ -317,32 +527,82 @@ export default function TurningPointsTimeline({
   dateRange,
 }: TurningPointsTimelineProps) {
   const entries = buildTimelineEntries(pass2, pass4, dateRange);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInViewRaw = useInView(containerRef, { once: true, margin: MOBILE ? '9999px' : '-60px' });
+  const isInView = MOBILE ? true : isInViewRaw;
 
   // If no data available, don't render
   if (entries.length === 0) return null;
 
+  const countLabel = `${entries.length} ${entries.length === 1 ? 'element' : entries.length < 5 ? 'elementy' : 'elementów'}`;
+
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="flex justify-between items-center px-5 pt-4">
+    <div ref={containerRef} className="relative">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className="font-display text-[15px] font-bold">
+          <h3 className="font-[var(--font-syne)] text-lg font-bold text-purple-50/90">
             Punkty zwrotne
           </h3>
-          <p className="text-xs text-text-muted mt-0.5">
-            Kluczowe momenty i odkrycia wykryte przez AI
+          <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.15em] text-purple-300/40">
+            Kluczowe momenty wykryte przez AI
           </p>
         </div>
-        <span className="text-xs text-text-muted tabular-nums">
-          {entries.length} {entries.length === 1 ? 'element' : entries.length < 5 ? 'elementy' : 'elementów'}
-        </span>
+        {MOBILE ? (
+          <span className="flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/[0.08] px-3 py-1.5 font-mono text-[10px] tracking-wider text-purple-300/70">
+            <span className="relative flex h-2 w-2">
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400/80" />
+            </span>
+            {countLabel}
+          </span>
+        ) : (
+          <motion.span
+            className="flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/[0.08] px-3 py-1.5 font-mono text-[10px] tracking-wider text-purple-300/70"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-40" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400/80" style={{ boxShadow: '0 0 6px rgba(168,85,247,0.5)' }} />
+            </span>
+            {countLabel}
+          </motion.span>
+        )}
       </div>
-      <div className="px-5 py-4 pl-10 relative">
+
+      {/* Timeline */}
+      <div className="relative pl-2">
+        {/* Background timeline track — faint vertical glow line */}
+        <div
+          className="absolute left-[13px] top-0 bottom-0 w-px"
+          style={{
+            background: 'linear-gradient(180deg, transparent 0%, rgba(168,85,247,0.15) 5%, rgba(168,85,247,0.08) 90%, transparent 100%)',
+          }}
+          aria-hidden="true"
+        />
+        {/* Timeline progress glow — fills as entries appear */}
+        {!MOBILE && (
+          <motion.div
+            className="absolute left-[12px] top-0 w-[3px] rounded-full"
+            style={{
+              background: 'linear-gradient(180deg, rgba(192,132,252,0.4) 0%, rgba(168,85,247,0.2) 60%, rgba(168,85,247,0.05) 100%)',
+              filter: 'blur(1px)',
+            }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={isInView ? { height: '100%', opacity: 0.6 } : { height: 0, opacity: 0 }}
+            transition={{ duration: 2 + entries.length * 0.2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            aria-hidden="true"
+          />
+        )}
+
         {entries.map((entry, index) => (
           <TimelineItem
             key={`${entry.source}-${entry.title.slice(0, 30)}-${index}`}
             entry={entry}
             isLast={index === entries.length - 1}
             index={index}
+            total={entries.length}
           />
         ))}
       </div>

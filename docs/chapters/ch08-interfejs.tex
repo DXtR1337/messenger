@@ -1119,3 +1119,220 @@ Pełen interfejs czatu działający w~trzech fazach:
 
 Karta prezentująca fragment symulowanej konwersacji --- kilka par wiadomości (użytkownik → symulacja) w~układzie dymek-czat. Zaprojektowana jako atrakcyjny wizualnie podgląd zachęcający do wypróbowania symulatora.
 
+% ============================================================
+\section{Nowe komponenty analizy g\l{}\k{e}bokiej (Faza~24--28)}
+\label{sec:deep-analytics-components}
+% ============================================================
+
+W~Fazach~24--28 dodano \textbf{16~nowych komponent\'{o}w} rozszerzaj\k{a}cych panel analizy o~zaawansowane wizualizacje psychologiczne i~statystyczne.
+
+% --- Faza 24 ---
+\subsection{Komponenty Fazy~24: Deep Analytics}
+\label{subsec:faza24-components}
+
+\subsubsection{ResponseTimeHistogram.tsx}
+\label{subsubsec:response-time-histogram}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/ResponseTimeHistogram.tsx}
+  \item[Typ] Wizualizacja --- pogrupowany wykres s\l{}upkowy (Recharts)
+  \item[Dane] \tstype{ResponseTimeDistribution} z~\tstype{QuantitativeAnalysis}
+  \item[Animacje] framer-motion entrance
+\end{description}
+
+Histogram 6~bucket\'{o}w czasu odpowiedzi per osoba: B\l{}yskawiczna ($<$1~min), Szybka (1--5~min), Normalna (5--30~min), Wolna (30~min--2~h), Bardzo wolna (2--8~h), Ghosting ($>$8~h). Ka\.{z}da osoba ma w\l{}asny kolor s\l{}upk\'{o}w.
+
+\subsubsection{HourlyActivityChart.tsx}
+\label{subsubsec:hourly-activity}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/HourlyActivityChart.tsx}
+  \item[Typ] Wykres stacked bar 24-godzinny (Recharts)
+  \item[Dane] \tstype{heatmap} z~\tstype{QuantitativeAnalysis}
+\end{description}
+
+24-godzinny skumulowany wykres s\l{}upkowy aktywno\'{s}ci obu rozm\'{o}wc\'{o}w. Pozwala na~wizualne zidentyfikowanie chronotyp\'{o}w bez oblicze\'{n} modu\l{}u Chronotype.
+
+\subsubsection{YearMilestones.tsx}
+\label{subsubsec:year-milestones}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/YearMilestones.tsx}
+  \item[Typ] Karta tekstowo-graficzna z~podsumowaniem rocznym
+  \item[Dane] \tstype{yearMilestones} z~\tstype{QuantitativeAnalysis}
+\end{description}
+
+Wy\'{s}wietla najlepszy miesi\k{a}c rozmowy (najwy\.{z}sze zaanga\.{z}owanie), najgorszy miesi\k{a}c oraz trend YoY (Year-over-Year) dla ca\l{}ej historii konwersacji.
+
+\subsubsection{ThreatMeters.tsx}
+\label{subsubsec:threat-meters}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/ThreatMeters.tsx}
+  \item[Typ] Zestaw wskaznik\'{o}w gauge (SVG circular progress)
+  \item[Dane] \tstype{DamageReportResult}, \tstype{QuantitativeAnalysis}
+  \item[PsychDisclaimer] Tak (z~cytatami akademickimi)
+\end{description}
+
+Cztery wskaźniki dynamiki relacji (przemianowane z~,,Wskaźniki Zagrożeń'' w~Fazie~26):
+
+\begin{itemize}
+  \item \textbf{Ghost Risk} --- ryzyko wycofania / ghostingu
+  \item \textbf{Intensywno\'{s}\'{c} Przywiązania} (poprz.\ Codependency) --- intensywno\'{s}\'{c} emocjonalna z\k{a}le\.{z}no\'{s}ci
+  \item \textbf{Nier\'{o}wnowaga Wp\l{}ywu} (poprz.\ Manipulacja) --- asymetria kontroli w~rozmowie
+  \item \textbf{Trust Index} --- zaufanie (wagi: reciprocity~0,40, responseConsistency~0,40, ghostRisk~0,20)
+\end{itemize}
+
+\subsubsection{DamageReport.tsx}
+\label{subsubsec:damage-report}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/DamageReport.tsx}
+  \item[Typ] Karta z~czterema wska\'{z}nikami jako progress bars
+  \item[PsychDisclaimer] Tak
+\end{description}
+
+Cztery metryki zdrowia komunikacyjnego:
+
+\begin{itemize}
+  \item \textbf{Emotional Damage\%} --- poziom toksyczno\'{s}ci emocjonalnej
+  \item \textbf{Communication Grade} --- ocena stanu komunikacji (A--F)
+  \item \textbf{Repair Potential} --- potencja\l{} naprawy relacji
+  \item \textbf{Korzy\'{s}\'{c} z~konsultacji} --- skala: \texttt{WYSOKA} / \texttt{UMIARKOWANA} / \texttt{NISKA} (zmienione z~binarnego TAK/NIE w~Fazie~26)
+\end{itemize}
+
+\subsubsection{CognitiveFunctionsClash.tsx}
+\label{subsubsec:cognitive-clash}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/CognitiveFunctionsClash.tsx}
+  \item[Typ] Karta por\'{o}wnawcza funkcji kognitywnych MBTI
+  \item[PsychDisclaimer] Tak
+\end{description}
+
+Wizualizuje 8~funkcji kognitywnych (Ni, Ne, Si, Se, Ti, Te, Fi, Fe) dla obu uczestnik\'{o}w na~podstawie typ\'{o}w MBTI z~Pass~3. Pokazuje punkty konfliktu i~komplementarno\'{s}ci.
+
+\subsubsection{PursuitWithdrawalCard.tsx}
+\label{subsubsec:pursuit-withdrawal-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/PursuitWithdrawalCard.tsx}
+  \item[Typ] Karta z~list\k{a} wykrytych cykl\'{o}w
+  \item[PsychDisclaimer] Tak (cytat: Christensen \& Heavey 1990)
+\end{description}
+
+Wizualizuje wykryte cykle po\'{s}cigu i~wycofania: dominant pursuer, severity, timeline cykl\'{o}w.
+
+\subsubsection{RankingBadges.tsx}
+\label{subsubsec:ranking-badges}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/RankingBadges.tsx}
+  \item[Typ] Siatka badge\'{o}w z~percentylami
+  \item[PsychDisclaimer] Tak (heurystyczne --- nie kliniczne)
+\end{description}
+
+Heurystyczne percentyle TOP~X\% dla kluczowych metryk: aktywno\'{s}\'{c}, szybko\'{s}\'{c} odpowiedzi, d\l{}ugo\'{s}\'{c} wiadomo\'{s}ci i~inne. Ikony badge\'{o}w w~\filepath{public/icons/badges/} i~\filepath{public/icons/ranking/}.
+
+\subsubsection{AIPredictions.tsx}
+\label{subsubsec:ai-predictions}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/AIPredictions.tsx}
+  \item[Typ] Lista predykcji z~confidence\%
+  \item[PsychDisclaimer] Tak
+\end{description}
+
+Wy\'{s}wietla tablice predykcji z~Pass~4 (pole \texttt{predictions[]}). Ka\.{z}da predykcja zawiera tre\'{s}\'{c} i~wsp\'{o}\l{}czynnik pewno\'{s}ci (0--100\%). Zielony/\.{z}\'{o}\l{}ty/czerwony kolor confidence bar.
+
+\subsubsection{GottmanHorsemen.tsx}
+\label{subsubsec:gottman-horsemen}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/GottmanHorsemen.tsx}
+  \item[Typ] Karta z~czterema wska\'{z}nikami Czterech Je\'{z}d\'{z}c\'{o}w Gottmana
+  \item[PsychDisclaimer] Tak (cytat: Gottman 1994)
+\end{description}
+
+Wizualizuje nasilenie czterech wzorca\'{o}w destruktywnej komunikacji: Krytyka, Pogarda, Defensywno\'{s}\'{c}, Zamkni\k{e}cie si\k{e}. Dane pochodzi z~\filepath{src/lib/analysis/gottman-horsemen.ts}.
+
+% --- Faza 26 ---
+\subsection{Komponenty Fazy~26: Psychological Hardening}
+\label{subsec:faza26-components}
+
+\subsubsection{PsychDisclaimer.tsx}
+\label{subsubsec:psych-disclaimer}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/shared/PsychDisclaimer.tsx}
+  \item[Typ] Reużywalny komponent disclaimer
+  \item[Stosowany w] ThreatMeters, DamageReport, PursuitWithdrawalCard, DelusionQuiz, CognitiveFunctionsClash, RankingBadges, GottmanHorsemen, AIPredictions, ViralScoresSection, PersonalityDeepDive
+\end{description}
+
+Sp\'{o}jny disclaimer psychologiczny z~opcjonalnymi cytatami akademickimi (z~\filepath{src/lib/analysis/citations.ts}) i~generyczn\k{a} stop\k{a} informuj\k{a}c\k{a}, \\.{z}e wyniki s\k{a} interpretacyjne, nie diagnostyczne. Props: \texttt{citations?: Citation[]}, \texttt{compact?: boolean}.
+
+% --- Faza 27 ---
+\subsection{Komponenty Fazy~27: Deep Psychological Validation}
+\label{subsec:faza27-components}
+
+\subsubsection{LSMCard.tsx}
+\label{subsubsec:lsm-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/LSMCard.tsx}
+  \item[Typ] Karta z~wykresem radarowym 9~kategorii + metryki tekstowe
+  \item[Dane] \tstype{LSMResult} z~\tstype{QuantitativeAnalysis}
+\end{description}
+
+Wy\'{s}wietla og\'{o}lny wynik LSM (0--1), asymetri\k{e} adaptacji (kt\'{o}ra osoba bardziej dostosowuje si\k{e} do~stylu partnera) oraz rozk\l{}ad per kategori\k{e} (9~s\l{}upk\'{o}w lub wykres radarowy). Interpretacja s\l{}owna wed\l{}ug progu 0,70/0,80/0,90. \'{Z}r\'{o}d\l{}o: Ireland \& Pennebaker (2010).
+
+\subsubsection{PronounCard.tsx}
+\label{subsubsec:pronoun-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/PronounCard.tsx}
+  \item[Typ] Karta por\'{o}wnawcza zaimk\'{o}w per osoba
+  \item[Dane] \tstype{PronounAnalysisResult} z~\tstype{QuantitativeAnalysis}
+\end{description}
+
+Trzy s\l{}upkowe mini-wykresy (I-rate / We-rate / You-rate) dla ka\.{z}dej osoby plus etykieta orientacji (\texttt{self-focused} / \texttt{other-focused} / \texttt{collective} / \texttt{balanced}). \'{Z}r\'{o}d\l{}o: Pennebaker (2011).
+
+% --- Faza 28 ---
+\subsection{Komponenty Fazy~28: Nowe modu\l{}y psychologiczne}
+\label{subsec:faza28-components}
+
+\subsubsection{ChronotypePair.tsx}
+\label{subsubsec:chronotype-pair}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/ChronotypePair.tsx}
+  \item[Typ] Karta z~circular progress bar + karty per osoba
+  \item[Dane] \tstype{ChronotypeCompatibility} z~\tstype{QuantitativeAnalysis}
+\end{description}
+
+Centralny okr\k{e}g\l{}y wska\'{z}nik zgodno\'{s}ci chronotyp\'{o}w (matchScore\%) flankowany dwoma kartami per osoba zawieraj\k{a}cymi: emoji chronotypu (\texttt{early\_bird} = 🌅, \texttt{night\_owl} = 🦉), godzin\k{e} szczytow\k{a} i~mini-histogram godzinowy.
+
+\subsubsection{ConversationalNarcissismCard.tsx}
+\label{subsubsec:cni-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/ConversationalNarcissismCard.tsx}
+  \item[Typ] Karta z~gauge CNI per osoba
+  \item[Dane] \tstype{ShiftSupportResult} z~\tstype{QuantitativeAnalysis}
+  \item[PsychDisclaimer] Tak (cytat: Derber 1979)
+\end{description}
+
+Gauge wska\'{z}nik CNI per osoba z~kolorem: czerwony ($\geq 70\%$), amber ($\geq 45\%$), zielony ($< 45\%$). Poni\.{z}ej gauge: liczniki shift-response i~support-response z~przyk\l{}adowymi wiadomo\'{s}ciami.
+
+\subsubsection{EmotionalGranularityCard.tsx}
+\label{subsubsec:eg-card}
+
+\begin{description}
+  \item[Plik] \filepath{src/components/analysis/EmotionalGranularityCard.tsx}
+  \item[Typ] Karta z~gauge score + breakdown kategorii emocjonalnych
+  \item[Dane] \tstype{EmotionalGranularityResult} z~\tstype{QuantitativeAnalysis}
+  \item[PsychDisclaimer] Tak (cytat: Kashdan et~al.\ 2015)
+\end{description}
+
+Gauge granularno\'{s}ci emocjonalnej (0--100) per osoba plus siatka 12~kategorii emocji z~kolorowanymi paskami proporcjonalnymi do~cz\k{e}sto\'{s}ci u\.{z}ycia. Dominuj\k{a}ca emocja wy\'{s}wietlana jako etykieta.
+

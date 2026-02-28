@@ -8,6 +8,7 @@
 
 import type { CommandDefinition } from './discord-types';
 import { CommandOptionType } from './discord-types';
+import { logger } from '@/lib/logger';
 
 const MESSAGES_OPTION = {
   name: 'messages',
@@ -157,7 +158,7 @@ async function registerCommands() {
 
   const url = `https://discord.com/api/v10/applications/${appId}/commands`;
 
-  console.log(`Registering ${COMMANDS.length} commands...`);
+  logger.log(`Registering ${COMMANDS.length} commands...`);
 
   const res = await fetch(url, {
     method: 'PUT',
@@ -175,7 +176,7 @@ async function registerCommands() {
   }
 
   const result = await res.json();
-  console.log(`Successfully registered ${(result as unknown[]).length} commands.`);
+  logger.log(`Successfully registered ${(result as unknown[]).length} commands.`);
 }
 
 registerCommands();

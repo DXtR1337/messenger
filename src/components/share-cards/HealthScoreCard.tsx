@@ -100,7 +100,7 @@ export default function HealthScoreCard({ pass4, participants }: HealthScoreCard
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: '#f8fafc',
           position: 'relative',

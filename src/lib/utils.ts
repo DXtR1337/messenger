@@ -29,11 +29,15 @@ const DB_VERSION = 1;
 const STORE_ANALYSES = 'analyses';
 const STORE_INDEX = 'index';
 
+let dbInstance: IDBDatabase | null = null;
+
 function openDB(): Promise<IDBDatabase> {
+  if (dbInstance) return Promise.resolve(dbInstance);
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
+    request.onerror = () => reject(request.error);
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_ANALYSES)) {
         db.createObjectStore(STORE_ANALYSES, { keyPath: 'id' });
       }
@@ -41,8 +45,11 @@ function openDB(): Promise<IDBDatabase> {
         db.createObjectStore(STORE_INDEX, { keyPath: 'id' });
       }
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      dbInstance = request.result;
+      dbInstance.onclose = () => { dbInstance = null; };
+      resolve(dbInstance);
+    };
   });
 }
 
@@ -73,6 +80,38 @@ export async function saveAnalysis(analysis: StoredAnalysis): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_INDEX, 'readwrite');
     tx.objectStore(STORE_INDEX).put(entry);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/**
+ * Atomically patch a single generated image into an analysis in IndexedDB.
+ * Uses a single readwrite transaction (get → mutate → put) so the write
+ * succeeds even if the React component tree has already unmounted.
+ */
+export async function patchGeneratedImage(
+  analysisId: string,
+  key: string,
+  dataUrl: string,
+): Promise<void> {
+  const db = await openDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_ANALYSES, 'readwrite');
+    const store = tx.objectStore(STORE_ANALYSES);
+    const req = store.get(analysisId);
+    req.onsuccess = () => {
+      const analysis = req.result as StoredAnalysis | undefined;
+      if (!analysis) {
+        resolve();
+        return;
+      }
+      analysis.generatedImages = {
+        ...(analysis.generatedImages ?? {}),
+        [key]: dataUrl,
+      };
+      store.put(analysis);
+    };
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -125,14 +164,17 @@ export async function deleteAnalysis(id: string): Promise<void> {
 
 export function formatDuration(ms: number): string {
   if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
-  if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
+  if (ms < 3_600_000) {
+    const mins = ms / 60_000;
+    return mins % 1 === 0 ? `${mins}m` : `${parseFloat(mins.toFixed(1))}m`;
+  }
   if (ms < 86_400_000) {
     const h = Math.floor(ms / 3_600_000);
-    const m = Math.round((ms % 3_600_000) / 60_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
   const d = Math.floor(ms / 86_400_000);
-  const h = Math.round((ms % 86_400_000) / 3_600_000);
+  const h = Math.floor((ms % 86_400_000) / 3_600_000);
   return h > 0 ? `${d}d ${h}h` : `${d}d`;
 }
 

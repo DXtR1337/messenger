@@ -144,7 +144,7 @@ export default function ParticleBackground() {
 
   if (isMobile) {
     return (
-      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#050505] via-[#0a0a14] to-[#050505]" />
+      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#050505] via-[#0a0a14] to-[#050505]" aria-hidden="true" />
     );
   }
 
@@ -153,6 +153,7 @@ export default function ParticleBackground() {
       ref={canvasRef}
       className="pointer-events-none fixed inset-0"
       style={{ zIndex: 0 }}
+      aria-hidden="true"
     />
   );
 }

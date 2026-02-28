@@ -48,7 +48,7 @@ function PersonCatchphrases({
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: delay + index * 0.05 }}
-              className="flex flex-col gap-0.5"
+              className="rounded-lg bg-white/[0.03] px-3 py-2"
             >
               <div className="flex items-center gap-1.5">
                 <span
@@ -61,7 +61,7 @@ function PersonCatchphrases({
                   <Sparkles className="size-3.5 text-amber-400" />
                 )}
               </div>
-              <span className="font-mono text-xs text-muted-foreground">
+              <span className="font-mono text-[11px] text-muted-foreground">
                 {entry.count} razy
               </span>
             </motion.div>
@@ -94,17 +94,15 @@ export default function CatchphraseCard({
       animate={isInView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="px-5 pt-4">
-          <h3 className="font-display text-[15px] font-bold">
-            Ulubione frazy
-          </h3>
-          <p className="mt-0.5 text-xs text-text-muted">
-            Unikalne, powtarzające się frazy każdej osoby
-          </p>
-        </div>
+      <div>
+        <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">
+          Ulubione frazy
+        </h3>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Unikalne, powtarzające się frazy każdej osoby
+        </p>
 
-        <div className="grid gap-6 px-5 py-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-6 sm:grid-cols-2">
           {sortedParticipants.map((person, index) => (
             <PersonCatchphrases
               key={person}

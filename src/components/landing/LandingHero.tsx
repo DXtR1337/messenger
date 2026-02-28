@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { SectionErrorBoundary } from '@/components/shared/SectionErrorBoundary';
 
 const SplineScene = dynamic(
   () => import('@/components/shared/SplineScene').then((m) => ({ default: m.SplineScene })),
@@ -34,14 +35,17 @@ export default function LandingHero() {
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
       {/* Layer 1: Spline 3D brain scene (desktop only — not rendered on mobile) */}
       {isDesktop && (
-        <div className="absolute inset-0" style={{ zIndex: 1 }}>
-          <SplineScene scene="/scene.splinecode" className="h-full w-full" />
-        </div>
+        <SectionErrorBoundary section="Spline 3D" fallback={null}>
+          <div className="absolute inset-0" style={{ zIndex: 1 }}>
+            <SplineScene scene="/scene.splinecode" className="h-full w-full" />
+          </div>
+        </SectionErrorBoundary>
       )}
 
       {/* Grain overlay */}
       <div
         className="pointer-events-none absolute inset-0"
+        aria-hidden="true"
         style={{
           zIndex: 2,
           opacity: 0.03,
@@ -227,6 +231,7 @@ export default function LandingHero() {
           strokeLinecap="round"
           strokeLinejoin="round"
           style={{ animation: 'heroPulseDown 2s ease-in-out infinite' }}
+          aria-hidden="true"
         >
           <defs>
             <linearGradient id="scrollGrad" x1="0" y1="0" x2="20" y2="0" gradientUnits="userSpaceOnUse">

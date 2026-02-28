@@ -117,9 +117,9 @@ export default function PersonalityCard({
   }
 
   const bigFive = profile.big_five_approximation;
-  const attachment = profile.attachment_indicators.primary_style;
+  const attachment = profile.attachment_indicators?.primary_style ?? 'insufficient_data';
   const loveLanguage = profile.love_language;
-  const commStyle = profile.communication_profile.style;
+  const commStyle = profile.communication_profile?.style ?? 'mixed';
   const mbti = profile.mbti;
 
   // Compute trait scores (average of range, scaled to 0-100)
@@ -170,7 +170,7 @@ export default function PersonalityCard({
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: BG,
           position: 'relative',

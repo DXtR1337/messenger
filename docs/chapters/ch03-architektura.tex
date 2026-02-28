@@ -689,6 +689,32 @@ Duże rozmowy mogą generować obiekty \tstype{StoredAnalysis} o~rozmiarze 20--5
 
 Wcześniejsza wersja aplikacji (ChatScope) używała bazy o~nazwie \texttt{chatscope}. Eksportowana stała \tstype{LEGACY\_DB\_NAME = 'chatscope'} służy do ewentualnej migracji danych ze starej wersji.
 
+\subsection{Supabase Auth (Faza~25)}
+\label{subsec:supabase-auth}
+
+Od~Fazy~25 aplikacja zawiera gotowy interfejs uwierzytelniania oparty na~Supabase Auth (\texttt{@supabase/supabase-js} + \texttt{@supabase/ssr}). Architektura autoryzacji jest \textbf{warunkowa} --- działa tylko gdy zdefiniowane są zmienne środowiskowe \texttt{NEXT\_PUBLIC\_SUPABASE\_URL} i~\texttt{NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY}. Bez nich middleware pomija ochronę tras i~aplikacja funkcjonuje bez logowania (tryb lokalny MVP).
+
+\begin{table}[H]
+\centering
+\caption{Składniki Supabase Auth w~\podtekst}
+\label{tab:supabase-auth-components}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Plik} & \textbf{Rola} \\
+\midrule
+\filepath{src/lib/supabase/client.ts} & Klient przeglądarkowy (singleton) \\
+\filepath{src/lib/supabase/server.ts} & Klient serwerowy (Server Components, API Routes) \\
+\filepath{src/lib/supabase/middleware.ts} & Odświeżanie sesji + ochrona tras \\
+\filepath{middleware.ts} & Root middleware --- warunkowo wywołuje Supabase \\
+\filepath{src/app/auth/login/page.tsx} & Logowanie (email/hasło + Google OAuth) \\
+\filepath{src/app/auth/signup/page.tsx} & Rejestracja \\
+\filepath{src/app/auth/reset/page.tsx} & Reset hasła \\
+\filepath{src/app/auth/callback/route.ts} & Obsługa callbacku OAuth \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Sesja przechowywana jest w~HttpOnly cookies przez \texttt{@supabase/ssr}. Komponent \filepath{src/components/auth/UserMenu.tsx} zastępuje hardcoded kartę użytkownika w~nawigacji.
 
 % ============================================================
 \section{Integracja Gemini API}

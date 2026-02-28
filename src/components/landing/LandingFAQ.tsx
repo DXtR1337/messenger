@@ -28,7 +28,7 @@ const FAQ_ITEMS: FAQItem[] = [
   {
     question: 'Ile wiadomości potrzeba do analizy?',
     answer:
-      'Minimum 100 wiadomości. Dla pełnej analizy psychologicznej i dokładnych wzorców rekomendujemy co najmniej 1000 wiadomości. Im dłuższa historia konwersacji, tym trafniejsze wyniki.',
+      'Minimum 100 wiadomości. Dla pełnej analizy komunikacyjnej i dokładnych wzorców rekomendujemy co najmniej 1000 wiadomości. Im dłuższa historia konwersacji, tym trafniejsze wyniki.',
   },
   {
     question: 'Czy analiza AI jest dokładna?',
@@ -43,7 +43,7 @@ const FAQ_ITEMS: FAQItem[] = [
   {
     question: 'Ile to kosztuje?',
     answer:
-      '100% za darmo. Bez rejestracji. Bez karty kredytowej. Twoje dane nigdy nie opuszczają przeglądarki — analiza statystyczna dzieje się lokalnie, a AI otrzymuje tylko ~2% próbkę wiadomości.',
+      'Zacznij za darmo — 3 analizy miesięcznie z pełną analizą ilościową i podstawowym AI. Plany Pro i Unlimited odblokują wszystkie funkcje AI. Żadna karta kredytowa nie jest wymagana na start. Twoje dane nigdy nie opuszczają przeglądarki — analiza statystyczna dzieje się lokalnie, a AI otrzymuje tylko ~2% próbkę wiadomości.',
   },
   {
     question: 'Jaki AI używacie?',

@@ -75,7 +75,7 @@ export function computeGottmanHorsemen(
   const contemptAsymmetryBoost = Math.min(20, responseAsymmetry / 5);
   const contemptScore = Math.min(100, Math.round(contemptBase + contemptAsymmetryBoost));
   const contemptEvidence: string[] = [];
-  if (get('manipulation_low_empathy') > 50) contemptEvidence.push('Wzorce manipulacji i niskiej empatii');
+  if (get('manipulation_low_empathy') > 50) contemptEvidence.push('Wzorce instrumentalnej komunikacji i niskiej empatii');
   if (responseAsymmetry > 30) contemptEvidence.push(`Asymetria odpowiedzi: ${Math.round(responseAsymmetry)} min`);
 
   // --- Defensiveness ---
@@ -152,3 +152,7 @@ export function computeGottmanHorsemen(
 
   return { horsemen, activeCount, riskLevel };
 }
+
+export const GOTTMAN_DISCLAIMER =
+  'Ta analiza mapuje wzorce komunikacyjne na koncepty Gottmana w sposób heurystyczny, ' +
+  'nie metodą obserwacyjną (SPAFF). Wyniki mają charakter orientacyjny, nie diagnostyczny.';

@@ -132,7 +132,7 @@ export default function DashboardPage() {
               transition={{ delay: 0.35, duration: 0.4 }}
               className="mb-8 max-w-xs text-sm leading-relaxed text-muted-foreground"
             >
-              Wrzu{'\u0107'} eksport z Messengera lub WhatsApp i odkryj, co naprawd{'\u0119'} si{'\u0119'} dzieje.
+              Wrzu{'ć'} eksport z Messengera lub WhatsApp i odkryj, co naprawd{'ę'} si{'ę'} dzieje.
             </motion.p>
 
             <motion.div
@@ -142,7 +142,7 @@ export default function DashboardPage() {
             >
               <Button asChild className="gap-2 rounded-xl px-6 py-3 text-sm font-semibold">
                 <Link href="/analysis/new">
-                  Rozpocznij pierwsz{'\u0105'} analiz{'\u0119'}
+                  Rozpocznij pierwsz{'ą'} analiz{'ę'}
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                 Masz nowe rozmowy do przeanalizowania?
               </p>
               <p className="text-xs text-muted-foreground">
-                Ostatnia analiza ponad 7 dni temu — sprawd{'\u017A'}, co si{'\u0119'} zmieni{'\u0142'}o.
+                Ostatnia analiza ponad 7 dni temu — sprawd{'ź'}, co si{'ę'} zmieni{'ł'}o.
               </p>
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function DashboardPage() {
                     variant="ghost"
                     size="icon-xs"
                     onClick={(event) => handleDeleteClick(event, entry.id)}
-                    aria-label="Usu{'\u0144'} analiz{'\u0119'}"
+                    aria-label="Usu{'ń'} analiz{'ę'}"
                   >
                     <X className="size-3" />
                   </Button>
@@ -254,7 +254,7 @@ export default function DashboardPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="flex flex-wrap gap-1.5">
-                    {entry.participants.map((name) => (
+                    {entry.participants?.map((name) => (
                       <Badge key={name} variant="secondary" className="text-xs">
                         {name}
                       </Badge>
@@ -285,7 +285,7 @@ export default function DashboardPage() {
                   }}
                 >
                   <p className="text-sm font-medium text-foreground">
-                    Usun{'\u0105\u0107'} t{'\u0119'} analiz{'\u0119'}?
+                    Usun{'ąć'} t{'ę'} analiz{'ę'}?
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -293,7 +293,7 @@ export default function DashboardPage() {
                       size="sm"
                       onClick={(event) => handleConfirmDelete(event, entry.id)}
                     >
-                      Tak, usu{'\u0144'}
+                      Tak, usu{'ń'}
                     </Button>
                     <Button
                       variant="outline"
@@ -399,7 +399,7 @@ function GroupedAnalysesList({ analyses, pendingDeleteId, onDeleteClick, onConfi
                       className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-card/95 backdrop-blur-sm"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     >
-                      <p className="text-xs font-medium">Usun{'\u0105\u0107'}?</p>
+                      <p className="text-xs font-medium">Usun{'ąć'}?</p>
                       <div className="flex gap-2">
                         <Button variant="destructive" size="sm" onClick={(e) => onConfirmDelete(e, entry.id)}>Tak</Button>
                         <Button variant="outline" size="sm" onClick={onCancelDelete}>Nie</Button>

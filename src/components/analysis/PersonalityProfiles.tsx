@@ -30,12 +30,12 @@ const BIG_FIVE_LABELS: Array<{ key: keyof BigFiveApproximation; label: string }>
 ];
 
 const ATTACHMENT_STYLES: Record<string, { label: string; className: string }> = {
-  secure: { label: 'Bezpieczny', className: 'bg-success/15 text-success border-success/30' },
-  anxious: { label: 'Lękowy', className: 'bg-warning/15 text-warning border-warning/30' },
-  avoidant: { label: 'Unikający', className: 'bg-primary/15 text-primary border-primary/30' },
+  secure: { label: 'Bezpieczny', className: 'bg-purple-500/15 text-purple-400 border-purple-500/30' },
+  anxious: { label: 'Lękowy', className: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30' },
+  avoidant: { label: 'Unikający', className: 'bg-violet-500/15 text-violet-400 border-violet-500/30' },
   disorganized: {
     label: 'Zdezorganizowany',
-    className: 'bg-destructive/15 text-destructive border-destructive/30',
+    className: 'bg-fuchsia-400/15 text-fuchsia-300 border-fuchsia-400/30',
   },
   insufficient_data: {
     label: 'Brak danych',
@@ -99,7 +99,7 @@ function ProfileCard({
 }) {
   const color = PERSON_COLORS[colorIndex % PERSON_COLORS.length];
   const attachmentStyle =
-    ATTACHMENT_STYLES[profile.attachment_indicators.primary_style] ??
+    ATTACHMENT_STYLES[profile.attachment_indicators?.primary_style ?? 'insufficient_data'] ??
     ATTACHMENT_STYLES.insufficient_data;
 
   return (
@@ -146,9 +146,9 @@ function ProfileCard({
           <Badge className={cn('border', attachmentStyle.className)}>
             {attachmentStyle.label}
           </Badge>
-          {profile.attachment_indicators.indicators.length > 0 && (
+          {(profile.attachment_indicators?.indicators?.length ?? 0) > 0 && (
             <div className="space-y-1 pt-1">
-              {profile.attachment_indicators.indicators.slice(0, 3).map((ind, idx) => (
+              {profile.attachment_indicators!.indicators.slice(0, 3).map((ind, idx) => (
                 <p key={idx} className="text-xs text-muted-foreground">
                   {ind.behavior}
                 </p>
@@ -210,7 +210,7 @@ function ProfileCard({
                 Sygnały niezaspokojonych potrzeb
               </p>
               {profile.communication_needs.unmet_needs_signals.map((signal, idx) => (
-                <p key={idx} className="text-xs text-warning">
+                <p key={idx} className="text-xs text-purple-400">
                   {signal}
                 </p>
               ))}

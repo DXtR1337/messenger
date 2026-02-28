@@ -5,10 +5,17 @@ import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/typ
 import type { QualitativeAnalysis } from '@/lib/analysis/types';
 import type { SubtextResult } from '@/lib/analysis/subtext';
 
+interface OperationCallbacks {
+  startOperation: (id: string, label: string, status?: string) => void;
+  updateOperation: (id: string, patch: { progress?: number; status?: string }) => void;
+  stopOperation: (id: string) => void;
+}
+
 interface UseSubtextAnalysisOptions {
   conversation: ParsedConversation;
   quantitative: QuantitativeAnalysis;
   qualitative?: QualitativeAnalysis;
+  ops?: OperationCallbacks;
 }
 
 interface UseSubtextAnalysisReturn {
@@ -47,6 +54,7 @@ export function useSubtextAnalysis({
   conversation,
   quantitative,
   qualitative,
+  ops,
 }: UseSubtextAnalysisOptions): UseSubtextAnalysisReturn {
   const [state, setState] = useState<SubtextState>('idle');
   const [progress, setProgress] = useState(0);
@@ -54,6 +62,7 @@ export function useSubtextAnalysis({
   const [error, setError] = useState<string | null>(null);
   const ceilingRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Smooth progress interpolation
   useEffect(() => {
@@ -78,6 +87,7 @@ export function useSubtextAnalysis({
   }, [state]);
 
   const reset = useCallback(() => {
+    abortRef.current?.abort();
     setState('idle');
     setProgress(0);
     ceilingRef.current = 0;
@@ -86,9 +96,14 @@ export function useSubtextAnalysis({
   }, []);
 
   const runSubtext = useCallback(async () => {
+    if (state === 'running') return;
     setState('running');
     setProgress(0);
     setError(null);
+    ops?.startOperation('subtext', 'Subtext Decoder', 'Rozpoczynam analizę podtekstów...');
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       // Filter to eligible text messages
@@ -134,6 +149,7 @@ export function useSubtextAnalysis({
           relationshipContext,
           quantitativeContext,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -176,6 +192,7 @@ export function useSubtextAnalysis({
               if (phase) {
                 setProgress(phase.start);
                 ceilingRef.current = phase.ceiling;
+                ops?.updateOperation('subtext', { progress: phase.start, status: event.status });
               }
             } else if (event.type === 'complete' && event.result) {
               finalResult = event.result;
@@ -197,10 +214,13 @@ export function useSubtextAnalysis({
         throw new Error('Subtext analysis completed without results');
       }
     } catch (err) {
+      if (controller.signal.aborted) return;
       setState('error');
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      ops?.stopOperation('subtext');
     }
-  }, [conversation, quantitative, qualitative]);
+  }, [state, conversation, quantitative, qualitative, ops]);
 
   return {
     runSubtext,

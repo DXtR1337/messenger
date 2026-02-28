@@ -95,18 +95,18 @@ export async function POST(request: Request): Promise<Response> {
 
     // /analyze — sends a link to the website for full analysis
     if (commandName === 'analyze') {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://chatscope-9278095424.europe-west1.run.app';
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? '';
       const url = `${baseUrl}/analysis/new?channel=${channelId}`;
       return immediateResponse(
         undefined,
         [{
-          title: '\u{1F4CA} Pe\u0142na analiza kana\u0142u',
+          title: '\u{1F4CA} Pełna analiza kanału',
           description: [
-            'Kliknij link poni\u017Cej, aby otworzy\u0107 pe\u0142n\u0105 analiz\u0119 z wykresami, heatmap\u0105, profilami osobowo\u015Bci i wi\u0119cej.',
+            'Kliknij link poniżej, aby otworzyć pełną analizę z wykresami, heatmapą, profilami osobowości i więcej.',
             '',
-            `**[\u{1F517} Otw\u00F3rz analiz\u0119 na PodTeksT](${url})**`,
+            `**[\u{1F517} Otwórz analizę na PodTeksT](${url})**`,
             '',
-            '*Bot automatycznie pobierze wiadomo\u015Bci i przeanalizuje kana\u0142.*',
+            '*Bot automatycznie pobierze wiadomości i przeanalizuje kanał.*',
           ].join('\n'),
           color: 0x3b82f6,
           footer: { text: 'PodTeksT \u2022 podtekst.app' },
@@ -183,7 +183,7 @@ export async function POST(request: Request): Promise<Response> {
             interaction.token,
             undefined,
             [warningEmbed('Błąd', `Nie udało się pobrać wiadomości: ${err instanceof Error ? err.message : 'nieznany błąd'}`)],
-          );
+          ).catch(editErr => console.error('[Discord/interactions] Failed to edit deferred response after fetch error:', editErr));
         });
 
       return deferredResponse();
@@ -199,26 +199,36 @@ export async function POST(request: Request): Promise<Response> {
       }
 
       // Fire and forget: fetch/cache + AI call, then edit deferred
+      // 4-minute safety timeout — must finish before maxDuration (300s)
+      const AI_TIMEOUT_MS = 4 * 60 * 1000;
       (async () => {
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('AI command timed out (4 min)')), AI_TIMEOUT_MS),
+        );
         try {
-          const data = await fetchAndCacheAnalysis(channelId, botToken, messageLimit);
+          await Promise.race([
+            (async () => {
+              const data = await fetchAndCacheAnalysis(channelId, botToken, messageLimit);
 
-          switch (commandName) {
-            case 'roast':
-              await handleRoast(interaction, data);
-              break;
-            case 'megaroast':
-              await handleMegaroast(interaction, data);
-              break;
-            case 'personality':
-              await handlePersonality(interaction, data);
-              break;
-            case 'cwel':
-              await handleCwel(interaction, data);
-              break;
-          }
-          // Send website link button as follow-up after AI response
-          await sendFollowUp(interaction.token, undefined, undefined, linkComponents);
+              switch (commandName) {
+                case 'roast':
+                  await handleRoast(interaction, data);
+                  break;
+                case 'megaroast':
+                  await handleMegaroast(interaction, data);
+                  break;
+                case 'personality':
+                  await handlePersonality(interaction, data);
+                  break;
+                case 'cwel':
+                  await handleCwel(interaction, data);
+                  break;
+              }
+              // Send website link button as follow-up after AI response
+              await sendFollowUp(interaction.token, undefined, undefined, linkComponents);
+            })(),
+            timeout,
+          ]);
         } catch (err) {
           await editDeferredResponse(
             interaction.token,
@@ -226,7 +236,7 @@ export async function POST(request: Request): Promise<Response> {
             [warningEmbed('Błąd', err instanceof Error ? err.message : 'Nieznany błąd')],
           );
         }
-      })();
+      })().catch(err => console.error('[Discord/interactions] Unhandled in AI command handler:', err));
 
       return deferredResponse();
     }
@@ -243,7 +253,7 @@ export async function POST(request: Request): Promise<Response> {
             [warningEmbed('Błąd', err instanceof Error ? err.message : 'Nieznany błąd')],
           );
         }
-      })();
+      })().catch(err => console.error('[Discord/interactions] Unhandled in search handler:', err));
 
       return deferredResponse();
     }

@@ -32,8 +32,26 @@ export function detectFormat(fileName: string, jsonData?: unknown): ChatFormat {
 
   // Messenger / Instagram: both have participants[] and messages[] with sender_name
   if (Array.isArray(data.participants) && Array.isArray(data.messages)) {
-    // Both are Meta exports — nearly identical format
-    // Default to messenger (Instagram can use the same parser with platform override)
+    // Both are Meta exports — nearly identical format.
+    // Heuristic: Messenger exports include thread_path containing 'inbox' or 'e2ee_cutover';
+    // Instagram DM exports typically lack thread_path or have different patterns.
+    if (typeof data.thread_path === 'string') {
+      const threadPath = (data.thread_path as string).toLowerCase();
+      // Known Messenger thread_path prefixes
+      if (threadPath.includes('inbox') || threadPath.includes('e2ee_cutover') || threadPath.includes('filtered_threads') || threadPath.includes('message_requests')) {
+        return 'messenger';
+      }
+      return 'instagram';
+    }
+    // If thread_path exists (even as undefined/null), it's likely Messenger
+    if ('thread_path' in data) {
+      return 'messenger';
+    }
+    // No thread_path at all — check for Instagram-specific fields
+    // Instagram exports often have 'thread_type' or lack 'is_still_participant'
+    if (!('is_still_participant' in data)) {
+      return 'instagram';
+    }
     return 'messenger';
   }
 

@@ -5,9 +5,10 @@
  */
 
 import 'server-only';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import type { AnalysisSamples } from './qualitative';
 import { formatMessagesForAnalysis } from './prompts';
+import { callGeminiWithRetry } from './gemini';
+import { parseGeminiJSON } from './json-parser';
 
 // ============================================================
 // Types
@@ -39,91 +40,6 @@ export interface PersonDatingProfile {
 
 export interface DatingProfileResult {
   profiles: Record<string, PersonDatingProfile>;
-}
-
-// ============================================================
-// Private: Gemini helpers (mirrors gemini.ts pattern)
-// ============================================================
-
-const SAFETY_SETTINGS = [
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-];
-
-function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set in .env.local');
-  return new GoogleGenerativeAI(apiKey);
-}
-
-async function callGeminiWithRetry(
-  systemPrompt: string,
-  userContent: string,
-  maxRetries = 3,
-  maxTokens = 8192,
-): Promise<string> {
-  let lastError: Error | undefined;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      const client = getClient();
-      const model = client.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
-        systemInstruction: systemPrompt,
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature: 0.7,
-          responseMimeType: 'application/json',
-        },
-        safetySettings: SAFETY_SETTINGS,
-      });
-
-      const result = await model.generateContent(userContent);
-      const response = result.response;
-
-      if (response.promptFeedback?.blockReason) {
-        throw new Error(`Prompt zablokowany przez filtr bezpieczenstwa: ${response.promptFeedback.blockReason}`);
-      }
-
-      const candidate = response.candidates?.[0];
-      if (candidate?.finishReason === 'SAFETY') {
-        throw new Error('Odpowiedz zablokowana przez filtr bezpieczenstwa');
-      }
-
-      const text = response.text();
-      if (!text) throw new Error('No text in Gemini response');
-      return text;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      const msg = lastError.message.toLowerCase();
-      if (msg.includes('api key') || msg.includes('permission') || msg.includes('billing')) {
-        throw new Error('Blad konfiguracji API — sprawdz klucz API');
-      }
-      if (attempt < maxRetries - 1) {
-        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
-      }
-    }
-  }
-  throw new Error(`Blad analizy AI: ${lastError?.message ?? 'nieznany blad'}`);
-}
-
-function parseGeminiJSON<T>(raw: string): T {
-  let cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-  if (!cleaned.startsWith('{') && !cleaned.startsWith('[')) {
-    const jsonStart = cleaned.search(/[{[]/);
-    if (jsonStart >= 0) cleaned = cleaned.slice(jsonStart);
-  }
-  if (cleaned.startsWith('{') || cleaned.startsWith('[')) {
-    const closingChar = cleaned.startsWith('{') ? '}' : ']';
-    const lastClose = cleaned.lastIndexOf(closingChar);
-    if (lastClose >= 0) cleaned = cleaned.slice(0, lastClose + 1);
-  }
-  try {
-    return JSON.parse(cleaned) as T;
-  } catch {
-    throw new Error('Blad parsowania odpowiedzi AI — odpowiedz nie jest poprawnym JSON');
-  }
 }
 
 // ============================================================
@@ -164,6 +80,13 @@ ZASADY:
 - Badz CELNY i OSTRY. Kazde zdanie niesie informacje.
 - 5-6 stats per osobe
 - age_vibe to nie prawdziwy wiek — to "energia wiekowa" — precyzyjna, sarkastyczna diagnoza
+- DEEP PROFILE RESEARCH: Masz dostep do dossier z zenujacymi cytatami, obsesjami tematycznymi, ksywkami, wyznaniami i sprzecznosciami. UZYJ ICH.
+- Bio MUSI zawierac DOSLOWNE cytaty z wiadomosci. Np: "Moje ostatnie 'dobranoc' o 4:17 to 'koxham cie misiu ps mam lekki meltdown'"
+- Prompty MUSZA zawierac cytowane wiadomosci lub KONKRETNE obsesje tematyczne (nie "czesto mowi o jedzeniu" ale "wspomina kebab 23 razy w 3 miesiace")
+- Kazdy red_flag i green_flag MUSI zawierac konkretny cytat lub wzorzec z danych
+- Confessions = material na bio. Najdluzsza wiadomosc osoby to prawdziwy portret.
+- Pet names = material na age_vibe i prompts. Wylistuj wszystkie ksywki.
+- SPRZECZNOSCI: Jesli ktos napisal "odchodze" a 3h pozniej pisal "kocham cie" — to jest Twoj material na red_flag I bio jednoczesnie.
 
 OUTPUT FORMAT: Valid JSON only.
 
@@ -198,6 +121,7 @@ export async function runDatingProfile(
   participants: string[],
   quantitativeContext: string,
   existingAnalysis?: { pass1?: Record<string, unknown>; pass3?: Record<string, unknown> },
+  deepScanMaterial?: string,
 ): Promise<DatingProfileResult> {
   let contextBlock = '';
   if (existingAnalysis?.pass1) {
@@ -208,7 +132,7 @@ export async function runDatingProfile(
   }
 
   const input = `PARTICIPANTS: ${participants.join(', ')}
-${contextBlock}
+${deepScanMaterial ? `\n${deepScanMaterial}\n` : ''}${contextBlock}
 QUANTITATIVE DATA:
 ${quantitativeContext}
 
@@ -219,10 +143,10 @@ MESSAGES PER PERSON:
 ${participants.map(name => {
   const personMsgs = samples.perPerson[name];
   if (!personMsgs || personMsgs.length === 0) return `${name}: brak wiadomosci`;
-  return `--- ${name} ---\n${formatMessagesForAnalysis(personMsgs.slice(0, 50))}`;
+  return `--- ${name} ---\n${formatMessagesForAnalysis(personMsgs.slice(0, 120))}`;
 }).join('\n\n')}`;
 
-  const raw = await callGeminiWithRetry(DATING_PROFILE_SYSTEM, input, 3, 8192);
+  const raw = await callGeminiWithRetry(DATING_PROFILE_SYSTEM, input, 3, 8192, 0.7);
   const result = parseGeminiJSON<DatingProfileResult>(raw);
 
   // Validate structure

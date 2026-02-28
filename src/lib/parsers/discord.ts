@@ -93,8 +93,9 @@ export function parseDiscordMessages(
   channelName?: string,
 ): ParsedConversation {
   // Filter out bot messages and non-user message types
+  // Type 7 = GUILD_MEMBER_JOIN — include for participant discovery but filter from sorted later
   const userMessages = messages.filter(
-    (m) => !m.author.bot && (USER_MESSAGE_TYPES.has(m.type) || m.type === 7),
+    (m) => !m.author.bot && USER_MESSAGE_TYPES.has(m.type),
   );
 
   // Collect unique participants
@@ -112,7 +113,6 @@ export function parseDiscordMessages(
 
   // Sort messages chronologically (Discord API returns newest first)
   const sorted = [...userMessages]
-    .filter((m) => USER_MESSAGE_TYPES.has(m.type))
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   // Build Discord message ID → index map for reply resolution
@@ -134,14 +134,15 @@ export function parseDiscordMessages(
     const reactions: Reaction[] = [];
     if (msg.reactions) {
       for (const r of msg.reactions) {
+        // Guard against missing emoji data from Discord API
+        if (!r.emoji?.name) continue;
         // Discord API doesn't tell us WHO reacted in GET messages endpoint
-        // We add the reaction with 'unknown' actor for count tracking
-        for (let i = 0; i < r.count; i++) {
-          reactions.push({
-            emoji: r.emoji.name,
-            actor: 'unknown',
-          });
-        }
+        // Single entry per emoji type with count — avoids N duplicate entries
+        reactions.push({
+          emoji: r.emoji.name,
+          actor: 'unknown',
+          count: r.count,
+        });
       }
     }
 
@@ -175,8 +176,8 @@ export function parseDiscordMessages(
   }
 
   const timestamps = unified.map((m) => m.timestamp).filter((t) => t > 0);
-  const start = timestamps.length > 0 ? Math.min(...timestamps) : 0;
-  const end = timestamps.length > 0 ? Math.max(...timestamps) : 0;
+  const start = timestamps.length > 0 ? timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]) : 0;
+  const end = timestamps.length > 0 ? timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]) : 0;
   const durationDays = Math.max(1, Math.round((end - start) / 86_400_000));
 
   return {

@@ -2,6 +2,7 @@ import { runAnalysisPasses, runRoastPass } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import { rateLimit } from '@/lib/rate-limit';
 import { analyzeRequestSchema, formatZodError } from '@/lib/validation/schemas';
+import { SSE_HEARTBEAT_MS } from '@/lib/analysis/constants';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000); // 5 requests per 10 min
 
@@ -55,23 +56,33 @@ export async function POST(request: Request): Promise<Response> {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(heartbeat);
+        try { controller.close(); } catch { /* already closed */ }
+      };
       const send = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch { safeClose(); }
       };
 
       // SSE keepalive heartbeat — prevents proxy idle timeout (e.g. Cloud Run 60s)
       const heartbeat = setInterval(() => {
+        if (closed) { clearInterval(heartbeat); return; }
         try {
           controller.enqueue(encoder.encode(':\n\n'));
         } catch {
           clearInterval(heartbeat);
         }
-      }, 15000);
+      }, SSE_HEARTBEAT_MS);
 
       try {
         if (mode === 'roast') {
-          // Check if client disconnected before starting roast
-          if (signal.aborted) { clearInterval(heartbeat); controller.close(); return; }
+          if (signal.aborted) { safeClose(); return; }
 
           send({ type: 'progress', pass: 1, status: 'Generowanie roastu...' });
           const roastResult = await runRoastPass(
@@ -80,28 +91,24 @@ export async function POST(request: Request): Promise<Response> {
             quantitativeContext ?? samples.quantitativeContext,
           );
 
-          // Check if client disconnected after roast pass
-          if (signal.aborted) { clearInterval(heartbeat); controller.close(); return; }
+          if (signal.aborted) { safeClose(); return; }
 
           send({ type: 'roast_complete', result: roastResult });
         } else {
-          // Check if client disconnected before starting analysis
-          if (signal.aborted) { clearInterval(heartbeat); controller.close(); return; }
+          if (signal.aborted) { safeClose(); return; }
 
           const result = await runAnalysisPasses(
             samples,
             participants,
             (pass, status) => {
-              // Check disconnect before sending each progress update
-              if (!signal.aborted) {
+              if (!signal.aborted && !closed) {
                 send({ type: 'progress', pass, status });
               }
             },
             relationshipContext,
           );
 
-          // Check if client disconnected after analysis passes
-          if (signal.aborted) { clearInterval(heartbeat); controller.close(); return; }
+          if (signal.aborted) { safeClose(); return; }
 
           if (result.status === 'error') {
             send({ type: 'error', error: result.error ?? 'Analysis failed' });
@@ -110,15 +117,15 @@ export async function POST(request: Request): Promise<Response> {
           }
         }
       } catch (error) {
-        if (!signal.aborted) {
+        if (!signal.aborted && !closed) {
+          console.error('[Analyze]', error);
           send({
             type: 'error',
             error: 'Błąd analizy AI — spróbuj ponownie',
           });
         }
       } finally {
-        clearInterval(heartbeat);
-        controller.close();
+        safeClose();
       }
     },
   });
@@ -126,8 +133,9 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }

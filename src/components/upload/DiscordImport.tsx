@@ -142,10 +142,11 @@ export default function DiscordImport({ relationshipType, autoChannelId }: Disco
     abortRef.current = controller;
 
     try {
+      const storedPin = sessionStorage.getItem('podtekst-discord-pin') ?? '';
       const res = await fetch('/api/discord/fetch-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId: channelId.trim(), messageLimit }),
+        body: JSON.stringify({ channelId: channelId.trim(), messageLimit, pin: storedPin }),
         signal: controller.signal,
       });
 
@@ -403,7 +404,8 @@ export default function DiscordImport({ relationshipType, autoChannelId }: Disco
                       }`}
                     >
                       {guild.iconUrl ? (
-                        <img src={guild.iconUrl} alt="" className="size-8 rounded-full" />
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={guild.iconUrl} alt={`Ikona serwera ${guild.name}`} className="size-8 rounded-full" />
                       ) : (
                         <div className="flex size-8 items-center justify-center rounded-full bg-border text-xs font-bold text-muted-foreground">
                           {guild.name.charAt(0)}

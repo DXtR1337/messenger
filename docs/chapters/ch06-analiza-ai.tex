@@ -2334,4 +2334,52 @@ Retry             & 3$\times$ z~exponential backoff ($1\text{s} \to 2\text{s} \t
 \end{tabularx}
 \end{table}
 
+% ============================================================
+\section{Enhanced Roast --- pog\l{}\k{e}biony roast psychologiczny}
+\label{sec:enhanced-roast}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/app/api/analyze/enhanced-roast/route.ts}\\
+\textbf{Endpoint:} \texttt{POST /api/analyze/enhanced-roast}\\
+\textbf{Tryb:} SSE streaming | \textbf{Rate limit:} 5~zapyta\'{n} / 10~min | \textbf{Temperatura:} 0,5
+
+Enhanced Roast to~rozszerzenie standardowego roastu o~pe\l{}en kontekst psychologiczny zebrany w~przebiegach Pass~1--4. Standardowy roast dostaje jedynie pr\'{o}bk\k{e} wiadomo\'{s}ci; enhanced roast otrzymuje dodatkowo skompilowane wyniki analizy:
+
+\begin{lstlisting}[style=podcode, caption={Dane wej\'{s}ciowe Enhanced Roast}]
+{
+  samples: Message[],              // probka wiadomosci
+  existingAnalysis: {
+    pass1: Pass1Result,            // ton, styl, typ relacji
+    pass2: Pass2Result,            // dynamika, konflikty
+    pass3: Pass3Result,            // profile osobowosci
+    pass4: Pass4Result             // zdrowie, prognozy
+  }
+}
+\end{lstlisting}
+
+Dzi\k{e}ki temu model mo\.{z}e odwo\l{}ywa\'{c} si\k{e} do~konkretnych profil\'{o}w osobowo\'{s}ci, zidentyfikowanych wzorca\'{o}w i~predykcji, tworz\k{a}c bardziej celny i~trafny roast psychologiczny. Temperatura~0,5 (ni\.{z}sza ni\.{z} standardowy roast 0,7) zapewnia balans mi\k{e}dzy kreatywno\'{s}ci\k{a} a~koherencj\k{a} faktyczn\k{a} z~wynikami analizy.
+
+Wynik rozszerza schemat \tstype{RoastResult} o~g\l{}\k{e}bsze odwo\l{}ania do~profil\'{o}w osobowo\'{s}ci uczestnik\'{o}w. Komponent trigger: \filepath{src/components/analysis/EnhancedRoastButton.tsx}.
+
+% ============================================================
+\section{Cwel Tygodnia --- ceremonialna AI}
+\label{sec:cwel}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/app/api/analyze/cwel/route.ts}\\
+\textbf{Endpoint:} \texttt{POST /api/analyze/cwel}\\
+\textbf{Tryb:} SSE streaming | \textbf{Rate limit:} 5~zapyta\'{n} / 10~min | \textbf{Temperatura:} 0,7
+
+Cwel Tygodnia to~ceremonialny AI roast inspirowany polskim kolokwializmem, kt\'{o}ry wskazuje ,,cwela tygodnia'' --- osob\k{e} wykazuj\k{a}c\k{a} najwi\k{e}cej komunikacyjnych patologii w~analizowanej rozmowie. Temperatura~0,7 zapewnia maksymaln\k{a} kreatywno\'{s}\'{c} stylistyczn\k{a}.
+
+\begin{lstlisting}[style=podcode, caption={Schemat wyj\'{s}ciowy CwelResult}]
+interface CwelResult {
+  cwelOfTheWeek: string;      // imie wybranej osoby
+  verdict: string;            // krotki werdykt (1 zdanie)
+  evidence: string[];         // cytaty dowodowe z rozmowy
+  uzasadnienie: string;       // rozbudowane uzasadnienie wyboru
+}
+\end{lstlisting}
+
+Prompt kieruje model do~analizy takich zachowa\'{n} jak: narcyzm konwersacyjny, unikanie odpowiedzialno\'{s}ci, nadu\.{z}ywanie double-texting, gaslighting komunikacyjny, celowe ignorowanie. Model otrzymuje pr\'{o}bk\k{e} wiadomo\'{s}ci oraz metadane rozmowy (typ relacji, liczba uczestnik\'{o}w).
 

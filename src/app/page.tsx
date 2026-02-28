@@ -5,6 +5,7 @@ import LandingHowItWorks from '@/components/landing/LandingHowItWorks';
 import CurtainReveal from '@/components/landing/CurtainReveal';
 import ScrollProgress from '@/components/landing/ScrollProgress';
 import ToggleLettersButton from '@/components/landing/ToggleLettersButton';
+import { SectionErrorBoundary } from '@/components/shared/SectionErrorBoundary';
 
 const ParticleBackground = dynamic(() => import('@/components/landing/ParticleBackground'));
 const LandingDemo = dynamic(() => import('@/components/landing/LandingDemo'));
@@ -98,20 +99,29 @@ export default function Home() {
       <noscript>
         <style>{`.landing-content { opacity: 1 !important; }`}</style>
       </noscript>
-      <CurtainReveal />
+      <SectionErrorBoundary section="CurtainReveal">
+        <CurtainReveal />
+      </SectionErrorBoundary>
       <ScrollProgress />
       <ToggleLettersButton />
 
-      <ParticleBackground />
+      <SectionErrorBoundary section="ParticleBackground" fallback={null}>
+        <ParticleBackground />
+      </SectionErrorBoundary>
 
       <div id="landing-content" className="landing-content">
+        <h1 className="sr-only">PodTeksT — odkryj to, co kryje sie miedzy wierszami</h1>
         <LandingHero />
         <LandingSocialProof />
         <LandingHowItWorks />
-        <LandingDemo />
+        <SectionErrorBoundary section="Demo">
+          <LandingDemo />
+        </SectionErrorBoundary>
         <LandingPricing />
         <LandingFAQ />
-        <LandingFooter />
+        <footer role="contentinfo">
+          <LandingFooter />
+        </footer>
       </div>
     </main>
   );

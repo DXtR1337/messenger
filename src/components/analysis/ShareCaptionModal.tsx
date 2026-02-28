@@ -35,7 +35,7 @@ const CAPTION_TEMPLATES = [
     emoji: "\ud83e\uddfe",
     label: "Paragon",
     template: (_p: string[], _scores: Scores) =>
-      "\ud83e\uddfe The receipts are in.\n\nAI przeanalizowa\u0142o nasz\u0105 rozmow\u0119 i... wow.\n\n#podtekst #thereceipts",
+      "\ud83e\uddfe The receipts are in.\n\nAI przeanalizowało naszą rozmowę i... wow.\n\n#podtekst #thereceipts",
   },
   {
     id: "redflag",
@@ -49,7 +49,7 @@ const CAPTION_TEMPLATES = [
     emoji: "\ud83d\udc7b",
     label: "Ghost",
     template: (_p: string[], scores: Scores) =>
-      "\ud83d\udc7b Ghost Forecast: " + (scores.health && scores.health < 40 ? "\ud83c\udf2a\ufe0f EWAKUACJA" : "\u26c5 zachmurzenie") + "\n\nAI wie wi\u0119cej ni\u017c my sami\n\n#podtekst #ghosted",
+      "\ud83d\udc7b Ghost Forecast: " + (scores.health && scores.health < 40 ? "\ud83c\udf2a\ufe0f EWAKUACJA" : "\u26c5 zachmurzenie") + "\n\nAI wie więcej niż my sami\n\n#podtekst #ghosted",
   },
 ];
 
@@ -124,6 +124,15 @@ export default function ShareCaptionModal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -132,6 +141,9 @@ export default function ShareCaptionModal({
       onMouseDown={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-caption-modal-title"
         className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -139,10 +151,11 @@ export default function ShareCaptionModal({
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <Share2 className="size-4 text-blue-400" />
-            <h3 className="text-sm font-bold text-foreground">Udost\u0119pnij z captionem</h3>
+            <h3 id="share-caption-modal-title" className="text-sm font-bold text-foreground">Udostępnij z captionem</h3>
           </div>
           <button
             onClick={onClose}
+            aria-label="Zamknij"
             className="flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-card-hover hover:text-foreground"
           >
             <X className="size-4" />
@@ -168,7 +181,7 @@ export default function ShareCaptionModal({
         {/* Captions */}
         <div className="max-h-[60vh] space-y-3 overflow-y-auto p-5">
           <p className="mb-3 text-xs text-muted-foreground">
-            Pobierz kart\u0119, a potem skopiuj gotowy caption do posta:
+            Pobierz kartę, a potem skopiuj gotowy caption do posta:
           </p>
 
           {CAPTION_TEMPLATES.map((tpl) => {

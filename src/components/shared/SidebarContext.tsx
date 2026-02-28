@@ -15,8 +15,11 @@ interface SidebarContextValue {
   collapsed: boolean;
   mobileOpen: boolean;
   isMobile: boolean;
+  isFullscreen: boolean;
   toggleCollapsed: () => void;
   setMobileOpen: (open: boolean) => void;
+  toggleFullscreen: () => void;
+  setFullscreen: (on: boolean) => void;
   breadcrumb: string[];
   setBreadcrumb: (items: string[]) => void;
 }
@@ -37,13 +40,18 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isFullscreen, setFullscreen] = useState(false);
   const [breadcrumb, setBreadcrumb] = useState<string[]>(['PodTeksT']);
 
+  // React 18+ automatically batches all setState calls inside useEffect and
+  // event handlers into a single re-render, so the multiple setCollapsed /
+  // setIsMobile / setMobileOpen calls below do NOT cause cascading renders.
   useEffect(() => {
     setCollapsed(readPersistedCollapsed());
 
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
+      // Batched by React 18 — single re-render for all three updates
       setIsMobile(mobile);
       if (mobile) {
         setMobileOpen(false);
@@ -75,14 +83,31 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     });
   }, [isMobile]);
 
+  const toggleFullscreen = useCallback(() => {
+    setFullscreen((prev) => !prev);
+  }, []);
+
+  // Escape key exits fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
   return (
     <SidebarContext.Provider
       value={{
         collapsed,
         mobileOpen,
         isMobile,
+        isFullscreen,
         toggleCollapsed,
         setMobileOpen,
+        toggleFullscreen,
+        setFullscreen,
         breadcrumb,
         setBreadcrumb,
       }}

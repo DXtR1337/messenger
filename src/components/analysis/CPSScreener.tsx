@@ -59,6 +59,7 @@ interface CPSScreenerProps {
   completedPasses: number[];
   canRun: boolean;
   reasonsCannotRun?: string[];
+  participantName?: string;
 }
 
 // ============================================================
@@ -248,6 +249,7 @@ export function CPSScreener({
   completedPasses,
   canRun,
   reasonsCannotRun = [],
+  participantName,
 }: CPSScreenerProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -282,7 +284,7 @@ export function CPSScreener({
                 Analiza wzorców w toku
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                Analizuję wzorce komunikacji...
+                Analizuję wzorce komunikacji{participantName ? ` — ${participantName}` : ''}...
               </CardDescription>
             </div>
           </div>
@@ -339,7 +341,9 @@ export function CPSScreener({
                     Podsumowanie analizy wzorców
                   </CardTitle>
                   <CardDescription className="text-sm text-muted-foreground">
-                    Wynik ogólny i zagrożenie
+                    {(cpsResult.participantName || participantName)
+                      ? `Analiza: ${cpsResult.participantName || participantName}`
+                      : 'Wynik ogólny i zagrożenie'}
                   </CardDescription>
                 </div>
               </div>
@@ -450,7 +454,7 @@ export function CPSScreener({
               Wzorce komunikacyjne
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground">
-              Analiza wzorców komunikacji
+              {participantName ? `Analiza wzorców: ${participantName}` : 'Analiza wzorców komunikacji'}
             </CardDescription>
           </div>
         </div>

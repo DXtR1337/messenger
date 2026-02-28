@@ -51,12 +51,29 @@ export function computeThreatMeters(quant: QuantitativeAnalysis): ThreatMetersRe
 
   // Normalize double-text rate: cap at 80/1000 to prevent it from dominating the score
   const dtNorm = Math.min(maxDoubleTextRate, 80);
-  // Weights normalized to sum=1.0 (original ratios 0.7:0.35:0.5 preserved proportionally)
-  const codependencyScore = clamp(initiationImbalance * 0.45 + dtNorm * 0.22 + rtAsymmetry * 0.33);
+
+  // Pursuit intensity: maximum pursuit streak from pursuit-withdrawal cycles
+  // 8 consecutive messages in a pursuit burst = 100% intensity
+  const pw = quant.pursuitWithdrawal;
+  let pursuitIntensity = 0;
+  if (pw?.cycles && pw.cycles.length > 0) {
+    const maxStreak = Math.max(...pw.cycles.map((c) => c.pursuitMessageCount));
+    pursuitIntensity = Math.min(100, Math.round((maxStreak / 8) * 100));
+  }
+
+  // Weights sum to 1.0:
+  // initiationImbalance 0.35 + dtNorm 0.18 + rtAsymmetry 0.27 + pursuitIntensity 0.20
+  const codependencyScore = clamp(
+    initiationImbalance * 0.35 +
+    dtNorm * 0.18 +
+    rtAsymmetry * 0.27 +
+    pursuitIntensity * 0.20
+  );
   const codependencyFactors: string[] = [];
   if (initiationImbalance > 15) codependencyFactors.push(`Nierówna inicjacja: ${Math.round(Math.max(...initRatios) * 100)}%`);
   if (maxDoubleTextRate > 5) codependencyFactors.push(`Double-texty: ${maxDoubleTextRate.toFixed(1)}/1000 msg`);
   if (rtAsymmetry > 20) codependencyFactors.push(`Asymetria czasu odpowiedzi`);
+  if (pursuitIntensity > 25) codependencyFactors.push(`Intensywne serie wiadomości bez odpowiedzi`);
 
   // --- Power Imbalance Index ---
   // Based on: reciprocity asymmetry, reaction imbalance, initiation imbalance

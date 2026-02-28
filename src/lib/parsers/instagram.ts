@@ -108,8 +108,11 @@ export function parseInstagramJSON(data: unknown): ParsedConversation {
 
   const nonSystem = messages.filter((m) => m.type !== 'system');
   const timestamps = nonSystem.map((m) => m.timestamp);
-  const start = Math.min(...timestamps);
-  const end = Math.max(...timestamps);
+  if (timestamps.length === 0) {
+    throw new Error('No user messages found in the Instagram export.');
+  }
+  const start = timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]);
+  const end = timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]);
   const durationDays = Math.max(1, Math.round((end - start) / 86_400_000));
 
   const title = raw.title ? decodeFBString(raw.title) : participantNames.join(' & ');
@@ -136,19 +139,20 @@ export function mergeInstagramFiles(files: unknown[]): ParsedConversation {
   const allMessages = conversations.flatMap((c) => c.messages);
 
   allMessages.sort((a, b) => a.timestamp - b.timestamp);
-  allMessages.forEach((m, i) => {
-    m.index = i;
-  });
+  const reindexed = allMessages.map((m, i) => ({ ...m, index: i }));
 
   const base = conversations[0];
-  const nonSystem = allMessages.filter((m) => m.type !== 'system');
+  const nonSystem = reindexed.filter((m) => m.type !== 'system');
   const timestamps = nonSystem.map((m) => m.timestamp);
-  const start = Math.min(...timestamps);
-  const end = Math.max(...timestamps);
+  if (timestamps.length === 0) {
+    throw new Error('No user messages found after merging Instagram files.');
+  }
+  const start = timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]);
+  const end = timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]);
 
   return {
     ...base,
-    messages: allMessages,
+    messages: reindexed,
     metadata: {
       totalMessages: nonSystem.length,
       dateRange: { start, end },

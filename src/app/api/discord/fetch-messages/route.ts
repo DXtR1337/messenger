@@ -55,13 +55,24 @@ export async function POST(request: Request): Promise<Response> {
   const { channelId } = parsed.data;
   const messageLimit = Math.min(parsed.data.messageLimit ?? 5000, MAX_MESSAGES);
 
-  // Use client-provided token or fall back to server-side PodTeksT bot token
-  const botToken = parsed.data.botToken ?? process.env.DISCORD_BOT_TOKEN;
+  // PIN protection — same as guilds endpoint
+  const requiredPin = process.env.DISCORD_ACCESS_PIN;
+  if (requiredPin) {
+    const pin = parsed.data.pin;
+    if (pin !== requiredPin) {
+      return Response.json(
+        { error: 'Nieprawidłowy PIN dostępu.' },
+        { status: 401 },
+      );
+    }
+  }
 
+  // Use server-side bot token
+  const botToken = process.env.DISCORD_BOT_TOKEN;
   if (!botToken) {
     return Response.json(
-      { error: 'Brak tokenu bota. Dodaj PodTeksT BoT na swój serwer Discord.' },
-      { status: 400 },
+      { error: 'Bot nie jest skonfigurowany (brak DISCORD_BOT_TOKEN).' },
+      { status: 500 },
     );
   }
 
@@ -115,47 +126,67 @@ export async function POST(request: Request): Promise<Response> {
 
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        try { controller.close(); } catch { /* already closed */ }
+      };
       const send = (data: Record<string, unknown>) => {
-        if (signal.aborted) return;
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (closed || signal.aborted) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch { safeClose(); }
       };
 
       try {
         const allMessages: DiscordMessage[] = [];
         let beforeId: string | undefined;
-        let page = 0;
+        let rateLimitRetries = 0;
+        const MAX_RATE_LIMIT_RETRIES = 10;
 
         send({ type: 'progress', fetched: 0, channelName });
 
-        while (!signal.aborted) {
+        while (!signal.aborted && !closed) {
           const url = new URL(`${DISCORD_API}/channels/${channelId}/messages`);
           url.searchParams.set('limit', String(MESSAGES_PER_PAGE));
           if (beforeId) url.searchParams.set('before', beforeId);
 
           const res = await fetch(url.toString(), { headers, signal });
 
-          // Rate limit handling
+          // Rate limit handling with NaN protection and max retries
           if (res.status === 429) {
+            rateLimitRetries++;
+            if (rateLimitRetries > MAX_RATE_LIMIT_RETRIES) {
+              send({ type: 'error', message: 'Zbyt wiele rate limitów Discord API. Spróbuj ponownie później.' });
+              safeClose();
+              return;
+            }
             const retryAfterHeader = res.headers.get('Retry-After');
-            const waitMs = retryAfterHeader
-              ? parseFloat(retryAfterHeader) * 1000 + 200
-              : 5000;
+            const parsed = retryAfterHeader ? parseFloat(retryAfterHeader) : NaN;
+            const waitMs = isNaN(parsed) ? 5000 : Math.min(parsed * 1000 + 200, 60000);
             send({ type: 'rate_limit', waitMs });
             await sleep(waitMs);
             continue;
           }
 
+          // Reset rate limit counter on successful request
+          rateLimitRetries = 0;
+
           if (!res.ok) {
             send({ type: 'error', message: `Discord API error: ${res.status} ${res.statusText}` });
-            controller.close();
+            safeClose();
             return;
           }
 
-          // Check rate limit headers proactively
+          // Check rate limit headers proactively (with NaN protection)
           const remaining = res.headers.get('X-RateLimit-Remaining');
           const resetAfterHeader = res.headers.get('X-RateLimit-Reset-After');
           if (remaining === '0' && resetAfterHeader) {
-            await sleep(parseFloat(resetAfterHeader) * 1000 + 200);
+            const resetMs = parseFloat(resetAfterHeader);
+            if (!isNaN(resetMs)) {
+              await sleep(Math.min(resetMs * 1000 + 200, 60000));
+            }
           }
 
           const messages = (await res.json()) as DiscordMessage[];
@@ -163,7 +194,6 @@ export async function POST(request: Request): Promise<Response> {
 
           allMessages.push(...messages);
           beforeId = messages[messages.length - 1].id;
-          page++;
 
           send({ type: 'progress', fetched: allMessages.length });
 
@@ -178,7 +208,7 @@ export async function POST(request: Request): Promise<Response> {
         }
 
         if (signal.aborted) {
-          controller.close();
+          safeClose();
           return;
         }
 
@@ -189,15 +219,16 @@ export async function POST(request: Request): Promise<Response> {
           totalFetched: allMessages.length,
         });
 
-        controller.close();
+        safeClose();
       } catch (err) {
-        if (!signal.aborted) {
+        if (!signal.aborted && !closed) {
+          console.error('[Discord/fetch-messages]', err);
           send({
             type: 'error',
             message: err instanceof Error ? err.message : 'Nieznany błąd podczas pobierania wiadomości.',
           });
         }
-        controller.close();
+        safeClose();
       }
     },
   });
@@ -205,8 +236,9 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }

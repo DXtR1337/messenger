@@ -48,7 +48,7 @@ export default function ShareCardShell({
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           minHeight: 640,
           background: gradient,
           borderRadius: 20,

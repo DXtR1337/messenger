@@ -7,11 +7,28 @@ import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Only run auth logic on auth routes (login/signup redirect) — skip everything else
+  // Dashboard, analysis, settings, profile are NOT protected (local-first app)
+  const isAuthRoute = pathname.startsWith('/auth');
+  if (!isAuthRoute) {
+    return NextResponse.next();
+  }
+
+  // Skip auth logic when Supabase env vars are not configured
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.next();
+  }
+
+  // Only for /auth/* routes: check if user is logged in → redirect to dashboard
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
@@ -30,23 +47,7 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Refresh the session — this is the key call
   const { data: { user } } = await supabase.auth.getUser();
-
-  // Protected routes: redirect to login if not authenticated
-  const isProtectedRoute =
-    request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/analysis') ||
-    request.nextUrl.pathname.startsWith('/settings') ||
-    request.nextUrl.pathname.startsWith('/profile');
-
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth');
-
-  if (!user && isProtectedRoute) {
-    const loginUrl = new URL('/auth/login', request.url);
-    loginUrl.searchParams.set('redirect', request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
-  }
 
   // If logged in and trying to access auth pages, redirect to dashboard
   if (user && isAuthRoute) {

@@ -2,8 +2,14 @@ import { z } from 'zod/v4';
 
 // --- Shared building blocks ---
 
-/** AnalysisSamples is deeply nested — validate it's a non-null object, allow any keys */
-const samplesSchema = z.object({}).passthrough();
+const samplesSchema = z.object({}).passthrough().refine(
+  (val) => {
+    const rec = val as Record<string, unknown>;
+    const arr = rec['all'] ?? rec['overview'];
+    return Array.isArray(arr) && arr.length > 0;
+  },
+  'samples must contain an "overview" (or "all") array with at least one message',
+);
 
 const participantsSchema = z.array(z.string().min(1)).min(1, 'participants must contain at least one entry');
 
@@ -41,6 +47,7 @@ export const enhancedRoastRequestSchema = z.object({
     pass3: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
     pass4: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
   }),
+  deepScanMaterial: z.optional(z.string()),
 });
 export type EnhancedRoastRequestParsed = z.infer<typeof enhancedRoastRequestSchema>;
 
@@ -65,8 +72,8 @@ const conversationExcerptItemSchema = z.object({
 });
 
 export const imageRequestSchema = z.object({
-  participants: participantsSchema,
-  conversationExcerpt: z.array(conversationExcerptItemSchema).min(1, 'conversationExcerpt must not be empty'),
+  participants: z.optional(participantsSchema),
+  conversationExcerpt: z.optional(z.array(conversationExcerptItemSchema)),
   executiveSummary: z.optional(z.string()),
   healthScore: z.optional(z.number()),
   roastContext: z.optional(
@@ -74,6 +81,22 @@ export const imageRequestSchema = z.object({
       verdict: z.string(),
       roastSnippets: z.array(z.string()),
       superlativeTitles: z.array(z.string()),
+    }),
+  ),
+  datingProfileContext: z.optional(
+    z.object({
+      name: z.string(),
+      bio: z.string(),
+      ageVibe: z.string(),
+      personality: z.optional(z.string()),
+      mbti: z.optional(z.string()),
+      bigFive: z.optional(z.string()),
+      attachmentStyle: z.optional(z.string()),
+      communicationStyle: z.optional(z.string()),
+      dominantEmotions: z.optional(z.string()),
+      appearanceClues: z.optional(z.string()),
+      redFlags: z.optional(z.string()),
+      worstStats: z.optional(z.string()),
     }),
   ),
 });
@@ -107,9 +130,9 @@ export const courtRequestSchema = z.object({
 export type CourtRequestParsed = z.infer<typeof courtRequestSchema>;
 
 export const discordFetchRequestSchema = z.object({
-  botToken: z.string().min(50, 'Invalid bot token'),
   channelId: z.string().regex(/^\d{17,20}$/, 'Invalid channel ID (must be Discord snowflake)'),
-  messageLimit: z.optional(z.number().int().min(100).max(20000)),
+  messageLimit: z.optional(z.number().int().min(100).max(200_000)),
+  pin: z.optional(z.string()),
 });
 export type DiscordFetchRequestParsed = z.infer<typeof discordFetchRequestSchema>;
 

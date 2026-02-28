@@ -7,6 +7,7 @@ import { Download, X, Link2, Check } from 'lucide-react';
 import Image from 'next/image';
 import type { StoredAnalysis } from '@/lib/analysis/types';
 import { useTier } from '@/lib/tiers/tier-context';
+import { SectionErrorBoundary } from '@/components/shared/SectionErrorBoundary';
 
 // -------------------------------------------------------------------
 // Share-card download guard context
@@ -342,7 +343,9 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
                   transition={{ duration: 0.2 }}
                   style={{ minWidth: 'min(396px, 100%)' }}
                 >
-                  {renderFullCard(activeCard)}
+                  <SectionErrorBoundary section="Karta udostepniania">
+                    {renderFullCard(activeCard)}
+                  </SectionErrorBoundary>
                 </motion.div>
               </div>
             </motion.div>
@@ -415,7 +418,9 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
 
               {/* Card render */}
               <div className="flex justify-center overflow-x-auto py-4">
-                {renderFullCard(activeCard)}
+                <SectionErrorBoundary section="Karta udostepniania">
+                  {renderFullCard(activeCard)}
+                </SectionErrorBoundary>
               </div>
             </motion.div>
           )}
@@ -432,7 +437,7 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
             <div className="mb-3 text-3xl">{'\u{1F0CF}'}</div>
             <h3 className="mb-1 text-sm font-bold text-foreground">Wykorzystano 3/3 kart</h3>
             <p className="mb-4 text-xs text-muted-foreground">
-              Limit kart w darmowym planie wyczerpany na ten miesi\u0105c. Odblokuj unlimited w Pro.
+              Limit kart w darmowym planie wyczerpany na ten miesiąc. Odblokuj unlimited w Pro.
             </p>
             <a
               href="/pricing"
@@ -441,7 +446,7 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
               Odblokuj unlimited {'\u2192'}
             </a>
             <button onClick={() => setShowLimitOverlay(false)} className="mt-3 block w-full text-[11px] text-muted-foreground/60 hover:text-muted-foreground">
-              Mo\u017Ce p\u00F3\u017Aniej
+              Może później
             </button>
           </div>
         </div>

@@ -25,6 +25,12 @@ export type { LSMResult };
 // ============================================================
 
 const CATEGORIES: Record<string, Set<string>> = {
+  // Polish has no true grammatical articles — unlike English (a/an/the).
+  // We approximate with demonstrative pronouns (ten/ta/to) which serve a similar
+  // discourse function. Per Ireland & Pennebaker (2010), categories where BOTH parties
+  // score below MIN_RATE (0.001) are excluded from the LSM composite — this naturally
+  // handles Polish-dominant conversations where demonstratives are less frequent.
+  // Expected behavior: this category will score lower in Polish-only conversations.
   articles: new Set([
     // English
     'a', 'an', 'the',
@@ -181,8 +187,10 @@ export function computeLSM(messages: UnifiedMessage[], participantNames: string[
     const MIN_RATE = 0.001;
     if (ratesA[catName] < MIN_RATE && ratesB[catName] < MIN_RATE) continue;
 
-    // LSM formula: 1 - |rateA - rateB| / (rateA + rateB + 0.0001)
-    perCategory[catName] = 1 - Math.abs(ratesA[catName] - ratesB[catName]) / (ratesA[catName] + ratesB[catName] + 0.0001);
+    // LSM formula: 1 - |rateA - rateB| / (rateA + rateB + 0.0001), clamped to [0, 1]
+    perCategory[catName] = Math.min(1, Math.max(0,
+      1 - Math.abs(ratesA[catName] - ratesB[catName]) / (ratesA[catName] + ratesB[catName] + 0.0001)
+    ));
   }
 
   // Overall: mean of INCLUDED categories only (empty categories excluded above)
@@ -190,10 +198,14 @@ export function computeLSM(messages: UnifiedMessage[], participantNames: string[
   if (catValues.length === 0) return undefined;
   const overall = catValues.reduce((a, b) => a + b, 0) / catValues.length;
 
+  // Thresholds calibrated to empirical norms (Ireland & Pennebaker, 2010;
+  // Burke & Rauer, 2022: established couples .86-.91; Cannava & Bodie, 2017:
+  // ≤.65 = low, ≥.85 = high; population mean ≈ .84, range .75-.95).
   const interpretation =
-    overall >= 0.85 ? 'Wysoka synchronizacja językowa — silna spójność komunikacyjna'
-    : overall >= 0.70 ? 'Umiarkowana synchronizacja — dobra kompatybilność stylu'
-    : overall >= 0.55 ? 'Niska synchronizacja — wyraźne różnice w stylu komunikacji'
+    overall >= 0.87 ? 'Bardzo wysoka synchronizacja — powyżej normy parowej (śr. 0.84)'
+    : overall >= 0.80 ? 'Wysoka synchronizacja — w granicach normy dla par'
+    : overall >= 0.65 ? 'Umiarkowana synchronizacja — poniżej typowej normy parowej'
+    : overall >= 0.50 ? 'Niska synchronizacja — wyraźne różnice w stylu komunikacji'
     : 'Bardzo niska synchronizacja — odmienne style komunikacji';
 
   // Style proximity: who is closer to the shared midpoint of both profiles?

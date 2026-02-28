@@ -266,14 +266,21 @@ export async function POST(request: Request): Promise<Response> {
 
     // If overflow embeds, send a second message
     if (embeds.length > 10) {
-      await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bot ${botToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ embeds: embeds.slice(10) }),
-      });
+      try {
+        const overflowRes = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bot ${botToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ embeds: embeds.slice(10) }),
+        });
+        if (!overflowRes.ok) {
+          console.error('[Discord/send-roast] Overflow embed failed:', overflowRes.status);
+        }
+      } catch (err) {
+        console.error('[Discord/send-roast] Overflow embed error:', err);
+      }
     }
 
     return Response.json({ ok: true });

@@ -42,7 +42,7 @@ export default function MugshotCard({ personVerdict, caseNumber, cardRef: extern
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           minHeight: 640,
           background: '#1a1a1f',
           borderRadius: 20,

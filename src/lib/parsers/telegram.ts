@@ -138,6 +138,7 @@ export function parseTelegramJSON(data: unknown): ParsedConversation {
       for (const r of msg.reactions) {
         if (r.recent) {
           for (const person of r.recent) {
+            if (!person.from) continue;
             reactions.push({
               emoji: r.emoji,
               actor: person.from,
@@ -163,8 +164,8 @@ export function parseTelegramJSON(data: unknown): ParsedConversation {
 
   const nonSystem = messages.filter((m) => m.type !== 'system');
   const timestamps = nonSystem.map((m) => m.timestamp).filter((t) => t > 0);
-  const start = timestamps.length > 0 ? Math.min(...timestamps) : 0;
-  const end = timestamps.length > 0 ? Math.max(...timestamps) : 0;
+  const start = timestamps.length > 0 ? timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]) : 0;
+  const end = timestamps.length > 0 ? timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]) : 0;
   const durationDays = Math.max(1, Math.round((end - start) / 86_400_000));
 
   return {

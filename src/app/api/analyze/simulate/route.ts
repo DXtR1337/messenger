@@ -3,6 +3,7 @@ import { runReplySimulation } from '@/lib/analysis/simulator-prompts';
 import type { PersonProfile, Pass1Result, Pass2Result } from '@/lib/analysis/types';
 import { rateLimit } from '@/lib/rate-limit';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
+import { SSE_HEARTBEAT_MS } from '@/lib/analysis/constants';
 
 // ── Local Zod schema (avoids modifying shared schemas.ts) ────
 
@@ -127,24 +128,31 @@ export async function POST(request: Request): Promise<Response> {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(heartbeat);
+        try { controller.close(); } catch { /* already closed */ }
+      };
       const send = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch { safeClose(); }
       };
 
       const heartbeat = setInterval(() => {
+        if (closed) { clearInterval(heartbeat); return; }
         try {
           controller.enqueue(encoder.encode(':\n\n'));
         } catch {
           clearInterval(heartbeat);
         }
-      }, 15000);
+      }, SSE_HEARTBEAT_MS);
 
       try {
-        if (signal.aborted) {
-          clearInterval(heartbeat);
-          controller.close();
-          return;
-        }
+        if (signal.aborted) { safeClose(); return; }
 
         // Calculate realistic typing delay
         const typingDelay = Math.min(medianResponseTimeMs / 60, 5000);
@@ -169,11 +177,7 @@ export async function POST(request: Request): Promise<Response> {
           dynamicsAnalysis,
         });
 
-        if (signal.aborted) {
-          clearInterval(heartbeat);
-          controller.close();
-          return;
-        }
+        if (signal.aborted) { safeClose(); return; }
 
         send({
           type: 'reply',
@@ -198,7 +202,8 @@ export async function POST(request: Request): Promise<Response> {
           styleNotes: result.styleNotes,
         });
       } catch (error) {
-        if (!signal.aborted) {
+        if (!signal.aborted && !closed) {
+          console.error('[Simulate]', error);
           send({
             type: 'error',
             error: error instanceof Error
@@ -207,8 +212,7 @@ export async function POST(request: Request): Promise<Response> {
           });
         }
       } finally {
-        clearInterval(heartbeat);
-        controller.close();
+        safeClose();
       }
     },
   });
@@ -216,8 +220,9 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }

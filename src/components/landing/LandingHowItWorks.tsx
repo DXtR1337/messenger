@@ -9,7 +9,7 @@ const STEPS = [
     icon: Upload,
     title: 'Wrzuć plik',
     description:
-      'Eksportuj rozmowę z Messengera jako JSON i przeciągnij na stronę. Obsługujemy też WhatsApp.',
+      'Eksportuj rozmowę z Messengera, WhatsApp, Instagrama lub Telegrama — albo importuj przez bota Discord. Przeciągnij plik na stronę, automatycznie rozpoznamy format.',
     detail: '~30 sekund',
     color: '#3b82f6',
   },
@@ -17,7 +17,7 @@ const STEPS = [
     icon: BarChart3,
     title: 'Analizujemy',
     description:
-      '28+ metryk ilościowych obliczanych natychmiast, a potem 4 passy analizy AI — osobowość, dynamika, red flagi.',
+      '60+ metryk ilościowych obliczanych natychmiast, a potem 4 passy analizy AI — osobowość, dynamika, red flagi.',
     detail: '~2 minuty',
     color: '#a855f7',
   },
@@ -25,8 +25,8 @@ const STEPS = [
     icon: Sparkles,
     title: 'Odkrywasz',
     description:
-      'Interaktywny raport z kartami do pobrania na Instagram Stories. Receipt, Red Flag Report, Versus i 12 innych formatów.',
-    detail: '15+ kart',
+      'Interaktywny raport z kartami do pobrania na Instagram Stories. Receipt, Red Flag Report, Versus i 20 innych formatów.',
+    detail: '23 karty',
     color: '#10b981',
   },
 ];
@@ -90,7 +90,7 @@ export default function LandingHowItWorks() {
           Jak to działa?
         </h2>
         <p className="mt-2 font-story-body text-sm text-muted-foreground">
-          3 proste kroki do pełnej analizy psychologicznej
+          3 proste kroki do pełnej analizy komunikacyjnej
         </p>
       </motion.div>
 

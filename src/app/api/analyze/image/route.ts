@@ -1,4 +1,4 @@
-import { generateAnalysisImage, generateRoastImage } from '@/lib/analysis/gemini';
+import { generateAnalysisImage, generateRoastImage, generateDatingProfileImage } from '@/lib/analysis/gemini';
 import { rateLimit } from '@/lib/rate-limit';
 import { imageRequestSchema, formatZodError } from '@/lib/validation/schemas';
 
@@ -48,17 +48,19 @@ export async function POST(request: Request): Promise<Response> {
 
     const body = parsed.data;
 
-    const result = body.roastContext
+    const result = body.datingProfileContext
+        ? await generateDatingProfileImage(body.datingProfileContext)
+        : body.roastContext
         ? await generateRoastImage({
-            participants: body.participants,
-            conversationExcerpt: body.conversationExcerpt,
+            participants: body.participants ?? [],
+            conversationExcerpt: body.conversationExcerpt ?? [],
             roastVerdict: body.roastContext.verdict,
             roastSnippets: body.roastContext.roastSnippets,
             superlativeTitles: body.roastContext.superlativeTitles,
         })
         : await generateAnalysisImage({
-            participants: body.participants,
-            conversationExcerpt: body.conversationExcerpt,
+            participants: body.participants ?? [],
+            conversationExcerpt: body.conversationExcerpt ?? [],
             executiveSummary: body.executiveSummary ?? '',
             healthScore: body.healthScore ?? 50,
         });

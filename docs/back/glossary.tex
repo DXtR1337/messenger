@@ -270,4 +270,30 @@ Zob. \emph{CPS (Conversation Partnership Score)}.
 \item[\textbf{Zunifikowany format wiadomości}]
 Typ \tstype{UnifiedMessage} --- wspólna struktura danych, do której parsery wszystkich platform transformują natywne formaty. Pola: \texttt{id}, \texttt{sender}, \texttt{timestamp}, \texttt{content}, \texttt{type}, \texttt{reactions}, \texttt{media}, \texttt{isUnsent}. Definicja: \filepath{src/lib/parsers/types.ts}.
 
+% --- Nowe terminy (Fazy 24-28) ---
+
+\item[\textbf{Bid-response} (wskaźnik odpowiedzi na sygnały)]
+Metryka wywodząca się z~badań Johna Gottmana --- mierzy, jak często rozmówca odpowiada na~,,sygnały nawiązania kontaktu'' (\emph{bids for connection}) partnera. Benchmark Gottmana: $\geq 86\%$ dla par stabilnych, $< 33\%$ dla par rozstających się. Moduł: \filepath{src/lib/analysis/quant/bid-response.ts}.
+
+\item[\textbf{Chronotyp}]
+Naturalny rytm dobowy aktywności człowieka wyznaczany przez wewnętrzny zegar biologiczny. W~\podtekst wyznaczany z~godzinowego rozkładu wiadomości metodą okrągłej średniej (\emph{circular mean}). Kategorie: \emph{early bird} (ranny ptaszek, szczyt $<$ 10:00), \emph{intermediate} (pośredni) i~\emph{night owl} (nocna sowa, szczyt $\geq$ 20:00). Moduł: \filepath{src/lib/analysis/quant/chronotype.ts}.
+
+\item[\textbf{CNI} (Conversational Narcissism Index)]
+Wskaźnik narcyzmu konwersacyjnego operacjonalizujący teorię Charlesa Derbera (1979). Mierzy proporcję \emph{shift-responses} (odpowiedzi przekierowujących uwagę na siebie) do \emph{support-responses} (odpowiedzi wspierających temat rozmówcy). Wysoki CNI ($\geq 70\%$) wskazuje tendencję do przejmowania centrum rozmowy. Moduł: \filepath{src/lib/analysis/quant/shift-support.ts}.
+
+\item[\textbf{Granularność emocjonalna} (emotional granularity)]
+Zdolność do precyzyjnego różnicowania i~nazywania własnych stanów emocjonalnych. Osoby z~wysoką granularności używają szerszego i~bardziej zróżnicowanego słownictwa emocjonalnego. W~\podtekst mierzona na~podstawie 12~kategorii emocji ($\sim$160+ słów PL+EN). Badania (Kashdan et~al.\ 2015) wykazują, że wysoka granularność wiąże się z~lepszą regulacją emocji. Moduł: \filepath{src/lib/analysis/quant/emotional-granularity.ts}.
+
+\item[\textbf{Gottman benchmark}]
+Empiryczny punkt odniesienia wywodzący się z~wieloletnich badań Johna Gottmana nad parami. W~\podtekst: próg bid-response $\geq 86\%$ odróżnia pary stabilne od rozstających się.
+
+\item[\textbf{LSM} (Language Style Matching)]
+Dopasowanie stylu językowego --- miara stopnia, w~jakim dwie osoby nieświadomie synchronizują użycie \emph{function words} (słów funkcyjnych: zaimków, przyimków, spójników, negacji i~in.). Opracowana przez Ireland \& Pennebaker (2010). Wysoki wynik LSM ($\geq 0{,}80$) jest predyktorem jakości relacji i~zaangażowania. Moduł: \filepath{src/lib/analysis/quant/lsm.ts}.
+
+\item[\textbf{Pursuit-Withdrawal (pościg--wycofanie)}]
+Wzorzec dynamiki komunikacyjnej opisany przez Christensen \& Heavey (1990), w~którym jedna osoba eskaluje kontakt (pościg), podczas gdy druga milknie lub unika (wycofanie). Cykl jest silnym predyktorem niezadowolenia z~relacji. Moduł: \filepath{src/lib/analysis/quant/pursuit-withdrawal.ts}.
+
+\item[\textbf{Shift-support response}]
+Para pojęć z~teorii narcyzmu konwersacyjnego Derbera (1979). \emph{Support-response} kontynuuje temat rozmówcy (np.\ pytanie o~szczegóły). \emph{Shift-response} przekierowuje rozmowę na siebie (np.\ ,,Tak, mi też się to przydarzyło --- kiedyś ja\ldots''). Stosunek tych odpowiedzi wyznacza wskaźnik CNI.
+
 \end{description}

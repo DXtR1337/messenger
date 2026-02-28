@@ -61,7 +61,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: 'linear-gradient(180deg, #0a0a1a 0%, #0d0e1a 50%, #0a0a0f 100%)',
           borderRadius: 16,

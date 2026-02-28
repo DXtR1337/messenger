@@ -11,6 +11,8 @@ import {
   formatZodError,
 } from '../schemas';
 
+const validSamples = { overview: [{ sender: 'Alice', content: 'Hi', timestamp: 1700000000000, index: 0 }] };
+
 // ============================================================
 // analyzeRequestSchema
 // ============================================================
@@ -18,7 +20,7 @@ import {
 describe('analyzeRequestSchema', () => {
   it('accepts valid payload with required fields', () => {
     const payload = {
-      samples: { messages: [] },
+      samples: validSamples,
       participants: ['Alice', 'Bob'],
     };
     const result = analyzeRequestSchema.safeParse(payload);
@@ -27,7 +29,7 @@ describe('analyzeRequestSchema', () => {
 
   it('accepts payload with all optional fields', () => {
     const payload = {
-      samples: { messages: [] },
+      samples: validSamples,
       participants: ['Alice', 'Bob'],
       relationshipContext: 'romantic' as const,
       mode: 'roast' as const,
@@ -44,20 +46,20 @@ describe('analyzeRequestSchema', () => {
   });
 
   it('rejects when participants is empty', () => {
-    const payload = { samples: {}, participants: [] };
+    const payload = { samples: validSamples, participants: [] };
     const result = analyzeRequestSchema.safeParse(payload);
     expect(result.success).toBe(false);
   });
 
   it('rejects when participants contains empty string', () => {
-    const payload = { samples: {}, participants: [''] };
+    const payload = { samples: validSamples, participants: [''] };
     const result = analyzeRequestSchema.safeParse(payload);
     expect(result.success).toBe(false);
   });
 
   it('rejects invalid relationshipContext enum value', () => {
     const payload = {
-      samples: {},
+      samples: validSamples,
       participants: ['Alice'],
       relationshipContext: 'enemy',
     };
@@ -67,9 +69,18 @@ describe('analyzeRequestSchema', () => {
 
   it('rejects invalid mode enum value', () => {
     const payload = {
-      samples: {},
+      samples: validSamples,
       participants: ['Alice'],
       mode: 'invalid',
+    };
+    const result = analyzeRequestSchema.safeParse(payload);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects samples without overview or all array', () => {
+    const payload = {
+      samples: { messages: [] },
+      participants: ['Alice'],
     };
     const result = analyzeRequestSchema.safeParse(payload);
     expect(result.success).toBe(false);
@@ -82,19 +93,19 @@ describe('analyzeRequestSchema', () => {
 
 describe('cpsRequestSchema', () => {
   it('accepts valid payload', () => {
-    const payload = { samples: { data: [] }, participantName: 'Alice' };
+    const payload = { samples: validSamples, participantName: 'Alice' };
     const result = cpsRequestSchema.safeParse(payload);
     expect(result.success).toBe(true);
   });
 
   it('rejects empty participantName', () => {
-    const payload = { samples: {}, participantName: '' };
+    const payload = { samples: validSamples, participantName: '' };
     const result = cpsRequestSchema.safeParse(payload);
     expect(result.success).toBe(false);
   });
 
   it('rejects missing participantName', () => {
-    const payload = { samples: {} };
+    const payload = { samples: validSamples };
     const result = cpsRequestSchema.safeParse(payload);
     expect(result.success).toBe(false);
   });
@@ -107,7 +118,7 @@ describe('cpsRequestSchema', () => {
 describe('courtRequestSchema', () => {
   it('accepts valid payload with required fields', () => {
     const payload = {
-      samples: { evidence: [] },
+      samples: validSamples,
       participants: ['Alice', 'Bob'],
       quantitativeContext: 'stats here',
     };
@@ -117,7 +128,7 @@ describe('courtRequestSchema', () => {
 
   it('accepts payload with optional existingAnalysis', () => {
     const payload = {
-      samples: {},
+      samples: validSamples,
       participants: ['Alice'],
       quantitativeContext: 'stats',
       existingAnalysis: {
@@ -131,7 +142,7 @@ describe('courtRequestSchema', () => {
 
   it('rejects missing quantitativeContext', () => {
     const payload = {
-      samples: {},
+      samples: validSamples,
       participants: ['Alice'],
     };
     const result = courtRequestSchema.safeParse(payload);
@@ -146,7 +157,7 @@ describe('courtRequestSchema', () => {
 describe('standUpRequestSchema', () => {
   it('accepts valid payload', () => {
     const payload = {
-      samples: {},
+      samples: validSamples,
       participants: ['Alice', 'Bob'],
       quantitativeContext: 'stats',
     };
@@ -156,7 +167,7 @@ describe('standUpRequestSchema', () => {
 
   it('rejects missing quantitativeContext', () => {
     const payload = {
-      samples: {},
+      samples: validSamples,
       participants: ['Alice'],
     };
     const result = standUpRequestSchema.safeParse(payload);
@@ -210,10 +221,8 @@ describe('formatZodError', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const formatted = formatZodError(result.error);
-      // Should include path info and error messages
       expect(typeof formatted).toBe('string');
       expect(formatted.length).toBeGreaterThan(0);
-      // Should mention the missing fields
       expect(formatted).toContain('samples');
     }
   });
@@ -223,13 +232,11 @@ describe('formatZodError', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const formatted = formatZodError(result.error);
-      // Should contain participant-related error too
       expect(formatted).toContain('participants');
     }
   });
 
   it('shows (root) for errors without path', () => {
-    // Use a schema that can produce root-level errors
     const result = cpsRequestSchema.safeParse('not an object');
     expect(result.success).toBe(false);
     if (!result.success) {

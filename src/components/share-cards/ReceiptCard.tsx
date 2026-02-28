@@ -142,7 +142,7 @@ export default function ReceiptCard({ quantitative, conversation }: ReceiptCardP
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: paper,
           borderRadius: 4,

@@ -1,12 +1,14 @@
 /**
  * Health Score computation with explicit, documented weights.
- * 
- * These weights were calibrated based on clinical psychology research:
- * - BALANCE (0.25): Power dynamics equality is the strongest predictor of relationship satisfaction
- * - RECIPROCITY (0.20): Mutual investment prevents resentment buildup
- * - RESPONSE_PATTERN (0.20): Communication consistency reflects commitment
- * - EMOTIONAL_SAFETY (0.20): Ability to be vulnerable without punishment
+ *
+ * Component weights are inspired by relationship psychology constructs:
+ * - BALANCE (0.25): Investment reciprocity predicts satisfaction (Gottman, 1999)
+ * - RECIPROCITY (0.20): Mutual engagement prevents resentment (Baucom et al., 2002)
+ * - RESPONSE_PATTERN (0.20): Communication consistency as commitment signal
+ * - EMOTIONAL_SAFETY (0.20): Safe expression predicts resilience (Gottman & Levenson, 2000)
  * - GROWTH (0.15): Trajectory matters — stagnation ≠ stability
+ *
+ * NOTE: Specific weight values are heuristic, not empirically derived from data.
  */
 
 // ============================================================

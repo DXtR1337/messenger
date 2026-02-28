@@ -5,6 +5,7 @@ import { Flame, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sampleMessages, buildQuantitativeContext } from '@/lib/analysis/qualitative';
 import { trackEvent } from '@/lib/analytics/events';
+import { useAnalysis } from '@/lib/analysis/analysis-context';
 import type { StoredAnalysis, MegaRoastResult } from '@/lib/analysis/types';
 
 interface MegaRoastButtonProps {
@@ -14,13 +15,17 @@ interface MegaRoastButtonProps {
 }
 
 export default function MegaRoastButton({ analysis, targetPerson, onComplete }: MegaRoastButtonProps) {
+  const { startOperation, updateOperation, stopOperation } = useAnalysis();
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
+  // Do NOT abort SSE on unmount — let it finish in the background
   useEffect(() => {
-    return () => { controllerRef.current?.abort(); };
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
   }, []);
 
   const handleCancel = useCallback(() => {
@@ -36,6 +41,7 @@ export default function MegaRoastButton({ analysis, targetPerson, onComplete }: 
     setRunning(true);
     setError(null);
     setStatus(`Przygotowuję mega roast na ${targetPerson}...`);
+    startOperation('mega-roast', 'Mega Roast', `Przygotowuję mega roast na ${targetPerson}...`);
 
     controllerRef.current?.abort();
     const controller = new AbortController();
@@ -95,7 +101,8 @@ export default function MegaRoastButton({ analysis, targetPerson, onComplete }: 
             };
 
             if (event.type === 'progress' && event.status) {
-              setStatus(event.status);
+              if (mountedRef.current) setStatus(event.status);
+              updateOperation('mega-roast', { status: event.status, progress: 50 });
             } else if (event.type === 'mega_roast_complete' && event.result) {
               megaRoastResult = event.result;
             } else if (event.type === 'error') {
@@ -118,12 +125,13 @@ export default function MegaRoastButton({ analysis, targetPerson, onComplete }: 
     } catch (err) {
       await reader?.cancel();
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setError(err instanceof Error ? err.message : String(err));
+      if (mountedRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setRunning(false);
+      stopOperation('mega-roast');
+      if (mountedRef.current) setRunning(false);
       controllerRef.current = null;
     }
-  }, [analysis, targetPerson, onComplete]);
+  }, [analysis, targetPerson, onComplete, startOperation, updateOperation, stopOperation]);
 
   if (error) {
     return (

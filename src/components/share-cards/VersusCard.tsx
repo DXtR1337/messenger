@@ -55,7 +55,7 @@ export default function VersusCard({ quantitative, participants }: VersusCardPro
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: '#f8f5ef',
           position: 'relative',

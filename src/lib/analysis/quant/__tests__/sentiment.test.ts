@@ -7,7 +7,7 @@ import {
   computePersonSentiment,
 } from '../sentiment';
 import type { SentimentScore } from '../sentiment';
-import type { UnifiedMessage } from '../../../parsers/types';
+import type { UnifiedMessage } from '@/lib/parsers/types';
 
 // ============================================================
 // Helper: build a minimal UnifiedMessage
@@ -172,5 +172,131 @@ describe('computePersonSentiment', () => {
     ];
     const result = computePersonSentiment(messages);
     expect(result.neutralRatio).toBe(1);
+  });
+});
+
+describe('diacritics tolerance and negation edge cases', () => {
+  it('detects negative sentiment when ę is missing: nienawidze → negative', () => {
+    const result = computeSentimentScore('nienawidze cie strasznie');
+    expect(result.score).toBeLessThan(0.1);
+  });
+
+  it('detects positive sentiment in text without diacritics: kocham → positive', () => {
+    const result = computeSentimentScore('kocham cie jestes super pieknie');
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it('przepraszam is neutral (removed from negative dict)', () => {
+    // przepraszam should NOT trigger negative sentiment (it is a repair behavior per Gottman).
+    // "sorry" (English) was NOT removed, so we test with przepraszam only.
+    const result = computeSentimentScore('przepraszam przepraszam przepraszam');
+    expect(result.score).toBeGreaterThanOrEqual(-0.2);
+  });
+
+  it('handles Polish negation: nie kocham → negative (negation flips positive)', () => {
+    // "nie" before positive word should flip to negative
+    const result = computeSentimentScore('nie kocham cie nie lubie tego');
+    expect(result.score).toBeLessThanOrEqual(0);
+  });
+
+  it('handles double negation: nie nie lubię → should be complex but not throw', () => {
+    // Double negation is complex - just verify function runs without throwing
+    const result = computeSentimentScore('no nie nie lubie tego wcale');
+    expect(typeof result.score).toBe('number');
+    expect(isNaN(result.score)).toBe(false);
+  });
+
+  it('English negation: dont hate → processed with negation awareness', () => {
+    // "don't hate" should be processed with negation awareness
+    const result = computeSentimentScore("don't hate you i don't love this");
+    expect(typeof result.score).toBe('number');
+  });
+
+  it('pure positive Polish messages give positive score', () => {
+    const result = computeSentimentScore('kocham cie jestes cudowny uwielbiam cie super fajnie pieknie');
+    expect(result.score).toBeGreaterThan(0.1);
+  });
+
+  it('pure negative Polish messages give negative score', () => {
+    const result = computeSentimentScore('nienawidze cie okropny jestes beznadziejnie strasznie cholera');
+    expect(result.score).toBeLessThan(0);
+  });
+
+  it('Polish bez as negation: bez sensu → flips positive word if present', () => {
+    const result = computeSentimentScore('to jest bez sensu bez znaczenia');
+    expect(typeof result.score).toBe('number');
+  });
+
+  it('returns score for each participant via computePersonSentiment', () => {
+    const annaMessages = [
+      makeMessage('kocham cie', 'Anna'),
+      makeMessage('jestes cudowny', 'Anna'),
+    ];
+    const bartekMessages = [
+      makeMessage('nienawidze wszystkiego', 'Bartek'),
+      makeMessage('okropne straszne', 'Bartek'),
+    ];
+    const annaResult = computePersonSentiment(annaMessages);
+    const bartekResult = computePersonSentiment(bartekMessages);
+    expect(annaResult).toBeDefined();
+    expect(bartekResult).toBeDefined();
+    expect(annaResult.avgSentiment).toBeGreaterThan(bartekResult.avgSentiment);
+  });
+
+  it('empty/punctuation-only messages return zero score without throwing', () => {
+    const result = computeSentimentScore('   ... !!!');
+    expect(typeof result.score).toBe('number');
+    expect(isNaN(result.score)).toBe(false);
+  });
+});
+
+// ============================================================
+// roughPolishStem fallback — inflected forms not in dictionary
+// ============================================================
+
+describe('stemmer fallback — inflected Polish forms', () => {
+  it('szczęśliwemu (dative of szczęśliwy) scores positive', () => {
+    // "szczęśliwemu" is NOT in the dictionary verbatim; stem "szczęśliw" should match
+    const result = computeSentimentScore('szczęśliwemu');
+    expect(result.positive).toBeGreaterThan(0);
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it('cudownego (genitive of cudowny) scores positive', () => {
+    const result = computeSentimentScore('cudownego dnia');
+    expect(result.positive).toBeGreaterThan(0);
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it('okropnego (genitive of okropny) scores negative', () => {
+    const result = computeSentimentScore('okropnego zachowania');
+    expect(result.negative).toBeGreaterThan(0);
+    expect(result.score).toBeLessThan(0);
+  });
+
+  it('straszliwego (adjective form not in dict verbatim) scores negative', () => {
+    const result = computeSentimentScore('straszliwego dnia');
+    expect(result.negative).toBeGreaterThan(0);
+  });
+
+  it('stemmer fallback does not break existing exact-match tokens', () => {
+    // "kocham" is an exact match; should still score positive
+    const result = computeSentimentScore('kocham cie');
+    expect(result.positive).toBeGreaterThan(0);
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it('negation still works for inflected positive word (nie szczęśliwemu)', () => {
+    // negation particle before an inflected positive word should flip it to negative
+    const negated = computeSentimentScore('nie szczęśliwemu');
+    const plain   = computeSentimentScore('szczęśliwemu');
+    // negated version should score lower than or equal to plain
+    expect(negated.score).toBeLessThanOrEqual(plain.score);
+  });
+
+  it('inflected form without diacritics (szczesliwemu) scores positive via stripped stem', () => {
+    // Users often omit diacritics; stem lookup with stripDiacritics should handle it
+    const result = computeSentimentScore('szczesliwemu');
+    expect(result.positive).toBeGreaterThan(0);
   });
 });

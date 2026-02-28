@@ -24,7 +24,10 @@ const URL_RE = /https?:\/\/\S+/i;
 export function decodeFBString(str: string | undefined | null): string {
   if (!str) return '';
   try {
-    const bytes = new Uint8Array(str.split('').map(c => c.charCodeAt(0)));
+    const bytes = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      bytes[i] = str.charCodeAt(i);
+    }
     return new TextDecoder('utf-8').decode(bytes);
   } catch {
     // If decoding fails, return original — it might already be correct
@@ -153,6 +156,9 @@ function parseAltConversation(data: AltConversation): ParsedConversation {
   });
 
   const timestamps = messages.map(m => m.timestamp);
+  if (timestamps.length === 0) {
+    throw new Error('No messages found in the Messenger export.');
+  }
   const start = timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]);
   const end = timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]);
   const durationDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
@@ -241,6 +247,9 @@ export function parseMessengerJSON(data: unknown): ParsedConversation {
 
   // Compute metadata
   const timestamps = messages.map(m => m.timestamp);
+  if (timestamps.length === 0) {
+    throw new Error('No messages found in the Messenger export.');
+  }
   const start = timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]);
   const end = timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]);
   const durationDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
@@ -281,7 +290,7 @@ export function mergeMessengerFiles(files: unknown[]): ParsedConversation {
 
   const seen = new Set<string>();
   const deduped = merged.filter(m => {
-    const key = `${m.timestamp}-${m.sender}`;
+    const key = `${m.timestamp}-${m.sender}-${(m.content || '').slice(0, 20)}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -291,6 +300,9 @@ export function mergeMessengerFiles(files: unknown[]): ParsedConversation {
 
   const first = parsed[0];
   const timestamps = allMessages.map(m => m.timestamp);
+  if (timestamps.length === 0) {
+    throw new Error('No messages found after merging Messenger files.');
+  }
   const start = timestamps.reduce((a, b) => a < b ? a : b, timestamps[0]);
   const end = timestamps.reduce((a, b) => a > b ? a : b, timestamps[0]);
   const durationDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));

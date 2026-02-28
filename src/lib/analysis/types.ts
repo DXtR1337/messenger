@@ -10,6 +10,8 @@ import type { DelusionQuizResult } from './delusion-quiz';
 import type { CourtResult } from './court-prompts';
 import type { DatingProfileResult } from './dating-profile-prompts';
 import type { CoupleQuizComparison } from './couple-quiz';
+import type { EmotionCausesResult } from './emotion-causes-prompts';
+import type { MoralFoundationsResult } from './moral-foundations-prompts';
 
 // ============================================================
 // PASS 1: Overview — Tone, Style, Relationship Type
@@ -152,6 +154,8 @@ export interface BigFiveTrait {
   /** Low and high end of the estimated range, each 1-10 */
   range: [number, number];
   evidence: string;
+  /** Behavioral evidence specific to THIS trait — required for agreeableness to prevent Empathy conflation */
+  distinction_check?: string;
   confidence: number;
 }
 
@@ -256,23 +260,31 @@ export interface PersonProfile {
 
 // ── Clinical-adjacent observations ────────────────────────
 
+// Frequency labels (new) + legacy severity values (backward compat with stored analyses)
+type ObservationFrequency =
+  | 'not_observed' | 'occasional' | 'recurring' | 'pervasive'
+  | 'none' | 'mild' | 'moderate' | 'significant' | 'severe';
+
 export interface ClinicalObservations {
   anxiety_markers: {
     present: boolean;
     patterns: string[];
-    severity: 'none' | 'mild' | 'moderate' | 'significant';
+    frequency?: ObservationFrequency;
+    severity?: ObservationFrequency;
     confidence: number;
   };
   avoidance_markers: {
     present: boolean;
     patterns: string[];
-    severity: 'none' | 'mild' | 'moderate' | 'significant';
+    frequency?: ObservationFrequency;
+    severity?: ObservationFrequency;
     confidence: number;
   };
   manipulation_patterns: {
     present: boolean;
     types: string[];
-    severity: 'none' | 'mild' | 'moderate' | 'severe';
+    frequency?: ObservationFrequency;
+    severity?: ObservationFrequency;
     confidence: number;
   };
   boundary_respect: {
@@ -395,6 +407,8 @@ export interface RoastResult {
     roast: string;   // funny description
   }>;
   verdict: string; // one-line brutal summary
+  /** Enhanced roast: commentary on intensity crescendo (Rozgrzewka, Main Event, Finish Him) */
+  rounds_commentary?: [string, string, string];
 }
 
 // ============================================================
@@ -466,6 +480,74 @@ export interface CwelTygodniaResult {
 }
 
 // ============================================================
+// ARGUMENT SIMULATION
+// ============================================================
+
+export interface ArgumentSimulationMessage {
+  sender: string;
+  text: string;
+  /** Delay in ms before this message appears (from previous message) */
+  delayMs: number;
+  /** Messages in the same burst group appear rapid-fire */
+  burstGroup: number;
+  phase: 'trigger' | 'escalation' | 'peak' | 'deescalation' | 'aftermath';
+  /** Whether to show typing indicator before this message */
+  isTypingVisible: boolean;
+}
+
+export interface ArgumentTopic {
+  topic: string;
+  /** How often this topic appeared in real conflicts */
+  frequency: number;
+  /** Person A's typical stance on this topic */
+  stanceA: string;
+  /** Person B's typical stance on this topic */
+  stanceB: string;
+  volatility: 'low' | 'medium' | 'high';
+}
+
+export interface ArgumentSummary {
+  /** Who escalated more */
+  escalator: string;
+  /** Who first tried to de-escalate */
+  firstDeescalator: string;
+  /** How many messages until peak conflict */
+  escalationMessageCount: number;
+  totalMessages: number;
+  dominantHorseman: 'criticism' | 'contempt' | 'defensiveness' | 'stonewalling';
+  /** 0-100 score per horseman */
+  horsemanScores: Record<string, number>;
+  /** Polish text comparing with real conflict patterns */
+  comparisonWithReal: string;
+  /** Polish text describing the conflict arc */
+  patternDescription: string;
+  personBreakdown: Record<string, {
+    messagesCount: number;
+    avgLength: number;
+    /** 0-100 escalation contribution */
+    escalationContribution: number;
+    dominantPhase: string;
+  }>;
+}
+
+export interface EnrichedFingerprintData {
+  topics: ArgumentTopic[];
+  perPerson: Record<string, {
+    sarcasmPatterns: string[];
+    emotionalTriggers: string[];
+    deepEscalationStyle: string;
+    deepDeescalationStyle: string;
+  }>;
+}
+
+export interface ArgumentSimulationResult {
+  topic: string;
+  messages: ArgumentSimulationMessage[];
+  summary: ArgumentSummary;
+  enrichedFingerprint: EnrichedFingerprintData;
+}
+
+// ============================================================
 // Container & Storage Types
 // ============================================================
 
@@ -479,6 +561,8 @@ export interface QualitativeAnalysis {
   pass3?: Record<string, PersonProfile>;
   pass4?: Pass4Result;
   roast?: RoastResult;
+  /** Enhanced Roast — deep psychological roast using full pass1-4 context (optional) */
+  enhancedRoast?: RoastResult;
   /** Communication Pattern Screening (optional Pass 5) */
   cps?: CPSResult;
   /** Subtext Decoder (optional) */
@@ -497,6 +581,14 @@ export interface QualitativeAnalysis {
   megaRoast?: MegaRoastResult;
   /** Cwel Tygodnia — AI-first group chat award ceremony (optional) */
   cwelTygodnia?: CwelTygodniaResult;
+  /** Emotion Cause Extraction (optional AI pass) */
+  emotionCauses?: EmotionCausesResult;
+  /** Moral Foundations Theory (optional AI pass) */
+  moralFoundations?: MoralFoundationsResult;
+  /** Active-Constructive Responding / Capitalization (optional AI pass) */
+  capitalization?: import('./capitalization-prompts').CapitalizationResult;
+  /** Symulacja Kłótni — generated argument simulation (optional) */
+  argumentSimulation?: ArgumentSimulationResult;
   completedAt?: number;
 }
 

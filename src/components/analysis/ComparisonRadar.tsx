@@ -56,6 +56,7 @@ function normalize(valueA: number, valueB: number): [number, number] {
 function ComparisonRadar({ analysisA, analysisB }: ComparisonRadarProps) {
   const chartHeight = useChartHeight(340);
   const data: RadarDataPoint[] = useMemo(() => {
+    if (!analysisA || !analysisB) return [];
     const a = analysisA;
     const b = analysisB;
 
@@ -124,6 +125,14 @@ function ComparisonRadar({ analysisA, analysisB }: ComparisonRadarProps) {
       { axis: 'Media', A: mdA, B: mdB },
     ];
   }, [analysisA, analysisB]);
+
+  if (!analysisA || !analysisB) {
+    return (
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 text-center text-sm text-zinc-500">
+        Brak danych do wyświetlenia
+      </div>
+    );
+  }
 
   const titleA = analysisA.title.length > 20
     ? analysisA.title.slice(0, 18) + '...'

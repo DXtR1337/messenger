@@ -66,7 +66,7 @@ export default function FlagsCard({ redFlags, greenFlags }: FlagsCardProps) {
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: 'linear-gradient(160deg, #c4956a 0%, #b8895e 30%, #a87d5a 60%, #9e7352 100%)',
           position: 'relative',

@@ -69,7 +69,7 @@ export default function WrappedPage() {
             className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
           >
             <ArrowLeft className="size-4" />
-            Powrot do analizy
+            Powrót do analizy
           </Link>
         </div>
       </div>

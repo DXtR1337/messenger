@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeQuantitativeAnalysis } from '../../analysis/quantitative';
+import { computeQuantitativeAnalysis } from '@/lib/analysis/quantitative';
 import type { ParsedConversation, UnifiedMessage } from '../types';
 
 // ============================================================

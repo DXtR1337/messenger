@@ -4,9 +4,12 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Heart, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sampleMessages, buildQuantitativeContext } from '@/lib/analysis/qualitative';
+import { runDeepScan } from '@/lib/analysis/deep-scanner';
 import { trackEvent } from '@/lib/analytics/events';
+import { useAnalysis } from '@/lib/analysis/analysis-context';
 import type { StoredAnalysis } from '@/lib/analysis/types';
 import type { DatingProfileResult } from '@/lib/analysis/dating-profile-prompts';
+import { logger } from '@/lib/logger';
 
 interface DatingProfileButtonProps {
   analysis: StoredAnalysis;
@@ -14,13 +17,17 @@ interface DatingProfileButtonProps {
 }
 
 export default function DatingProfileButton({ analysis, onComplete }: DatingProfileButtonProps) {
+  const { startOperation, updateOperation, stopOperation } = useAnalysis();
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
+  // Do NOT abort SSE on unmount — let it finish in the background
   useEffect(() => {
-    return () => { controllerRef.current?.abort(); };
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
   }, []);
 
   const handleCancel = useCallback(() => {
@@ -36,6 +43,7 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
     setRunning(true);
     setError(null);
     setStatus('Skanowanie wzorców komunikacji...');
+    startOperation('dating', 'Dating Profile', 'Skanowanie wzorców komunikacji...');
 
     controllerRef.current?.abort();
     const controller = new AbortController();
@@ -49,10 +57,20 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
       const participants = conversation.participants.map((p) => p.name);
       const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
 
+      // Deep scan — extract confessions, contradictions, obsessions, pet names
+      if (mountedRef.current) setStatus('Szukam najciekawszych wątków...');
+      updateOperation('dating', { status: 'Szukam najciekawszych wątków...', progress: 15 });
+      const deepScan = runDeepScan(conversation, quantitative);
+      logger.log('[DatingProfile] Deep scan material:', (deepScan.formattedForPrompt.length / 1024).toFixed(1), 'KB');
+
+      if (mountedRef.current) setStatus('Tworzę szczere profile randkowe...');
+      updateOperation('dating', { status: 'Tworzę szczere profile randkowe...', progress: 25 });
+
       const body: Record<string, unknown> = {
         samples,
         participants,
         quantitativeContext,
+        deepScanMaterial: deepScan.formattedForPrompt,
       };
 
       if (qualitative?.pass1 || qualitative?.pass3) {
@@ -103,7 +121,8 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
             };
 
             if (event.type === 'progress' && event.status) {
-              setStatus(event.status);
+              if (mountedRef.current) setStatus(event.status);
+              updateOperation('dating', { status: event.status, progress: 50 });
             } else if (event.type === 'complete' && event.result) {
               profileResult = event.result;
             } else if (event.type === 'error') {
@@ -126,12 +145,13 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
     } catch (err) {
       await reader?.cancel();
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setError(err instanceof Error ? err.message : String(err));
+      if (mountedRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setRunning(false);
+      stopOperation('dating');
+      if (mountedRef.current) setRunning(false);
       controllerRef.current = null;
     }
-  }, [analysis, onComplete]);
+  }, [analysis, onComplete, startOperation, updateOperation, stopOperation]);
 
   if (error) {
     return (

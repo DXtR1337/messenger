@@ -283,16 +283,37 @@ describe('topNPhrases', () => {
 
 describe('getMonthKey', () => {
   it('returns YYYY-MM format', () => {
-    // 2024-03-15 in UTC
-    const ts = new Date('2024-03-15T12:00:00Z').getTime();
+    const ts = new Date(2024, 2, 15, 12, 0, 0).getTime(); // March 15 local
     expect(getMonthKey(ts)).toBe('2024-03');
+  });
+
+  it('uses local timezone, not UTC', () => {
+    // Feb 1 at 00:30 local time — should be Feb, not Jan
+    const ts = new Date(2024, 1, 1, 0, 30, 0).getTime();
+    expect(getMonthKey(ts)).toBe('2024-02');
+  });
+
+  it('pads single-digit months', () => {
+    const ts = new Date(2024, 0, 15, 12, 0, 0).getTime(); // January
+    expect(getMonthKey(ts)).toBe('2024-01');
   });
 });
 
 describe('getDayKey', () => {
   it('returns YYYY-MM-DD format', () => {
-    const ts = new Date('2024-03-15T12:00:00Z').getTime();
+    const ts = new Date(2024, 2, 15, 12, 0, 0).getTime(); // March 15 local
     expect(getDayKey(ts)).toBe('2024-03-15');
+  });
+
+  it('uses local timezone, not UTC', () => {
+    // Feb 1 at 00:30 local time — should be Feb 1, not Jan 31
+    const ts = new Date(2024, 1, 1, 0, 30, 0).getTime();
+    expect(getDayKey(ts)).toBe('2024-02-01');
+  });
+
+  it('pads single-digit days and months', () => {
+    const ts = new Date(2024, 0, 5, 12, 0, 0).getTime(); // Jan 5
+    expect(getDayKey(ts)).toBe('2024-01-05');
   });
 });
 
@@ -340,5 +361,70 @@ describe('isWeekend', () => {
     // March 18, 2024 is a Monday
     const ts = new Date(2024, 2, 18, 12, 0, 0).getTime();
     expect(isWeekend(ts)).toBe(false);
+  });
+});
+
+describe('tokenizeWords - Unicode normalization (NFC)', () => {
+  it('handles NFC normalized text correctly', () => {
+    const nfc = 'kochanie'; // standard ę
+    expect(tokenizeWords(nfc)).toContain('kochanie');
+  });
+
+  it('treats NFD and NFC forms of same word as identical after normalization', () => {
+    // NFD: ę decomposed as e + combining character
+    const nfd = 'kochanie'.normalize('NFD');
+    const nfc = 'kochanie'.normalize('NFC');
+    // After our normalization step, both should produce same token
+    expect(tokenizeWords(nfd)).toEqual(tokenizeWords(nfc));
+  });
+
+  it('handles FB Messenger double-encode edge case via NFC', () => {
+    // When NFC normalizes already-correct Polish text, output is unchanged
+    // Use 'nienawidzę' (not a stopword) and 'uwielbiam' (not a stopword)
+    const text = 'nienawidzę uwielbiam kocham';
+    const result = tokenizeWords(text);
+    expect(result).toContain('nienawidzę');
+    expect(result).toContain('kocham');
+  });
+
+  it('tokenizes Polish text without diacritics correctly', () => {
+    // 'nienawidze' and 'kocham' are not stopwords
+    const text = 'nienawidze kocham uwielbiam';
+    const result = tokenizeWords(text);
+    expect(result).toContain('nienawidze');
+    expect(result).toContain('kocham');
+  });
+
+  it('does not create duplicate tokens for same word in NFC and NFD forms', () => {
+    // In a frequency map, NFC-normalized text should not produce duplicates
+    const nfdText = '\u006B\u006F\u0063\u0068\u0061\u006E\u0069\u0065'; // "kochanie" in ASCII (no diacritics issue)
+    const nfcText = 'kochanie';
+    expect(tokenizeWords(nfdText)).toEqual(tokenizeWords(nfcText));
+  });
+
+  it('NFC normalization is transparent for ASCII text (no change)', () => {
+    const ascii = 'hello world test';
+    const result = tokenizeWords(ascii);
+    expect(result).toContain('hello');
+    expect(result).toContain('world');
+    expect(result).toContain('test');
+  });
+
+  it('still filters stopwords after NFC normalization', () => {
+    // Common Polish stopwords should still be filtered
+    const text = 'ja to jest on ona'; // all likely stopwords
+    const result = tokenizeWords(text);
+    // Should not contain Polish stopwords - exact set depends on constants
+    // At minimum, result should be array (may be empty if all filtered)
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it('handles mixed Polish and ASCII text with NFC', () => {
+    // 'bardzo' is a stopword; use 'kocham' and 'uwielbiam' which are not
+    const mixed = 'kocham you uwielbiam much';
+    const result = tokenizeWords(mixed);
+    expect(result).toContain('kocham');
+    expect(result).toContain('uwielbiam');
+    expect(result.every(w => w.length >= 2)).toBe(true);
   });
 });

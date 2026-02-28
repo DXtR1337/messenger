@@ -13,6 +13,20 @@
 import type { UnifiedMessage } from '../../parsers/types';
 import { getDayKey, countWords } from './helpers';
 
+/**
+ * Simple word tokenizer for bigram matching.
+ * Does NOT filter stopwords (unlike tokenizeWords) — words like "ty", "nie",
+ * "jak" are critical for conflict bigrams and must be kept.
+ * Uses Unicode-aware split so Polish characters are treated as word chars.
+ */
+function splitWords(text: string): string[] {
+  return text
+    .normalize('NFC')
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(w => w.length > 0);
+}
+
 // ============================================================
 // Types
 // ============================================================
@@ -52,6 +66,68 @@ const ESCALATION_MULTIPLIER = 2;
 const ESCALATION_CONFIRM_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 /** Minimum gap between reported escalation events to avoid clustering */
 const MIN_ESCALATION_GAP_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+// ── Bigram-based conflict keywords ───────────────────────
+// Single words like "dlaczego" cause false positives ("Dlaczego kupiłeś mleko?").
+// Bigrams require accusatory context: "ty" + absolute quantifier = conflict signal.
+const CONFLICT_BIGRAMS_PL = [
+  'ty zawsze', 'ty nigdy', 'dlaczego ty', 'czemu ty', 'znowu ty',
+  'twoja wina', 'przez ciebie', 'jak zwykle', 'jak zawsze',
+  'masz problem', 'nie rozumiesz', 'nie słuchasz',
+] as const;
+const CONFLICT_BIGRAMS_EN = [
+  'you always', 'you never', 'why do you', 'your fault',
+  'because of you', 'as always', 'you dont', 'you don\'t',
+] as const;
+
+/**
+ * Count accusatory bigrams in a message using token-array matching.
+ *
+ * Uses splitWords() instead of .includes() on raw text to prevent:
+ * 1. Substring false-positives (e.g. "okty zawsze" matching "ty zawsze")
+ * 2. Polish word boundary issues (JS \b doesn't treat Polish chars as word chars)
+ *
+ * Returns count of matched conflict bigrams.
+ */
+function countConflictBigrams(text: string): number {
+  const words = splitWords(text);
+  let count = 0;
+
+  const matchesBigram = (w1: string, w2: string): boolean => {
+    for (let i = 0; i < words.length - 1; i++) {
+      if (words[i] === w1 && words[i + 1] === w2) return true;
+    }
+    return false;
+  };
+
+  for (const bigram of CONFLICT_BIGRAMS_PL) {
+    const [w1, w2] = bigram.split(' ');
+    if (w1 && w2 && matchesBigram(w1, w2)) count++;
+  }
+  for (const bigram of CONFLICT_BIGRAMS_EN) {
+    const [w1, w2] = bigram.split(' ');
+    if (w1 && w2 && matchesBigram(w1, w2)) count++;
+  }
+  return count;
+}
+
+/**
+ * Check if messages in a range contain lexical conflict signals (≥2 bigrams).
+ * Used to boost severity of timing-based escalation detections.
+ */
+function hasLexicalConflictSignals(
+  messages: UnifiedMessage[],
+  startIdx: number,
+  endIdx: number,
+): boolean {
+  let totalBigrams = 0;
+  for (let i = startIdx; i <= endIdx && i < messages.length; i++) {
+    if (!messages[i].content) continue;
+    totalBigrams += countConflictBigrams(messages[i].content);
+    if (totalBigrams >= 2) return true;
+  }
+  return false;
+}
 /** Intensity threshold: messages per hour to consider "intense" */
 const INTENSE_MSG_PER_HOUR = 8;
 /** Minimum silence duration after intense exchange to flag */
@@ -218,13 +294,18 @@ function detectEscalations(messages: UnifiedMessage[]): ConflictEvent[] {
         const template = ESCALATION_TEMPLATES[templateIndex % ESCALATION_TEMPLATES.length];
         templateIndex++;
 
+        // Boost severity if lexical conflict signals (accusatory bigrams) are present
+        const baseSeverity = recentSpikes.length >= 3 ? 3 : 2;
+        const lexicalBoost = hasLexicalConflictSignals(messages, firstSpike.index, i) ? 1 : 0;
+        const severity = Math.min(3, baseSeverity + lexicalBoost);
+
         events.push({
           type: 'escalation',
           timestamp: firstSpike.timestamp,
           date: getDayKey(firstSpike.timestamp),
           participants,
           description: template(namesStr, multiplier),
-          severity: recentSpikes.length >= 3 ? 3 : 2,
+          severity,
           messageRange: [firstSpike.index, i],
         });
 

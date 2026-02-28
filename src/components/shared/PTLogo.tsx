@@ -1,5 +1,3 @@
-'use client';
-
 import { useId } from 'react';
 
 interface PTLogoProps {
@@ -10,8 +8,10 @@ interface PTLogoProps {
 
 export default function PTLogo({ size = 28, className = '' }: PTLogoProps) {
   const uid = useId();
-  const gradId = `ptgrad-${uid}`;
-  const maskId = `ptmask-${uid}`;
+  // Sanitize useId output for SVG id attributes (colons not valid in CSS selectors)
+  const safeUid = uid.replace(/:/g, '');
+  const gradId = `ptg${safeUid}`;
+  const maskId = `ptm${safeUid}`;
 
   // Original viewBox: 580 x 370 → aspect ratio ~1.568
   const width = Math.round(size * (580 / 370));
@@ -24,6 +24,7 @@ export default function PTLogo({ size = 28, className = '' }: PTLogoProps) {
       fill="none"
       className={className}
       aria-hidden="true"
+      suppressHydrationWarning
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">

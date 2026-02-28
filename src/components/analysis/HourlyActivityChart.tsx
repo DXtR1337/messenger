@@ -19,6 +19,7 @@ import {
   CHART_AXIS_TICK,
   CHART_GRID_PROPS,
   PERSON_COLORS_HEX,
+  CHART_CURSOR_BAR,
   useIsMobile,
   useAxisWidth,
 } from './chart-config';
@@ -89,7 +90,13 @@ export default function HourlyActivityChart({
     );
   }, [chartData, participants]);
 
-  if (!hasData) return null;
+  if (!hasData) {
+    return (
+      <div className="py-8 text-center text-sm text-white/50">
+        Brak danych do wyświetlenia
+      </div>
+    );
+  }
 
   const colors = participants.length > 2 ? EXTENDED_COLORS : PERSON_COLORS_HEX;
 
@@ -101,14 +108,14 @@ export default function HourlyActivityChart({
       initial={{ opacity: 0 }}
       animate={inView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="overflow-hidden rounded-xl border border-border bg-card"
+      className="overflow-hidden"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-5 pt-4">
         <div>
-          <h3 className="font-display text-[15px] font-bold">
+          <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">
             Aktywność w ciągu dnia
           </h3>
-          <p className="mt-0.5 text-xs text-text-muted">
+          <p className="mt-0.5 text-xs text-white/50">
             Rozkład wiadomości według godziny
           </p>
         </div>
@@ -116,10 +123,10 @@ export default function HourlyActivityChart({
           {participants.slice(0, isMobile ? 4 : 10).map((name, i) => (
             <span
               key={name}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              className="flex items-center gap-1.5 text-xs text-white/50"
             >
               <span
-                className="inline-block h-2 w-2 rounded-sm"
+                className="inline-block size-2 rounded-[3px]"
                 style={{
                   backgroundColor: colors[i % colors.length],
                 }}
@@ -130,7 +137,7 @@ export default function HourlyActivityChart({
             </span>
           ))}
           {participants.length > (isMobile ? 4 : 10) && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-white/50">
               +{participants.length - (isMobile ? 4 : 10)}
             </span>
           )}
@@ -165,11 +172,13 @@ export default function HourlyActivityChart({
             <Tooltip
               contentStyle={CHART_TOOLTIP_STYLE}
               labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-              labelFormatter={(label: any) => `${label}:00`}
-              formatter={(value: any, name: any) => [
-                (value as number).toLocaleString('pl-PL'),
-                name as string,
+              labelFormatter={(label) => `${label}:00`}
+              formatter={(value, name) => [
+                Number(value).toLocaleString('pl-PL'),
+                String(name),
               ]}
+              cursor={CHART_CURSOR_BAR}
+              animationDuration={0}
             />
             {participants.map((name, i) => (
               <Bar
@@ -177,7 +186,7 @@ export default function HourlyActivityChart({
                 dataKey={name}
                 stackId="hourly"
                 fill={colors[i % colors.length]}
-                fillOpacity={0.85}
+                fillOpacity={0.75}
                 radius={
                   i === participants.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]
                 }

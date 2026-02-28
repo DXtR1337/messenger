@@ -66,7 +66,7 @@ export default function CPSCard({ cpsResult }: CPSCardProps) {
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           minHeight: 640,
           background: '#050510',
           borderRadius: 20,

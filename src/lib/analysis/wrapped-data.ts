@@ -99,7 +99,7 @@ function safePercent(a: number, b: number): [number, number] {
 
 function findPeakHour(heatmap: QuantitativeAnalysis['heatmap']): { hour: number; count: number } {
   const combined = heatmap.combined;
-  let maxHour = 0;
+  let maxHour = 12;
   let maxCount = 0;
 
   for (let hour = 0; hour < 24; hour++) {
@@ -225,7 +225,7 @@ export function generateWrappedSlides(
       emoji: '\u{23F1}\uFE0F',
       title: 'Kto odpowiada szybciej?',
       value: fasterName,
-      subtitle: `\u015Arednio w ${formatMinutes(fasterTime)}`,
+      subtitle: `Średnio w ${formatMinutes(fasterTime)}`,
       detail: `Wolniejsza osoba odpowiada w ${formatMinutes(slowerTime)}`,
       personA: { name: nameA, value: formatMinutes(rtA), percent: rtA <= rtB ? 100 : Math.min(100, Math.round((rtB / (rtA || 1)) * 100)) },
       personB: { name: nameB, value: formatMinutes(rtB), percent: rtB <= rtA ? 100 : Math.min(100, Math.round((rtA / (rtB || 1)) * 100)) },
@@ -269,7 +269,7 @@ export function generateWrappedSlides(
       title: 'Wasze ulubione emoji',
       value: topEmoji[0],
       subtitle: `Użyte ${formatNumber(topEmoji[1])} razy`,
-      detail: `\u0141\u0105cznie u\u017cyliście ${formatNumber(totalEmoji)} emoji${sortedEmojis.length > 1 ? ` \u2014 #2 to ${sortedEmojis[1][0]}` : ''}`,
+      detail: `Łącznie użyliście ${formatNumber(totalEmoji)} emoji${sortedEmojis.length > 1 ? ` \u2014 #2 to ${sortedEmojis[1][0]}` : ''}`,
     });
   }
 

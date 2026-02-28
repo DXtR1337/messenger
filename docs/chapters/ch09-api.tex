@@ -785,6 +785,74 @@ obliczone podczas parsowania. Logika pyta\'{n} i~scoringu znajduje si\k{e} w~pli
 \filepath{src/lib/analysis/delusion-quiz.ts} (568 LOC).
 \end{infobox}
 
+% ============================================================
+\section{POST /api/analyze/cwel}
+\label{sec:endpoint-cwel}
+% ============================================================
+
+\begin{description}
+  \item[Plik] \filepath{src/app/api/analyze/cwel/route.ts}
+  \item[Metoda] POST
+  \item[Tryb] SSE streaming
+  \item[Rate limit] 5~zapyta\'{n} / 10~min
+  \item[Temperatura] 0,7
+\end{description}
+
+\textbf{Opis:} Ceremonialny AI roast wskazuj\k{a}cy ,,cwela tygodnia'' --- uczestnika wykazuj\k{a}cego najwi\k{e}cej komunikacyjnych patologii (narcyzm konwersacyjny, gaslighting, unikanie odpowiedzialno\'{s}ci, double-texting, celowe ignorowanie).
+
+\begin{lstlisting}[style=podcode, caption={Cia\l{}o \k{z}adania POST /api/analyze/cwel}]
+{
+  samples: Message[],          // probka wiadomosci
+  metadata: {
+    participants: string[],
+    totalMessages: number,
+    dateRange: { start: string; end: string }
+  },
+  relationType: string         // np. "romantic", "friendship"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=podcode, caption={Schemat odpowiedzi SSE}]
+interface CwelResult {
+  cwelOfTheWeek: string;       // imie wybranego uczestnika
+  verdict: string;             // krotki werdykt (1 zdanie)
+  evidence: string[];          // cytaty dowodowe z rozmowy
+  uzasadnienie: string;        // rozbudowane uzasadnienie wyboru
+}
+\end{lstlisting}
+
+Endpoint streamuje wynik przez SSE identycznie jak pozosta\l{}e endpointy analizy (heartbeat co~15~s, sygna\l{} \texttt{done} po~zako\'{n}czeniu).
+
+% ============================================================
+\section{POST /api/discord/send-roast}
+\label{sec:endpoint-send-roast}
+% ============================================================
+
+\begin{description}
+  \item[Plik] \filepath{src/app/api/discord/send-roast/route.ts}
+  \item[Metoda] POST
+  \item[Tryb] JSON (nie SSE)
+  \item[Rate limit] 10~zapyta\'{n} / 10~min
+\end{description}
+
+\textbf{Opis:} Wysy\l{}a mega-roast lub wynik Cwel~Tygodnia bezpo\'{s}rednio do~kana\l{}u Discord przez Discord Bot~API. U\.{z}ywany po~wygenerowaniu roastu przez \texttt{/cwel} lub \texttt{/enhanced-roast}, gdy u\.{z}ytkownik chce przes\l{}a\'{c} wynik na~serwer Discord.
+
+\begin{lstlisting}[style=podcode, caption={Cia\l{}o \k{z}adania POST /api/discord/send-roast}]
+{
+  channelId: string,           // ID kanalu Discord
+  roastContent: string,        // tresc wiadomosci do wyslania
+  botToken: string             // token bota Discord
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=podcode, caption={Schemat odpowiedzi JSON}]
+{
+  success: boolean,
+  messageId: string            // ID wyslanej wiadomosci Discord
+}
+\end{lstlisting}
+
+Endpoint wywo\l{}uje Discord REST~API (\texttt{POST /channels/\{id\}/messages}) z~Bearer tokenem bota. W~przypadku b\l{}\k{e}du API Discord zwraca odpowiedni HTTP status code i~komunikat b\l{}\k{e}du.
 
 % ============================================================
 \section{Rate Limiting}

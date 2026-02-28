@@ -15,6 +15,7 @@ const DISCORD_API = 'https://discord.com/api/v10';
 const MESSAGES_PER_PAGE = 100;
 const DELAY_BETWEEN_REQUESTS_MS = 200;
 const MAX_MESSAGES_FOR_BOT = 5_000;
+const MAX_RATE_LIMIT_RETRIES = 10;
 
 interface CacheEntry {
   conversation: ParsedConversation;
@@ -97,6 +98,7 @@ export async function fetchAndCacheAnalysis(
   // Paginate messages
   const allMessages: DiscordMessage[] = [];
   let beforeId: string | undefined;
+  let rateLimitRetries = 0;
 
   while (true) {
     const url = new URL(`${DISCORD_API}/channels/${channelId}/messages`);
@@ -106,6 +108,9 @@ export async function fetchAndCacheAnalysis(
     const res = await fetch(url.toString(), { headers });
 
     if (res.status === 429) {
+      if (++rateLimitRetries > MAX_RATE_LIMIT_RETRIES) {
+        throw new Error(`Discord rate limit: exceeded ${MAX_RATE_LIMIT_RETRIES} retries`);
+      }
       const retryAfter = res.headers.get('Retry-After');
       await sleep(retryAfter ? parseFloat(retryAfter) * 1000 + 200 : 5000);
       continue;

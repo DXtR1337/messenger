@@ -2,10 +2,11 @@
  * Tests for share URL encoding and decoding.
  */
 import { describe, it, expect } from 'vitest';
+import { compressToEncodedURIComponent } from 'lz-string';
 import { encodeShareData, buildShareUrl } from '../encode';
 import { decodeShareData } from '../decode';
-import type { StoredAnalysis } from '../../analysis/types';
-import type { ParsedConversation, QuantitativeAnalysis } from '../../parsers/types';
+import type { StoredAnalysis } from '@/lib/analysis/types';
+import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 
 // ============================================================
 // Helper: build minimal StoredAnalysis for testing
@@ -189,13 +190,13 @@ describe('decodeShareData — error cases', () => {
 
   it('returns null for valid JSON that does not match payload schema', () => {
     // lz-string compress a valid JSON that is not a SharePayload
-    const { compressToEncodedURIComponent } = require('lz-string');
+    // using top-level import
     const encoded = compressToEncodedURIComponent(JSON.stringify({ foo: 'bar' }));
     expect(decodeShareData(encoded)).toBeNull();
   });
 
   it('returns null for payload with wrong version', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+    // using top-level import
     const payload = {
       v: 2,
       participantCount: 2,

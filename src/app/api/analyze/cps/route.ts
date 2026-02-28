@@ -2,6 +2,7 @@ import { runCPSAnalysis } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import { rateLimit } from '@/lib/rate-limit';
 import { cpsRequestSchema, formatZodError } from '@/lib/validation/schemas';
+import { SSE_HEARTBEAT_MS } from '@/lib/analysis/constants';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000); // 5 requests per 10 min
 
@@ -16,6 +17,15 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(
       { error: 'Zbyt wiele żądań. Spróbuj ponownie za chwilę.' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    );
+  }
+
+  const MAX_BODY_SIZE = 5 * 1024 * 1024; // 5MB
+  const contentLength = request.headers.get('content-length');
+  if (contentLength && parseInt(contentLength, 10) > MAX_BODY_SIZE) {
+    return Response.json(
+      { error: 'Zbyt duży request. Maksymalny rozmiar to 5MB.' },
+      { status: 413 },
     );
   }
 
@@ -45,49 +55,56 @@ export async function POST(request: Request): Promise<Response> {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(heartbeat);
+        try { controller.close(); } catch { /* already closed */ }
+      };
       const send = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch { safeClose(); }
       };
 
       // SSE keepalive heartbeat — prevents proxy idle timeout (e.g. Cloud Run 60s)
       const heartbeat = setInterval(() => {
+        if (closed) { clearInterval(heartbeat); return; }
         try {
           controller.enqueue(encoder.encode(':\n\n'));
         } catch {
           clearInterval(heartbeat);
         }
-      }, 15000);
+      }, SSE_HEARTBEAT_MS);
 
       try {
-        // Check if client disconnected before starting CPS analysis
-        if (signal.aborted) { clearInterval(heartbeat); controller.close(); return; }
+        if (signal.aborted) { safeClose(); return; }
 
         const result = await runCPSAnalysis(
           samples,
           participantName,
           (status) => {
-            // Check disconnect before sending each progress update
-            if (!signal.aborted) {
+            if (!signal.aborted && !closed) {
               send({ type: 'progress', status });
             }
           },
         );
 
-        // Check if client disconnected after CPS analysis
-        if (signal.aborted) { clearInterval(heartbeat); controller.close(); return; }
+        if (signal.aborted) { safeClose(); return; }
 
         send({ type: 'complete', result });
       } catch (error) {
-        // Don't send error if client already disconnected
-        if (!signal.aborted) {
+        if (!signal.aborted && !closed) {
+          console.error('[CPS]', error);
           send({
             type: 'error',
             error: error instanceof Error ? error.message : 'CPS analysis failed',
           });
         }
       } finally {
-        clearInterval(heartbeat);
-        controller.close();
+        safeClose();
       }
     },
   });
@@ -95,8 +112,9 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }

@@ -124,8 +124,8 @@ export default function StoryPage() {
     for (const name of participants) {
       const profile = pass3[name];
       if (profile) {
-        traits.push(profile.attachment_indicators.primary_style);
-        traits.push(profile.communication_profile.style);
+        if (profile.attachment_indicators?.primary_style) traits.push(profile.attachment_indicators.primary_style);
+        if (profile.communication_profile?.style) traits.push(profile.communication_profile.style);
       }
     }
   }

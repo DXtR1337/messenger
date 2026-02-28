@@ -11,8 +11,14 @@ import { STOPWORDS } from '../constants';
 // Text Processing
 // ============================================================
 
-/** Extract all emoji characters from a string. */
+/** Extract all emoji characters from a string (ZWJ-sequence aware). */
 export function extractEmojis(text: string): string[] {
+  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+    const segments = [...segmenter.segment(text)];
+    const emojiRegex = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/u;
+    return segments.filter(s => emojiRegex.test(s.segment)).map(s => s.segment);
+  }
   const emojiRegex = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
   return text.match(emojiRegex) ?? [];
 }
@@ -26,6 +32,7 @@ export function countWords(text: string): number {
 /** Tokenize text to lowercase words (letters only, min 2 chars, no stopwords). */
 export function tokenizeWords(text: string): string[] {
   return text
+    .normalize('NFC')
     .toLowerCase()
     .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
     .split(/[\s.,!?;:()\[\]{}"'\-\/\<>@#$%^&*+=|~`]+/)
@@ -71,14 +78,16 @@ export function filterResponseTimeOutliers(times: number[]): number[] {
 // Date Helpers
 // ============================================================
 
-/** Get YYYY-MM month key from a timestamp. */
+/** Get YYYY-MM month key from a timestamp (local timezone). */
 export function getMonthKey(timestamp: number): string {
-  return new Date(timestamp).toISOString().slice(0, 7);
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** Get YYYY-MM-DD day key from a timestamp. */
+/** Get YYYY-MM-DD day key from a timestamp (local timezone). */
 export function getDayKey(timestamp: number): string {
-  return new Date(timestamp).toISOString().slice(0, 10);
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /** Check if a timestamp falls in late-night hours (22:00-04:00). */

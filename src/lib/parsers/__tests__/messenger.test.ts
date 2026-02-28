@@ -299,8 +299,8 @@ describe('mergeMessengerFiles', () => {
     const file2 = {
       ...base,
       messages: [
-        // Duplicate: same timestamp + sender
-        { sender_name: 'Bob', timestamp_ms: 1700000002000, content: 'Msg 2 dup', type: 'Generic' },
+        // Duplicate: same timestamp + sender + content
+        { sender_name: 'Bob', timestamp_ms: 1700000002000, content: 'Msg 2', type: 'Generic' },
         { sender_name: 'Alice', timestamp_ms: 1700000003000, content: 'Msg 3', type: 'Generic' },
       ],
     };

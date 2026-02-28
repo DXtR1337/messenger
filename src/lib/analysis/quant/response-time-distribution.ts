@@ -16,7 +16,10 @@ const BINS: ReadonlyArray<{ label: string; minMs: number; maxMs: number }> = [
   { label: '5-15m', minMs: 300_000, maxMs: 900_000 },
   { label: '15-30m', minMs: 900_000, maxMs: 1_800_000 },
   { label: '30m-1h', minMs: 1_800_000, maxMs: 3_600_000 },
-  { label: '1h+', minMs: 3_600_000, maxMs: Infinity },
+  { label: '1-2h',  minMs: 3_600_000,  maxMs: 7_200_000  },
+  { label: '2-6h',  minMs: 7_200_000,  maxMs: 21_600_000 },
+  { label: '6-24h', minMs: 21_600_000, maxMs: 86_400_000 },
+  { label: '24h+',  minMs: 86_400_000, maxMs: Infinity   },
 ];
 
 /**

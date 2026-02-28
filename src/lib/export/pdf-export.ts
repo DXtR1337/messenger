@@ -335,9 +335,9 @@ function buildCoverPage(doc: jsPDF, analysis: StoredAnalysis): void {
   // Stats row
   const statsY = partY + 40 + participants.length * 14;
   const statItems = [
-    { label: 'WIADOMO\u015ACI', value: formatNumber(conversation.metadata.totalMessages) },
+    { label: 'WIADOMOŚCI', value: formatNumber(conversation.metadata.totalMessages) },
     { label: 'OKRES', value: `${conversation.metadata.durationDays} dni` },
-    { label: 'POCZ\u0104TEK', value: formatDate(conversation.metadata.dateRange.start) },
+    { label: 'POCZĄTEK', value: formatDate(conversation.metadata.dateRange.start) },
     { label: 'KONIEC', value: formatDate(conversation.metadata.dateRange.end) },
   ];
 
@@ -362,12 +362,12 @@ function buildCoverPage(doc: jsPDF, analysis: StoredAnalysis): void {
     setColor(doc, C.textMuted);
     doc.setFont('Inter', 'normal');
     doc.setFontSize(7);
-    doc.text('GDYBY TA ROZMOWA BY\u0141A...', MARGIN + 10, cpY + 12);
+    doc.text('GDYBY TA ROZMOWA BYŁA...', MARGIN + 10, cpY + 12);
 
     const items = [
       { label: 'Gatunek filmowy', value: cp.if_this_conversation_were_a.movie_genre },
       { label: 'Pogoda', value: cp.if_this_conversation_were_a.weather },
-      { label: 'Jedno s\u0142owo', value: cp.if_this_conversation_were_a.one_word },
+      { label: 'Jedno słowo', value: cp.if_this_conversation_were_a.one_word },
     ];
     items.forEach((item, i) => {
       const ix = MARGIN + 10 + i * 60;
@@ -398,7 +398,14 @@ function buildSummaryPage(doc: jsPDF, pass4: Pass4Result): void {
   let curY = 34;
 
   // Executive summary
-  drawCard(doc, MARGIN, curY, CONTENT_W, 55);
+  setColor(doc, C.textPrimary);
+  doc.setFont('Inter', 'normal');
+  doc.setFontSize(9);
+  const summaryLines = wrapText(doc, pass4.executive_summary, CONTENT_W - 20);
+  const maxSummaryLines = 8;
+  const visibleLines = summaryLines.slice(0, maxSummaryLines);
+  const summaryCardH = 22 + visibleLines.length * 5 + 6;
+  drawCard(doc, MARGIN, curY, CONTENT_W, summaryCardH);
   setColor(doc, C.accent);
   doc.setFont('Inter', 'bold');
   doc.setFontSize(9);
@@ -406,12 +413,11 @@ function buildSummaryPage(doc: jsPDF, pass4: Pass4Result): void {
   setColor(doc, C.textPrimary);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(9);
-  const summaryLines = wrapText(doc, pass4.executive_summary, CONTENT_W - 20);
-  summaryLines.slice(0, 8).forEach((line, i) => {
+  visibleLines.forEach((line, i) => {
     doc.text(line, MARGIN + 10, curY + 22 + i * 5);
   });
 
-  curY += 65;
+  curY += summaryCardH + 10;
 
   // Health score with components
   const hs = pass4.health_score;
@@ -422,9 +428,9 @@ function buildSummaryPage(doc: jsPDF, pass4: Pass4Result): void {
 
   const components: Array<{ label: string; value: number }> = [
     { label: 'Balans', value: hs.components.balance },
-    { label: 'Wzajemno\u015B\u0107', value: hs.components.reciprocity },
+    { label: 'Wzajemność', value: hs.components.reciprocity },
     { label: 'Wzorce odpowiedzi', value: hs.components.response_pattern },
-    { label: 'Bezpiecze\u0144stwo emocjonalne', value: hs.components.emotional_safety },
+    { label: 'Bezpieczeństwo emocjonalne', value: hs.components.emotional_safety },
     { label: 'Trajektoria wzrostu', value: hs.components.growth_trajectory },
   ];
 
@@ -505,9 +511,9 @@ function buildStatsPage(doc: jsPDF, analysis: StoredAnalysis): void {
 
     // Stat grid
     const stats = [
-      { label: 'Wiadomo\u015Bci', value: formatNumber(metrics.totalMessages) },
-      { label: 'S\u0142owa', value: formatNumber(metrics.totalWords) },
-      { label: '\u015Ar. d\u0142ugo\u015B\u0107', value: `${metrics.averageMessageLength.toFixed(1)}` },
+      { label: 'Wiadomości', value: formatNumber(metrics.totalMessages) },
+      { label: 'Słowa', value: formatNumber(metrics.totalWords) },
+      { label: 'Śr. długość', value: `${metrics.averageMessageLength.toFixed(1)}` },
       { label: 'Emoji', value: formatNumber(metrics.emojiCount) },
       { label: 'Pytania', value: formatNumber(metrics.questionsAsked) },
       { label: 'Media', value: formatNumber(metrics.mediaShared) },
@@ -562,7 +568,7 @@ function buildStatsPage(doc: jsPDF, analysis: StoredAnalysis): void {
     doc.setFont('Inter', 'normal');
     doc.setFontSize(8);
     doc.text(`Mediana: ${formatDuration(timing.medianResponseTimeMs)}`, MARGIN + 85, curY + 14);
-    doc.text(`\u015Arednia: ${formatDuration(timing.averageResponseTimeMs)}`, MARGIN + 125, curY + 14);
+    doc.text(`Średnia: ${formatDuration(timing.averageResponseTimeMs)}`, MARGIN + 125, curY + 14);
 
     curY += 30;
   });
@@ -573,15 +579,15 @@ function buildStatsPage(doc: jsPDF, analysis: StoredAnalysis): void {
     setColor(doc, C.textSecondary);
     doc.setFont('Inter', 'bold');
     doc.setFontSize(9);
-    doc.text('ZAANGA\u017BOWANIE', MARGIN, curY);
+    doc.text('ZAANGAŻOWANIE', MARGIN, curY);
     curY += 8;
 
     drawCard(doc, MARGIN, curY, CONTENT_W, 28);
 
     const engStats = [
-      { label: 'Sesje rozm\u00F3w', value: String(quantitative.engagement.totalSessions) },
-      { label: '\u015Ar. wiad./sesja', value: quantitative.engagement.avgConversationLength.toFixed(1) },
-      { label: 'Najd\u0142u\u017Csza cisza', value: formatDuration(quantitative.timing.longestSilence.durationMs) },
+      { label: 'Sesje rozmów', value: String(quantitative.engagement.totalSessions) },
+      { label: 'Śr. wiad./sesja', value: quantitative.engagement.avgConversationLength.toFixed(1) },
+      { label: 'Najdłuższa cisza', value: formatDuration(quantitative.timing.longestSilence.durationMs) },
     ];
 
     const engCellW = (CONTENT_W - 20) / engStats.length;
@@ -617,13 +623,13 @@ function buildViralScoresPage(
   setColor(doc, C.textPrimary);
   doc.setFont('Inter', 'bold');
   doc.setFontSize(13);
-  doc.text('Kompatybilno\u015B\u0107', MARGIN + 68, curY + 24);
+  doc.text('Kompatybilność', MARGIN + 68, curY + 24);
   setColor(doc, C.textSecondary);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(8);
   const compatDesc = wrapText(
     doc,
-    'Wska\u017Anik oparty na symetrii odpowiedzi, nak\u0142adaniu si\u0119 aktywno\u015Bci i balansie zaanga\u017Cowania.',
+    'Wskaźnik oparty na symetrii odpowiedzi, nakładaniu się aktywności i balansie zaangażowania.',
     CONTENT_W - 80,
   );
   compatDesc.forEach((line, i) => {
@@ -715,7 +721,7 @@ function buildPersonalityPage(
   participantPhotos?: Record<string, string>,
 ): void {
   drawPageBg(doc);
-  drawSectionHeader(doc, '04', 'Profile osobowo\u015Bci');
+  drawSectionHeader(doc, '04', 'Profile osobowości');
 
   let curY = 34;
 
@@ -763,10 +769,10 @@ function buildPersonalityPage(
     // Big Five bars (left column)
     const b5 = profile.big_five_approximation;
     const traits: Array<{ label: string; key: keyof BigFiveApproximation }> = [
-      { label: 'Otwarto\u015B\u0107', key: 'openness' },
-      { label: 'Sumienno\u015B\u0107', key: 'conscientiousness' },
+      { label: 'Otwartość', key: 'openness' },
+      { label: 'Sumienność', key: 'conscientiousness' },
       { label: 'Ekstrawersja', key: 'extraversion' },
-      { label: 'Ugodowo\u015B\u0107', key: 'agreeableness' },
+      { label: 'Ugodowość', key: 'agreeableness' },
       { label: 'Neurotyzm', key: 'neuroticism' },
     ];
 
@@ -795,18 +801,18 @@ function buildPersonalityPage(
     setColor(doc, C.textMuted);
     doc.setFont('Inter', 'normal');
     doc.setFontSize(6);
-    doc.text('STYL PRZYWI\u0104ZANIA', rightX, curY + 28);
+    doc.text('STYL PRZYWIĄZANIA', rightX, curY + 28);
     const attachmentLabels: Record<string, string> = {
       secure: 'Bezpieczny',
-      anxious: 'L\u0119kowy',
-      avoidant: 'Unikaj\u0105cy',
+      anxious: 'Lękowy',
+      avoidant: 'Unikający',
       disorganized: 'Zdezorganizowany',
       insufficient_data: 'Brak danych',
     };
     setColor(doc, C.textPrimary);
     doc.setFont('Inter', 'bold');
     doc.setFontSize(9);
-    doc.text(attachmentLabels[profile.attachment_indicators.primary_style] ?? profile.attachment_indicators.primary_style, rightX, curY + 36);
+    doc.text(attachmentLabels[profile.attachment_indicators?.primary_style ?? 'insufficient_data'] ?? (profile.attachment_indicators?.primary_style ?? 'Brak danych'), rightX, curY + 36);
 
     // Communication style
     setColor(doc, C.textMuted);
@@ -814,8 +820,8 @@ function buildPersonalityPage(
     doc.setFontSize(6);
     doc.text('STYL KOMUNIKACJI', rightX, curY + 48);
     const styleLabels: Record<string, string> = {
-      direct: 'Bezpo\u015Bredni',
-      indirect: 'Po\u015Bredni',
+      direct: 'Bezpośredni',
+      indirect: 'Pośredni',
       mixed: 'Mieszany',
     };
     setColor(doc, C.textPrimary);
@@ -828,11 +834,11 @@ function buildPersonalityPage(
       setColor(doc, C.textMuted);
       doc.setFont('Inter', 'normal');
       doc.setFontSize(6);
-      doc.text('J\u0118ZYK MI\u0141O\u015ACI', rightX, curY + 68);
+      doc.text('JĘZYK MIŁOŚCI', rightX, curY + 68);
       const llLabels: Record<string, string> = {
-        words_of_affirmation: 'S\u0142owa uznania',
-        quality_time: 'Wsp\u00F3lny czas',
-        acts_of_service: 'Akty s\u0142u\u017Cby',
+        words_of_affirmation: 'Słowa uznania',
+        quality_time: 'Wspólny czas',
+        acts_of_service: 'Akty służby',
         gifts_pebbling: 'Prezenty',
         physical_touch: 'Dotyk',
       };
@@ -888,7 +894,7 @@ function buildDynamicsPage(
   setColor(doc, C.textMuted);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(7);
-  doc.text('BALANS SI\u0141Y', MARGIN + 10, curY + 12);
+  doc.text('BALANS SIŁY', MARGIN + 10, curY + 12);
 
   const pd = pass2.power_dynamics;
   const barY = curY + 18;
@@ -908,7 +914,7 @@ function buildDynamicsPage(
 
   setColor(doc, C.textSecondary);
   doc.setFontSize(7);
-  doc.text(`Dostosowuje si\u0119 bardziej: ${pdfSafe(pd.who_adapts_more)}`, MARGIN + 10, curY + 42);
+  doc.text(`Dostosowuje się bardziej: ${pdfSafe(pd.who_adapts_more)}`, MARGIN + 10, curY + 42);
 
   curY += 56;
 
@@ -921,7 +927,7 @@ function buildDynamicsPage(
   setColor(doc, C.textPrimary);
   doc.setFont('Inter', 'bold');
   doc.setFontSize(9);
-  doc.text(`G\u0142\u00F3wny opiekun: ${pdfSafe(pass2.emotional_labor.primary_caregiver)}`, MARGIN + 10, curY + 20);
+  doc.text(`Główny opiekun: ${pdfSafe(pass2.emotional_labor.primary_caregiver)}`, MARGIN + 10, curY + 20);
   setColor(doc, C.textSecondary);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(7);
@@ -939,10 +945,10 @@ function buildDynamicsPage(
   doc.setFont('Inter', 'bold');
   doc.setFontSize(9);
   const freqLabels: Record<string, string> = {
-    none_observed: 'Brak', rare: 'Rzadki', occasional: 'Okazjonalny', frequent: 'Cz\u0119sty',
+    none_observed: 'Brak', rare: 'Rzadki', occasional: 'Okazjonalny', frequent: 'Częsty',
   };
   doc.text(
-    `Cz\u0119stotliwo\u015B\u0107: ${freqLabels[pass2.conflict_patterns.conflict_frequency] ?? pass2.conflict_patterns.conflict_frequency}`,
+    `Częstotliwość: ${freqLabels[pass2.conflict_patterns.conflict_frequency] ?? pass2.conflict_patterns.conflict_frequency}`,
     MARGIN + 10,
     curY + 20,
   );
@@ -955,14 +961,14 @@ function buildDynamicsPage(
   setColor(doc, C.textMuted);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(7);
-  doc.text('INTYMNO\u015A\u0106', MARGIN + 10, curY + 10);
+  doc.text('INTYMNOŚĆ', MARGIN + 10, curY + 10);
   setColor(doc, C.textPrimary);
   doc.setFont('Inter', 'bold');
   doc.setFontSize(9);
   const jokesCount = intm.shared_language.inside_jokes;
   const petNames = intm.shared_language.pet_names;
   doc.text(
-    `\u017Carty wewn.: ${jokesCount} | Zdrobnienia: ${petNames ? 'Tak' : 'Nie'}`,
+    `żarty wewn.: ${jokesCount} | Zdrobnienia: ${petNames ? 'Tak' : 'Nie'}`,
     MARGIN + 10,
     curY + 20,
   );
@@ -992,7 +998,7 @@ function buildDynamicsPage(
     const dirLabels: Record<string, string> = {
       strengthening: 'Wzmacnianie',
       stable: 'Stabilna',
-      weakening: 'Os\u0142abienie',
+      weakening: 'Osłabienie',
       volatile: 'Niestabilna',
     };
     const dirColor: RGB =
@@ -1023,21 +1029,28 @@ function buildFlagsPage(
     doc.text('Czerwone flagi', MARGIN, curY);
     curY += 10;
 
-    pass2.red_flags.slice(0, 6).forEach((flag) => {
+    pass2.red_flags.slice(0, 8).forEach((flag) => {
       if (curY > A4_H - 40) return;
-      drawCard(doc, MARGIN, curY, CONTENT_W, 20);
+
+      doc.setFont('Inter', 'bold');
+      doc.setFontSize(8);
+      const patternLines = wrapText(doc, flag.pattern, CONTENT_W - 28);
+      const cardH = 10 + patternLines.length * 5 + 8;
+      drawCard(doc, MARGIN, curY, CONTENT_W, cardH);
       setFill(doc, C.danger);
       doc.circle(MARGIN + 10, curY + 10, 2.5, 'F');
       setColor(doc, C.textPrimary);
       doc.setFont('Inter', 'bold');
       doc.setFontSize(8);
-      doc.text(truncate(flag.pattern, 80), MARGIN + 18, curY + 8);
+      patternLines.slice(0, 2).forEach((line, i) => {
+        doc.text(line, MARGIN + 18, curY + 8 + i * 5);
+      });
       setColor(doc, C.textSecondary);
       doc.setFont('Inter', 'normal');
       doc.setFontSize(6);
-      const sevLabels: Record<string, string> = { mild: '\u0141agodna', moderate: 'Umiarkowana', severe: 'Powa\u017Cna' };
-      doc.text(`Waga: ${sevLabels[flag.severity] ?? flag.severity}`, MARGIN + 18, curY + 15);
-      curY += 24;
+      const sevLabels: Record<string, string> = { mild: 'Łagodna', moderate: 'Umiarkowana', severe: 'Poważna' };
+      doc.text(`Waga: ${sevLabels[flag.severity] ?? flag.severity}`, MARGIN + 18, curY + 8 + Math.min(patternLines.length, 2) * 5 + 2);
+      curY += cardH + 4;
     });
 
     curY += 4;
@@ -1045,22 +1058,30 @@ function buildFlagsPage(
 
   // Green flags
   if (pass2.green_flags.length > 0) {
+    if (curY > A4_H - 50) return;
     setColor(doc, C.success);
     doc.setFont('Inter', 'bold');
     doc.setFontSize(11);
     doc.text('Zielone flagi', MARGIN, curY);
     curY += 10;
 
-    pass2.green_flags.slice(0, 6).forEach((flag) => {
+    pass2.green_flags.slice(0, 8).forEach((flag) => {
       if (curY > A4_H - 40) return;
-      drawCard(doc, MARGIN, curY, CONTENT_W, 16);
+
+      doc.setFont('Inter', 'normal');
+      doc.setFontSize(8);
+      const patternLines = wrapText(doc, flag.pattern, CONTENT_W - 28);
+      const cardH = 6 + Math.min(patternLines.length, 2) * 5 + 4;
+      drawCard(doc, MARGIN, curY, CONTENT_W, cardH);
       setFill(doc, C.success);
       doc.circle(MARGIN + 10, curY + 8, 2.5, 'F');
       setColor(doc, C.textPrimary);
       doc.setFont('Inter', 'normal');
       doc.setFontSize(8);
-      doc.text(truncate(flag.pattern, 85), MARGIN + 18, curY + 10);
-      curY += 20;
+      patternLines.slice(0, 2).forEach((line, i) => {
+        doc.text(line, MARGIN + 18, curY + 8 + i * 5);
+      });
+      curY += cardH + 4;
     });
   }
 }
@@ -1069,7 +1090,7 @@ function buildFlagsPage(
 
 function buildBadgesPage(doc: jsPDF, badges: Badge[], participants: string[]): void {
   drawPageBg(doc);
-  drawSectionHeader(doc, '07', 'Osi\u0105gni\u0119cia');
+  drawSectionHeader(doc, '07', 'Osiągnięcia');
 
   const colW = (CONTENT_W - 6) / 2;
   const badgeH = 28;
@@ -1110,7 +1131,7 @@ function buildInsightsPage(
   participants: string[],
 ): void {
   drawPageBg(doc);
-  drawSectionHeader(doc, '08', 'Wskaz\u00F3wki');
+  drawSectionHeader(doc, '08', 'Wskazówki');
 
   let curY = 34;
 
@@ -1180,11 +1201,11 @@ function buildInsightsPage(
     setColor(doc, C.textPrimary);
     doc.setFont('Inter', 'bold');
     doc.setFontSize(12);
-    doc.text('Sprawd\u017A swoj\u0105 rozmow\u0119 na PodTeksT', A4_W / 2, ctaY + 18, { align: 'center' });
+    doc.text('Sprawdź swoją rozmowę na PodTeksT', A4_W / 2, ctaY + 18, { align: 'center' });
     setColor(doc, C.textSecondary);
     doc.setFont('Inter', 'normal');
     doc.setFontSize(8);
-    doc.text('podtekst.app \u2014 odkryj to, co kryje si\u0119 mi\u0119dzy wierszami', A4_W / 2, ctaY + 28, { align: 'center' });
+    doc.text('podtekst.app \u2014 odkryj to, co kryje się między wierszami', A4_W / 2, ctaY + 28, { align: 'center' });
   }
 }
 
@@ -1236,7 +1257,7 @@ export async function generateAnalysisPdf(
   };
 
   // Page 1: Cover
-  report('Ok\u0142adka...');
+  report('Okładka...');
   buildCoverPage(doc, analysis);
   drawFooter(doc, 1, totalPages);
 
@@ -1269,7 +1290,7 @@ export async function generateAnalysisPdf(
 
   // Page 5: Personality Profiles
   if (hasPass3 && qualitative?.pass3) {
-    report('Profile osobowo\u015Bci...');
+    report('Profile osobowości...');
     doc.addPage();
     buildPersonalityPage(doc, qualitative.pass3, participants, analysis.participantPhotos);
     drawFooter(doc, nextPageIdx, totalPages);
@@ -1296,7 +1317,7 @@ export async function generateAnalysisPdf(
 
   // Page 8: Badges
   if (hasBadges && quantitative.badges) {
-    report('Osi\u0105gni\u0119cia...');
+    report('Osiągnięcia...');
     doc.addPage();
     buildBadgesPage(doc, quantitative.badges, participants);
     drawFooter(doc, nextPageIdx, totalPages);
@@ -1305,7 +1326,7 @@ export async function generateAnalysisPdf(
 
   // Page 9: Insights
   if (hasPass4 && qualitative?.pass4) {
-    report('Wskaz\u00F3wki...');
+    report('Wskazówki...');
     doc.addPage();
     buildInsightsPage(doc, qualitative.pass4, participants);
     drawFooter(doc, nextPageIdx, totalPages);
@@ -1315,7 +1336,7 @@ export async function generateAnalysisPdf(
   // Generate filename
   const titleSlug = conversation.title
     .toLowerCase()
-    .replace(/[^a-z0-9\u0105\u0107\u0119\u0142\u0144\u00F3\u015B\u017A\u017C]+/gi, '-')
+    .replace(/[^a-z0-9ąćęłńóśźż]+/gi, '-')
     .replace(/(^-|-$)/g, '')
     .slice(0, 40);
   const dateStr = new Date().toISOString().slice(0, 10);

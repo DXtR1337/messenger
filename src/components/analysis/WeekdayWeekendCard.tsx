@@ -21,6 +21,7 @@ import {
   CHART_AXIS_TICK,
   CHART_GRID_PROPS,
   PERSON_COLORS_HEX,
+  CHART_CURSOR_BAR,
   useAxisWidth,
 } from './chart-config';
 
@@ -72,33 +73,36 @@ export default function WeekdayWeekendCard({
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.5 }}
-      className="overflow-hidden rounded-xl border border-border bg-card"
+      className="overflow-hidden"
     >
-      <div className="px-3 sm:px-5 pt-4">
-        <h3 className="font-display text-[15px] font-bold">
+      <div className="px-4 sm:px-6 pt-4">
+        <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">
           Dni robocze vs Weekend
         </h3>
+        <p className="mt-0.5 text-xs text-white/50">
+          Porównanie aktywności w tygodniu i na weekendzie
+        </p>
       </div>
 
-      <div className="flex flex-col gap-5 px-3 sm:px-5 py-4">
+      <div className="flex flex-col gap-5 px-4 sm:px-6 py-4">
         {/* Stat blocks */}
         <div className="grid grid-cols-2 gap-4">
           {/* Weekday block */}
-          <div className="rounded-lg border border-border bg-muted px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+          <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+            <p className="text-[11px] tracking-[0.15em] text-white/50 uppercase font-medium">
               Dni robocze
             </p>
-            <p className="mt-1 font-display text-xl font-bold text-foreground">
+            <p className="mt-1 font-display text-2xl font-bold text-foreground">
               {formatNumber(weekdayTotal)}
             </p>
             <div className="mt-2 flex flex-col gap-1">
               {participants.map((name, i) => (
-                <div key={name} className="flex items-center gap-1.5 text-xs">
+                <div key={name} className="flex items-center gap-1.5 text-[11px]">
                   <span
-                    className="inline-block h-2 w-2 rounded-sm"
+                    className="inline-block size-2.5 rounded-[3px]"
                     style={{ backgroundColor: PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0] }}
                   />
-                  <span className="text-text-muted">{name}</span>
+                  <span className="text-white/50">{name}</span>
                   <span className="ml-auto font-display text-foreground">
                     {formatNumber(weekday[name] ?? 0)}
                   </span>
@@ -108,21 +112,21 @@ export default function WeekdayWeekendCard({
           </div>
 
           {/* Weekend block */}
-          <div className="rounded-lg border border-border bg-muted px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+          <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+            <p className="text-[11px] tracking-[0.15em] text-white/50 uppercase font-medium">
               Weekend
             </p>
-            <p className="mt-1 font-display text-xl font-bold text-foreground">
+            <p className="mt-1 font-display text-2xl font-bold text-foreground">
               {formatNumber(weekendTotal)}
             </p>
             <div className="mt-2 flex flex-col gap-1">
               {participants.map((name, i) => (
-                <div key={name} className="flex items-center gap-1.5 text-xs">
+                <div key={name} className="flex items-center gap-1.5 text-[11px]">
                   <span
-                    className="inline-block h-2 w-2 rounded-sm"
+                    className="inline-block size-2.5 rounded-[3px]"
                     style={{ backgroundColor: PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0] }}
                   />
-                  <span className="text-text-muted">{name}</span>
+                  <span className="text-white/50">{name}</span>
                   <span className="ml-auto font-display text-foreground">
                     {formatNumber(weekend[name] ?? 0)}
                   </span>
@@ -150,10 +154,11 @@ export default function WeekdayWeekendCard({
               tickFormatter={(value: number) => formatNumber(value)}
             />
             <Tooltip
-              cursor={false}
+              cursor={CHART_CURSOR_BAR}
+              animationDuration={0}
               contentStyle={CHART_TOOLTIP_STYLE}
               labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-              formatter={(value?: number | string) => [formatNumber(Number(value ?? 0))]}
+              formatter={(value) => [formatNumber(Number(value ?? 0))]}
             />
             <Legend
               iconType="square"
@@ -165,7 +170,7 @@ export default function WeekdayWeekendCard({
                 key={name}
                 dataKey={name}
                 fill={PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0]}
-                radius={[4, 4, 0, 0]}
+                radius={[2, 2, 0, 0]}
                 maxBarSize={60}
               />
             ))}

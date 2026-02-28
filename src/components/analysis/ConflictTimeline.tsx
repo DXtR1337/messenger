@@ -16,6 +16,17 @@ interface ConflictTimelineProps {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Format an ISO date string (YYYY-MM-DD) to Polish locale with year. */
+function formatDatePL(isoDate: string): string {
+  const d = new Date(isoDate + 'T00:00:00');
+  if (isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ---------------------------------------------------------------------------
 // Styling constants
 // ---------------------------------------------------------------------------
 
@@ -83,14 +94,14 @@ function ConflictEventItem({
       {/* Date column */}
       <div className="w-24 shrink-0 pt-0.5 text-right pr-2">
         <span className="font-display text-xs text-text-muted">
-          {event.date}
+          {formatDatePL(event.date)}
         </span>
       </div>
 
       {/* Dot */}
       <div
         className={cn(
-          'w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 border-2 border-card z-10',
+          'w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 border-2 border-card z-10 transition-transform duration-300',
           dotStyle,
         )}
       />
@@ -101,7 +112,7 @@ function ConflictEventItem({
         <div className="flex items-center gap-2 mb-1">
           <span
             className={cn(
-              'inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border',
+              'inline-block text-[11px] font-medium px-1.5 py-0.5 rounded border',
               badgeStyle,
             )}
           >
@@ -140,27 +151,27 @@ function ConflictEventItem({
 function EmptyState() {
   return (
     <motion.div
-      className="flex items-center gap-2 px-5 py-6 justify-center"
+      className="py-8 text-center text-sm text-white/50"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
     >
-      <svg
-        className="w-5 h-5 text-success"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-      <span className="text-sm text-text-muted">
-        Brak wykrytych konfliktów
-      </span>
+      <div className="flex items-center gap-2 justify-center">
+        <svg
+          className="w-5 h-5 text-success"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <span>Brak wykrytych konfliktów</span>
+      </div>
     </motion.div>
   );
 }
@@ -194,15 +205,15 @@ export default function ConflictTimeline({ conflictAnalysis }: ConflictTimelineP
   const resolutionCount = events.filter(e => e.type === 'resolution').length;
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
+    <div className="overflow-hidden">
       {/* Header */}
       <div className="flex justify-between items-center px-5 pt-4 pb-2">
         <div>
-          <h3 className="font-display text-[15px] font-bold">
+          <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">
             Detekcja konfliktów
           </h3>
           {hasEvents && (
-            <p className="text-xs text-text-muted mt-0.5">
+            <p className="text-xs text-white/50 mt-0.5">
               {pluralizeEvents(events.length)}
             </p>
           )}

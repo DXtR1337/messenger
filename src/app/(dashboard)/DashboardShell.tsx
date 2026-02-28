@@ -1,32 +1,42 @@
 'use client';
 
-import { SidebarProvider, useSidebar } from '@/components/shared/SidebarContext';
-import { Navigation } from '@/components/shared/Navigation';
-import { Topbar } from '@/components/shared/Topbar';
+import { usePathname } from 'next/navigation';
+import { SidebarProvider } from '@/components/shared/SidebarContext';
+import { CinematicNav } from '@/components/shared/Navigation';
 import { cn } from '@/lib/utils';
 
+/** Analysis pages handle their own full-screen layout */
+function isImmersiveRoute(pathname: string): boolean {
+  return /^\/analysis\/[^/]+/.test(pathname)
+    && pathname !== '/analysis/new'
+    && pathname !== '/analysis/compare';
+}
+
 function DashboardInner({ children }: { children: React.ReactNode }) {
-  const { collapsed, isMobile } = useSidebar();
+  const pathname = usePathname();
+  const immersive = isImmersiveRoute(pathname);
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden">
-      <Navigation />
-      <div
-        className={cn(
-          'flex flex-1 flex-col min-w-0 min-h-screen transition-[margin-left] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-          isMobile
-            ? 'ml-0'
-            : collapsed
-              ? 'ml-[var(--sidebar-collapsed-w)]'
-              : 'ml-[var(--sidebar-w)]'
-        )}
-      >
-        <Topbar />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6">
-          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
-        </main>
-      </div>
-    </div>
+    <>
+      {/* Hide the top nav bar on immersive analysis pages — those pages
+          use ModeSwitcherPill + their own back buttons for navigation */}
+      {!immersive && (
+        <header role="banner">
+          <CinematicNav />
+        </header>
+      )}
+      <main className={cn(
+        'min-h-screen safe-area-main',
+        !immersive && 'px-4 py-6 sm:px-6 md:px-8 lg:px-12',
+      )}>
+        <div className={cn(
+          'mx-auto w-full',
+          !immersive && 'max-w-[1400px]',
+        )}>
+          {children}
+        </div>
+      </main>
+    </>
   );
 }
 

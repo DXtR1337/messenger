@@ -65,6 +65,7 @@ Discord uses direct API import via bot token (no file upload).
 | `/api/analyze/dating-profile` | POST | Honest Dating Profile generator (SSE) | 5/10min |
 | `/api/analyze/simulate` | POST | Reply Simulator — predicts responses (SSE) | 5/10min |
 | `/api/analyze/cwel` | POST | Cwel Tygodnia — AI ceremony roast (SSE) | 5/10min |
+| `/api/analyze/capitalization` | POST | Capitalization/ACR analysis (Gable 2004) — SSE | 5/10min |
 | `/api/analyze/image` | POST | Gemini image generation | 10/10min |
 | `/api/discord/fetch-messages` | POST | Discord Bot message fetcher (SSE) | 3/10min |
 | `/api/discord/send-roast` | POST | Send mega roast/cwel to Discord channel | 10/10min |
@@ -239,7 +240,11 @@ src/
 │   │   │   ├── pursuit-withdrawal.ts # detectPursuitWithdrawal()
 │   │   │   ├── response-time-distribution.ts # computeResponseTimeDistribution()
 │   │   │   ├── lsm.ts              # computeLSM() — Language Style Matching
-│   │   │   └── pronouns.ts         # computePronounAnalysis() — I/We/You rates
+│   │   │   ├── pronouns.ts         # computePronounAnalysis() — I/We/You rates
+│   │   │   ├── chronotype.ts       # computeChronotypeCompatibility() — behavioral chronotype
+│   │   │   ├── shift-support.ts    # computeShiftSupportRatio() — Conversational Narcissism Index
+│   │   │   ├── emotional-granularity.ts # computeEmotionalGranularity() — emotion diversity
+│   │   │   └── bid-response.ts     # computeBidResponseRatio() — Gottman "turning toward"
 │   │   ├── threat-meters.ts          # Codependency/Manipulation/Trust indexes
 │   │   ├── damage-report.ts          # Emotional damage + communication grade
 │   │   ├── cognitive-functions.ts     # MBTI → cognitive functions derivation
@@ -332,6 +337,11 @@ Apply to EVERY string field: `sender_name`, `content`, `participants[].name`, `r
 ### Prompt Design
 - Output: always JSON with defined schema
 - No hedging — direct assessments with confidence levels (0-100)
+- Temperature selection rationale:
+  - 0.3 (Main Analysis, CPS): Structured JSON output requires high consistency; lower temperatures reduce output variance
+  - 0.5 (Court Trial, Enhanced Roast): Semi-creative entertainment — balances factual anchoring with stylistic variety
+  - 0.5 (Reply Simulator): Reduced from 0.7 to improve response consistency across repeated interactions
+  - 0.7 (Dating Profile, Stand-Up): Maximum creativity for comedy and voice-matching generation
 - Evidence-based — cite specific quotes
 - Culturally aware — Polish, English, mixed-language support
 
@@ -503,6 +513,26 @@ Danger:      #ef4444
 - **Codependency renamed in LandingDemo:** "współuzależnienie" → "intensywne przywiązanie", "Codependency" → "Attachment Intensity"
 - **Conflict detection bigrams:** Added accusatory bigram detection (PL: "ty zawsze", "ty nigdy", "dlaczego ty"; EN: "you always", "you never") — boosts escalation severity when co-occurring with timing spikes
 - **New citations:** Ireland & Pennebaker 2010 (LSM), Pennebaker 2011 (Pronouns), Gottman & Levenson 2000 (Conflict Escalation)
+
+### Faza 30 — Novel Psychological Constructs + Bug Fixes ✅
+- **Wskaźnik Reakcji fix:** Changed from asymmetric `reactionRate` (reactionsGiven/messagesReceived) to split view: `↑X% ↓Y%` showing `reactionGiveRate` / `reactionReceiveRate` per person. Overall = avg receive rate.
+- **Chronotype Compatibility Score:** Behavioral chronotype from timestamps (circular midpoint), match score 0-100 by delta hours. `quant/chronotype.ts` + `ChronotypePair.tsx`. Citations: Aledavood 2018, Jarmolowicz 2022, Alikhan 2023.
+- **Conversational Narcissism Index (CNI):** Shift-response vs support-response ratio (Derber 1979). Heuristic per-message classification, CNI 0-100 per person. `quant/shift-support.ts` + `ConversationalNarcissismCard.tsx`. Citations: Vangelisti et al. 1990.
+- **Emotional Granularity Score:** 12-category Plutchik-extended emotion lexicon (PL+EN), diversity × density formula. `quant/emotional-granularity.ts` + `EmotionalGranularityCard.tsx`. Citations: Vishnubhotla 2024, Suvak 2011, Kashdan 2015.
+- **Bid-Response Ratio ("Turning Toward"):** Gottman's bids (questions, disclosures, URLs) + response toward/away within 4h. Benchmark line at 86%. `quant/bid-response.ts` + `BidResponseCard.tsx`. Citations: Driver & Gottman 2004.
+- **Capitalization Analysis (ACR):** AI-powered Active-Constructive Responding (Gable et al. 2004). New SSE endpoint `/api/analyze/capitalization`, hook `useCapitalizationAnalysis.ts`, button `CapitalizationButton.tsx`, card `CapitalizationCard.tsx`. Classifies AC/PC/AD/PD with per-person stacked bars + example exchanges. Citations: Gable et al. 2004, Peters et al. 2018.
+- **New citations:** Aledavood 2018, Jarmolowicz 2022, Alikhan 2023, Derber 1979, Vangelisti et al. 1990, Gable et al. 2004, Peters et al. 2018, Vishnubhotla 2024, Suvak 2011, Kashdan 2015, Driver & Gottman 2004.
+
+### Faza 31 — Novel Psychological Constructs II ✅
+- **Integrative Complexity (IC):** AutoIC phrase-based scoring (Suedfeld & Tetlock 1977, Conway 2014). Differentiation + integration phrases (PL+EN). Normalized 0-100, monthly trend, example phrases. `quant/integrative-complexity.ts` + `IntegrativeComplexityCard.tsx`.
+- **Temporal Focus (Future Orientation):** LIWC-inspired marker-based tense detection (PL+EN). Past/Present/Future rates per 1000 words, futureIndex (0-1), orientation classification, monthly trend. `quant/temporal-focus.ts` + `TemporalFocusCard.tsx`. Citations: Pennebaker LIWC 2007, Vanderbilt et al. 2025.
+- **Conversational Repair Patterns:** Schegloff (1977) self-repair vs other-repair marker detection (PL+EN). selfRepairRate/otherRepairRate per 100 messages, repairInitiationRatio, mutualRepairIndex. `quant/repair-patterns.ts` + `RepairPatternsCard.tsx`.
+- **Social Jet Lag (Chronotype enhancement):** Added `weekdayMidpoint`, `weekendMidpoint`, `socialJetLagHours`, `socialJetLagLevel` to `PersonChronotype`. Separate weekday/weekend distributions computed in `computeChronotypeCompatibility`. `ChronotypePair.tsx` displays social jet lag per person. Citations: Roenneberg et al. 2012.
+- **Emotional Granularity Co-occurrence:** Added `categoryCooccurrenceIndex` (Jaccard per message) + `granularityScoreV2` (adjusted for co-occurrence) to `PersonEmotionalGranularity`. `higherGranularity` now uses `granularityScoreV2`.
+- **Moral Foundations Theory (AI pass):** Haidt's 6 foundations (Care, Fairness, Loyalty, Authority, Sanctity, Liberty). Scores 0-10 per person, radar chart, conflict analysis, moral compatibility 0-100. New files: `moral-foundations-prompts.ts`, `/api/analyze/moral-foundations/route.ts`, `useMoralFoundationsAnalysis.ts`, `MoralFoundationsButton.tsx`, `MoralFoundationsCard.tsx`. Citations: Haidt & Graham 2007, Rathje et al. 2024 (PNAS).
+- **Emotion Cause Extraction (AI pass):** SemEval-2024 Task 3 format. Identifies emotion-cause pairs (who felt what, triggered by whom). triggerMap + emotionalResponsibility per person. New files: `emotion-causes-prompts.ts`, `/api/analyze/emotion-causes/route.ts`, `useEmotionCausesAnalysis.ts`, `EmotionCausesButton.tsx`, `EmotionCausesCard.tsx`. Citations: Poria et al. 2021.
+- **New API endpoints:** `/api/analyze/moral-foundations` (SSE, 5/10min), `/api/analyze/emotion-causes` (SSE, 5/10min).
+- **New citations in citations.ts:** Suedfeld & Tetlock 1977, Conway 2014 (IC), Pennebaker 2007 LIWC, Schegloff et al. 1977, Roenneberg 2012 (social jet lag), Haidt & Graham 2007, Rathje 2024 (PNAS), Poria 2021, SemEval-2024.
 
 ### Future (not started)
 - Supabase PostgreSQL (`profiles` table + RLS policies + trigger)

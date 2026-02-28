@@ -43,12 +43,15 @@ export function useShareCard({ cardType, title, text }: UseShareCardOptions): Us
         }
       } else {
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `podtekst-${cardType}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-        trackEvent({ name: 'share_card_download', params: { cardType } });
+        try {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `podtekst-${cardType}.png`;
+          a.click();
+          trackEvent({ name: 'share_card_download', params: { cardType } });
+        } finally {
+          URL.revokeObjectURL(url);
+        }
       }
     },
     [canShare, cardType, title, text],

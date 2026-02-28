@@ -41,7 +41,7 @@ export default function SubtextCard({ subtextResult, participants }: SubtextCard
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           minHeight: 640,
           background: '#0a1208',
           borderRadius: 20,

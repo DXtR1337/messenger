@@ -281,7 +281,7 @@ export default function LabelCard({ qualitative, participants }: LabelCardProps)
             zIndex: 1,
           }}
         >
-          styl przywi\u0105zania
+          styl przywiązania
         </div>
 
         {/* MBTI badge — larger with gradient border */}
@@ -366,7 +366,7 @@ export default function LabelCard({ qualitative, participants }: LabelCardProps)
                 border: `1px solid ${colors.accent}15`,
               }}
             >
-              G\u0142\u00F3wna cecha: <span style={{ color: '#bbb', fontWeight: 600 }}>{label.topTrait}</span>
+              Główna cecha: <span style={{ color: '#bbb', fontWeight: 600 }}>{label.topTrait}</span>
             </div>
           </div>
         )}
@@ -430,7 +430,7 @@ export default function LabelCard({ qualitative, participants }: LabelCardProps)
         disabled={isDownloading}
         className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-card-hover hover:text-foreground disabled:opacity-50"
       >
-        {isDownloading ? 'Pobieranie...' : '\u{1F4E5} Pobierz etykietk\u0119'}
+        {isDownloading ? 'Pobieranie...' : '\u{1F4E5} Pobierz etykietkę'}
       </button>
     </div>
   );

@@ -95,7 +95,7 @@ export default function ScoresCard({ viralScores, participants }: ScoresCardProp
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: 'linear-gradient(160deg, #1a8a4a 0%, #15803d 40%, #12703a 70%, #0e6030 100%)',
           position: 'relative',

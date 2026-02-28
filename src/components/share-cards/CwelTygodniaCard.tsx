@@ -23,7 +23,7 @@ export default function CwelTygodniaCard({ result, cardRef: externalRef }: CwelT
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           minHeight: 640,
           background: 'linear-gradient(180deg, #0c0c0c 0%, #1a0a0a 50%, #0c0c0c 100%)',
           borderRadius: 16,

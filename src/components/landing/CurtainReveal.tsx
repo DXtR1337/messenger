@@ -15,6 +15,8 @@ export default function CurtainReveal() {
   const openedRef = useRef(false);
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const twitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track ALL timer IDs from recursive scheduleTwitch + openCurtain chains
+  const timerIdsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const curtainRef = useRef<HTMLDivElement>(null);
   const leftRef = useRef<HTMLDivElement>(null);
@@ -30,6 +32,9 @@ export default function CurtainReveal() {
     openedRef.current = true;
     if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
     if (twitchTimerRef.current) clearTimeout(twitchTimerRef.current);
+    // Clear all tracked timers from recursive chains
+    timerIdsRef.current.forEach(id => clearTimeout(id));
+    timerIdsRef.current = [];
 
     // Stop prompt pulsing
     promptRef.current?.getAnimations().forEach(a => a.cancel());
@@ -57,15 +62,15 @@ export default function CurtainReveal() {
     hangingRef.current?.startRise();
 
     // Show ceiling rail once rise begins (~650ms = drop + pause)
-    setTimeout(() => {
+    timerIdsRef.current.push(setTimeout(() => {
       railRef.current?.animate(
         [{ opacity: '0' }, { opacity: '1' }],
         { duration: 500, fill: 'forwards' },
       );
-    }, 650);
+    }, 650));
 
     // ── LANDING CONTENT FADE-IN ──
-    setTimeout(() => {
+    timerIdsRef.current.push(setTimeout(() => {
       const landing = document.getElementById('landing-content');
       if (landing) {
         landing.animate(
@@ -80,19 +85,19 @@ export default function CurtainReveal() {
         [{ opacity: '0' }, { opacity: '1' }],
         { duration: 1000, fill: 'forwards' },
       );
-    }, 1200);
+    }, 1200));
 
     // ── NEON "EKS" + IDLE WIND ──
-    setTimeout(() => {
+    timerIdsRef.current.push(setTimeout(() => {
       hangingRef.current?.activateNeon();
       hangingRef.current?.startIdleWind();
-    }, 2800);
+    }, 2800));
 
     // ── HIDE CURTAIN DOM + ENABLE INTERACTION ──
-    setTimeout(() => {
+    timerIdsRef.current.push(setTimeout(() => {
       if (curtainRef.current) curtainRef.current.style.display = 'none';
       hangingRef.current?.enableInteraction();
-    }, 3600);
+    }, 3600));
   }, []);
 
   // Lock scroll + prompt pulse + curtain fabric twitches
@@ -111,7 +116,7 @@ export default function CurtainReveal() {
       if (openedRef.current) return;
 
       const delay = 1500 + Math.random() * 3000; // 1.5-4.5s between twitches
-      twitchTimerRef.current = setTimeout(() => {
+      const timerId = setTimeout(() => {
         if (openedRef.current) return;
 
         // Pick left or right (or both)
@@ -149,15 +154,23 @@ export default function CurtainReveal() {
 
         scheduleTwitch();
       }, delay);
+      twitchTimerRef.current = timerId;
+      timerIdsRef.current.push(timerId);
     }
 
     // Start twitches quickly
     const startTimer = setTimeout(scheduleTwitch, 800);
+    timerIdsRef.current.push(startTimer);
 
     return () => {
       document.body.style.overflow = '';
       clearTimeout(startTimer);
       if (twitchTimerRef.current) clearTimeout(twitchTimerRef.current);
+      // Clear all tracked timers from recursive chains
+      timerIdsRef.current.forEach(id => clearTimeout(id));
+      timerIdsRef.current = [];
+      // Cancel any pending Web Animations on the prompt button
+      promptRef.current?.getAnimations?.().forEach(a => a.cancel());
     };
   }, []);
 

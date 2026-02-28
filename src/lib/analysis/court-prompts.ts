@@ -5,9 +5,10 @@
  */
 
 import 'server-only';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import type { AnalysisSamples } from './qualitative';
 import { formatMessagesForAnalysis } from './prompts';
+import { callGeminiWithRetry } from './gemini';
+import { parseGeminiJSON } from './json-parser';
 
 // ============================================================
 // Types
@@ -40,95 +41,12 @@ export interface CourtResult {
   caseNumber: string;
   courtName: string;
   charges: CourtCharge[];
+  witnesses?: Array<{quote: string; witness: string; prosecutor_comment: string}>;
+  prosecutor_questions?: Record<string, string[]>;
   prosecution: string;
   defense: string;
   verdict: CourtVerdict;
   perPerson: Record<string, PersonVerdict>;
-}
-
-// ============================================================
-// Private: Gemini helpers (mirroring gemini.ts pattern)
-// ============================================================
-
-function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set in .env.local');
-  return new GoogleGenerativeAI(apiKey);
-}
-
-const SAFETY_SETTINGS = [
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-];
-
-async function callGeminiWithRetry(
-  systemPrompt: string,
-  userContent: string,
-  maxRetries = 3,
-  maxTokens = 8192,
-): Promise<string> {
-  let lastError: Error | undefined;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      const client = getClient();
-      const model = client.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
-        systemInstruction: systemPrompt,
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature: 0.5,
-          responseMimeType: 'application/json',
-        },
-        safetySettings: SAFETY_SETTINGS,
-      });
-
-      const result = await model.generateContent(userContent);
-      const response = result.response;
-
-      if (response.promptFeedback?.blockReason) {
-        throw new Error(`Prompt zablokowany przez filtr bezpieczeństwa: ${response.promptFeedback.blockReason}`);
-      }
-
-      const candidate = response.candidates?.[0];
-      if (candidate?.finishReason === 'SAFETY') {
-        throw new Error('Odpowiedź zablokowana przez filtr bezpieczeństwa');
-      }
-
-      const text = response.text();
-      if (!text) throw new Error('No text in Gemini response');
-      return text;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      const msg = lastError.message.toLowerCase();
-      if (msg.includes('api key') || msg.includes('permission') || msg.includes('billing')) {
-        throw new Error('Błąd konfiguracji API — sprawdź klucz API');
-      }
-      if (attempt < maxRetries - 1) {
-        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
-      }
-    }
-  }
-  throw new Error(`Błąd analizy AI: ${lastError?.message ?? 'nieznany błąd'}`);
-}
-
-function parseGeminiJSON<T>(raw: string): T {
-  let cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-  if (!cleaned.startsWith('{') && !cleaned.startsWith('[')) {
-    const jsonStart = cleaned.search(/[{[]/);
-    if (jsonStart >= 0) cleaned = cleaned.slice(jsonStart);
-  }
-  if (cleaned.startsWith('{') || cleaned.startsWith('[')) {
-    const closingChar = cleaned.startsWith('{') ? '}' : ']';
-    const lastClose = cleaned.lastIndexOf(closingChar);
-    if (lastClose >= 0) cleaned = cleaned.slice(0, lastClose + 1);
-  }
-  try {
-    return JSON.parse(cleaned) as T;
-  } catch {
-    throw new Error('Błąd parsowania odpowiedzi AI — odpowiedź nie jest poprawnym JSON');
-  }
 }
 
 // ============================================================
@@ -162,12 +80,15 @@ ZASADY:
 - Styl: FORMALNY język prawniczy ale z ABSURDALNYM kontekstem. Poważna forma, śmieszna treść.
 - PRIORYTET: Zarzuty oparte na PRAWDZIWYCH rzeczach znalezionych w wiadomościach! Cytuj DOSŁOWNE fragmenty wiadomości jako dowody.
 - Każdy zarzut MUSI opierać się na KONKRETNYCH danych — CYTATY z wiadomości (dosłowne!), metryki liczbowe.
-- Generuj 3-6 zarzutów. Mieszaj zarzuty "realne" (z treści wiadomości) z "emocjonalnymi" (wzorce komunikacyjne).
+- Generuj 5-8 zarzutów. Mieszaj zarzuty "realne" (z treści wiadomości) z "emocjonalnymi" (wzorce komunikacyjne).
 - Minimum 2 zarzuty muszą być oparte na DOSŁOWNYCH cytatach z wiadomości (prawdziwe zachowania).
 - Każda osoba w rozmowie dostaje osobny wyrok (perPerson).
-- Kary muszą być kreatywne, zabawne i NAWIĄZYWAĆ do konkretnych przewinień (np. jeśli ktoś gadał o narkotykach: "Przymusowe 200 godzin oglądania filmów profilaktycznych", jeśli ktoś wyzywał: "Kurs zarządzania gniewem prowadzony przez babcię oskarżonego").
-- Mowa oskarżyciela: dramatyczna, z konkretnymi dowodami i DOSŁOWNYMI cytatami, 4-6 zdań.
-- Mowa obrońcy: próbuje bronić oskarżonych, ale dowody są miażdżące, 3-5 zdań.
+- Kary muszą być kreatywne, zabawne i NAWIĄZYWAĆ do konkretnych przewinień (np. jeśli ktoś gadał o narkotykach: "Przymusowe 200 godzin oglądania filmów profilaktycznych", jeśli ktoś wyzywał: "Kurs zarządzania gniewem prowadzony przez babcię oskarżonego"). Kary MUSZĄ być absurdalnie kreatywne i SPECYFICZNE — np. "6 miesięcy zakazu wysyłania emoji 🥺 pod groźbą konfiskaty telefonu", "Przymusowe 200h czytania poradników komunikacji interpersonalnej", "Kara 50 złotych za każde przeczytane i zignorowane wiadomość".
+
+PRZESŁUCHANIA ŚWIADKÓW:
+Generuj sekcję "witnesses" z 3-5 zeznaniami świadków. Każde zeznanie to DOSŁOWNY cytat z wiadomości użyty jako dowód w procesie, z dramatycznym komentarzem prokuratora. Format zeznania: {"quote": "dosłowny cytat", "witness": "imię osoby cytowanej", "prosecutor_comment": "komentarz prokuratora do tego zeznania"}.
+- Mowa oskarżyciela: dramatyczna, z konkretnymi dowodami i DOSŁOWNYMI cytatami, 6-10 zdań. Prokuratura zadaje RETORYCZNE PYTANIA oskarżonym — 2-3 pytania per osoba, cytując ich własne słowa przeciwko nim. Pytania retoryczne zapisz w osobnym polu "prosecutor_questions".
+- Mowa obrońcy: próbuje bronić oskarżonych, ale dowody są miażdżące, 5-8 zdań.
 - Wyrok: jedno zdanie podsumowujące + uzasadnienie.
 - caseNumber format: "SPRAWA NR PT-2026/[losowy numer 3-5 cyfr]"
 - mugshotLabel: krótki label na karcie mugshot nawiązujący do PRAWDZIWYCH przewinień (np. "DILER EMOCJI", "SERYJNY WULGARYZATOR", "NOCNY MARUDER")
@@ -213,7 +134,7 @@ severity:
 OUTPUT FORMAT: Valid JSON only.
 
 {
-  "caseNumber": "SPRAWA NR PT-2026/XXXXX",
+  "caseNumber": "SPRAWA NR PT-2026/[losowy 3-5 cyfrowy numer]",
   "courtName": "Sąd Okręgowy ds. Emocjonalnych i Obyczajowych",
   "charges": [
     {
@@ -225,6 +146,12 @@ OUTPUT FORMAT: Valid JSON only.
       "defendant": "imię osoby"
     }
   ],
+  "witnesses": [
+    {"quote": "dosłowny cytat z wiadomości", "witness": "imię osoby cytowanej", "prosecutor_comment": "dramatyczny komentarz prokuratora"}
+  ],
+  "prosecutor_questions": {
+    "[imię]": ["retoryczne pytanie do oskarżonego cytujące jego własne słowa"]
+  },
   "prosecution": "Wysoki Sądzie, oskarżyciel cytuje KONKRETNE wiadomości...",
   "defense": "Wysoki Sądzie, mowa obrońcy...",
   "verdict": {
@@ -284,7 +211,7 @@ export async function runCourtTrial(
 
   const input = parts.join('\n');
 
-  const raw = await callGeminiWithRetry(COURT_TRIAL_SYSTEM, input, 3, 8192);
+  const raw = await callGeminiWithRetry(COURT_TRIAL_SYSTEM, input, 3, 8192, 0.5);
   const result = parseGeminiJSON<CourtResult>(raw);
 
   // Validate essential fields

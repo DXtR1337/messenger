@@ -4,6 +4,11 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { PersonMetrics } from '@/lib/parsers/types';
 
+const PERSON_COLORS = ['#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ef4444'] as const;
+
+/** Maximum participants shown in legend before "+X more" truncation */
+const MAX_LEGEND = 6;
+
 interface EmojiReactionsProps {
   perPerson: Record<string, PersonMetrics>;
   participants: string[];
@@ -40,13 +45,16 @@ export default function EmojiReactions({
 
     merged.sort((a, b) => b.total - a.total);
     // Filter out entries that aren't valid emoji (e.g. "unknown", empty, garbled text)
-    return merged.filter((e) => e.emoji && e.emoji.length <= 8 && /\p{Emoji}/u.test(e.emoji)).slice(0, 5);
+    // Length <= 20 to allow complex emoji: ZWJ sequences, flags, skin tones
+    return merged.filter((e) => e.emoji && e.emoji.length <= 20 && /\p{Emoji}/u.test(e.emoji)).slice(0, 5);
   }, [perPerson, participants]);
 
   if (topEmojis.length === 0) return null;
 
-  const personA = participants[0];
-  const personB = participants[1];
+  const getColor = (index: number) => PERSON_COLORS[index % PERSON_COLORS.length];
+
+  const legendParticipants = participants.slice(0, MAX_LEGEND);
+  const hiddenCount = participants.length - MAX_LEGEND;
 
   return (
     <motion.div
@@ -54,56 +62,62 @@ export default function EmojiReactions({
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.5 }}
-      className="overflow-hidden rounded-xl border border-border bg-card"
+      className="overflow-hidden"
     >
-      <div className="flex items-center justify-between px-3 sm:px-5 pt-4">
+      <div className="flex items-center justify-between px-4 sm:px-6 pt-4">
         <div>
-          <h3 className="font-display text-[15px] font-bold">Top reakcje</h3>
-          <p className="mt-0.5 text-xs text-text-muted">
+          <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">Top reakcje</h3>
+          <p className="mt-0.5 text-xs text-white/50">
             Najczęściej używane emoji
           </p>
         </div>
       </div>
-      <div className="flex flex-col gap-3 px-3 sm:px-5 py-4">
-        {topEmojis.map((entry) => {
-          const countA = personA ? (entry.perPerson[personA] ?? 0) : 0;
-          const countB = personB ? (entry.perPerson[personB] ?? 0) : 0;
-          const pctA = entry.total > 0 ? (countA / entry.total) * 100 : 0;
-          const pctB = entry.total > 0 ? (countB / entry.total) * 100 : 0;
-
-          return (
-            <div key={entry.emoji} className="flex items-center gap-2.5">
-              <span className="w-[30px] text-center text-xl">{entry.emoji}</span>
-              <div className="flex h-2 flex-1 overflow-hidden rounded">
-                <div
-                  className="bg-chart-a transition-all duration-300"
-                  style={{ width: `${pctA}%` }}
-                />
-                <div
-                  className="bg-chart-b transition-all duration-300"
-                  style={{ width: `${pctB}%` }}
-                />
-              </div>
-              <span className="w-11 text-right font-display text-[13px] text-muted-foreground">
-                {entry.total}
-              </span>
+      <div className="flex flex-col gap-3 px-4 sm:px-6 py-4">
+        {topEmojis.map((entry) => (
+          <div key={entry.emoji} className="flex items-center gap-2.5">
+            <span className="w-[30px] text-center text-2xl opacity-90">{entry.emoji}</span>
+            <div
+              className="flex h-[5px] flex-1 overflow-hidden rounded-full bg-white/[0.04]"
+              style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3)' }}
+            >
+              {participants.map((name, i) => {
+                const count = entry.perPerson[name] ?? 0;
+                const pct = entry.total > 0 ? (count / entry.total) * 100 : 0;
+                if (pct === 0) return null;
+                const color = getColor(i);
+                return (
+                  <div
+                    key={name}
+                    className="first:rounded-l-full last:rounded-r-full transition-all duration-300"
+                    title={`${name}: ${count}`}
+                    style={{
+                      width: `${pct}%`,
+                      background: `linear-gradient(90deg, ${color}90, ${color})`,
+                      boxShadow: `0 0 8px ${color}25`,
+                    }}
+                  />
+                );
+              })}
             </div>
-          );
-        })}
+            <span className="w-11 text-right font-display text-xs text-white/50">
+              {entry.total}
+            </span>
+          </div>
+        ))}
 
         {/* Legend */}
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-text-muted">
-          {personA && (
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-sm bg-chart-a" />
-              {personA}
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] text-white/50">
+          {legendParticipants.map((name, i) => (
+            <span key={name} className="flex items-center gap-1.5">
+              <span
+                className="inline-block size-2.5 rounded-[3px]"
+                style={{ backgroundColor: getColor(i) }}
+              />
+              {name}
             </span>
-          )}
-          {personB && (
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-sm bg-chart-b" />
-              {personB}
-            </span>
+          ))}
+          {hiddenCount > 0 && (
+            <span className="text-muted-foreground">+{hiddenCount}</span>
           )}
         </div>
       </div>

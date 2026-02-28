@@ -35,6 +35,14 @@ export function detectPursuitWithdrawal(
   const WITHDRAWAL_THRESHOLD_MS = 4 * 60 * 60 * 1000; // 4 hours of silence (2h gaps are normal: lunch, meetings, commute)
   const MIN_CONSECUTIVE = 4; // minimum messages to count as pursuit (3 is normal message-splitting)
 
+  /** Returns true if this gap starts at nighttime (22:00–08:00) and is short enough
+   *  to be plausibly just "sleep". Gaps > 12h are not suppressed even if starting at night. */
+  function isOvernightGap(startTs: number, gapMs: number): boolean {
+    if (gapMs > 12 * 3600_000) return false; // >12h — not just overnight
+    const hour = new Date(startTs).getHours();
+    return hour >= 22 || hour < 8;
+  }
+
   let i = 0;
   while (i < messages.length) {
     const sender = messages[i].sender;
@@ -57,8 +65,8 @@ export function detectPursuitWithdrawal(
       const nextMsg = messages[i];
       const silenceDuration = nextMsg.timestamp - messages[i - 1].timestamp;
 
-      // Withdrawal = next message takes >2h to arrive
-      if (silenceDuration > WITHDRAWAL_THRESHOLD_MS) {
+      // Withdrawal = next message takes >4h to arrive AND gap is not just overnight sleep
+      if (silenceDuration >= WITHDRAWAL_THRESHOLD_MS && !isOvernightGap(messages[i - 1].timestamp, silenceDuration)) {
         cycles.push({
           pursuitTimestamp: pursuitStart,
           withdrawalDurationMs: silenceDuration,

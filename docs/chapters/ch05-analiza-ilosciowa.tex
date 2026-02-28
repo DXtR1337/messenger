@@ -1670,10 +1670,266 @@ export interface QuantitativeAnalysis {
   catchphrases?: CatchphraseResult;
   networkMetrics?: NetworkMetrics;
   reciprocityIndex?: ReciprocityIndex;
+  // Faza 24-27: Deep Analytics + Validation
+  sentimentScore?: SentimentScore;
+  conflicts?: ConflictEvent[];
+  intimacyProgression?: IntimacyPoint[];
+  pursuitWithdrawal?: PursuitWithdrawalResult;
+  responseTimeDistribution?: ResponseTimeDistribution;
+  yearMilestones?: YearMilestones;
+  rankingPercentiles?: RankingPercentiles;
+  lsm?: LSMResult;
+  pronounAnalysis?: PronounAnalysisResult;
+  // Faza 28: Nowe moduły psychologiczne
+  chronotypeCompatibility?: ChronotypeCompatibility;
+  emotionalGranularity?: EmotionalGranularityResult;
+  bidResponse?: BidResponseResult;
+  shiftSupport?: ShiftSupportResult;
 }
 \end{lstlisting}
 
-Pola oznaczone \texttt{?} (opcjonalne) są obecne po fazie 3 przetwarzania końcowego. \texttt{networkMetrics} jest dostępny wyłącznie dla czatów grupowych.
+Pola oznaczone \texttt{?} (opcjonalne) są obecne po fazie 3 przetwarzania końcowego. \texttt{networkMetrics} jest dostępny wyłącznie dla czatów grupowych. Pola od \tstype{pursuitWithdrawal} wzwyż wprowadzono w~Fazach 24--28.
+
+% ============================================================
+\section{Wykrywanie wzorca pościg--wycofanie}
+\label{sec:pursuit-withdrawal}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/lib/analysis/quant/pursuit-withdrawal.ts}\\
+\textbf{Podstawa naukowa:} Christensen \& Heavey (1990) --- wzorzec Demand--Withdraw.
+
+Moduł wykrywa naprzemienne serie wiadomości, w~których jedna osoba wysyła sekwencję co~najmniej 4~kolejnych wiadomości (faza \emph{pościgu}), po której następuje przerwa milczenia trwająca co~najmniej 4~godziny (faza \emph{wycofania}). Progi podwyższono w~Fazie~26 z~wartości 3~wiadomości / 2~godziny, aby ograniczyć liczbę fałszywych alarmów.
+
+\begin{lstlisting}[style=podcode, caption={Interfejs modułu pursuit-withdrawal}]
+interface PursuitWithdrawalCycle {
+  pursuer: string;           // nadawca inicjujacy poscius
+  withdrawer: string;        // osoba milczaca
+  pursuerMessages: number;   // liczba wiadomosci w serii
+  withdrawerMessages: number;
+  gapMs: number;             // czas milczenia w ms
+}
+
+interface PursuitWithdrawalResult {
+  cycles: PursuitWithdrawalCycle[];
+  dominantPursuer: string | null;  // osoba czesciej inicjujaca
+  severity: 'none' | 'mild' | 'moderate' | 'significant';
+}
+\end{lstlisting}
+
+Wynik \tstype{severity} jest wyliczany na~podstawie liczby wykrytych cykli w~stosunku do~łącznej liczby wiadomości w~konwersacji. Komponent UI: \filepath{src/components/analysis/PursuitWithdrawalCard.tsx}.
+
+% ============================================================
+\section{Dopasowanie stylu językowego (LSM)}
+\label{sec:lsm}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/lib/analysis/quant/lsm.ts}\\
+\textbf{Podstawa naukowa:} Ireland \& Pennebaker (2010), \emph{Journal of Personality and Social Psychology}.
+
+Language Style Matching (LSM) mierzy stopień, w~jakim dwie osoby nieświadomie dostosowują swój styl językowy do~siebie nawzajem. Moduł analizuje 9~kategorii \emph{function words} (słów funkcyjnych) w~językach polskim i~angielskim:
+
+\begin{itemize}
+  \item artykuły (\emph{the, a, an} / \emph{ten, ta, to, \ldots})
+  \item zaimki osobowe (\emph{I, you, he} / \emph{ja, ty, on, \ldots})
+  \item zaimki względne (\emph{who, which, that} / \emph{który, która, \ldots})
+  \item negacje (\emph{no, not, never} / \emph{nie, nigdy, bez, \ldots})
+  \item przyimki (\emph{in, on, at} / \emph{w, na, przy, \ldots})
+  \item spójniki (\emph{and, but, or} / \emph{i, ale, lub, \ldots})
+  \item kwantyfikatory (\emph{all, few, some} / \emph{wszystko, kilka, trochę, \ldots})
+  \item przysłówki (\emph{very, quite} / \emph{bardzo, dość, \ldots})
+  \item pomocnicze (\emph{is, was, have} / \emph{jest, był, ma, \ldots})
+\end{itemize}
+
+Wynik LSM na~kategorię: $\text{LSM}_k = 1 - \frac{|r_A - r_B|}{r_A + r_B + 0{,}0001}$, gdzie $r_A$, $r_B$ to~odsetki użycia słów z~kategorii $k$ przez osoby A i~B. Ogólny wynik LSM to~ważona średnia 9~kategorii.
+
+Dodatkowa metryka \emph{asymetrii adaptacji} wskazuje, która osoba bardziej dostosowuje swój styl do~rozmówcy --- efekt ,,kameleona komunikacyjnego''.
+
+\begin{table}[H]
+\centering
+\caption{Interpretacja wyniku LSM}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Wynik LSM} & \textbf{Interpretacja} \\
+\midrule
+$\geq 0{,}90$ & Bardzo wysokie dopasowanie stylistyczne \\
+$\geq 0{,}80$ & Wysokie dopasowanie \\
+$\geq 0{,}70$ & Umiarkowane dopasowanie \\
+$< 0{,}70$ & Niskie dopasowanie (wyraźna rozbieżność stylu) \\
+\bottomrule
+\end{tabularx}
+\label{tab:lsm-interpretation}
+\end{table}
+
+Komponent UI: \filepath{src/components/analysis/LSMCard.tsx}.
+
+% ============================================================
+\section{Analiza zaimków (Pronoun Analysis)}
+\label{sec:pronouns}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/lib/analysis/quant/pronouns.ts}\\
+\textbf{Podstawa naukowa:} Pennebaker (2011), \emph{The Secret Life of Pronouns}.
+
+Moduł zlicza użycie zaimków pierwszoosobowych (\emph{ja}/\emph{I}), inkluzywnych (\emph{my}/\emph{we}) i~drugoosobowych (\emph{ty}/\emph{you}) z~uwzględnieniem pełnej polskiej deklinacji:
+\begin{itemize}
+  \item \textbf{ja:} \emph{ja, mnie, mi, mną, mój, moja, moje, moi, moją}
+  \item \textbf{my:} \emph{my, nas, nam, nami, nasz, nasza, nasze, nasi}
+  \item \textbf{ty:} \emph{ty, cię, ci, tobie, twój, twoja, twoje, twoi}
+\end{itemize}
+
+Dla każdej osoby obliczane są odsetki: \texttt{iRate}, \texttt{weRate}, \texttt{youRate} (jako \% wszystkich słów). Na~ich podstawie wyznaczana jest orientacja relacyjna:
+
+\begin{description}
+  \item[\texttt{self-focused}] dominuje \emph{ja} --- wysoka uwaga na~siebie
+  \item[\texttt{other-focused}] dominuje \emph{ty} --- wysoka uwaga na~partnera
+  \item[\texttt{collective}] dominuje \emph{my} --- silne poczucie jedności pary
+  \item[\texttt{balanced}] żaden zaimek nie dominuje
+\end{description}
+
+Komponent UI: \filepath{src/components/analysis/PronounCard.tsx}.
+
+% ============================================================
+\section{Rozkład czasu odpowiedzi}
+\label{sec:response-time-dist}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/lib/analysis/quant/response-time-distribution.ts}
+
+Moduł buduje histogram czasów odpowiedzi per osoba w~6~przedziałach:
+
+\begin{table}[H]
+\centering
+\caption{Przedziały histogramu czasu odpowiedzi}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Bucket} & \textbf{Zakres} \\
+\midrule
+Błyskawiczna & $< 1$~minuta \\
+Szybka & $1$--$5$ minut \\
+Normalna & $5$--$30$ minut \\
+Wolna & $30$ minut -- $2$ godziny \\
+Bardzo wolna & $2$--$8$ godzin \\
+Ghosting & $> 8$ godzin \\
+\bottomrule
+\end{tabularx}
+\label{tab:response-buckets}
+\end{table}
+
+Oprócz histogramu moduł oblicza medianę oraz percentyle 75. i~90. dla każdej osoby. Dane są wizualizowane przez komponent \filepath{src/components/analysis/ResponseTimeHistogram.tsx} jako pogrupowany wykres słupkowy.
+
+% ============================================================
+\section{Analiza chronotypu (Faza~28)}
+\label{sec:chronotype}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/lib/analysis/quant/chronotype.ts}\\
+\textbf{Podstawa naukowa:} Aledavood et~al.\ 2018 ($N=400$); Jarmolowicz et~al.\ 2022 ($F(1{,}58)=19{,}57$).
+
+Moduł wyznacza chronotyp każdej osoby (ranny ptaszek / pośredni / nocna sowa) na~podstawie godzinowego rozkładu wysyłanych wiadomości. Punkt szczytowy (\emph{peak hour}) obliczany jest metodą okrągłej średniej (\emph{angular mean}, opartej na~$\text{atan}2$), która poprawnie obsługuje przejście przez północ.
+
+\begin{lstlisting}[style=podcode, caption={Kategorie chronotypu}]
+type ChronotypeCategory = 'early_bird' | 'intermediate' | 'night_owl';
+// early_bird:   peakHour < 10  (emoji: 🌅)
+// night_owl:    peakHour >= 20 (emoji: 🦉)
+// intermediate: pozostale godziny
+\end{lstlisting}
+
+Wynik zgodności pary (\texttt{matchScore}) jest obliczany na~podstawie różnicy kołowej między punktami szczytowymi obojga rozmówców:
+
+\begin{table}[H]
+\centering
+\caption{Przelicznik delta-godzin na matchScore}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Różnica (deltaHours)} & \textbf{matchScore} \\
+\midrule
+$\leq 1$~h & 95\% \\
+$\leq 2$~h & 80\% \\
+$\leq 3$~h & 60\% \\
+$\leq 4$~h & 40\% \\
+$\leq 5$~h & 20\% \\
+$> 5$~h & 10\% \\
+\bottomrule
+\end{tabularx}
+\label{tab:chronotype-match}
+\end{table}
+
+Minimalne wymagania: 20~wiadomości per osoba. Komponent UI: \filepath{src/components/analysis/ChronotypePair.tsx}.
+
+% ============================================================
+\section{Granularność emocjonalna (Faza~28)}
+\label{sec:emotional-granularity}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/lib/analysis/quant/emotional-granularity.ts}\\
+\textbf{Podstawa naukowa:} Vishnubhotla et~al.\ 2024 (EMNLP); Suvak et~al.\ 2011; Kashdan et~al.\ 2015.
+
+Granularność emocjonalna (\emph{emotional granularity}) mierzy zdolność osoby do~precyzyjnego różnicowania stanów emocjonalnych. Moduł analizuje użycie słów z~12~kategorii emocjonalnych (łącznie $\sim$160+ słów w~językach polskim i~angielskim):
+
+\begin{itemize}
+  \item radość, smutek, złość, strach, zaskoczenie, wstręt
+  \item oczekiwanie, zaufanie, frustracja, czułość, samotność, duma
+\end{itemize}
+
+Wynik granularności: $G = \frac{d}{12} \times 70 + \min(30,\, \frac{e}{w} \times 300)$, gdzie $d$ = liczba rozróżnionych kategorii, $e$ = liczba słów emocjonalnych, $w$ = łączna liczba słów.
+
+Minimalne wymagania: 200~słów per osoba. Komponent UI: \filepath{src/components/analysis/EmotionalGranularityCard.tsx}.
+
+% ============================================================
+\section{Wskaźnik bid-response --- ,,zwrot ku partnerowi'' (Faza~28)}
+\label{sec:bid-response}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/lib/analysis/quant/bid-response.ts}\\
+\textbf{Podstawa naukowa:} Gottman \& Silver (1999); Driver \& Gottman (2004). Benchmark: $\geq 86\%$ = pary stabilne (Gottman).
+
+Bid-response ratio mierzy, jak często rozmówca odpowiada na~sygnały nawiązania kontaktu (\emph{bids for connection}) wysyłane przez partnera.
+
+\textbf{Definicja bidu:} wiadomość zawierająca \texttt{?}, zaczynająca się od~frazy nawiązania (PL: ,,słuchaj'', ,,wiesz co''; EN: ,,listen'') lub zawierająca URL.
+
+\textbf{Klasyfikacja odpowiedzi:}
+\begin{description}
+  \item[\emph{toward} (zwrot ku partnerowi)] zawiera pytanie, overlap słów $\geq 1$ z~bidem lub jest dłuższa niż 5~znaków i~nie jest odrzuceniem
+  \item[\emph{away} (wycofanie)] brak odpowiedzi $> 4$~godziny lub zawiera tokeny odrzucenia (PL: ,,spoko'', ,,zapomnij''; EN: ,,whatever'')
+\end{description}
+
+\begin{table}[H]
+\centering
+\caption{Interpretacja bid-response rate}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Wynik} & \textbf{Interpretacja} \\
+\midrule
+$\geq 80\%$ & Wysoka responsywność \\
+$\geq 60\%$ & Umiarkowana responsywność \\
+$< 60\%$ & Niska responsywność \\
+$\geq 86\%$ & Poziom stabilnych par (benchmark Gottmana) \\
+\bottomrule
+\end{tabularx}
+\label{tab:bid-response}
+\end{table}
+
+Minimalne wymagania: 10~bidów łącznie.
+
+% ============================================================
+\section{Narcyzm konwersacyjny --- wskaźnik CNI (Faza~28)}
+\label{sec:cni}
+% ============================================================
+
+\textbf{Plik:} \filepath{src/lib/analysis/quant/shift-support.ts}\\
+\textbf{Podstawa naukowa:} Derber (1979); Vangelisti, Knapp \& Daly (1990), \emph{Communication Monographs}.
+
+Conversational Narcissism Index (CNI) operacjonalizuje teorię Derbera o~tendencji do~przejmowania centrum uwagi w~rozmowie przez nadmierne używanie \emph{shift-response} (odpowiedzi przekierowujących temat na~siebie) zamiast \emph{support-response} (odpowiedzi wspierających temat rozmówcy).
+
+\textbf{Klasyfikacja odpowiedzi:}
+\begin{description}
+  \item[\emph{support-response}] zawiera \texttt{?}, zaczyna się od~pytajnika lub overlap słów z~poprzednią wiadomością $\geq 2$
+  \item[\emph{shift-response}] zaczyna się od~tokenu self-referential (np.\ ,,ja'', ,,mnie'', ,,I'') i~overlap = 0
+\end{description}
+
+$$\text{CNI} = \frac{\text{shiftCount}}{\text{shiftCount} + \text{supportCount}} \times 100$$
+
+Minimalne wymagania: 10~odpowiedzi per osoba. Interpretacja: CNI $\geq 70\%$ = wysoki narcyzm konwersacyjny; $\geq 45\%$ = umiarkowany; $< 45\%$ = niski. Komponent UI: \filepath{src/components/analysis/ConversationalNarcissismCard.tsx}.
 
 \vfill
 \begin{center}

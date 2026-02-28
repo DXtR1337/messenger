@@ -154,7 +154,7 @@ export function alertEmbed(title: string, description: string): DiscordEmbed {
 
 /** Build ACTION_ROW with a LINK button to the website analysis page */
 export function websiteLinkRow(channelId: string): DiscordComponent[] {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://chatscope-9278095424.europe-west1.run.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? '';
   return [
     {
       type: 1, // ACTION_ROW
@@ -162,7 +162,7 @@ export function websiteLinkRow(channelId: string): DiscordComponent[] {
         {
           type: 2,    // BUTTON
           style: 5,   // LINK
-          label: 'Otw\u00F3rz pe\u0142n\u0105 analiz\u0119 na stronie',
+          label: 'Otwórz pełną analizę na stronie',
           url: `${baseUrl}/analysis/new?channel=${channelId}`,
           emoji: { name: '\uD83D\uDD17' },
         },

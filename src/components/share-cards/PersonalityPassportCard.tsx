@@ -75,7 +75,7 @@ export default function PersonalityPassportCard({
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: '#0c0c10',
           borderRadius: 8,

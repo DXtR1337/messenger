@@ -192,32 +192,32 @@ function classifyWhatsAppMessage(content: string): UnifiedMessage['type'] {
 
 const SYSTEM_MESSAGE_INDICATORS = [
   'messages and calls are end-to-end encrypted',
-  'wiadomo\u015Bci oraz po\u0142\u0105czenia s\u0105 szyfrowane',
+  'wiadomości oraz połączenia są szyfrowane',
   'created group',
-  'utworzy\u0142',
+  'utworzył',
   'changed the subject',
-  'zmieni\u0142',
+  'zmienił',
   'changed the group description',
   'changed this group',
   'added',
-  'doda\u0142',
+  'dodał',
   'removed',
-  'usun\u0105\u0142',
+  'usunął',
   'left',
-  'opu\u015Bci\u0142',
+  'opuścił',
   'joined using',
-  'do\u0142\u0105czy\u0142',
+  'dołączył',
   'security code changed',
   'you were added',
   "you're now an admin",
   'disappearing messages',
-  'wiadomo\u015Bci znikaj\u0105ce',
+  'wiadomości znikające',
   'missed voice call',
   'missed video call',
   'this message was deleted',
-  'ta wiadomo\u015B\u0107 zosta\u0142a usuni\u0119ta',
+  'ta wiadomość została usunięta',
   'you deleted this message',
-  'usun\u0105\u0142e\u015B t\u0119 wiadomo\u015B\u0107',
+  'usunąłeś tę wiadomość',
 ];
 
 /**
@@ -312,7 +312,11 @@ export function parseWhatsAppText(text: string): ParsedConversation {
     } else {
       // Line does not start with a date — it's a continuation of the previous message
       if (currentMessage) {
-        currentMessage.content += '\n' + line;
+        if (currentMessage.content.length > 100_000) {
+          currentMessage.content = currentMessage.content.slice(0, 100_000) + '\n[...treść obcięta]';
+        } else {
+          currentMessage.content += '\n' + line;
+        }
       }
       // If no current message exists, skip orphan lines
     }
@@ -357,8 +361,8 @@ export function parseWhatsAppText(text: string): ParsedConversation {
     const isUnsent =
       lowerContent === 'this message was deleted' ||
       lowerContent === 'you deleted this message' ||
-      lowerContent === 'ta wiadomo\u015B\u0107 zosta\u0142a usuni\u0119ta' ||
-      lowerContent === 'usun\u0105\u0142e\u015B t\u0119 wiadomo\u015B\u0107';
+      lowerContent === 'ta wiadomość została usunięta' ||
+      lowerContent === 'usunąłeś tę wiadomość';
 
     messages.push({
       index,

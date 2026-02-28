@@ -5,6 +5,7 @@
  */
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GEMINI_MODEL_ID } from '@/lib/analysis/constants';
 
 const SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -35,7 +36,7 @@ export async function callGeminiForDiscord(
     try {
       const client = getClient();
       const model = client.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
+        model: GEMINI_MODEL_ID,
         systemInstruction: systemPrompt,
         generationConfig: {
           maxOutputTokens: options?.maxOutputTokens ?? 2048,

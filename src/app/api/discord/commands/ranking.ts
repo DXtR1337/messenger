@@ -1,6 +1,7 @@
 import type { DiscordInteraction } from '../lib/discord-types';
 import { immediateResponse, rankingEmbed, warningEmbed } from '../lib/discord-respond';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
+import { logger } from '@/lib/logger';
 
 type MetricKey = 'messages' | 'words' | 'emoji' | 'questions' | 'double_texts' | 'night_messages' | 'response_time';
 
@@ -54,7 +55,7 @@ export function handleRanking(
   for (const name of participants) {
     const pm = data.quantitative.perPerson[name];
     if (!pm) {
-      console.warn(`[ranking] perPerson miss: "${name}" not in keys: [${Object.keys(data.quantitative.perPerson).join(', ')}]`);
+      logger.warn(`[ranking] perPerson miss: "${name}" not in keys: [${Object.keys(data.quantitative.perPerson).join(', ')}]`);
       continue;
     }
 

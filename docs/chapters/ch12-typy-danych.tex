@@ -2691,6 +2691,166 @@ interface SimulationResponse {
 \end{tabularx}
 \end{table}
 
+% ============================================================
+\section{Typy modu\l{}\'{o}w ilościowych (Fazy~24--28)}
+\label{sec:quant-module-types}
+% ============================================================
+
+Poni\.{z}ej zestawiono nowe interfejsy TypeScript wprowadzone w~Fazach~24--28 dla modu\l{}\'{o}w analizy ilościowej. Wszystkie pola opcjonalne w~\tstype{QuantitativeAnalysis} u\.{z}ywaj\k{a} tych typ\'{o}w.
+
+\subsection{Pursuit-Withdrawal (Faza~24)}
+\label{subsec:types-pursuit-withdrawal}
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy PursuitWithdrawalCycle i PursuitWithdrawalResult}]
+interface PursuitWithdrawalCycle {
+  pursuer: string;             // imie osoby inicjujacej poscius
+  withdrawer: string;          // imie osoby milczacej
+  pursuerMessages: number;     // liczba wiadomosci w serii poscius
+  withdrawerMessages: number;  // liczba wiadomosci withdrawer w tym oknie
+  gapMs: number;               // czas milczenia w milisekundach
+}
+
+interface PursuitWithdrawalResult {
+  cycles: PursuitWithdrawalCycle[];
+  dominantPursuer: string | null;  // osoba czesciej inicjujaca
+  severity: 'none' | 'mild' | 'moderate' | 'significant';
+}
+\end{lstlisting}
+
+\subsection{Language Style Matching (Faza~27)}
+\label{subsec:types-lsm}
+
+\begin{lstlisting}[style=podcode, caption={Interfejs LSMResult}]
+interface LSMResult {
+  score: number;                        // ogolny wynik LSM (0-1)
+  perCategory: Record<string, number>;  // wynik per kategoria (9 kat.)
+  adaptationAsymmetry: {
+    adapter: string;                    // osoba bardziej sie dostosowujaca
+    delta: number;                      // roznica w stopniu adaptacji
+  } | null;
+  interpretation: 'very_high' | 'high' | 'moderate' | 'low';
+}
+\end{lstlisting}
+
+\subsection{Pronoun Analysis (Faza~27)}
+\label{subsec:types-pronouns}
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy PronounAnalysisResult i PersonPronounStats}]
+interface PersonPronounStats {
+  iRate: number;      // % uzycia zaimkow "ja" (deklinacja PL)
+  weRate: number;     // % uzycia zaimkow "my"
+  youRate: number;    // % uzycia zaimkow "ty"
+  orientation: 'self-focused' | 'other-focused' | 'collective' | 'balanced';
+}
+
+interface PronounAnalysisResult {
+  perPerson: Record<string, PersonPronounStats>;
+}
+\end{lstlisting}
+
+\subsection{Chronotype Compatibility (Faza~28)}
+\label{subsec:types-chronotype}
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy PersonChronotype i ChronotypeCompatibility}]
+interface PersonChronotype {
+  peakHour: number;                  // godzina szczytowej aktywnosci (0-23)
+  midpoint: number;                  // angular mean (atan2-based)
+  category: ChronotypeCategory;      // 'early_bird'|'intermediate'|'night_owl'
+  label: string;                     // czytelna etykieta
+  emoji: string;                     // 🌅 / 😊 / 🦉
+  hourlyDistribution: number[];      // 24-elementowa tablica liczby wiad.
+}
+
+interface ChronotypeCompatibility {
+  persons: Record<string, PersonChronotype>;
+  deltaHours: number;                // roznica circular miedzy osobami
+  matchScore: number;                // % zgodnosci (10-95)
+  interpretation: string;            // opis slowny
+  isCompatible: boolean;             // delta <= 2h
+}
+\end{lstlisting}
+
+\subsection{Emotional Granularity (Faza~28)}
+\label{subsec:types-eg}
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy EmotionalGranularityResult i PersonEmotionalGranularity}]
+interface PersonEmotionalGranularity {
+  distinctCategories: number;          // liczba rozroznionych kategorii (0-12)
+  emotionalWordCount: number;          // liczba slow emocjonalnych
+  categoryCounts: Record<string, number>; // liczba slow per kategoria
+  granularityScore: number;            // wynik 0-100
+  dominantCategory: string | null;     // najczesciej uzywana kategoria
+}
+
+interface EmotionalGranularityResult {
+  perPerson: Record<string, PersonEmotionalGranularity>;
+  higherGranularity: string | null;    // osoba z wyzszym wynikiem
+}
+\end{lstlisting}
+
+\subsection{Bid-Response (Faza~28)}
+\label{subsec:types-bid-response}
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy BidResponseResult i PersonBidResponse}]
+interface PersonBidResponse {
+  bidsMade: number;             // liczba sygnalów wysłanych przez te osobe
+  turnedToward: number;         // odpowiedzi "toward" (zwrot ku partnerowi)
+  turnedAway: number;           // odpowiedzi "away" (odwrocenie)
+  bidsReceived: number;         // liczba bidsow otrzymanych
+  bidsRespondedTo: number;      // liczba bidsow na ktore odpowiedziano
+  bidSuccessRate: number;       // % bidsow ktore otrzymaly odpowiedz
+  responseRate: number;         // % odpowiedzi "toward" na otrzymane bidy
+}
+
+interface BidResponseResult {
+  perPerson: Record<string, PersonBidResponse>;
+  overallResponseRate: number;  // srednia dla calej rozmowy
+  gottmanBenchmark: 86;         // sta la: benchmark Gottmana (%)
+  interpretation: 'high' | 'moderate' | 'low';
+}
+\end{lstlisting}
+
+\subsection{Shift-Support CNI (Faza~28)}
+\label{subsec:types-cni}
+
+\begin{lstlisting}[style=podcode, caption={Interfejsy ShiftSupportResult i PersonShiftSupport}]
+interface PersonShiftSupport {
+  shiftCount: number;     // liczba shift-responses
+  supportCount: number;   // liczba support-responses
+  shiftRatio: number;     // shiftCount / (shift + support)
+  cni: number;            // Conversational Narcissism Index (0-100)
+}
+
+interface ShiftSupportResult {
+  perPerson: Record<string, PersonShiftSupport>;
+  higherCNI: string | null;  // osoba z wyzszym CNI
+  cniGap: number;            // roznica CNI miedzy osobami
+}
+\end{lstlisting}
+
+\subsection{Zaktualizowane typy (Faza~26--27)}
+\label{subsec:types-updated}
+
+\textbf{DamageReportResult} --- zmiana pola \texttt{therapyNeeded}:
+
+\begin{lstlisting}[style=podcode, caption={Zmiana therapyNeeded -> therapyBenefit (Faza 26)}]
+// POPRZEDNI (Faza <= 25):
+therapyNeeded: boolean;
+
+// AKTUALNY (Faza 26+):
+therapyBenefit: 'WYSOKA' | 'UMIARKOWANA' | 'NISKA';
+\end{lstlisting}
+
+\textbf{ClinicalObservation} --- zmiana etykiet nasilenia (Faza~27):
+
+\begin{lstlisting}[style=podcode, caption={Zmiana severity labels -> frequency labels (Faza 27)}]
+// POPRZEDNI (Faza <= 26):
+severity: 'none' | 'mild' | 'moderate' | 'significant';
+
+// AKTUALNY (Faza 27+):
+frequency: 'not_observed' | 'occasional' | 'recurring' | 'pervasive';
+// (backward compat: stare wartosci sa mapowane automatycznie)
+\end{lstlisting}
 
 % ============================================================
 \section{Typy walidacji Zod}

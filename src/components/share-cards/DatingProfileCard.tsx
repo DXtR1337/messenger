@@ -55,7 +55,7 @@ export default function DatingProfileCard({ profile, cardRef: externalRef }: Dat
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           minHeight: 640,
           background: '#f5f0dc',
           position: 'relative',

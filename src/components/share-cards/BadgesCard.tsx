@@ -40,7 +40,7 @@ export default function BadgesCard({ badges, participants }: BadgesCardProps) {
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: '#0a0e1f',
           position: 'relative',

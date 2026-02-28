@@ -12,6 +12,7 @@ import type {
 } from '@/lib/analysis/delusion-quiz';
 import type { QuantitativeAnalysis, ParsedConversation } from '@/lib/parsers/types';
 import { trackEvent } from '@/lib/analytics/events';
+import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 
 // ============================================================
 // Props
@@ -291,6 +292,11 @@ function ResultsScreen({
       <p className="text-center text-sm text-text-secondary">
         {verdict}
       </p>
+
+      <PsychDisclaimer
+        text="Delusion Index to metryka rozrywkowa porównująca subiektywną samoocenę z danymi ilościowymi. Różnice w postrzeganiu są naturalne i nie świadczą o zaburzeniach."
+        showGenericFooter
+      />
 
       {/* Score */}
       <div className="flex items-baseline justify-center gap-2">

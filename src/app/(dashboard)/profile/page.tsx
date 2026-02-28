@@ -20,6 +20,7 @@ import { createClient } from '@/lib/supabase/client';
 import PTLogo from '@/components/shared/PTLogo';
 import type { AnalysisIndexEntry } from '@/lib/analysis/types';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 // -------------------------------------------------------------------
 // Stats helpers
@@ -118,9 +119,9 @@ export default function ProfilePage() {
       .select('tier, is_admin')
       .eq('id', userId)
       .single();
-    if (error) console.warn('[profile] fetch error:', error.message, error.code);
+    if (error) logger.warn('[profile] fetch error:', error.message, error.code);
     if (data) setDbProfile(data as DbProfile);
-    else console.warn('[profile] no data for user', userId);
+    else logger.warn('[profile] no data for user', userId);
   }
 
   if (!loaded) {

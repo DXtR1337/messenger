@@ -79,7 +79,7 @@ export default function MBTICard({ profiles, participants }: MBTICardProps) {
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: 'linear-gradient(180deg, #f0f5ff 0%, #ffffff 30%, #ffffff 100%)',
           position: 'relative',

@@ -167,7 +167,7 @@ export default function CardShowcase({ inView, paused, onPause }: {
         Karty do pobrania
       </h3>
       <p className="mb-8 text-center font-mono text-xs text-muted-foreground">
-        22 unikalne formaty — od paragonu po paszport osobowości
+        23 unikalne formaty — od paragonu po paszport osobowości
       </p>
 
       {/* Marquee container */}

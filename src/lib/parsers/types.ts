@@ -13,6 +13,8 @@ export interface Reaction {
   emoji: string;
   actor: string;
   timestamp?: number;
+  /** Number of reactions of this type (Discord — actor is unknown, count aggregates) */
+  count?: number;
 }
 
 export interface UnifiedMessage {
@@ -91,6 +93,28 @@ export interface QuantitativeAnalysis {
   yearMilestones?: YearMilestones;
   pursuitWithdrawal?: PursuitWithdrawalAnalysis;
   rankingPercentiles?: RankingPercentiles;
+  /** Language Style Matching — function word similarity (Ireland & Pennebaker, 2010) */
+  lsm?: LSMResult;
+  /** Pronoun analysis — I/We/You rates (Pennebaker, 2011) */
+  pronounAnalysis?: PronounAnalysis;
+  /** Behavioral chronotype compatibility from message timestamps (Aledavood 2018) */
+  chronotypeCompatibility?: import('../analysis/quant/chronotype').ChronotypeCompatibility;
+  /** Shift-response vs support-response ratio (Derber 1979) */
+  shiftSupportResult?: import('../analysis/quant/shift-support').ShiftSupportResult;
+  /** Emotional granularity — diversity of emotion categories (Vishnubhotla 2024) */
+  emotionalGranularity?: import('../analysis/quant/emotional-granularity').EmotionalGranularityResult;
+  /** Bid-response ratio — Gottman's "turning toward" metric (Gottman 1999) */
+  bidResponseResult?: import('../analysis/quant/bid-response').BidResponseResult;
+  /** Integrative complexity — phrase-based IC scoring (Suedfeld & Tetlock 1977, Conway AutoIC 2014) */
+  integrativeComplexity?: import('../analysis/quant/integrative-complexity').IntegrativeComplexityResult;
+  /** Temporal focus — past/present/future orientation from marker analysis (Pennebaker LIWC 2007) */
+  temporalFocus?: import('../analysis/quant/temporal-focus').TemporalFocusResult;
+  /** Conversational repair patterns — self-repair vs other-repair (Schegloff 1977) */
+  repairPatterns?: import('../analysis/quant/repair-patterns').RepairPatternsResult;
+  /** Per-person conflict behavior fingerprint — escalation/de-escalation styles, conflict vocabulary */
+  conflictFingerprint?: import('../analysis/quant/conflict-fingerprint').ConflictFingerprintResult;
+  /** Data format version — used for migrations (e.g. UTC→local date fix) */
+  _version?: number;
 }
 
 // ============================================================
@@ -401,6 +425,8 @@ export interface BestTimeToText {
 
 export interface CatchphraseResult {
   perPerson: Record<string, CatchphraseEntry[]>;
+  /** Phrases co-used by multiple participants — no single person dominates (>70%) */
+  shared: CatchphraseEntry[];
 }
 
 export interface CatchphraseEntry {
@@ -506,6 +532,44 @@ export interface RankingPercentiles {
 }
 
 // ============================================================
+// Language Style Matching (Ireland & Pennebaker, 2010)
+// ============================================================
+
+export interface LSMResult {
+  /** Overall LSM score 0-1, higher = more linguistic synchrony */
+  overall: number;
+  /** Per-category LSM scores */
+  perCategory: Record<string, number>;
+  /** Polish-language interpretation */
+  interpretation: string;
+  /** Who adapts more to whom — the "chameleon" who mirrors their partner's style */
+  adaptationDirection?: {
+    chameleon: string;
+    asymmetryScore: number;
+  };
+}
+
+// ============================================================
+// Pronoun Analysis (Pennebaker, 2011)
+// ============================================================
+
+export interface PersonPronounStats {
+  iCount: number;
+  weCount: number;
+  youCount: number;
+  iRate: number;       // per 1000 words
+  weRate: number;      // per 1000 words
+  youRate: number;     // per 1000 words
+  iWeRatio: number;    // iRate / (weRate + 0.001)
+}
+
+export interface PronounAnalysis {
+  perPerson: Record<string, PersonPronounStats>;
+  /** 0-100, higher = more "we" language across all participants */
+  relationshipOrientation: number;
+}
+
+// ============================================================
 // Threat Meters
 // ============================================================
 
@@ -529,5 +593,5 @@ export interface DamageReportResult {
   emotionalDamage: number;
   communicationGrade: string;
   repairPotential: number;
-  therapyNeeded: 'YES' | 'RECOMMENDED' | 'NO';
+  therapyBenefit: 'HIGH' | 'MODERATE' | 'LOW';
 }

@@ -7,18 +7,21 @@ import type { StoredAnalysis, StandUpRoastResult } from '@/lib/analysis/types';
 import { sampleMessages } from '@/lib/analysis/qualitative';
 import { buildQuantitativeContext } from '@/lib/analysis/qualitative';
 import { trackEvent } from '@/lib/analytics/events';
+import { useAnalysis } from '@/lib/analysis/analysis-context';
 
 interface StandUpPDFButtonProps {
   analysis: StoredAnalysis;
 }
 
 export default function StandUpPDFButton({ analysis }: StandUpPDFButtonProps) {
+  const { startOperation, updateOperation, stopOperation } = useAnalysis();
   const [generating, setGenerating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
     setStatus('Generowanie stand-upu...');
+    startOperation('standup', 'Stand-Up', 'Generowanie stand-upu...');
 
     try {
       const { conversation, quantitative } = analysis;
@@ -61,6 +64,7 @@ export default function StandUpPDFButton({ analysis }: StandUpPDFButtonProps) {
             const event = JSON.parse(line.slice(6).trim()) as Record<string, unknown>;
             if (event.type === 'progress') {
               setStatus(event.status as string);
+              updateOperation('standup', { status: event.status as string, progress: 40 });
             } else if (event.type === 'complete') {
               result = event.result as StandUpRoastResult;
             } else if (event.type === 'error') {
@@ -75,7 +79,7 @@ export default function StandUpPDFButton({ analysis }: StandUpPDFButtonProps) {
 
       if (!result) throw new Error('Brak wyniku z API');
       if (!result.acts || !Array.isArray(result.acts) || result.acts.length === 0) {
-        throw new Error('Niepoprawna odpowied\u017A AI \u2014 brak akt\u00F3w');
+        throw new Error('Niepoprawna odpowiedź AI \u2014 brak aktów');
       }
 
       trackEvent({ name: 'analysis_complete', params: { mode: 'standup', passCount: 1 } });
@@ -102,12 +106,13 @@ export default function StandUpPDFButton({ analysis }: StandUpPDFButtonProps) {
       setStatus(null);
     } catch (err) {
       console.error('Stand-Up PDF failed:', err);
-      setStatus('B\u0142\u0105d \u2014 spr\u00F3buj ponownie');
+      setStatus('Błąd \u2014 spróbuj ponownie');
       setTimeout(() => setStatus(null), 3000);
     } finally {
+      stopOperation('standup');
       setGenerating(false);
     }
-  }, [analysis]);
+  }, [analysis, startOperation, updateOperation, stopOperation]);
 
   return (
     <Button

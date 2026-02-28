@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
   },
@@ -42,13 +45,15 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://www.google-analytics.com",
+              "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://generativelanguage.googleapis.com https://www.google-analytics.com https://discord.com https://cdn.discordapp.com https://prod.spline.design https://*.spline.design https://unpkg.com https://www.gstatic.com blob:",
+              "connect-src 'self' https://generativelanguage.googleapis.com https://www.google-analytics.com https://discord.com https://cdn.discordapp.com https://prod.spline.design https://*.spline.design https://www.gstatic.com https://*.supabase.co blob:",
               "frame-src 'self' https://my.spline.design",
               "worker-src 'self' blob:",
+              "object-src 'none'",
+              "base-uri 'self'",
             ].join('; '),
           },
         ],

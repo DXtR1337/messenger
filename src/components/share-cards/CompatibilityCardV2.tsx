@@ -14,9 +14,9 @@ function getVerdict(score: number): { text: string; emoji: string } {
   if (score >= 90) return { text: 'Bratnie dusze', emoji: '\u{1F4AB}' };
   if (score >= 75) return { text: 'Idealny duet', emoji: '\u{1F495}' };
   if (score >= 60) return { text: 'Dobre wibracje', emoji: '\u{2728}' };
-  if (score >= 45) return { text: 'Mo\u017Ce si\u0119 uda', emoji: '\u{1F937}' };
+  if (score >= 45) return { text: 'Może się uda', emoji: '\u{1F937}' };
   if (score >= 30) return { text: 'To skomplikowane', emoji: '\u{1F62C}' };
-  return { text: 'Tykaj\u0105ca bomba', emoji: '\u{1F4A3}' };
+  return { text: 'Tykająca bomba', emoji: '\u{1F4A3}' };
 }
 
 function getScoreColor(score: number): string {
@@ -87,7 +87,7 @@ export default function CompatibilityCardV2({ viralScores, participants }: Compa
             zIndex: 1,
           }}
         >
-          KOMPATYBILNO\u015A\u0106
+          KOMPATYBILNOŚĆ
         </div>
 
         {/* Dramatic tagline */}
@@ -370,7 +370,7 @@ export default function CompatibilityCardV2({ viralScores, participants }: Compa
         disabled={isDownloading}
         className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-card-hover hover:text-foreground disabled:opacity-50"
       >
-        {isDownloading ? 'Pobieranie...' : '\u{1F4E5} Pobierz kart\u0119'}
+        {isDownloading ? 'Pobieranie...' : '\u{1F4E5} Pobierz kartę'}
       </button>
     </div>
   );

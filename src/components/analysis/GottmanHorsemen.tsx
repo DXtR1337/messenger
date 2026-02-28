@@ -4,23 +4,26 @@ import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { GottmanResult, HorsemanResult } from '@/lib/analysis/gottman-horsemen';
+import { GOTTMAN_DISCLAIMER } from '@/lib/analysis/gottman-horsemen';
+import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
+import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
 
 interface GottmanHorsemenProps {
   result?: GottmanResult;
 }
 
 const SEVERITY_STYLES: Record<HorsemanResult['severity'], { bg: string; text: string; label: string }> = {
-  none: { bg: 'bg-success/10', text: 'text-success', label: 'Nieaktywny' },
-  mild: { bg: 'bg-warning/10', text: 'text-warning', label: 'Łagodny' },
-  moderate: { bg: 'bg-orange-500/10', text: 'text-orange-400', label: 'Umiarkowany' },
-  severe: { bg: 'bg-danger/10', text: 'text-danger', label: 'Poważny' },
+  none: { bg: 'bg-violet-500/10', text: 'text-violet-400', label: 'Nieaktywny' },
+  mild: { bg: 'bg-purple-500/10', text: 'text-purple-400', label: 'Łagodny' },
+  moderate: { bg: 'bg-fuchsia-500/10', text: 'text-fuchsia-400', label: 'Umiarkowany' },
+  severe: { bg: 'bg-fuchsia-400/10', text: 'text-fuchsia-300', label: 'Poważny' },
 };
 
 const BAR_COLORS: Record<HorsemanResult['severity'], string> = {
-  none: 'bg-success',
-  mild: 'bg-warning',
-  moderate: 'bg-orange-500',
-  severe: 'bg-danger',
+  none: 'bg-violet-500',
+  mild: 'bg-purple-500',
+  moderate: 'bg-fuchsia-500',
+  severe: 'bg-fuchsia-400',
 };
 
 export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
@@ -30,7 +33,7 @@ export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
   if (!result) return null;
 
   return (
-    <div ref={ref} className="bg-card border border-border rounded-xl overflow-hidden">
+    <div ref={ref} className="bg-purple-950/[0.08] border border-purple-500/[0.06] rounded-xl overflow-hidden">
       <div className="flex justify-between items-start px-5 pt-4 pb-2">
         <div>
           <h3 className="font-display text-[15px] font-bold">
@@ -43,14 +46,18 @@ export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
         <span
           className={cn(
             'text-[11px] font-bold px-2 py-0.5 rounded-full',
-            result.activeCount >= 3 ? 'bg-danger/15 text-danger'
-              : result.activeCount >= 2 ? 'bg-warning/15 text-warning'
-              : result.activeCount >= 1 ? 'bg-orange-500/15 text-orange-400'
-              : 'bg-success/15 text-success',
+            result.activeCount >= 3 ? 'bg-fuchsia-400/15 text-fuchsia-300'
+              : result.activeCount >= 2 ? 'bg-fuchsia-500/15 text-fuchsia-400'
+              : result.activeCount >= 1 ? 'bg-purple-500/15 text-purple-400'
+              : 'bg-violet-500/15 text-violet-400',
           )}
         >
           {result.activeCount}/4
         </span>
+      </div>
+
+      <div className="px-5 pt-2">
+        <PsychDisclaimer text={GOTTMAN_DISCLAIMER} />
       </div>
 
       <div className="px-5 pb-4 space-y-3">
@@ -69,7 +76,7 @@ export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
                   <span className="text-sm font-medium">{h.label}</span>
                   <span
                     className={cn(
-                      'text-[10px] font-medium px-1.5 py-0.5 rounded',
+                      'text-[11px] font-medium px-1.5 py-0.5 rounded',
                       styles.bg,
                       styles.text,
                     )}
@@ -98,7 +105,7 @@ export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
                   {h.evidence.map((e, ei) => (
                     <span
                       key={ei}
-                      className="text-[10px] text-muted-foreground/80 bg-border/50 px-1.5 py-0.5 rounded"
+                      className="text-[11px] text-muted-foreground/80 bg-border/50 px-1.5 py-0.5 rounded"
                     >
                       {e}
                     </span>
@@ -115,6 +122,11 @@ export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
         <p className="text-xs text-muted-foreground">
           {result.riskLevel}
         </p>
+        <PsychDisclaimer
+          text="Model Czterech Jeźdźców Gottmana pochodzi z badań laboratoryjnych opartych na mowie, mimice i fizjologii — NIGDY nie był empirycznie walidowany dla analizy tekstu. Badania Al-Mosaiwi & Johnstone (2018, N>6400) potwierdzają związek języka absolutystycznego (zawsze/nigdy) z dystresem (d>3.14), ale nie dla pełnego modelu Czterech Jeźdźców. Wyniki mają charakter eksploracyjny, nie diagnostyczny."
+          citation={`${PSYCH_CITATIONS.gottmanShort}; Al-Mosaiwi & Johnstone, 2018`}
+          showGenericFooter
+        />
       </div>
     </div>
   );

@@ -70,3 +70,24 @@ scripts/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# large data files & temp artifacts
+sada/
+generacje/
+claudeobsidian/
+MOCK/
+*.mp4
+!public/videos/**/*.mp4
+*.bz2
+*.7z
+_tmp_*
+document_pdf.pdf
+tinder-phone.html
+tinder.css
+compass_artifact_*.md
+AUDIT-*.md
+*-PLAN.md
+*-REVIEW-*.md
+GAP-ANALYSIS.md
+ROADMAP.md
+PSYCHOMETRIC_AUDIT.md

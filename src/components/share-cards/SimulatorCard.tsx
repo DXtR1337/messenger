@@ -98,7 +98,7 @@ export default function SimulatorCard({
       <div
         ref={actualRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: BG,
           position: 'relative',

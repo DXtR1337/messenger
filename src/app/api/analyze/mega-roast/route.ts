@@ -3,6 +3,7 @@ import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import type { MegaRoastResult } from '@/lib/analysis/types';
 import { rateLimit } from '@/lib/rate-limit';
 import { megaRoastRequestSchema, formatZodError } from '@/lib/validation/schemas';
+import { SSE_HEARTBEAT_MS } from '@/lib/analysis/constants';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000);
 
@@ -49,24 +50,31 @@ export async function POST(request: Request): Promise<Response> {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(heartbeat);
+        try { controller.close(); } catch { /* already closed */ }
+      };
       const send = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch { safeClose(); }
       };
 
       const heartbeat = setInterval(() => {
+        if (closed) { clearInterval(heartbeat); return; }
         try {
           controller.enqueue(encoder.encode(':\n\n'));
         } catch {
           clearInterval(heartbeat);
         }
-      }, 15000);
+      }, SSE_HEARTBEAT_MS);
 
       try {
-        if (signal.aborted) {
-          clearInterval(heartbeat);
-          controller.close();
-          return;
-        }
+        if (signal.aborted) { safeClose(); return; }
 
         send({ type: 'progress', status: `Przygotowuję mega roast na ${targetPerson}...` });
         const result: MegaRoastResult = await runMegaRoast(
@@ -76,23 +84,19 @@ export async function POST(request: Request): Promise<Response> {
           quantitativeContext,
         );
 
-        if (signal.aborted) {
-          clearInterval(heartbeat);
-          controller.close();
-          return;
-        }
+        if (signal.aborted) { safeClose(); return; }
 
         send({ type: 'mega_roast_complete', result });
       } catch (error) {
-        if (!signal.aborted) {
+        if (!signal.aborted && !closed) {
+          console.error('[MegaRoast]', error);
           send({
             type: 'error',
             error: 'Błąd generowania mega roastu — spróbuj ponownie',
           });
         }
       } finally {
-        clearInterval(heartbeat);
-        controller.close();
+        safeClose();
       }
     },
   });
@@ -100,8 +104,9 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }

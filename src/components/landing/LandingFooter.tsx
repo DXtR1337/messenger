@@ -25,8 +25,8 @@ export default function LandingFooter() {
             >
               <BrandP height="0.85em" /><span className="text-[#3b82f6]">od</span><span className="text-[#a855f7]">T</span><span className="brand-eks text-[#a855f7]">eks</span><span className="text-[#a855f7]">T</span>
             </Link>
-            <p className="font-story-body text-sm text-muted-foreground">
-              Zobacz swoje relacje przez dane
+            <p className="font-story-body text-sm italic text-muted-foreground">
+              odkryj to, co kryje się między wierszami
             </p>
           </div>
 

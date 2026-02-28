@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   Cell,
+  ReferenceLine,
 } from 'recharts';
 import type { TrendData } from '@/lib/parsers/types';
 import {
@@ -24,19 +25,18 @@ import {
   CHART_AXIS_TICK,
   CHART_GRID_PROPS,
   PERSON_COLORS_HEX,
-  MONTHS_PL,
-  monthYearLabelFormatter,
+  CHART_CURSOR_BAR,
+  chartActiveDot,
+  useActiveChartLabel,
+  ACTIVE_REF_LINE_PROPS,
+  ChartTooltipContent,
+  formatMonthSmart,
+  formatMonthWithYear,
 } from './chart-config';
 
 interface ResponseTimeChartProps {
   trendData: TrendData['responseTimeTrend'];
   participants: string[];
-}
-
-function formatMonth(ym: string): string {
-  const parts = ym.split('-');
-  const m = parseInt(parts[1] ?? '0', 10);
-  return MONTHS_PL[m - 1] ?? parts[1] ?? '';
 }
 
 type TimeUnit = 'seconds' | 'minutes' | 'hours';
@@ -66,6 +66,36 @@ function unitLabel(unit: TimeUnit): string {
   }
 }
 
+/** Response-time-specific tooltip that formats ms values with unit. */
+function ResponseTimeTooltip({
+  active,
+  payload,
+  label,
+  unit: timeUnit,
+}: { active?: boolean; payload?: Array<{ payload?: Record<string, unknown>; color?: string; name?: string; value?: number }>; label?: string | number; unit: TimeUnit }) {
+  if (!active || !payload?.length) return null;
+  const raw = payload[0]?.payload?.month;
+  const title = typeof raw === 'string' ? formatMonthWithYear(raw) : String(label ?? '');
+  return (
+    <div style={CHART_TOOLTIP_STYLE}>
+      <p style={{ ...CHART_TOOLTIP_LABEL_STYLE, marginBottom: 6 }}>{title}</p>
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+        {payload.filter(e => e.value != null).map((entry, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: 12 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: entry.color, flexShrink: 0 }} />
+              <span style={{ color: '#999' }}>{entry.name}</span>
+            </span>
+            <span style={{ fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
+              {formatResponseTime(Number(entry.value ?? 0), timeUnit)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface ChartDataPoint {
   month: string;
   label: string;
@@ -81,11 +111,14 @@ function ResponseTimeChart({
   const chartHeight = useChartHeight();
   const axisWidth = useAxisWidth();
   const barAxisWidth = useBarAxisWidth();
+  const [activeLabel, chartHandlers] = useActiveChartLabel();
   const chartData: ChartDataPoint[] = useMemo(() => {
+    if (!trendData || trendData.length === 0) return [];
+    const allMonths = trendData.map((e) => e.month);
     return trendData.map((entry) => {
       const point: ChartDataPoint = {
         month: entry.month,
-        label: formatMonth(entry.month),
+        label: formatMonthSmart(entry.month, allMonths),
       };
       for (const name of participants) {
         // Store in minutes for display
@@ -95,8 +128,15 @@ function ResponseTimeChart({
     });
   }, [trendData, participants]);
 
+  const monthLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const d of chartData) map.set(d.month, d.label);
+    return map;
+  }, [chartData]);
+
   // Determine whether to show hours or minutes
   const maxMs = useMemo(() => {
+    if (!trendData) return 0;
     let max = 0;
     for (const entry of trendData) {
       for (const name of participants) {
@@ -127,6 +167,14 @@ function ResponseTimeChart({
 
   const barChartHeight = Math.max(200, barData.length * 32 + 40);
 
+  if (!trendData || trendData.length === 0) {
+    return (
+      <div className="py-8 text-center text-sm text-white/50">
+        Brak danych do wyświetlenia
+      </div>
+    );
+  }
+
   return (
     <motion.div
       ref={containerRef}
@@ -135,12 +183,12 @@ function ResponseTimeChart({
       initial={{ opacity: 0 }}
       animate={inView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="overflow-hidden rounded-xl border border-border bg-card"
+      className="overflow-hidden"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-5 pt-4">
         <div>
-          <h3 className="font-display text-[15px] font-bold">Czas odpowiedzi</h3>
-          <p className="mt-0.5 text-xs text-text-muted">
+          <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">Czas odpowiedzi</h3>
+          <p className="mt-0.5 text-xs text-white/50">
             {singlePoint
               ? `Mediana czasu odpowiedzi per osoba — ${chartData[0]?.label ?? ''}`
               : `Mediana czasu odpowiedzi ${unitLabel(unit)} per osoba`}
@@ -152,10 +200,10 @@ function ResponseTimeChart({
             {participants.map((name, i) => (
               <span
                 key={name}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                className="flex items-center gap-1.5 text-xs text-white/50"
               >
                 <span
-                  className="inline-block h-2 w-2 rounded-sm"
+                  className="inline-block size-2 rounded-[3px]"
                   style={{ backgroundColor: PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0] }}
                 />
                 {name}
@@ -186,14 +234,7 @@ function ResponseTimeChart({
                 width={barAxisWidth}
                 tickFormatter={(name: string) => name.length > 10 ? name.slice(0, 9) + '\u2026' : name}
               />
-              <Tooltip
-                contentStyle={CHART_TOOLTIP_STYLE}
-                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-                formatter={(value: number | undefined) => {
-                  if (value == null) return ['', undefined];
-                  return [formatResponseTime(value, unit), undefined];
-                }}
-              />
+              <Tooltip content={<ResponseTimeTooltip unit={unit} />} cursor={CHART_CURSOR_BAR} animationDuration={0} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
                 {barData.map((entry) => (
                   <Cell key={entry.name} fill={entry.color} />
@@ -204,14 +245,15 @@ function ResponseTimeChart({
         ) : (
           /* Standard line chart for multi-month */
           <ResponsiveContainer width="100%" height={chartHeight}>
-            <LineChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }} {...chartHandlers}>
               <CartesianGrid {...CHART_GRID_PROPS} />
               <XAxis
-                dataKey="label"
+                dataKey="month"
                 tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
+                tickFormatter={(value: string) => monthLabelMap.get(value) ?? value}
               />
               <YAxis
                 tick={CHART_AXIS_TICK}
@@ -220,15 +262,8 @@ function ResponseTimeChart({
                 width={axisWidth}
                 tickFormatter={(value: number) => formatResponseTime(value, unit)}
               />
-              <Tooltip
-                contentStyle={CHART_TOOLTIP_STYLE}
-                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-                labelFormatter={monthYearLabelFormatter}
-                formatter={(value: number | undefined) => {
-                  if (value == null) return ['', undefined];
-                  return [formatResponseTime(value, unit), undefined];
-                }}
-              />
+              <Tooltip content={<ResponseTimeTooltip unit={unit} />} cursor={false} animationDuration={0} />
+              {activeLabel != null && <ReferenceLine x={activeLabel} {...ACTIVE_REF_LINE_PROPS} />}
               {participants.map((name, i) => {
                 const color = PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0];
                 return (
@@ -239,7 +274,7 @@ function ResponseTimeChart({
                     stroke={color}
                     strokeWidth={fewPoints ? 3 : 2}
                     dot={fewPoints ? { r: 5, fill: color, stroke: '#0a0a0a', strokeWidth: 2 } : false}
-                    activeDot={fewPoints ? { r: 7, fill: color, stroke: '#0a0a0a', strokeWidth: 2 } : false}
+                    activeDot={chartActiveDot(color)}
                   />
                 );
               })}

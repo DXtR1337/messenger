@@ -1,9 +1,18 @@
 /**
- * Percentile comparison engine for PodTeksT.
+ * Percentile benchmarks — step-function thresholds for KPI card display.
  *
- * Hardcoded benchmarks derived from typical messaging patterns across
- * thousands of conversations. These let us show "Top X%" badges on KPIs
- * so users know how their conversation compares to others.
+ * Maps conversation metrics to approximate percentile values using
+ * hardcoded threshold tables. Used for numeric percentile display
+ * in KPI cards (not for RankingBadges "TOP X%" display).
+ *
+ * IMPORTANT — Two percentile systems coexist in this codebase:
+ * - THIS FILE: Step-function thresholds → KPI card numeric percentile display
+ *   Metrics: responseTimeMinutes, messagesPerDay, healthScore, emojiDiversity, conversationLengthMonths
+ * - ranking-percentiles.ts: Log-normal CDF → "TOP X%" badge display in RankingBadges.tsx
+ *   Metrics: message_volume, response_time, ghost_frequency, asymmetry
+ *
+ * Do NOT consolidate without mapping all UI consumers first.
+ * These serve different UI purposes and use different output formats.
  */
 
 export interface PercentileResult {

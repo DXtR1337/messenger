@@ -281,6 +281,8 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
+        aria-label="Strefa upuszczania plików eksportu rozmowy"
+        aria-describedby="dropzone-format-hint"
         onClick={handleClick}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -350,7 +352,7 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
           <p className="text-[10px] text-primary/70">
             Zalecane dla Messengera — automatycznie połączy wszystkie pliki
           </p>
-          <p className="text-xs text-muted-foreground/70">
+          <p id="dropzone-format-hint" className="text-xs text-muted-foreground/70">
             Messenger · Instagram · Telegram (JSON) · WhatsApp (TXT)
           </p>
         </div>
@@ -405,15 +407,16 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
                 </span>
                 <Button
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon"
                   onClick={(event) => {
                     event.stopPropagation();
                     removeFile(index);
                   }}
                   disabled={disabled}
                   aria-label={`Remove ${file.name}`}
+                  className="h-8 w-8 min-h-[44px] min-w-[44px]"
                 >
-                  <X className="size-3" />
+                  <X className="size-4" />
                 </Button>
               </div>
             ))}

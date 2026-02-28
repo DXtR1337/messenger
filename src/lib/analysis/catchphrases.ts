@@ -110,19 +110,26 @@ export function computeCatchphrases(
     }
   }
 
-  // Compute global phrase counts (across all people)
+  // Compute global phrase counts and per-person contribution counts
   const globalPhraseCount = new Map<string, number>();
+  // Maps phrase → (person → that person's count for this phrase)
+  const phrasePersonCounts = new Map<string, Map<string, number>>();
+
   for (const name of names) {
     const bigrams = bigramsPerPerson.get(name);
     const trigrams = trigramsPerPerson.get(name);
     if (bigrams) {
       for (const [phrase, count] of bigrams) {
         globalPhraseCount.set(phrase, (globalPhraseCount.get(phrase) ?? 0) + count);
+        if (!phrasePersonCounts.has(phrase)) phrasePersonCounts.set(phrase, new Map());
+        phrasePersonCounts.get(phrase)!.set(name, (phrasePersonCounts.get(phrase)!.get(name) ?? 0) + count);
       }
     }
     if (trigrams) {
       for (const [phrase, count] of trigrams) {
         globalPhraseCount.set(phrase, (globalPhraseCount.get(phrase) ?? 0) + count);
+        if (!phrasePersonCounts.has(phrase)) phrasePersonCounts.set(phrase, new Map());
+        phrasePersonCounts.get(phrase)!.set(name, (phrasePersonCounts.get(phrase)!.get(name) ?? 0) + count);
       }
     }
   }
@@ -170,7 +177,24 @@ export function computeCatchphrases(
     result[name] = candidates.slice(0, 8);
   }
 
-  return { perPerson: result };
+  // --- Shared phrases: co-used by multiple participants, no one dominates ---
+  // Criteria: globalCount >= 5, no person holds >= 70%, at least 2 persons with count >= 2
+  const sharedCandidates: CatchphraseEntry[] = [];
+  for (const [phrase, globalCount] of globalPhraseCount) {
+    if (globalCount < 5) continue;
+    const perPersonMap = phrasePersonCounts.get(phrase) ?? new Map<string, number>();
+    // Check no single person dominates (>= 70% of uses)
+    const dominates = [...perPersonMap.values()].some(c => c / globalCount >= 0.7);
+    if (dominates) continue;
+    // At least 2 contributors with count >= 2
+    const qualifiedContributors = [...perPersonMap.values()].filter(c => c >= 2);
+    if (qualifiedContributors.length < 2) continue;
+    sharedCandidates.push({ phrase, count: globalCount, uniqueness: 0 });
+  }
+  sharedCandidates.sort((a, b) => b.count - a.count);
+  const shared = sharedCandidates.slice(0, 5);
+
+  return { perPerson: result, shared };
 }
 
 // ============================================================

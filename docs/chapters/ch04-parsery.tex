@@ -1253,6 +1253,28 @@ Unicode decode   & \score{Wymagane} & Nie & \score{Wymagane} & Nie & Nie \\
 Tak+TS = reakcje z~timestampem osoby reaguj\k{a}cej.
 \end{small}
 
+\subsection{Test suite parserów (Faza~28)}
+\label{subsec:parser-tests}
+
+Od~Fazy~28 parsery s\k{a} pokryte automatycznymi testami jednostkowymi (Vitest). Testy u\.{z}ywaj\k{a} fikstur JSON/TXT odwzorowuj\k{a}cych rzeczywiste eksporty platform.
+
+\begin{table}[H]
+\centering
+\caption{Pliki test\'{o}w parser\'{o}w}
+\label{tab:parser-tests}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Plik test\'{o}w} & \textbf{Zakres} \\
+\midrule
+\filepath{src/lib/parsers/\_\_tests\_\_/discord.test.ts} & Parser Discord API (paginacja, reakcje, embeds) \\
+\filepath{src/lib/parsers/\_\_tests\_\_/instagram.test.ts} & Parser Instagram JSON (latin-1 decode, reactions) \\
+\filepath{src/lib/parsers/\_\_tests\_\_/telegram.test.ts} & Parser Telegram JSON (r\'{o}\.{z}ne typy wiadomo\'{s}ci) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Konfiguracja Vitest: \filepath{vitest.config.ts}. Uruchamianie: \texttt{pnpm test}.
+
 \vfill
 
 \begin{center}

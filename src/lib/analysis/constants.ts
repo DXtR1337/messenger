@@ -6,6 +6,16 @@
  */
 
 // ============================================================
+// Gemini model configuration
+// ============================================================
+
+/** Gemini model ID — single source of truth for all API calls */
+export const GEMINI_MODEL_ID = 'gemini-3-flash-preview';
+
+/** SSE heartbeat interval in milliseconds */
+export const SSE_HEARTBEAT_MS = 15_000;
+
+// ============================================================
 // Stopwords — Polish + English
 // ============================================================
 

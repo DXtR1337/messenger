@@ -9,28 +9,24 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
+  ReferenceLine,
 } from 'recharts';
 import { motion } from 'framer-motion';
 import type { IntimacyProgression } from '@/lib/parsers/types';
 import {
   CHART_HEIGHT,
   useAxisWidth,
-  CHART_TOOLTIP_STYLE,
-  CHART_TOOLTIP_LABEL_STYLE,
   CHART_AXIS_TICK,
   CHART_GRID_PROPS,
-  MONTHS_PL,
-  monthYearLabelFormatter,
+  chartActiveDot,
+  useActiveChartLabel,
+  ACTIVE_REF_LINE_PROPS,
+  ChartTooltipContent,
+  formatMonthSmart,
 } from './chart-config';
 
 interface IntimacyChartProps {
   intimacy: IntimacyProgression;
-}
-
-function formatMonth(ym: string): string {
-  const parts = ym.split('-');
-  const m = parseInt(parts[1] ?? '0', 10);
-  return MONTHS_PL[m - 1] ?? parts[1] ?? '';
 }
 
 /** Map intimacy label to appropriate color */
@@ -59,14 +55,22 @@ const COMPONENT_COLORS: Record<string, string> = {
 
 export default function IntimacyChart({ intimacy }: IntimacyChartProps) {
   const axisWidth = useAxisWidth();
+  const [activeLabel, chartHandlers] = useActiveChartLabel();
 
   const chartData = useMemo(() => {
+    const allMonths = intimacy.trend.map((p) => p.month);
     return intimacy.trend.map((point) => ({
       month: point.month,
-      label: formatMonth(point.month),
+      label: formatMonthSmart(point.month, allMonths),
       score: Math.round(point.score),
     }));
   }, [intimacy.trend]);
+
+  const monthLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const d of chartData) map.set(d.month, d.label);
+    return map;
+  }, [chartData]);
 
   const latestComponents = useMemo(() => {
     if (intimacy.trend.length === 0) return null;
@@ -87,14 +91,14 @@ export default function IntimacyChart({ intimacy }: IntimacyChartProps) {
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.5 }}
-      className="overflow-hidden rounded-xl border border-border bg-card"
+      className="overflow-hidden"
     >
       {/* Header */}
       <div className="px-3 sm:px-5 pt-4">
-        <h3 className="font-display text-[15px] font-bold">
+        <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">
           Progresja bliskości
         </h3>
-        <p className="mt-0.5 text-xs" style={{ color: labelColor }}>
+        <p className="mt-0.5 text-[11px]" style={{ color: labelColor }}>
           {intimacy.label}
         </p>
       </div>
@@ -102,7 +106,7 @@ export default function IntimacyChart({ intimacy }: IntimacyChartProps) {
       {/* Area chart */}
       <div className="px-3 sm:px-5 py-4">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+          <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }} {...chartHandlers}>
             <defs>
               <linearGradient id="intimacy-gradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#a855f7" stopOpacity={0.2} />
@@ -116,11 +120,12 @@ export default function IntimacyChart({ intimacy }: IntimacyChartProps) {
             </defs>
             <CartesianGrid {...CHART_GRID_PROPS} />
             <XAxis
-              dataKey="label"
+              dataKey="month"
               tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
+              tickFormatter={(value: string) => monthLabelMap.get(value) ?? value}
             />
             <YAxis
               tick={CHART_AXIS_TICK}
@@ -130,15 +135,8 @@ export default function IntimacyChart({ intimacy }: IntimacyChartProps) {
               domain={[0, 100]}
               ticks={[0, 25, 50, 75, 100]}
             />
-            <Tooltip
-              contentStyle={CHART_TOOLTIP_STYLE}
-              labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-              labelFormatter={monthYearLabelFormatter}
-              formatter={(value: number | undefined) => {
-                if (value == null) return ['', undefined];
-                return [`${value}/100`, 'Bliskość'];
-              }}
-            />
+            <Tooltip content={<ChartTooltipContent />} cursor={false} animationDuration={0} />
+            {activeLabel != null && <ReferenceLine x={activeLabel} {...ACTIVE_REF_LINE_PROPS} />}
             <Area
               type={fewPoints ? 'linear' : 'monotone'}
               dataKey="score"
@@ -151,7 +149,7 @@ export default function IntimacyChart({ intimacy }: IntimacyChartProps) {
                   ? { r: 5, fill: '#a855f7', stroke: '#0a0a0a', strokeWidth: 2 }
                   : false
               }
-              activeDot={{ r: 6, fill: '#a855f7', stroke: '#0a0a0a', strokeWidth: 2 }}
+              activeDot={chartActiveDot('#a855f7')}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -186,7 +184,7 @@ export default function IntimacyChart({ intimacy }: IntimacyChartProps) {
                       />
                     </div>
                     <span
-                      className="w-7 text-right font-mono text-[10px]"
+                      className="w-7 text-right font-mono text-[11px]"
                       style={{ color }}
                     >
                       {value}

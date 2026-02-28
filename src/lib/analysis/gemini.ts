@@ -7,6 +7,8 @@
 import 'server-only';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
+import { sanitizeJsonString, parseGeminiJSON } from './json-parser';
+
 import type {
     Pass1Result,
     Pass2Result,
@@ -21,7 +23,8 @@ import type {
 import {
     PASS_1_SYSTEM,
     PASS_2_SYSTEM,
-    PASS_3_SYSTEM,
+    PASS_3A_SYSTEM,
+    PASS_3B_SYSTEM,
     PASS_4_SYSTEM,
     buildCPSBatchPrompt,
     ROAST_SYSTEM,
@@ -39,15 +42,21 @@ import type { SubtextResult, SubtextItem, SimplifiedMsg, ExchangeWindow } from '
 import { extractExchangeWindows, SUBTEXT_DISCLAIMER } from './subtext';
 
 import type { AnalysisSamples } from './qualitative';
+import { logger } from '@/lib/logger';
+import { GEMINI_MODEL_ID } from './constants';
 
 // ============================================================
 // Private: Gemini API helpers
 // ============================================================
 
-function getClient() {
+let _clientInstance: GoogleGenerativeAI | null = null;
+
+function getClient(): GoogleGenerativeAI {
+    if (_clientInstance) return _clientInstance;
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error('GEMINI_API_KEY is not set in .env.local');
-    return new GoogleGenerativeAI(apiKey);
+    _clientInstance = new GoogleGenerativeAI(apiKey);
+    return _clientInstance;
 }
 
 const SAFETY_SETTINGS = [
@@ -57,28 +66,36 @@ const SAFETY_SETTINGS = [
     { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-async function callGeminiWithRetry(
+export async function callGeminiWithRetry(
     systemPrompt: string,
     userContent: string,
     maxRetries = 3,
     maxTokens = 8192,
+    temperature = 0.3,
+    timeoutMs = 60_000,
 ): Promise<string> {
     let lastError: Error | undefined;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
             const client = getClient();
             const model = client.getGenerativeModel({
-                model: 'gemini-3-flash-preview',
+                model: GEMINI_MODEL_ID,
                 systemInstruction: systemPrompt,
                 generationConfig: {
                     maxOutputTokens: maxTokens,
-                    temperature: 0.3,
+                    temperature: temperature,
                     responseMimeType: 'application/json',
                 },
                 safetySettings: SAFETY_SETTINGS,
             });
 
-            const result = await model.generateContent(userContent);
+            let timeoutId: NodeJS.Timeout;
+            const result = await Promise.race([
+                model.generateContent(userContent),
+                new Promise<never>((_, reject) => {
+                    timeoutId = setTimeout(() => reject(new Error(`Gemini API timeout after ${timeoutMs / 1000}s`)), timeoutMs);
+                }),
+            ]).finally(() => clearTimeout(timeoutId));
             const response = result.response;
 
             // Check for safety blocks
@@ -91,6 +108,17 @@ async function callGeminiWithRetry(
             if (candidate?.finishReason === 'SAFETY') {
                 console.error('[Gemini Safety] Response filtered:', candidate.finishReason);
                 throw new Error('Odpowiedź zablokowana przez filtr bezpieczeństwa');
+            }
+
+            // Detect token limit truncation — retry with doubled maxTokens
+            if (candidate?.finishReason === 'MAX_TOKENS') {
+                logger.warn(`[Gemini Truncation] Response truncated at ${maxTokens} tokens (attempt ${attempt + 1})`);
+                maxTokens = Math.min(maxTokens * 2, 65536);
+                if (attempt < maxRetries - 1) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    continue;
+                }
+                // Last attempt — return what we have, caller may still parse partial JSON
             }
 
             const text = response.text();
@@ -107,92 +135,17 @@ async function callGeminiWithRetry(
             ) {
                 throw new Error('Błąd konfiguracji API — sprawdź klucz API');
             }
+            if (msg.includes('gemini api timeout')) {
+                logger.warn('[Gemini Timeout] Attempt', attempt + 1, '- will retry with longer timeout');
+            }
             if (attempt < maxRetries - 1) {
-                await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+                const delay = msg.includes('timeout') ? 2000 * Math.pow(2, attempt) : 1000 * Math.pow(2, attempt);
+                await new Promise(r => setTimeout(r, delay));
             }
         }
     }
     console.error('[Gemini Error] All retries exhausted:', lastError?.message);
     throw new Error(`Błąd analizy AI: ${lastError?.message ?? 'nieznany błąd'}`);
-}
-
-function sanitizeJsonString(raw: string): string {
-    // Fix unescaped control characters inside JSON string values.
-    // Walk through the string tracking whether we're inside a quoted value;
-    // replace raw control chars (tabs, newlines) with their escape sequences.
-    const out: string[] = [];
-    let inString = false;
-    let escaped = false;
-
-    for (let i = 0; i < raw.length; i++) {
-        const ch = raw[i];
-
-        if (escaped) {
-            out.push(ch);
-            escaped = false;
-            continue;
-        }
-
-        if (ch === '\\' && inString) {
-            out.push(ch);
-            escaped = true;
-            continue;
-        }
-
-        if (ch === '"') {
-            inString = !inString;
-            out.push(ch);
-            continue;
-        }
-
-        if (inString) {
-            // Replace unescaped control characters
-            const code = ch.charCodeAt(0);
-            if (code < 0x20) {
-                if (ch === '\n') { out.push('\\n'); continue; }
-                if (ch === '\r') { out.push('\\r'); continue; }
-                if (ch === '\t') { out.push('\\t'); continue; }
-                // Other control chars — unicode escape
-                out.push('\\u' + code.toString(16).padStart(4, '0'));
-                continue;
-            }
-        }
-
-        out.push(ch);
-    }
-
-    return out.join('');
-}
-
-function parseGeminiJSON<T>(raw: string): T {
-    // Strip markdown code fences if present
-    let cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-    // Sometimes Gemini wraps JSON in extra text — extract the first { ... } or [ ... ] block
-    if (!cleaned.startsWith('{') && !cleaned.startsWith('[')) {
-        const jsonStart = cleaned.search(/[{[]/);
-        if (jsonStart >= 0) cleaned = cleaned.slice(jsonStart);
-    }
-    // Find the matching closing brace/bracket
-    if (cleaned.startsWith('{') || cleaned.startsWith('[')) {
-        const closingChar = cleaned.startsWith('{') ? '}' : ']';
-        const lastClose = cleaned.lastIndexOf(closingChar);
-        if (lastClose >= 0) cleaned = cleaned.slice(0, lastClose + 1);
-    }
-
-    // Attempt 1: direct parse
-    try {
-        return JSON.parse(cleaned) as T;
-    } catch {
-        // Attempt 2: fix unescaped control characters and trailing commas
-        try {
-            const sanitized = sanitizeJsonString(cleaned)
-                .replace(/,\s*([}\]])/g, '$1'); // strip trailing commas
-            return JSON.parse(sanitized) as T;
-        } catch {
-            console.error('[Gemini Parse] Failed to parse response, length:', raw?.length, 'first 500 chars:', raw?.slice(0, 500));
-            throw new Error('Błąd parsowania odpowiedzi AI — odpowiedź nie jest poprawnym JSON');
-        }
-    }
 }
 
 // ============================================================
@@ -346,25 +299,149 @@ export async function runAnalysisPasses(
         // Batch pass3 calls in groups of 4 to avoid Gemini rate limits
         const BATCH_SIZE = 4;
         const pass3: Record<string, PersonProfile> = {};
+
+        // Validate Big Five: must have 5 traits with valid range arrays
+        const isValidBigFive = (bf: unknown): boolean => {
+            if (!bf || typeof bf !== 'object') return false;
+            const obj = bf as Record<string, unknown>;
+            for (const key of ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism']) {
+                const trait = obj[key];
+                if (!trait || typeof trait !== 'object') return false;
+                const t = trait as { range?: unknown; score?: unknown };
+                if (Array.isArray(t.range) && t.range.length === 2 && t.range[0] > 0 && t.range[1] > 0) continue;
+                if (typeof t.score === 'number' && t.score > 0) continue;
+                return false;
+            }
+            return true;
+        };
+
+        // Safely parse Gemini JSON — returns empty object on error instead of throwing
+        const safeParse = (raw: string | null, label: string): Partial<PersonProfile> => {
+            if (!raw) return {};
+            try {
+                return parseGeminiJSON<Partial<PersonProfile>>(raw);
+            } catch (e) {
+                logger.warn(`[Pass 3] ${label} parse failed:`, e);
+                return {};
+            }
+        };
+
+        // Split Pass 3 into two calls per person to avoid Gemini output truncation.
+        // 3A: Big Five, Attachment, Communication Profile, MBTI, Love Language
+        // 3B: Communication Needs, Emotional Patterns, Clinical Observations, Conflict, EI
+        const fetchProfile = async (name: string): Promise<readonly [string, PersonProfile]> => {
+            const personMessages = samples.perPerson[name];
+            logger.info(`[Pass 3] ${name}: ${personMessages.length} messages sampled`);
+            const pass3Input = buildRelationshipPrefix(relationshipContext) + formatMessagesForAnalysis(personMessages);
+            const userPrompt = `Analyze messages from: ${name}\n\n${pass3Input}`;
+
+            // Run both halves in parallel — if one fails, the other still returns data
+            const [settledA, settledB] = await Promise.allSettled([
+                callGeminiWithRetry(PASS_3A_SYSTEM, userPrompt, 3, 8192),
+                callGeminiWithRetry(PASS_3B_SYSTEM, userPrompt, 3, 8192),
+            ]);
+
+            const rawA = settledA.status === 'fulfilled' ? settledA.value : null;
+            const rawB = settledB.status === 'fulfilled' ? settledB.value : null;
+
+            if (settledA.status === 'rejected') logger.warn(`[Pass 3] ${name} 3A failed:`, settledA.reason);
+            if (settledB.status === 'rejected') logger.warn(`[Pass 3] ${name} 3B failed:`, settledB.reason);
+
+            if (!rawA && !rawB) throw new Error(`Pass 3 completely failed for ${name}`);
+
+            logger.info(`[Pass 3] ${name}: 3A=${rawA?.length ?? 0} chars, 3B=${rawB?.length ?? 0} chars`);
+
+            let partA = safeParse(rawA, `${name}/3A`);
+            const partB = safeParse(rawB, `${name}/3B`);
+
+            // Validate Big Five — if present but malformed, retry 3A once
+            if (!isValidBigFive(partA.big_five_approximation)) {
+                logger.warn(`[Pass 3] ${name}: Big Five invalid or missing — retrying 3A`);
+                try {
+                    const retryRaw = await callGeminiWithRetry(PASS_3A_SYSTEM, userPrompt, 2, 8192);
+                    const retryPart = safeParse(retryRaw, `${name}/3A-retry`);
+                    if (isValidBigFive(retryPart.big_five_approximation)) {
+                        partA = { ...partA, ...retryPart };
+                    }
+                } catch {
+                    logger.warn(`[Pass 3] ${name}: 3A retry also failed`);
+                }
+            }
+
+            // Merge both halves into one PersonProfile
+            const profile: PersonProfile = {
+                big_five_approximation: partA.big_five_approximation ?? partB.big_five_approximation,
+                attachment_indicators: partA.attachment_indicators ?? partB.attachment_indicators,
+                communication_profile: partA.communication_profile ?? partB.communication_profile,
+                communication_needs: partB.communication_needs ?? partA.communication_needs,
+                emotional_patterns: partB.emotional_patterns ?? partA.emotional_patterns,
+                clinical_observations: partB.clinical_observations ?? partA.clinical_observations,
+                conflict_resolution: partB.conflict_resolution ?? partA.conflict_resolution,
+                emotional_intelligence: partB.emotional_intelligence ?? partA.emotional_intelligence,
+                mbti: partA.mbti ?? partB.mbti,
+                love_language: partA.love_language ?? partB.love_language,
+            } as PersonProfile;
+
+            const hasAttach = !!profile.attachment_indicators?.primary_style;
+            const hasBF = isValidBigFive(profile.big_five_approximation);
+            const hasMBTI = !!profile.mbti?.type;
+            const hasEI = !!profile.emotional_intelligence;
+            const hasClinical = !!profile.clinical_observations;
+            logger.info(`[Pass 3] ${name}: attach=${hasAttach}, bf=${hasBF}, mbti=${hasMBTI}, ei=${hasEI}, clinical=${hasClinical}`);
+            return [name, profile] as const;
+        };
+
         for (let i = 0; i < profilingNames.length; i += BATCH_SIZE) {
             const batch = profilingNames.slice(i, i + BATCH_SIZE);
-            const settled = await Promise.allSettled(
-                batch.map(async (name) => {
-                    const personMessages = samples.perPerson[name];
-                    const pass3Input = buildRelationshipPrefix(relationshipContext) + formatMessagesForAnalysis(personMessages);
-                    const pass3Raw = await callGeminiWithRetry(
-                        PASS_3_SYSTEM,
-                        `Analyze messages from: ${name}\n\n${pass3Input}`,
-                    );
-                    return [name, parseGeminiJSON<PersonProfile>(pass3Raw)] as const;
-                })
-            );
+            const settled = await Promise.allSettled(batch.map(fetchProfile));
             for (const entry of settled) {
                 if (entry.status === 'fulfilled') {
                     const [name, profile] = entry.value;
                     if (profile) pass3[name] = profile;
+                } else {
+                    logger.warn('[Pass 3] Profile fetch failed:', entry.reason);
                 }
-                // Rejected entries are silently skipped — partial profiles OK
+            }
+        }
+
+        // Retry incomplete profiles — if key fields are missing, likely truncated
+        const isProfileComplete = (p: PersonProfile): boolean =>
+            !!p.attachment_indicators?.primary_style &&
+            isValidBigFive(p.big_five_approximation) &&
+            !!p.communication_profile;
+
+        const incompleteNames = profilingNames.filter(
+            name => pass3[name] && !isProfileComplete(pass3[name])
+        );
+        if (incompleteNames.length > 0) {
+            logger.warn(`[Pass 3] Retrying ${incompleteNames.length} incomplete profile(s):`, incompleteNames);
+            const retrySettled = await Promise.allSettled(incompleteNames.map(fetchProfile));
+            for (const entry of retrySettled) {
+                if (entry.status === 'fulfilled') {
+                    const [name, profile] = entry.value;
+                    if (profile && isProfileComplete(profile)) {
+                        pass3[name] = profile;
+                    } else if (profile) {
+                        // Keep retry result if it has more data than original
+                        const orig = pass3[name];
+                        if (!orig.attachment_indicators?.primary_style && profile.attachment_indicators?.primary_style) {
+                            pass3[name] = profile;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Log final state for debugging
+        for (const name of profilingNames) {
+            if (!pass3[name]) {
+                logger.warn(`[Pass 3] No profile for ${name} — skipped`);
+            } else if (!isProfileComplete(pass3[name])) {
+                const missing: string[] = [];
+                if (!pass3[name].attachment_indicators?.primary_style) missing.push('attachment_indicators');
+                if (!pass3[name].big_five_approximation) missing.push('big_five');
+                if (!pass3[name].communication_profile) missing.push('communication_profile');
+                logger.warn(`[Pass 3] Incomplete profile for ${name} — missing: ${missing.join(', ')}`);
             }
         }
         result.pass3 = pass3;
@@ -379,10 +456,10 @@ export async function runAnalysisPasses(
 
         result.status = 'complete';
         result.completedAt = Date.now();
-    } catch {
+    } catch (err) {
         const hasPartialResults = result.pass1 || result.pass2 || result.pass3;
         result.status = hasPartialResults ? 'partial' : 'error';
-        result.error = 'Błąd analizy AI';
+        result.error = `Błąd analizy AI: ${err instanceof Error ? err.message : String(err)}`;
     }
 
     return result;
@@ -429,13 +506,218 @@ ${quantitativeContext}
 MESSAGE SAMPLES:
 ${formatMessagesForAnalysis(samples.overview)}`;
 
-    const raw = await callGeminiWithRetry(STANDUP_ROAST_SYSTEM, input, 3, 8192);
+    const raw = await callGeminiWithRetry(STANDUP_ROAST_SYSTEM, input, 3, 8192, 0.7);
     return parseGeminiJSON<StandUpRoastResult>(raw);
 }
 
 // ============================================================
 // Public: Enhanced Roast pass (with full psychological context)
 // ============================================================
+
+// ============================================================
+// Private: Roast keyword scanner — finds roastable material in messages
+// ============================================================
+
+interface RoastableFind {
+    category: string;
+    quote: string;
+    sender: string;
+}
+
+const ROAST_KEYWORD_PATTERNS: Array<{ category: string; patterns: RegExp[] }> = [
+    {
+        category: 'Cringe / żenada',
+        patterns: [
+            /kocham ci[eę]/i, /tęskn[ię]/i, /miss you/i, /love you/i,
+            /buzi[aąeę]/i, /kochani[eę]/i, /skarb[ie]?/i, /kotk[uao]/i,
+            /misiu/i, /baby/i, /babe/i,
+        ],
+    },
+    {
+        category: 'Substancje / imprezy',
+        patterns: [
+            /trawka/i, /zioło/i, /kresk[aę]/i, /tabs[yię]/i, /joint/i,
+            /na\s*bani/i, /urżnę?ą[lł]/i, /wódk[aęi]/i, /pijemy/i, /naćpan/i,
+            /imprez[aęy]/i, /melanż/i, /after/i, /rave/i,
+        ],
+    },
+    {
+        category: 'Wulgaryzmy / obrażanie',
+        patterns: [
+            /kurwa/i, /jeba[ćcł]/i, /pierdol/i, /chuj/i, /spierdal/i,
+            /debil/i, /idiota/i, /kretyn/i, /głupi[aey]?/i,
+        ],
+    },
+    {
+        category: 'Desperacja / clingy behavior',
+        patterns: [
+            /czemu nie odpisujesz/i, /halo\??/i, /odezwij si[eę]/i,
+            /\?\?\?/i, /odpowiedz/i, /ignorujesz/i, /napisz do mnie/i,
+            /dlaczego mi nie/i, /nie odpisuje/i,
+        ],
+    },
+    {
+        category: 'Kłamstwa / wymówki',
+        patterns: [
+            /nie widziałe?[mś]/i, /nie dostałe?[mś]/i, /telefon mi pad/i,
+            /bateria mi się/i, /byłe?[mś] zajęt/i, /zasn[aą]łe?[mś]/i,
+            /nie mogłe?[mś]/i, /sorr?y/i, /przepraszam/i,
+        ],
+    },
+    {
+        category: 'Groźby / szantaż emocjonalny',
+        patterns: [
+            /zostawię ci[eę]/i, /odchodzę/i, /koniec/i, /nie chcę cię/i,
+            /zabiję/i, /nie żyj/i, /rzucam ci[eę]/i,
+            /nie rozmawiaj ze mn/i, /blokuj[ęe]/i,
+        ],
+    },
+    {
+        category: 'Self-owns / samobójcze gole',
+        patterns: [
+            /jestem (taki |taka )?(głupi|beznadziejn|żałosn|smutny|brzydki)/i,
+            /nikt mnie nie/i, /jestem sam[ao]?$/i, /nie zasługuję/i,
+            /jestem (najgorsz|bezwartościow)/i,
+        ],
+    },
+    {
+        category: 'Podejrzane godziny',
+        patterns: [], // handled separately by timestamp
+    },
+];
+
+function scanForRoastableMaterial(messages: Array<{ sender: string; content: string; timestamp: number }>): string {
+    const finds: RoastableFind[] = [];
+    const lateNightMessages: Array<{ sender: string; content: string; time: string }> = [];
+
+    for (const msg of messages) {
+        if (!msg.content || msg.content.length < 3) continue;
+
+        // Check keyword patterns
+        for (const { category, patterns } of ROAST_KEYWORD_PATTERNS) {
+            if (patterns.length === 0) continue;
+            for (const pattern of patterns) {
+                if (pattern.test(msg.content)) {
+                    finds.push({ category, quote: msg.content.slice(0, 200), sender: msg.sender });
+                    break; // one match per category per message
+                }
+            }
+        }
+
+        // Check late-night messages (1:00 - 5:00 AM)
+        const hour = new Date(msg.timestamp).getHours();
+        if (hour >= 1 && hour <= 4 && msg.content.length > 10) {
+            lateNightMessages.push({
+                sender: msg.sender,
+                content: msg.content.slice(0, 150),
+                time: new Date(msg.timestamp).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+            });
+        }
+    }
+
+    if (finds.length === 0 && lateNightMessages.length === 0) return '';
+
+    const sections: string[] = ['=== ROASTABLE MATERIAL SCANNER (auto-detected) ==='];
+
+    // Group finds by category
+    const byCategory = new Map<string, RoastableFind[]>();
+    for (const find of finds) {
+        const list = byCategory.get(find.category) ?? [];
+        list.push(find);
+        byCategory.set(find.category, list);
+    }
+
+    for (const [category, items] of byCategory) {
+        sections.push(`\n[${category}] (${items.length} znalezionych):`);
+        // Show top 5 per category
+        for (const item of items.slice(0, 5)) {
+            sections.push(`  - ${item.sender}: "${item.quote}"`);
+        }
+    }
+
+    if (lateNightMessages.length > 0) {
+        sections.push(`\n[Podejrzane godziny] (${lateNightMessages.length} wiadomości między 1:00-5:00):`);
+        for (const msg of lateNightMessages.slice(0, 5)) {
+            sections.push(`  - ${msg.sender} o ${msg.time}: "${msg.content}"`);
+        }
+    }
+
+    sections.push('\nUŻYJ tych znalezionych cytatów i wzorców w swoich roastach! Cytuj je DOSŁOWNIE.');
+    return sections.join('\n');
+}
+
+/**
+ * Build a condensed psychological context for Enhanced Roast.
+ * Instead of dumping full JSON from all 4 passes (30-80KB),
+ * extract only the fields most useful for roasting (~5KB).
+ */
+function buildCondensedRoastContext(
+    pass1: Pass1Result,
+    pass2: Pass2Result,
+    pass3: Record<string, PersonProfile>,
+    pass4: Pass4Result,
+    quantitativeContext: string,
+): string {
+    const sections: string[] = [];
+
+    // Pass 1: compact overview
+    sections.push('=== OVERVIEW ===');
+    sections.push(`Relationship: ${pass1.relationship_type}`);
+    for (const [name, tone] of Object.entries(pass1.tone_per_person ?? {})) {
+        const t = tone as { dominant_tone?: string; formality?: string };
+        sections.push(`${name}: tone=${t.dominant_tone ?? '?'}, formality=${t.formality ?? '?'}`);
+    }
+    sections.push(`Dynamic: ${JSON.stringify(pass1.overall_dynamic)}`);
+
+    // Pass 2: dynamics essentials
+    sections.push('\n=== DYNAMICS ===');
+    const pd = pass2.power_dynamics;
+    sections.push(`Power balance: ${pd.balance_score} (adapts more: ${pd.who_adapts_more})`);
+    sections.push(`Evidence: ${pd.evidence.slice(0, 3).join('; ')}`);
+    sections.push(`Conflict style: ${JSON.stringify(pass2.conflict_patterns)}`);
+    const el = pass2.emotional_labor;
+    if (el) sections.push(`Emotional labor: caregiver=${el.primary_caregiver}, balance=${el.balance_score}`);
+    if (pass2.red_flags?.length) sections.push(`Red flags: ${pass2.red_flags.map(f => f.pattern).join(', ')}`);
+    if (pass2.green_flags?.length) sections.push(`Green flags: ${pass2.green_flags.map(f => f.pattern).join(', ')}`);
+
+    // Pass 3: per-person compact profiles
+    sections.push('\n=== PERSONALITY PROFILES ===');
+    for (const [name, profile] of Object.entries(pass3)) {
+        const lines: string[] = [`--- ${name} ---`];
+        if (profile.mbti?.type) lines.push(`MBTI: ${profile.mbti.type}`);
+        const b5 = profile.big_five_approximation;
+        if (b5) {
+            const scores = Object.entries(b5).map(([k, v]) => {
+                const trait = v as { range?: [number, number] };
+                return `${k[0].toUpperCase()}:${trait.range ? trait.range.join('-') : '?'}`;
+            }).join(' ');
+            lines.push(`Big Five: ${scores}`);
+        }
+        const att = profile.attachment_indicators;
+        if (att?.primary_style) lines.push(`Attachment: ${att.primary_style}`);
+        if (profile.love_language?.primary) lines.push(`Love language: ${profile.love_language.primary}`);
+        const comm = profile.communication_profile;
+        if (comm?.style) lines.push(`Communication: style=${comm.style}, assertiveness=${comm.assertiveness}`);
+        const clin = profile.clinical_observations;
+        if (clin?.anxiety_markers?.present) lines.push(`Anxiety markers: ${clin.anxiety_markers.patterns?.slice(0, 2).join(', ')}`);
+        if (clin?.avoidance_markers?.present) lines.push(`Avoidance markers: ${clin.avoidance_markers.patterns?.slice(0, 2).join(', ')}`);
+        sections.push(lines.join('\n'));
+    }
+
+    // Pass 4: health + insights
+    sections.push('\n=== HEALTH SCORE ===');
+    sections.push(JSON.stringify(pass4.health_score));
+    sections.push(`Summary: ${pass4.executive_summary}`);
+    if (pass4.predictions?.length) {
+        sections.push(`Predictions: ${pass4.predictions.slice(0, 3).map(p => p.prediction ?? p).join('; ')}`);
+    }
+
+    // Quantitative context (already compact string)
+    sections.push('\n=== QUANTITATIVE ===');
+    sections.push(quantitativeContext);
+
+    return sections.join('\n');
+}
 
 export async function runEnhancedRoastPass(
     samples: AnalysisSamples,
@@ -447,26 +729,34 @@ export async function runEnhancedRoastPass(
         pass3: Record<string, PersonProfile>;
         pass4: Pass4Result;
     },
+    deepScanMaterial?: string,
 ): Promise<RoastResult> {
+    // Full psychological context from all 4 passes
     const psychContext = buildSynthesisInputFromPasses(
         qualitative.pass1, qualitative.pass2, qualitative.pass3, quantitativeContext,
     );
 
-    const input = `PARTICIPANTS: ${participants.join(', ')}
+    // Scan all available messages for roastable material
+    const allMessages = [
+        ...samples.overview,
+        ...Object.values(samples.perPerson).flat(),
+    ];
+    const roastableMaterial = scanForRoastableMaterial(allMessages);
 
-=== PSYCHOLOGICAL ANALYSIS RESULTS ===
+    const input = `PARTICIPANTS: ${participants.join(', ')}
+${deepScanMaterial ? `\n${deepScanMaterial}\n` : ''}
+=== FULL PSYCHOLOGICAL ANALYSIS ===
 ${psychContext}
 
-=== HEALTH SCORE ===
-${JSON.stringify(qualitative.pass4.health_score)}
-
-=== KEY INSIGHTS ===
-${JSON.stringify(qualitative.pass4.insights)}
+=== PASS 4: SYNTHESIS ===
+${JSON.stringify(qualitative.pass4, null, 2)}
+${roastableMaterial ? `\n${roastableMaterial}` : ''}
 
 === MESSAGE SAMPLES ===
 ${formatMessagesForAnalysis(samples.overview)}`;
 
-    const raw = await callGeminiWithRetry(ENHANCED_ROAST_SYSTEM, input, 3, 8192);
+    logger.log('[Enhanced Roast] Input size:', (input.length / 1024).toFixed(1), 'KB');
+    const raw = await callGeminiWithRetry(ENHANCED_ROAST_SYSTEM, input, 3, 16384, 0.5, 240_000);
     return parseGeminiJSON<RoastResult>(raw);
 }
 
@@ -494,7 +784,7 @@ ${formatMessagesForAnalysis(targetMessages)}
 === FULL GROUP MESSAGES (context — what others say about/to target) ===
 ${formatMessagesForAnalysis(samples.overview)}`;
 
-    const raw = await callGeminiWithRetry(MEGA_ROAST_SYSTEM, input, 3, 8192);
+    const raw = await callGeminiWithRetry(MEGA_ROAST_SYSTEM, input, 3, 8192, 0.5);
     return parseGeminiJSON<MegaRoastResult>(raw);
 }
 
@@ -522,7 +812,7 @@ ${perPersonSections}
 === DANE ILOŚCIOWE (kontekst wspierający) ===
 ${quantitativeContext}`;
 
-    const raw = await callGeminiWithRetry(CWEL_TYGODNIA_SYSTEM, input, 3, 8192);
+    const raw = await callGeminiWithRetry(CWEL_TYGODNIA_SYSTEM, input, 3, 8192, 0.5);
     return parseGeminiJSON<CwelTygodniaResult>(raw);
 }
 
@@ -551,7 +841,6 @@ export async function generateAnalysisImage(
     const model = client.getGenerativeModel({
         model: 'gemini-3-pro-image-preview',
         generationConfig: {
-            // @ts-expect-error - responseModalities is valid for image generation models
             responseModalities: ['IMAGE', 'TEXT'],
         },
     });
@@ -755,7 +1044,6 @@ export async function generateRoastImage(
     const model = client.getGenerativeModel({
         model: 'gemini-3-pro-image-preview',
         generationConfig: {
-            // @ts-expect-error - responseModalities is valid for image generation models
             responseModalities: ['IMAGE', 'TEXT'],
         },
     });
@@ -816,6 +1104,158 @@ STYLE INSTRUCTIONS:
             error: error instanceof Error ? error.message : 'Błąd generowania obrazu',
         };
     }
+}
+
+/**
+ * Generate a satirical cartoon dating app profile picture using Gemini image generation.
+ */
+export async function generateDatingProfileImage(
+    context: {
+        name: string;
+        bio: string;
+        ageVibe: string;
+        personality?: string;
+        mbti?: string;
+        bigFive?: string;
+        attachmentStyle?: string;
+        communicationStyle?: string;
+        dominantEmotions?: string;
+        appearanceClues?: string;
+        redFlags?: string;
+        worstStats?: string;
+    },
+): Promise<{ imageBase64: string; mimeType: string } | { error: string }> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        return { error: 'GEMINI_API_KEY is not set in .env.local' };
+    }
+
+    const client = new GoogleGenerativeAI(apiKey);
+    const model = client.getGenerativeModel({
+        model: 'gemini-3-pro-image-preview',
+        generationConfig: {
+            responseModalities: ['IMAGE', 'TEXT'],
+        },
+    });
+
+    // Build a rich character description from personality data
+    const traits: string[] = [];
+
+    if (context.mbti) {
+        const mbtiVibes: Record<string, string> = {
+            INTJ: 'intense intellectual stare, sharp features, minimal expression, dark clothing',
+            INTP: 'messy hair, curious eyes, slightly disheveled, casual hoodie',
+            ENTJ: 'confident posture, sharp jawline, power dressing, commanding presence',
+            ENTP: 'mischievous smirk, animated expression, creative style, energetic pose',
+            INFJ: 'gentle eyes, thoughtful expression, soft features, layered clothing',
+            INFP: 'dreamy gaze, soft curly hair, artistic style, vintage clothes',
+            ENFJ: 'warm smile, open posture, charismatic expression, well-groomed',
+            ENFP: 'bright eyes, wild hair, colorful accessories, huge smile',
+            ISTJ: 'neat appearance, serious expression, button-up shirt, disciplined posture',
+            ISFJ: 'kind eyes, gentle smile, modest clothing, warm expression',
+            ESTJ: 'strong jaw, firm stance, business casual, authoritative expression',
+            ESFJ: 'friendly face, warm smile, trendy outfit, welcoming pose',
+            ISTP: 'cool detached expression, leather jacket, minimalist style, sharp eyes',
+            ISFP: 'artistic vibe, colorful accessories, soft expression, creative clothing',
+            ESTP: 'athletic build, cocky grin, sporty casual, confident lean',
+            ESFP: 'party energy, flashy outfit, big smile, expressive pose',
+        };
+        const mbtiType = context.mbti.toUpperCase();
+        traits.push(mbtiVibes[mbtiType] || `${mbtiType} personality type`);
+    }
+
+    if (context.bigFive) traits.push(`Big Five traits: ${context.bigFive}`);
+
+    if (context.attachmentStyle) {
+        const attachVibes: Record<string, string> = {
+            secure: 'relaxed confident posture, warm genuine smile, open body language',
+            anxious: 'slightly tense expression, eager eyes, leaning forward, nervous energy, phone clutched tightly',
+            avoidant: 'arms crossed, cool detached gaze, leaning back, wall-up vibe, looking away',
+            disorganized: 'contradictory expression, intense but guarded, unpredictable energy',
+        };
+        traits.push(attachVibes[context.attachmentStyle] || '');
+    }
+
+    if (context.communicationStyle) {
+        const commVibes: Record<string, string> = {
+            direct: 'assertive posture, firm eye contact, strong chin',
+            indirect: 'softer gaze, slightly turned away, diplomatic expression',
+            mixed: 'adaptive expression, somewhere between assertive and gentle',
+        };
+        traits.push(commVibes[context.communicationStyle] || '');
+    }
+
+    if (context.dominantEmotions) traits.push(`Expression reflecting: ${context.dominantEmotions}`);
+    if (context.appearanceClues) traits.push(`Physical appearance clues from their real conversations: ${context.appearanceClues}`);
+
+    const bioSnippet = context.bio.slice(0, 200);
+    const traitDescription = traits.filter(Boolean).join('. ');
+
+    const prompt = `Create a HUMOROUS but high-quality caricature portrait for a dating app. This is a SINGLE CHARACTER portrait that should be FUNNY — combining real appearance with their worst personality traits.
+
+CHARACTER: "${context.name}"
+VIBE/AGE ENERGY: ${context.ageVibe}
+BIO (their REAL texting personality — this is who they ACTUALLY are): "${bioSnippet}"
+${context.appearanceClues ? `REAL APPEARANCE CLUES FROM THEIR CONVERSATIONS (USE THESE — this is what they actually look like): ${context.appearanceClues}` : 'No appearance clues — improvise based on personality and age vibe.'}
+${context.redFlags ? `RED FLAGS TO VISUALLY REFERENCE (incorporate these as subtle visual gags — props, background details, expression): ${context.redFlags}` : ''}
+${context.worstStats ? `FUNNIEST STATS TO REFERENCE (exaggerate these visually): ${context.worstStats}` : ''}
+${traitDescription ? `PERSONALITY VISUAL TRAITS: ${traitDescription}` : ''}
+
+CRITICAL RULES:
+- The portrait MUST incorporate appearance clues from the conversation (hair color, glasses, build, style etc.) — this is the MOST IMPORTANT input
+- Add subtle visual gags that reference their red flags and worst stats: e.g. double-texter → phone in hand with notification bubbles, ghoster → slightly translucent, clingy → surrounded by hearts, night owl → dark circles and energy drink, gamer → RGB lighting, gym bro → tight shirt
+- The expression and body language should reflect their WORST trait, not their best
+- Make it look like the person's HONEST dating photo — the one their friends would pick, not the one they'd pick themselves
+
+STYLE:
+- Semi-realistic digital art with slight caricature exaggeration (NOT cartoon, NOT anime)
+- Moody dark background with subtle neon color gradient (deep purple/blue/pink tones)
+- Dramatic cinematic lighting — soft key light from one side, rim light from behind
+- Portrait from chest up, slight angle
+- Square 1:1 ratio
+- NO text, NO watermarks, NO UI elements, NO words
+- High quality, stylized dating app portrait aesthetic`;
+
+    // Retry up to 3 times with exponential backoff
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+            const result = await model.generateContent(prompt);
+            const parts = result.response.candidates?.[0]?.content?.parts;
+            if (!parts) {
+                if (attempt < MAX_RETRIES - 1) {
+                    await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+                    continue;
+                }
+                return { error: 'No response from image generation model' };
+            }
+
+            for (const part of parts) {
+                if (part.inlineData?.data && part.inlineData?.mimeType) {
+                    return {
+                        imageBase64: part.inlineData.data,
+                        mimeType: part.inlineData.mimeType,
+                    };
+                }
+            }
+
+            if (attempt < MAX_RETRIES - 1) {
+                await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+                continue;
+            }
+            return { error: 'No image data in Gemini response' };
+        } catch (error) {
+            if (attempt < MAX_RETRIES - 1) {
+                await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+                continue;
+            }
+            return {
+                error: error instanceof Error ? error.message : 'Błąd generowania zdjęcia profilowego',
+            };
+        }
+    }
+
+    return { error: 'Image generation failed after retries' };
 }
 
 // ============================================================

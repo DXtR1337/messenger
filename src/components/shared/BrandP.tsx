@@ -1,5 +1,3 @@
-'use client';
-
 import { useId } from 'react';
 
 interface BrandPProps {
@@ -14,9 +12,9 @@ interface BrandPProps {
  * viewBox covers just the P: 0,0 → 310,370 (aspect ~0.838:1)
  */
 export default function BrandP({ height = '1em', className = '' }: BrandPProps) {
-  const uid = useId();
-  const gradId = `bp-g-${uid}`;
-  const maskId = `bp-m-${uid}`;
+  const uid = useId().replace(/:/g, '_');
+  const gradId = `bp-g${uid}`;
+  const maskId = `bp-m${uid}`;
 
   return (
     <svg

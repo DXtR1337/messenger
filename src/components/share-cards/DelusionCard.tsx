@@ -128,7 +128,7 @@ export default function DelusionCard({ result, participants }: DelusionCardProps
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: '#f5f0e6',
           position: 'relative',

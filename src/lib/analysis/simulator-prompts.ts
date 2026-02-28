@@ -5,7 +5,7 @@
  */
 
 import 'server-only';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { callGeminiWithRetry } from './gemini';
 
 import type { PersonProfile, Pass1Result, Pass2Result } from './types';
 
@@ -48,23 +48,6 @@ export interface SimulationResponse {
   reply: string;
   confidence: number;
   styleNotes: string;
-}
-
-// ============================================================
-// Private: Gemini API helpers
-// ============================================================
-
-const SAFETY_SETTINGS = [
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-];
-
-function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set in .env.local');
-  return new GoogleGenerativeAI(apiKey);
 }
 
 // ============================================================
@@ -275,51 +258,8 @@ export async function runReplySimulation(params: SimulationParams): Promise<Simu
   const systemPrompt = buildSimulatorSystemPrompt(params);
   const userContent = buildUserContent(params);
 
-  let lastError: Error | undefined;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const client = getClient();
-      const model = client.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
-        systemInstruction: systemPrompt,
-        generationConfig: {
-          maxOutputTokens: 1024,
-          temperature: 0.7,
-          responseMimeType: 'application/json',
-        },
-        safetySettings: SAFETY_SETTINGS,
-      });
-
-      const result = await model.generateContent(userContent);
-      const response = result.response;
-
-      if (response.promptFeedback?.blockReason) {
-        throw new Error(`Prompt zablokowany przez filtr bezpieczeństwa: ${response.promptFeedback.blockReason}`);
-      }
-
-      const candidate = response.candidates?.[0];
-      if (candidate?.finishReason === 'SAFETY') {
-        throw new Error('Odpowiedź zablokowana przez filtr bezpieczeństwa');
-      }
-
-      const text = response.text();
-      if (!text) throw new Error('No text in Gemini response');
-
-      const parsed = parseSimulationJSON(text);
-      return parsed;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      const msg = lastError.message.toLowerCase();
-      if (msg.includes('api key') || msg.includes('permission') || msg.includes('billing')) {
-        throw new Error('Konfiguracja API -- sprawdz klucz API');
-      }
-      if (attempt < 2) {
-        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
-      }
-    }
-  }
-
-  throw new Error(`Symulacja nie powiodla sie: ${lastError?.message ?? 'nieznany blad'}`);
+  const rawText = await callGeminiWithRetry(systemPrompt, userContent, 3, 1024, 0.5);
+  return parseSimulationJSON(rawText);
 }
 
 // ============================================================

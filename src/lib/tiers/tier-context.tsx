@@ -1,3 +1,4 @@
+// FEATURE_FLAG: ENABLE_TIER_GATING — prepared but not active (requires Stripe integration)
 'use client';
 
 import {

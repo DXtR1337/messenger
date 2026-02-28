@@ -19,6 +19,7 @@ import {
   CHART_AXIS_TICK,
   CHART_GRID_PROPS,
   PERSON_COLORS_HEX,
+  CHART_CURSOR_BAR,
   useIsMobile,
 } from './chart-config';
 
@@ -43,7 +44,9 @@ export default function ResponseTimeHistogram({
 
   // Limit to first 2 persons for the grouped bar chart
   const shownParticipants = useMemo(
-    () => participants.filter((p) => distribution.perPerson[p]).slice(0, 2),
+    () => distribution?.perPerson
+      ? participants.filter((p) => distribution.perPerson[p]).slice(0, 2)
+      : [],
     [participants, distribution],
   );
 
@@ -64,7 +67,13 @@ export default function ResponseTimeHistogram({
     });
   }, [distribution, shownParticipants]);
 
-  if (!distribution || shownParticipants.length === 0) return null;
+  if (!distribution || shownParticipants.length === 0) {
+    return (
+      <div className="py-8 text-center text-sm text-white/50">
+        Brak danych do wyświetlenia
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -74,14 +83,14 @@ export default function ResponseTimeHistogram({
       initial={{ opacity: 0 }}
       animate={inView ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="overflow-hidden rounded-xl border border-border bg-card"
+      className="overflow-hidden"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-5 pt-4">
         <div>
-          <h3 className="font-display text-[15px] font-bold">
+          <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">
             Rozkład czasu odpowiedzi
           </h3>
-          <p className="mt-0.5 text-xs text-text-muted">
+          <p className="mt-0.5 text-xs text-white/50">
             Jak szybko odpowiadają
           </p>
         </div>
@@ -89,10 +98,10 @@ export default function ResponseTimeHistogram({
           {shownParticipants.map((name, i) => (
             <span
               key={name}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              className="flex items-center gap-1.5 text-xs text-white/50"
             >
               <span
-                className="inline-block h-2 w-2 rounded-sm"
+                className="inline-block size-2 rounded-[3px]"
                 style={{
                   backgroundColor:
                     PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0],
@@ -136,7 +145,9 @@ export default function ResponseTimeHistogram({
             <Tooltip
               contentStyle={CHART_TOOLTIP_STYLE}
               labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-              formatter={(value: any) => [`${(value as number).toFixed(1)}%`, undefined]}
+              formatter={(value) => [`${Number(value).toFixed(1)}%`, undefined]}
+              cursor={CHART_CURSOR_BAR}
+              animationDuration={0}
             />
             {shownParticipants.map((name, i) => (
               <Bar
@@ -144,7 +155,7 @@ export default function ResponseTimeHistogram({
                 dataKey={name}
                 fill={PERSON_COLORS_HEX[i] ?? PERSON_COLORS_HEX[0]}
                 fillOpacity={0.85}
-                radius={[4, 4, 0, 0]}
+                radius={[3, 3, 0, 0]}
                 barSize={isMobile ? 12 : 20}
               />
             ))}

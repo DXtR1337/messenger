@@ -19,6 +19,11 @@ const staggerVariants = {
   }),
 };
 
+function accentBorderColor(index: number): string {
+  const colors = ['#3b82f6', '#ef4444', '#10b981'];
+  return colors[index % colors.length];
+}
+
 export default function YearMilestones({ milestones }: YearMilestonesProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inView = useInView(containerRef, { once: true, margin: '-50px' });
@@ -65,16 +70,17 @@ export default function YearMilestones({ milestones }: YearMilestonesProps) {
           initial="hidden"
           animate={inView ? 'visible' : 'hidden'}
           variants={staggerVariants}
-          className="rounded-xl border border-border bg-card p-4 transition-colors"
+          className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 border-t-2 transition-colors hover:border-white/[0.08]"
+          style={{ borderTopColor: accentBorderColor(i) }}
         >
           <div className="flex items-center gap-2 text-muted-foreground mb-3">
             {card.icon}
-            <span className="text-xs uppercase tracking-wider">{card.title}</span>
+            <span className="text-[11px] uppercase tracking-wider">{card.title}</span>
           </div>
-          <p className={`font-display text-xl sm:text-2xl font-bold ${card.accentColor}`}>
+          <p className={`font-display text-3xl font-black ${card.accentColor}`}>
             {card.value}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">{card.subtitle}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">{card.subtitle}</p>
         </motion.div>
       ))}
     </div>

@@ -629,6 +629,234 @@ Szczery Profil Randkowy & Tak & \score{Gotowe} & 253 & \score{Wysoki} & Pass~1--
 
 
 % ============================================================
+\section{Faza 24: Deep Analytics}
+\label{sec:faza-24}
+
+\begin{description}
+  \item[Status] \score{Zrealizowane} (luty 2026)
+\end{description}
+
+Faza 24 wypełniła lukę między deklarowanymi funkcjami w~demo a~faktyczną implementacją. Dodano 10 nowych komponentów wizualizacyjnych oraz rozszerzono silnik ilościowy o~zaawansowane metryki psychologiczne.
+
+\subsection*{Nowe moduły ilościowe}
+
+\begin{itemize}
+  \item \filepath{src/lib/analysis/quant/pursuit-withdrawal.ts} --- wykrywanie wzorca pościg--wycofanie (Christensen \& Heavey 1990); próg 4h, minimum 4 kolejne wiadomości
+  \item \filepath{src/lib/analysis/quant/response-time-distribution.ts} --- histogram czasu odpowiedzi w~6 bucketach (<1min, 1--5min, 5--30min, 30min--2h, 2--8h, >8h)
+\end{itemize}
+
+\subsection*{Nowe moduły analityczne}
+
+\begin{itemize}
+  \item \filepath{src/lib/analysis/threat-meters.ts} --- wskaźniki dynamiki: Ghost Risk, Intensywność Przywiązania, Nierównowaga Wpływu, Trust Index
+  \item \filepath{src/lib/analysis/damage-report.ts} --- raport emocjonalny: Emotional Damage\%, Communication Grade, Repair Potential, Terapia
+  \item \filepath{src/lib/analysis/cognitive-functions.ts} --- wyprowadzanie funkcji kognitywnych MBTI (8 typów Junga)
+  \item \filepath{src/lib/analysis/gottman-horsemen.ts} --- mapowanie Czterech Jeźdźców Apokalipsy Gottmana z~danych CPS
+  \item \filepath{src/lib/analysis/ranking-percentiles.ts} --- heurystyczne rankingi percentylowe TOP X\%
+\end{itemize}
+
+\subsection*{Nowe komponenty UI}
+
+\begin{table}[H]
+\centering
+\caption{Komponenty Fazy 24}
+\label{tab:faza-24-components}
+\begin{tabularx}{\textwidth}{L{5cm}X}
+\toprule
+\textbf{Komponent} & \textbf{Opis} \\
+\midrule
+\textsf{ResponseTimeHistogram} & Histogram słupkowy czasu odpowiedzi, 6 bucketów, per-person kolory \\
+\textsf{HourlyActivityChart} & 24-godzinny stacked bar chart aktywności (Recharts) \\
+\textsf{YearMilestones} & Najlepszy/najgorszy miesiąc + trend rok do roku \\
+\textsf{ThreatMeters} & 4 wskaźniki dynamiki relacji (gauge 0--100) \\
+\textsf{DamageReport} & Raport emocjonalny z~oceną literową Communication Grade \\
+\textsf{CognitiveFunctionsClash} & Porównanie funkcji kognitywnych MBTI między uczestnikami \\
+\textsf{PursuitWithdrawalCard} & Wizualizacja cyklu pościg--wycofanie z~chronologią \\
+\textsf{RankingBadges} & Heurystyczne percentyle TOP X\% dla kluczowych metryk \\
+\textsf{AIPredictions} & Predykcje AI z~confidence\%, z~disclaimerem akademickim \\
+\textsf{GottmanHorsemen} & Cztery Jeźdźce Apokalipsy Gottmana (wizualizacja siły) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection*{Rozszerzenia silnika}
+
+\begin{itemize}
+  \item Pass 4 rozszerzony o~tablicę \texttt{predictions[]} z~prognozami AI
+  \item \tsfunc{computeQuantitative()} oblicza teraz: sentiment, konflikty, bliskość, pursuit-withdrawal, rozkład czasu odpowiedzi, milestones roczne, percentyle rankingowe
+\end{itemize}
+
+
+% ============================================================
+\section{Faza 25: Autoryzacja, Ustawienia, Optymalizacje}
+\label{sec:faza-25}
+
+\begin{description}
+  \item[Status] \score{Zrealizowane} (luty 2026)
+\end{description}
+
+\begin{itemize}
+  \item \textbf{Optymalizacja obrazów} --- kompresja 36\,MB $\to$ \textasciitilde1\,MB, obsługa formatów AVIF/WebP, nagłówki cache dla statycznych assetów
+  \item \textbf{Strona Ustawień} (\filepath{/settings}) --- preferencje (zgody cookie/AI), zarządzanie danymi (eksport/import/czyszczenie IndexedDB), sekcja O~aplikacji
+  \item \textbf{Supabase Auth (UI gotowe)} --- strony logowania, rejestracji, resetowania hasła + callback OAuth + middleware warunkowe
+  \item \textbf{Profil użytkownika} (\filepath{/profile}) --- avatar, badge tieru, lokalne statystyki (liczba analiz, wiadomości, platform)
+  \item \textbf{UserMenu} --- komponent avatara z~dropdownem (Profil, Ustawienia, Wyloguj) zastępujący hardcoded kartę użytkownika
+  \item \textbf{Wymagane env vars} do aktywacji Auth: \texttt{NEXT\_PUBLIC\_SUPABASE\_URL}, \texttt{NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY}
+\end{itemize}
+
+
+% ============================================================
+\section{Faza 26: Psychological Hardening}
+\label{sec:faza-26}
+
+\begin{description}
+  \item[Status] \score{Zrealizowane} (luty 2026)
+\end{description}
+
+Faza 26 to kompleksowe wzmocnienie etyczne i~metodologiczne silnika psychologicznego, zorientowane na odpowiedzialne raportowanie i~zmniejszenie false positives.
+
+\subsection*{Zmiany terminologiczne (UI)}
+
+\begin{table}[H]
+\centering
+\caption{Przemianowania terminologiczne w~Fazie 26}
+\label{tab:faza-26-renames}
+\begin{tabularx}{\textwidth}{L{5.5cm}L{5.5cm}X}
+\toprule
+\textbf{Stara nazwa} & \textbf{Nowa nazwa} & \textbf{Uzasadnienie} \\
+\midrule
+Manipulacja (UI) & Nierównowaga Wpływu & Redukcja stygmatyzacji; internal keys zachowane \\
+Współuzależnienie & Intensywność Przywiązania & Destigmatyzacja terminu klinicznego \\
+Wskaźniki Zagrożeń & Wskaźniki Dynamiki & Mniej alarmistyczna framing \\
+Terapia potrzebna: TAK/NIE & Korzyść z~konsultacji: WYSOKA/UMIARKOWANA/NISKA & Gradient zamiast binarności \\
+Obserwacje kliniczne & Wzorce behawioralne & Unikanie medykalizacji tekstu \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection*{Zmiany algorytmiczne}
+
+\begin{itemize}
+  \item \textbf{Trust Index} --- jawne wagi: reciprocity~0.40, responseConsistency~0.40, ghostRisk~0.20
+  \item \textbf{Progi pursuit-withdrawal} --- podwyższone: min gap 2h→4h, min consecutive 3→4 (ograniczenie false positives)
+  \item \textbf{Obsługa negacji w~sentymencie} --- 2-tokenowy lookahead dla polskich partykuł negacji (nie, bez, ani); samodzielne ,,nie'' usunięte ze słownika negatywnego
+  \item \textbf{Terminologia CPS} --- Splitting → Polaryzacja (czarno-białe myślenie); Gaslighting patterns → Zaprzeczanie i~przekręcanie
+\end{itemize}
+
+\subsection*{Nowe komponenty}
+
+\begin{itemize}
+  \item \textbf{PsychDisclaimer} (\filepath{src/components/shared/PsychDisclaimer.tsx}) --- reużywalny komponent disclaimera z~opcjonalnymi cytatami akademickimi; zastosowany we wszystkich 8 komponentach klinicznych
+  \item \textbf{Cytaty akademickie} (\filepath{src/lib/analysis/citations.ts}) --- stałe: Gottman, Bowlby, Ainsworth, Costa \& McCrae, Christensen \& Heavey, Jung, Myers-Briggs, Nielsen (AFINN)
+\end{itemize}
+
+
+% ============================================================
+\section{Faza 27: Deep Psychological Validation}
+\label{sec:faza-27}
+
+\begin{description}
+  \item[Status] \score{Zrealizowane} (luty 2026)
+\end{description}
+
+Faza 27 to gruntowny audit poprawności metodologicznej --- naprawiono błędy algorytmiczne, dodano nowe moduły z~silnym zakotwiczeniem akademickim oraz ustandaryzowano terminologię kliniczną.
+
+\subsection*{Naprawione błędy algorytmiczne}
+
+\begin{table}[H]
+\centering
+\caption{Poprawki algorytmiczne w~Fazie 27}
+\label{tab:faza-27-fixes}
+\begin{tabularx}{\textwidth}{L{4cm}L{4.5cm}X}
+\toprule
+\textbf{Moduł} & \textbf{Błąd} & \textbf{Poprawka} \\
+\midrule
+Codependency weights & Suma wag = 1.55 & Normalizacja do 1.0 (0.45 + 0.22 + 0.33) \\
+CPS percentage & Mianownik = threshold & Zmieniono na totalAnswerable (prawdziwy \%) \\
+Delusion attribution & Mniej zaangażowany = ,,delulu'' & Odwrócono: bardziej zaangażowany = ,,delulu'' \\
+Intimacy informality & Kara za znaki zapytania & Usunięto (pytania = zaangażowanie) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection*{Nowe moduły ilościowe}
+
+\begin{itemize}
+  \item \textbf{LSM --- Language Style Matching} (\filepath{src/lib/analysis/quant/lsm.ts}) --- Ireland \& Pennebaker (2010); 9 kategorii function words (PL+EN); komponent \textsf{LSMCard}
+  \item \textbf{Analiza zaimków} (\filepath{src/lib/analysis/quant/pronouns.ts}) --- Pennebaker (2011); pełna polska deklinacja; komponent \textsf{PronounCard}
+\end{itemize}
+
+\subsection*{Ulepszenia promptów AI}
+
+\begin{itemize}
+  \item Big Five --- kotwice behawioralne (skala 1--10 z~opisem każdego punktu) zamiast samych liczb
+  \item Health Score --- 5 komponentów z~operacyjnymi definicjami i~specific criteria
+  \item BigFive --- range bars [\textit{low}, \textit{high}] zamiast punktu środkowego w~\textsf{PersonalityDeepDive}
+\end{itemize}
+
+\subsection*{Ustandaryzowane etykiety kliniczne}
+
+Zastąpiono etykiety nasilenia etykietami częstości (backward compatibility zachowana):
+
+\medskip
+\texttt{severity: none | mild | moderate | significant} $\to$ \texttt{frequency: not\_observed | occasional | recurring | pervasive}
+
+\subsection*{Wykrywanie bigramów konfliktowych}
+
+Dodano detekcję oskarżycielskich bigramów (PL: ,,ty zawsze'', ,,ty nigdy'', ,,dlaczego ty''; EN: ,,you always'', ,,you never'') --- wzmacnia nasilenie eskalacji gdy współwystępuje ze skokami czasu odpowiedzi (Gottman \& Levenson 2000).
+
+\subsection*{Nowe cytaty akademickie}
+
+Ireland \& Pennebaker (2010) --- LSM (JPSP); Pennebaker (2011) --- analiza zaimków; Gottman \& Levenson (2000) --- eskalacja konfliktów.
+
+
+% ============================================================
+\section{Faza 28: Nowe moduły psychologiczne}
+\label{sec:faza-28}
+
+\begin{description}
+  \item[Status] \score{Zrealizowane} (luty 2026)
+\end{description}
+
+Faza 28 wzbogaciła silnik ilościowy o~cztery zaawansowane moduły z~silnym zakotwiczeniem naukowym, każdy sparowany z~dedykowanym komponentem UI zawierającym disclaimer akademicki.
+
+\subsection*{Nowe moduły ilościowe}
+
+\begin{table}[H]
+\centering
+\caption{Nowe moduły ilościowe Fazy 28}
+\label{tab:faza-28-modules}
+\begin{tabularx}{\textwidth}{L{4cm}L{3.5cm}X}
+\toprule
+\textbf{Moduł} & \textbf{Plik} & \textbf{Opis i~źródło} \\
+\midrule
+Chronotyp & \texttt{chronotype.ts} & Kompatybilność wzorców snu na podstawie rozkładu godzinowego wiadomości (circular statistics); Aledavood et al.\ 2018 \\
+Granularność emocjonalna & \texttt{emotional-granularity.ts} & 12-kategoryjny leksykon emocji PL+EN, ~160+ słów; Vishnubhotla et al.\ 2024 (EMNLP) \\
+Bid-Response Ratio & \texttt{bid-response.ts} & Wskaźnik ,,zwrotu ku partnerowi'' vs.\ benchmark Gottmana 86\%; Gottman \& Silver 1999 \\
+Narcyzm konwersacyjny (CNI) & \texttt{shift-support.ts} & Shift-response vs.\ support-response (Derber 1979); Vangelisti et al.\ 1990 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection*{Nowe komponenty UI}
+
+\begin{itemize}
+  \item \textsf{ChronotypePair} --- kołowy progress bar (match\%) + mini-wykres rozkładu godzinowego per osoba
+  \item \textsf{ConversationalNarcissismCard} --- gauge CNI (0--100) z~kolorami progowymi; shift vs.\ support counts
+  \item \textsf{EmotionalGranularityCard} --- gauge score + breakdown kategorii emocji + dominant emotion label
+\end{itemize}
+
+\subsection*{Infrastruktura i~zasoby}
+
+\begin{itemize}
+  \item \textbf{JSON parser} (\filepath{src/lib/analysis/json-parser.ts}) --- sanityzacja i~ekstrakcja JSON z~odpowiedzi \gemini{}
+  \item \textbf{Ikony} w~\filepath{public/icons/} --- badges (12+), features, ranking
+  \item \textbf{OG images} w~\filepath{public/og/} --- obrazy Open Graph dla kart social media
+  \item \textbf{Test suite} --- \filepath{src/lib/parsers/\_\_tests\_\_/} (discord, instagram, telegram), \filepath{src/lib/analysis/quant/\_\_tests\_\_/} (conflicts, lsm, pronouns, helpers, sentiment)
+\end{itemize}
+
+
+% ============================================================
 \section{TIER Improvements}
 \label{sec:tier-improvements}
 % ============================================================

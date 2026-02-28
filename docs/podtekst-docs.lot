@@ -22,180 +22,180 @@
 \contentsline {table}{\numberline {3.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy zdarzeń w~strumieniu SSE}}{37}{table.caption.43}%
 \contentsline {table}{\numberline {3.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Schemat IndexedDB --- baza \texttt {podtekst}, wersja 1}}{38}{table.caption.44}%
 \contentsline {table}{\numberline {3.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Funkcje CRUD dla IndexedDB}}{39}{table.caption.45}%
-\contentsline {table}{\numberline {3.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry konfiguracji modelu Gemini}}{40}{table.caption.46}%
-\contentsline {table}{\numberline {3.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Cztery pasy analizy AI --- wejście, wyjście, cel}}{41}{table.caption.47}%
-\contentsline {table}{\numberline {3.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Limity rate limitingu per endpoint}}{42}{table.caption.49}%
-\contentsline {table}{\numberline {3.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komendy slash Discord Bot}}{44}{table.caption.50}%
+\contentsline {table}{\numberline {3.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Składniki Supabase Auth w~\textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{40}{table.caption.46}%
+\contentsline {table}{\numberline {3.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry konfiguracji modelu Gemini}}{40}{table.caption.47}%
+\contentsline {table}{\numberline {3.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Cztery pasy analizy AI --- wejście, wyjście, cel}}{41}{table.caption.48}%
+\contentsline {table}{\numberline {3.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Limity rate limitingu per endpoint}}{43}{table.caption.50}%
+\contentsline {table}{\numberline {3.11}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komendy slash Discord Bot}}{44}{table.caption.51}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {4.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pliki w~module parserów}}{45}{table.caption.51}%
-\contentsline {table}{\numberline {4.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól interfejsu \texttt {\textcolor {CodeType}{UnifiedMessage}}}}{46}{table.caption.52}%
-\contentsline {table}{\numberline {4.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy wiadomo\'sci (\texttt {type} union)}}{46}{table.caption.53}%
-\contentsline {table}{\numberline {4.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Dost\k {e}pno\'s\'c danych reakcji w~zale\.zno\'sci od platformy}}{47}{table.caption.54}%
-\contentsline {table}{\numberline {4.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól metadanych \texttt {\textcolor {CodeType}{ParsedConversation.metadata}}}}{48}{table.caption.55}%
-\contentsline {table}{\numberline {4.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Regu\l {}y walidacji formatu Messenger}}{54}{table.caption.60}%
-\contentsline {table}{\numberline {4.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Obs\l {}ugiwane formaty daty/czasu WhatsApp}}{57}{table.caption.63}%
-\contentsline {table}{\numberline {4.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przyk\l {}ady dzia\l {}ania heurystyki DD/MM vs MM/DD}}{58}{table.caption.65}%
-\contentsline {table}{\numberline {4.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Ró\.znice mi\k {e}dzy formatem Messenger a~Instagram DM}}{60}{table.caption.66}%
-\contentsline {table}{\numberline {4.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Porównanie parserów --- podsumowanie}}{67}{table.caption.69}%
+\contentsline {table}{\numberline {4.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pliki w~module parserów}}{45}{table.caption.52}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól interfejsu \texttt {\textcolor {CodeType}{UnifiedMessage}}}}{46}{table.caption.53}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy wiadomo\'sci (\texttt {type} union)}}{46}{table.caption.54}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Dost\k {e}pno\'s\'c danych reakcji w~zale\.zno\'sci od platformy}}{47}{table.caption.55}%
+\contentsline {table}{\numberline {4.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól metadanych \texttt {\textcolor {CodeType}{ParsedConversation.metadata}}}}{48}{table.caption.56}%
+\contentsline {table}{\numberline {4.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Regu\l {}y walidacji formatu Messenger}}{54}{table.caption.61}%
+\contentsline {table}{\numberline {4.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Obs\l {}ugiwane formaty daty/czasu WhatsApp}}{57}{table.caption.64}%
+\contentsline {table}{\numberline {4.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przyk\l {}ady dzia\l {}ania heurystyki DD/MM vs MM/DD}}{58}{table.caption.66}%
+\contentsline {table}{\numberline {4.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Ró\.znice mi\k {e}dzy formatem Messenger a~Instagram DM}}{60}{table.caption.67}%
+\contentsline {table}{\numberline {4.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Porównanie parserów --- podsumowanie}}{67}{table.caption.70}%
+\contentsline {table}{\numberline {4.11}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pliki test\'{o}w parser\'{o}w}}{67}{table.caption.71}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {5.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Podsumowanie 22 pól interfejsu \texttt {\textcolor {CodeType}{PersonMetrics}}}}{79}{table.caption.71}%
-\contentsline {table}{\numberline {5.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pod-metryki wyniku kompatybilności}}{87}{table.caption.74}%
-\contentsline {table}{\numberline {5.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Czynniki wyniku zainteresowania z~wagami}}{88}{table.caption.75}%
-\contentsline {table}{\numberline {5.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces 4 trendy analizowane przez algorytm ghostRisk}}{88}{table.caption.76}%
-\contentsline {table}{\numberline {5.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kompletna lista 12 odznak systemu \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{89}{table.caption.77}%
-\contentsline {table}{\numberline {5.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Submoduły katalogu \texttt {\small \add@extra@listi {sml}\color {PodTextSecondary}src/lib/analysis/quant/}}}{94}{table.caption.79}%
+\contentsline {table}{\numberline {5.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Podsumowanie 22 pól interfejsu \texttt {\textcolor {CodeType}{PersonMetrics}}}}{79}{table.caption.73}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pod-metryki wyniku kompatybilności}}{87}{table.caption.76}%
+\contentsline {table}{\numberline {5.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Czynniki wyniku zainteresowania z~wagami}}{88}{table.caption.77}%
+\contentsline {table}{\numberline {5.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces 4 trendy analizowane przez algorytm ghostRisk}}{88}{table.caption.78}%
+\contentsline {table}{\numberline {5.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kompletna lista 12 odznak systemu \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{89}{table.caption.79}%
+\contentsline {table}{\numberline {5.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Submoduły katalogu \texttt {\small \add@extra@listi {sml}\color {PodTextSecondary}src/lib/analysis/quant/}}}{94}{table.caption.81}%
+\contentsline {table}{\numberline {5.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Interpretacja wyniku LSM}}{97}{table.caption.83}%
+\contentsline {table}{\numberline {5.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przedziały histogramu czasu odpowiedzi}}{98}{table.caption.84}%
+\contentsline {table}{\numberline {5.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przelicznik delta-godzin na matchScore}}{99}{table.caption.85}%
+\contentsline {table}{\numberline {5.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Interpretacja bid-response rate}}{100}{table.caption.86}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {6.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry konfiguracji modelu \textsc {Gemini}\xspace }}{99}{table.caption.82}%
-\contentsline {table}{\numberline {6.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Harmonogram powtórzeń}}{101}{table.caption.83}%
-\contentsline {table}{\numberline {6.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Budżet próbkowania dla każdego przebiegu AI}}{102}{table.caption.84}%
-\contentsline {table}{\numberline {6.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy relacji i~ich kalibracja analityczna}}{104}{table.caption.87}%
-\contentsline {table}{\numberline {6.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola \texttt {\textcolor {CodeType}{PersonTone}} --- profil tonalny per osoba}}{106}{table.caption.88}%
-\contentsline {table}{\numberline {6.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PowerDynamics}}}}{106}{table.caption.90}%
-\contentsline {table}{\numberline {6.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wymiary Wielkiej Piątki i~ich estymacja}}{108}{table.caption.96}%
-\contentsline {table}{\numberline {6.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Obszary obserwacji klinicznych}}{109}{table.caption.102}%
-\contentsline {table}{\numberline {6.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wymiary MBTI i~ich sygnały w~wiadomościach}}{110}{table.caption.106}%
-\contentsline {table}{\numberline {6.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komponenty Health Score z~wagami}}{111}{table.caption.110}%
-\contentsline {table}{\numberline {6.11}{\ignorespaces Wzorce komunikacyjne CPS}}{113}{table.6.11}%
-\contentsline {table}{\numberline {6.12}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Poziomy ryzyka CPS}}{115}{table.caption.115}%
-\contentsline {table}{\numberline {6.13}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry generowania komiksu analitycznego}}{116}{table.caption.116}%
-\contentsline {table}{\numberline {6.14}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kompletna mapa obsługi błędów silnika AI}}{118}{table.caption.118}%
-\contentsline {table}{\numberline {6.15}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kategorie podtekst\'{o}w z~metadanymi wy\'{s}wietlania}}{120}{table.caption.121}%
-\contentsline {table}{\numberline {6.16}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wybrane markery pasywne pogrupowane tematycznie}}{121}{table.caption.124}%
-\contentsline {table}{\numberline {6.17}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Regu\l {}y scoringu podtekstu}}{122}{table.caption.125}%
-\contentsline {table}{\numberline {6.18}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Stopnie ci\k {e}\.{z}ko\'{s}ci zarzut\'{o}w}}{124}{table.caption.127}%
-\contentsline {table}{\numberline {6.19}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Katalog zarzut\'{o}w s\k {a}du emocjonalnego}}{127}{table.caption.131}%
-\contentsline {table}{\numberline {6.20}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry wywo\l {}ania \textsc {Gemini}\xspace {} dla Profilu Randkowego}}{130}{table.caption.136}%
-\contentsline {table}{\numberline {6.21}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pe\l {}na lista pyta\'{n} Delusion Quiz}}{132}{table.caption.140}%
-\contentsline {table}{\numberline {6.22}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Etykiety Delusion Index}}{133}{table.caption.141}%
-\contentsline {table}{\numberline {6.23}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Dane psychologiczne wykorzystywane przez symulator}}{135}{table.caption.144}%
-\contentsline {table}{\numberline {6.24}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry wywo\l {}ania \textsc {Gemini}\xspace {} dla Symulatora Odpowiedzi}}{136}{table.caption.145}%
+\contentsline {table}{\numberline {6.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry konfiguracji modelu \textsc {Gemini}\xspace }}{103}{table.caption.88}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Harmonogram powtórzeń}}{105}{table.caption.89}%
+\contentsline {table}{\numberline {6.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Budżet próbkowania dla każdego przebiegu AI}}{106}{table.caption.90}%
+\contentsline {table}{\numberline {6.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy relacji i~ich kalibracja analityczna}}{108}{table.caption.93}%
+\contentsline {table}{\numberline {6.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola \texttt {\textcolor {CodeType}{PersonTone}} --- profil tonalny per osoba}}{110}{table.caption.94}%
+\contentsline {table}{\numberline {6.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PowerDynamics}}}}{110}{table.caption.96}%
+\contentsline {table}{\numberline {6.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wymiary Wielkiej Piątki i~ich estymacja}}{112}{table.caption.102}%
+\contentsline {table}{\numberline {6.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Obszary obserwacji klinicznych}}{113}{table.caption.108}%
+\contentsline {table}{\numberline {6.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wymiary MBTI i~ich sygnały w~wiadomościach}}{114}{table.caption.112}%
+\contentsline {table}{\numberline {6.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komponenty Health Score z~wagami}}{115}{table.caption.116}%
+\contentsline {table}{\numberline {6.11}{\ignorespaces Wzorce komunikacyjne CPS}}{117}{table.6.11}%
+\contentsline {table}{\numberline {6.12}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Poziomy ryzyka CPS}}{119}{table.caption.121}%
+\contentsline {table}{\numberline {6.13}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry generowania komiksu analitycznego}}{120}{table.caption.122}%
+\contentsline {table}{\numberline {6.14}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kompletna mapa obsługi błędów silnika AI}}{122}{table.caption.124}%
+\contentsline {table}{\numberline {6.15}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kategorie podtekst\'{o}w z~metadanymi wy\'{s}wietlania}}{124}{table.caption.127}%
+\contentsline {table}{\numberline {6.16}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wybrane markery pasywne pogrupowane tematycznie}}{125}{table.caption.130}%
+\contentsline {table}{\numberline {6.17}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Regu\l {}y scoringu podtekstu}}{126}{table.caption.131}%
+\contentsline {table}{\numberline {6.18}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Stopnie ci\k {e}\.{z}ko\'{s}ci zarzut\'{o}w}}{128}{table.caption.133}%
+\contentsline {table}{\numberline {6.19}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Katalog zarzut\'{o}w s\k {a}du emocjonalnego}}{131}{table.caption.137}%
+\contentsline {table}{\numberline {6.20}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry wywo\l {}ania \textsc {Gemini}\xspace {} dla Profilu Randkowego}}{134}{table.caption.142}%
+\contentsline {table}{\numberline {6.21}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pe\l {}na lista pyta\'{n} Delusion Quiz}}{136}{table.caption.146}%
+\contentsline {table}{\numberline {6.22}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Etykiety Delusion Index}}{137}{table.caption.147}%
+\contentsline {table}{\numberline {6.23}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Dane psychologiczne wykorzystywane przez symulator}}{139}{table.caption.150}%
+\contentsline {table}{\numberline {6.24}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Parametry wywo\l {}ania \textsc {Gemini}\xspace {} dla Symulatora Odpowiedzi}}{140}{table.caption.151}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {7.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Etykiety Health Score z~interpretacją}}{142}{table.caption.147}%
-\contentsline {table}{\numberline {7.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przykładowe wartości mnożnika normalizacji}}{144}{table.caption.149}%
-\contentsline {table}{\numberline {7.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Scenariusze rozbieżności między $H_{\text {det}}$ a~$H_{\text {AI}}$}}{145}{table.caption.151}%
+\contentsline {table}{\numberline {7.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Etykiety Health Score z~interpretacją}}{148}{table.caption.153}%
+\contentsline {table}{\numberline {7.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przykładowe wartości mnożnika normalizacji}}{150}{table.caption.155}%
+\contentsline {table}{\numberline {7.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Scenariusze rozbieżności między $H_{\text {det}}$ a~$H_{\text {AI}}$}}{151}{table.caption.157}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {8.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Paleta kolorów \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{148}{table.caption.152}%
-\contentsline {table}{\numberline {8.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces System typograficzny}}{148}{table.caption.154}%
-\contentsline {table}{\numberline {8.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Breakpointy responsywne}}{149}{table.caption.155}%
-\contentsline {table}{\numberline {8.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komponenty strony lądowania}}{150}{table.caption.156}%
-\contentsline {table}{\numberline {8.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy relacji}}{153}{table.caption.157}%
-\contentsline {table}{\numberline {8.6}{\ignorespaces Inwentarz komponentów strony analizy}}{153}{table.8.6}%
-\contentsline {table}{\numberline {8.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Skala Ghost Forecast}}{158}{table.caption.158}%
-\contentsline {table}{\numberline {8.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces 12 scen Story Mode}}{160}{table.caption.159}%
-\contentsline {table}{\numberline {8.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kompletny katalog animacji}}{161}{table.caption.160}%
-\contentsline {table}{\numberline {8.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kontrasty kolorystyczne (WCAG AA)}}{163}{table.caption.161}%
+\contentsline {table}{\numberline {8.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Paleta kolorów \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{154}{table.caption.158}%
+\contentsline {table}{\numberline {8.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces System typograficzny}}{154}{table.caption.160}%
+\contentsline {table}{\numberline {8.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Breakpointy responsywne}}{155}{table.caption.161}%
+\contentsline {table}{\numberline {8.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komponenty strony lądowania}}{156}{table.caption.162}%
+\contentsline {table}{\numberline {8.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy relacji}}{159}{table.caption.163}%
+\contentsline {table}{\numberline {8.6}{\ignorespaces Inwentarz komponentów strony analizy}}{159}{table.8.6}%
+\contentsline {table}{\numberline {8.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Skala Ghost Forecast}}{164}{table.caption.164}%
+\contentsline {table}{\numberline {8.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces 12 scen Story Mode}}{166}{table.caption.165}%
+\contentsline {table}{\numberline {8.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kompletny katalog animacji}}{167}{table.caption.166}%
+\contentsline {table}{\numberline {8.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kontrasty kolorystyczne (WCAG AA)}}{169}{table.caption.167}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {9.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przegla\k {}d endpointów API}}{170}{table.caption.171}%
-\contentsline {table}{\numberline {9.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.z\k {a}dania POST /api/analyze}}{170}{table.caption.172}%
-\contentsline {table}{\numberline {9.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól request body}}{171}{table.caption.173}%
-\contentsline {table}{\numberline {9.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy zdarze\'n SSE w~trybie \texttt {standard}}}{172}{table.caption.175}%
-\contentsline {table}{\numberline {9.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.z\k {a}dania POST /api/analyze/image}}{173}{table.caption.178}%
-\contentsline {table}{\numberline {9.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól request body /api/analyze/image}}{174}{table.caption.179}%
-\contentsline {table}{\numberline {9.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.z\k {a}dania POST /api/analyze/cps}}{175}{table.caption.183}%
-\contentsline {table}{\numberline {9.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól request body /api/analyze/cps}}{175}{table.caption.184}%
-\contentsline {table}{\numberline {9.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.{z}\k {a}dania POST /api/analyze/subtext}}{176}{table.caption.185}%
-\contentsline {table}{\numberline {9.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.{z}\k {a}dania POST /api/analyze/court}}{178}{table.caption.187}%
-\contentsline {table}{\numberline {9.11}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Por\'{o}wnanie endpoint\'{o}w SSE}}{179}{table.caption.189}%
-\contentsline {table}{\numberline {9.12}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.{z}\k {a}dania POST /api/analyze/dating-profile}}{179}{table.caption.190}%
-\contentsline {table}{\numberline {9.13}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.{z}\k {a}dania POST /api/analyze/simulate}}{181}{table.caption.192}%
-\contentsline {table}{\numberline {9.14}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Limity rate limiting na endpoint}}{184}{table.caption.194}%
-\contentsline {table}{\numberline {9.15}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kody HTTP i~odpowiadaj\k {a}ce im b\l {}\k {e}dy}}{185}{table.caption.195}%
-\contentsline {table}{\numberline {9.16}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przyk\l {}adowe komunikaty b\l {}\k {e}dów}}{186}{table.caption.197}%
+\contentsline {table}{\numberline {9.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przegla\k {}d endpointów API}}{180}{table.caption.193}%
+\contentsline {table}{\numberline {9.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.z\k {a}dania POST /api/analyze}}{180}{table.caption.194}%
+\contentsline {table}{\numberline {9.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól request body}}{181}{table.caption.195}%
+\contentsline {table}{\numberline {9.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy zdarze\'n SSE w~trybie \texttt {standard}}}{182}{table.caption.197}%
+\contentsline {table}{\numberline {9.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.z\k {a}dania POST /api/analyze/image}}{183}{table.caption.200}%
+\contentsline {table}{\numberline {9.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól request body /api/analyze/image}}{184}{table.caption.201}%
+\contentsline {table}{\numberline {9.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.z\k {a}dania POST /api/analyze/cps}}{185}{table.caption.205}%
+\contentsline {table}{\numberline {9.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Opis pól request body /api/analyze/cps}}{185}{table.caption.206}%
+\contentsline {table}{\numberline {9.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.{z}\k {a}dania POST /api/analyze/subtext}}{186}{table.caption.207}%
+\contentsline {table}{\numberline {9.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.{z}\k {a}dania POST /api/analyze/court}}{188}{table.caption.209}%
+\contentsline {table}{\numberline {9.11}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Por\'{o}wnanie endpoint\'{o}w SSE}}{189}{table.caption.211}%
+\contentsline {table}{\numberline {9.12}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.{z}\k {a}dania POST /api/analyze/dating-profile}}{189}{table.caption.212}%
+\contentsline {table}{\numberline {9.13}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Specyfikacja \.{z}\k {a}dania POST /api/analyze/simulate}}{191}{table.caption.214}%
+\contentsline {table}{\numberline {9.14}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Limity rate limiting na endpoint}}{195}{table.caption.216}%
+\contentsline {table}{\numberline {9.15}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Kody HTTP i~odpowiadaj\k {a}ce im b\l {}\k {e}dy}}{196}{table.caption.217}%
+\contentsline {table}{\numberline {9.16}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przyk\l {}adowe komunikaty b\l {}\k {e}dów}}{197}{table.caption.219}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {10.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Rodziny fontów skonfigurowane w~Tailwind}}{191}{table.caption.198}%
-\contentsline {table}{\numberline {10.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Konfiguracja Firebase}}{194}{table.caption.200}%
-\contentsline {table}{\numberline {10.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zmienne środowiskowe \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{196}{table.caption.201}%
-\contentsline {table}{\numberline {10.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Polecenia deweloperskie (skrypty npm/pnpm)}}{197}{table.caption.202}%
-\contentsline {table}{\numberline {10.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Podsumowanie zależności projektu}}{197}{table.caption.203}%
+\contentsline {table}{\numberline {10.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Rodziny fontów skonfigurowane w~Tailwind}}{201}{table.caption.220}%
+\contentsline {table}{\numberline {10.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Konfiguracja Firebase}}{204}{table.caption.222}%
+\contentsline {table}{\numberline {10.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zmienne środowiskowe \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{206}{table.caption.223}%
+\contentsline {table}{\numberline {10.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Polecenia deweloperskie (skrypty npm/pnpm)}}{207}{table.caption.224}%
+\contentsline {table}{\numberline {10.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Podsumowanie zależności projektu}}{207}{table.caption.225}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {11.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Nagłówki bezpieczeństwa HTTP}}{203}{table.caption.205}%
-\contentsline {table}{\numberline {11.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Limity rozmiaru payloadu per endpoint}}{204}{table.caption.206}%
-\contentsline {table}{\numberline {11.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Macierz zabezpieczeń \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{207}{table.caption.207}%
-\contentsline {table}{\numberline {11.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Schematy walidacji Zod}}{209}{table.caption.210}%
+\contentsline {table}{\numberline {11.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Nagłówki bezpieczeństwa HTTP}}{213}{table.caption.227}%
+\contentsline {table}{\numberline {11.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Limity rozmiaru payloadu per endpoint}}{214}{table.caption.228}%
+\contentsline {table}{\numberline {11.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Macierz zabezpieczeń \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{217}{table.caption.229}%
+\contentsline {table}{\numberline {11.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Schematy walidacji Zod}}{219}{table.caption.232}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {12.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{Participant}}}}{212}{table.caption.215}%
-\contentsline {table}{\numberline {12.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{Reaction}}}}{212}{table.caption.216}%
-\contentsline {table}{\numberline {12.3}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{UnifiedMessage}}}}{213}{table.12.3}%
-\contentsline {table}{\numberline {12.4}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ParsedConversation}}}}{213}{table.12.4}%
-\contentsline {table}{\numberline {12.5}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PersonMetrics}} (22 pola)}}{215}{table.12.5}%
-\contentsline {table}{\numberline {12.6}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{TimingMetrics}}}}{216}{table.12.6}%
-\contentsline {table}{\numberline {12.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EngagementMetrics}} (6 pól)}}{217}{table.caption.217}%
-\contentsline {table}{\numberline {12.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PatternMetrics}} (4 pola)}}{217}{table.caption.218}%
-\contentsline {table}{\numberline {12.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{HeatmapData}}}}{218}{table.caption.219}%
-\contentsline {table}{\numberline {12.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{TrendData}}}}{218}{table.caption.220}%
-\contentsline {table}{\numberline {12.11}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ViralScores}}}}{219}{table.caption.221}%
-\contentsline {table}{\numberline {12.12}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{Badge}}}}{220}{table.caption.222}%
-\contentsline {table}{\numberline {12.13}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{BestTimeToText}}}}{220}{table.caption.223}%
-\contentsline {table}{\numberline {12.14}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CatchphraseEntry}}}}{221}{table.caption.224}%
-\contentsline {table}{\numberline {12.15}{\ignorespaces Pola interfejsów sieciowych}}{221}{table.12.15}%
-\contentsline {table}{\numberline {12.16}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ReciprocityIndex}}}}{222}{table.caption.225}%
-\contentsline {table}{\numberline {12.17}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{QuantitativeAnalysis}}}}{223}{table.caption.226}%
-\contentsline {table}{\numberline {12.18}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{RelationshipType}}}}{223}{table.caption.227}%
-\contentsline {table}{\numberline {12.19}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PersonTone}}}}{224}{table.caption.228}%
-\contentsline {table}{\numberline {12.20}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{OverallDynamic}}}}{224}{table.caption.229}%
-\contentsline {table}{\numberline {12.21}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PowerDynamics}}}}{224}{table.caption.231}%
-\contentsline {table}{\numberline {12.22}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EmotionalLaborPattern}}}}{225}{table.caption.233}%
-\contentsline {table}{\numberline {12.23}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EmotionalLabor}}}}{225}{table.caption.234}%
-\contentsline {table}{\numberline {12.24}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ConflictPatterns}}}}{225}{table.caption.236}%
-\contentsline {table}{\numberline {12.25}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów \texttt {\textcolor {CodeType}{VulnerabilityProfile}} i~\texttt {\textcolor {CodeType}{SharedLanguage}}}}{226}{table.caption.238}%
-\contentsline {table}{\numberline {12.26}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{IntimacyMarkers}}}}{226}{table.caption.240}%
-\contentsline {table}{\numberline {12.27}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów \texttt {\textcolor {CodeType}{RedFlag}} i~\texttt {\textcolor {CodeType}{GreenFlag}}}}{226}{table.caption.242}%
-\contentsline {table}{\numberline {12.28}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów Wielkiej Piątki}}{227}{table.caption.245}%
-\contentsline {table}{\numberline {12.29}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów stylu przywiązania}}{228}{table.caption.247}%
-\contentsline {table}{\numberline {12.30}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CommunicationProfile}}}}{228}{table.caption.249}%
-\contentsline {table}{\numberline {12.31}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CommunicationNeeds}}}}{229}{table.caption.251}%
-\contentsline {table}{\numberline {12.32}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EmotionalPatterns}}}}{229}{table.caption.253}%
-\contentsline {table}{\numberline {12.33}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ClinicalObservations}}}}{229}{table.12.33}%
-\contentsline {table}{\numberline {12.34}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ConflictResolution}}}}{230}{table.caption.256}%
-\contentsline {table}{\numberline {12.35}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EmotionalIntelligence}}}}{230}{table.caption.258}%
-\contentsline {table}{\numberline {12.36}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{MBTIResult}}}}{231}{table.caption.260}%
-\contentsline {table}{\numberline {12.37}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{LoveLanguageResult}}}}{231}{table.caption.262}%
-\contentsline {table}{\numberline {12.38}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów Health Score}}{232}{table.caption.265}%
-\contentsline {table}{\numberline {12.39}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów Pass 4 --- obserwacje i~trajektoria}}{233}{table.caption.268}%
-\contentsline {table}{\numberline {12.40}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{Insight}}}}{233}{table.caption.270}%
-\contentsline {table}{\numberline {12.41}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ConversationPersonality}}}}{233}{table.caption.272}%
-\contentsline {table}{\numberline {12.42}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{RoastResult}}}}{234}{table.caption.274}%
-\contentsline {table}{\numberline {12.43}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów Stand-Up Roast}}{235}{table.caption.275}%
-\contentsline {table}{\numberline {12.44}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów \texttt {\textcolor {CodeType}{CPSQuestion}} i~\texttt {\textcolor {CodeType}{CPSPattern}}}}{235}{table.caption.277}%
-\contentsline {table}{\numberline {12.45}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów wynikowych CPS}}{236}{table.caption.279}%
-\contentsline {table}{\numberline {12.46}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{QualitativeAnalysis}}}}{237}{table.12.46}%
-\contentsline {table}{\numberline {12.47}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{StoredAnalysis}}}}{238}{table.caption.280}%
-\contentsline {table}{\numberline {12.48}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{AnalysisIndexEntry}}}}{239}{table.caption.281}%
-\contentsline {table}{\numberline {12.49}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Mapa zależności typów --- ile interfejsów zawiera każdy kontener}}{241}{table.caption.286}%
-\contentsline {table}{\numberline {12.50}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wartości \texttt {\textcolor {CodeType}{SubtextCategory}} z~opisami}}{243}{table.caption.287}%
-\contentsline {table}{\numberline {12.51}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SubtextItem}}}}{244}{table.caption.288}%
-\contentsline {table}{\numberline {12.52}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SubtextSummary}}}}{245}{table.caption.290}%
-\contentsline {table}{\numberline {12.53}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SubtextResult}}}}{245}{table.caption.291}%
-\contentsline {table}{\numberline {12.54}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SimplifiedMsg}}}}{246}{table.caption.292}%
-\contentsline {table}{\numberline {12.55}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ExchangeWindow}}}}{246}{table.caption.293}%
-\contentsline {table}{\numberline {12.56}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CourtCharge}}}}{247}{table.caption.294}%
-\contentsline {table}{\numberline {12.57}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PersonVerdict}}}}{247}{table.caption.295}%
-\contentsline {table}{\numberline {12.58}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CourtResult}}}}{248}{table.caption.296}%
-\contentsline {table}{\numberline {12.59}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PersonDatingProfile}}}}{250}{table.caption.297}%
-\contentsline {table}{\numberline {12.60}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{DatingProfileResult}}}}{250}{table.caption.298}%
-\contentsline {table}{\numberline {12.61}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{DelusionQuestion}}}}{252}{table.caption.299}%
-\contentsline {table}{\numberline {12.62}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{DelusionAnswer}}}}{252}{table.caption.300}%
-\contentsline {table}{\numberline {12.63}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{DelusionQuizResult}}}}{253}{table.caption.301}%
-\contentsline {table}{\numberline {12.64}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SimulationParams}} (14~p\'{o}l + 3~opcjonalne)}}{254}{table.caption.302}%
-\contentsline {table}{\numberline {12.65}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SimulationResponse}}}}{255}{table.caption.303}%
-\contentsline {table}{\numberline {12.66}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy Zod eksportowane ze \texttt {\small \add@extra@listi {sml}\color {PodTextSecondary}schemas.ts}}}{256}{table.caption.304}%
-\contentsline {table}{\numberline {12.67}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zaktualizowana mapa zależności typów --- Faza 19--20}}{257}{table.caption.305}%
+\contentsline {table}{\numberline {12.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{Participant}}}}{222}{table.caption.237}%
+\contentsline {table}{\numberline {12.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{Reaction}}}}{222}{table.caption.238}%
+\contentsline {table}{\numberline {12.3}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{UnifiedMessage}}}}{223}{table.12.3}%
+\contentsline {table}{\numberline {12.4}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ParsedConversation}}}}{223}{table.12.4}%
+\contentsline {table}{\numberline {12.5}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PersonMetrics}} (22 pola)}}{225}{table.12.5}%
+\contentsline {table}{\numberline {12.6}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{TimingMetrics}}}}{226}{table.12.6}%
+\contentsline {table}{\numberline {12.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EngagementMetrics}} (6 pól)}}{227}{table.caption.239}%
+\contentsline {table}{\numberline {12.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PatternMetrics}} (4 pola)}}{227}{table.caption.240}%
+\contentsline {table}{\numberline {12.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{HeatmapData}}}}{228}{table.caption.241}%
+\contentsline {table}{\numberline {12.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{TrendData}}}}{228}{table.caption.242}%
+\contentsline {table}{\numberline {12.11}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ViralScores}}}}{229}{table.caption.243}%
+\contentsline {table}{\numberline {12.12}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{Badge}}}}{230}{table.caption.244}%
+\contentsline {table}{\numberline {12.13}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{BestTimeToText}}}}{230}{table.caption.245}%
+\contentsline {table}{\numberline {12.14}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CatchphraseEntry}}}}{231}{table.caption.246}%
+\contentsline {table}{\numberline {12.15}{\ignorespaces Pola interfejsów sieciowych}}{231}{table.12.15}%
+\contentsline {table}{\numberline {12.16}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ReciprocityIndex}}}}{232}{table.caption.247}%
+\contentsline {table}{\numberline {12.17}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{QuantitativeAnalysis}}}}{233}{table.caption.248}%
+\contentsline {table}{\numberline {12.18}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{RelationshipType}}}}{233}{table.caption.249}%
+\contentsline {table}{\numberline {12.19}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PersonTone}}}}{234}{table.caption.250}%
+\contentsline {table}{\numberline {12.20}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{OverallDynamic}}}}{234}{table.caption.251}%
+\contentsline {table}{\numberline {12.21}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PowerDynamics}}}}{234}{table.caption.253}%
+\contentsline {table}{\numberline {12.22}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EmotionalLaborPattern}}}}{235}{table.caption.255}%
+\contentsline {table}{\numberline {12.23}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EmotionalLabor}}}}{235}{table.caption.256}%
+\contentsline {table}{\numberline {12.24}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ConflictPatterns}}}}{235}{table.caption.258}%
+\contentsline {table}{\numberline {12.25}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów \texttt {\textcolor {CodeType}{VulnerabilityProfile}} i~\texttt {\textcolor {CodeType}{SharedLanguage}}}}{236}{table.caption.260}%
+\contentsline {table}{\numberline {12.26}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{IntimacyMarkers}}}}{236}{table.caption.262}%
+\contentsline {table}{\numberline {12.27}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów \texttt {\textcolor {CodeType}{RedFlag}} i~\texttt {\textcolor {CodeType}{GreenFlag}}}}{236}{table.caption.264}%
+\contentsline {table}{\numberline {12.28}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów Wielkiej Piątki}}{237}{table.caption.267}%
+\contentsline {table}{\numberline {12.29}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów stylu przywiązania}}{238}{table.caption.269}%
+\contentsline {table}{\numberline {12.30}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CommunicationProfile}}}}{238}{table.caption.271}%
+\contentsline {table}{\numberline {12.31}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CommunicationNeeds}}}}{239}{table.caption.273}%
+\contentsline {table}{\numberline {12.32}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EmotionalPatterns}}}}{239}{table.caption.275}%
+\contentsline {table}{\numberline {12.33}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ClinicalObservations}}}}{239}{table.12.33}%
+\contentsline {table}{\numberline {12.34}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ConflictResolution}}}}{240}{table.caption.278}%
+\contentsline {table}{\numberline {12.35}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{EmotionalIntelligence}}}}{240}{table.caption.280}%
+\contentsline {table}{\numberline {12.36}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{MBTIResult}}}}{241}{table.caption.282}%
+\contentsline {table}{\numberline {12.37}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{LoveLanguageResult}}}}{241}{table.caption.284}%
+\contentsline {table}{\numberline {12.38}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów Health Score}}{242}{table.caption.287}%
+\contentsline {table}{\numberline {12.39}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów Pass 4 --- obserwacje i~trajektoria}}{243}{table.caption.290}%
+\contentsline {table}{\numberline {12.40}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{Insight}}}}{243}{table.caption.292}%
+\contentsline {table}{\numberline {12.41}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ConversationPersonality}}}}{243}{table.caption.294}%
+\contentsline {table}{\numberline {12.42}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{RoastResult}}}}{244}{table.caption.296}%
+\contentsline {table}{\numberline {12.43}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów Stand-Up Roast}}{245}{table.caption.297}%
+\contentsline {table}{\numberline {12.44}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów \texttt {\textcolor {CodeType}{CPSQuestion}} i~\texttt {\textcolor {CodeType}{CPSPattern}}}}{245}{table.caption.299}%
+\contentsline {table}{\numberline {12.45}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsów wynikowych CPS}}{246}{table.caption.301}%
+\contentsline {table}{\numberline {12.46}{\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{QualitativeAnalysis}}}}{247}{table.12.46}%
+\contentsline {table}{\numberline {12.47}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{StoredAnalysis}}}}{248}{table.caption.302}%
+\contentsline {table}{\numberline {12.48}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{AnalysisIndexEntry}}}}{249}{table.caption.303}%
+\contentsline {table}{\numberline {12.49}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Mapa zależności typów --- ile interfejsów zawiera każdy kontener}}{251}{table.caption.308}%
+\contentsline {table}{\numberline {12.50}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Wartości \texttt {\textcolor {CodeType}{SubtextCategory}} z~opisami}}{253}{table.caption.309}%
+\contentsline {table}{\numberline {12.51}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SubtextItem}}}}{254}{table.caption.310}%
+\contentsline {table}{\numberline {12.52}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SubtextSummary}}}}{255}{table.caption.312}%
+\contentsline {table}{\numberline {12.53}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SubtextResult}}}}{255}{table.caption.313}%
+\contentsline {table}{\numberline {12.54}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SimplifiedMsg}}}}{256}{table.caption.314}%
+\contentsline {table}{\numberline {12.55}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{ExchangeWindow}}}}{256}{table.caption.315}%
+\contentsline {table}{\numberline {12.56}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CourtCharge}}}}{257}{table.caption.316}%
+\contentsline {table}{\numberline {12.57}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PersonVerdict}}}}{257}{table.caption.317}%
+\contentsline {table}{\numberline {12.58}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{CourtResult}}}}{258}{table.caption.318}%
+\contentsline {table}{\numberline {12.59}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{PersonDatingProfile}}}}{260}{table.caption.319}%
+\contentsline {table}{\numberline {12.60}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{DatingProfileResult}}}}{260}{table.caption.320}%
+\contentsline {table}{\numberline {12.61}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{DelusionQuestion}}}}{262}{table.caption.321}%
+\contentsline {table}{\numberline {12.62}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{DelusionAnswer}}}}{262}{table.caption.322}%
+\contentsline {table}{\numberline {12.63}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{DelusionQuizResult}}}}{263}{table.caption.323}%
+\contentsline {table}{\numberline {12.64}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SimulationParams}} (14~p\'{o}l + 3~opcjonalne)}}{264}{table.caption.324}%
+\contentsline {table}{\numberline {12.65}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Pola interfejsu \texttt {\textcolor {CodeType}{SimulationResponse}}}}{265}{table.caption.325}%
+\contentsline {table}{\numberline {12.66}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Typy Zod eksportowane ze \texttt {\small \add@extra@listi {sml}\color {PodTextSecondary}schemas.ts}}}{268}{table.caption.326}%
+\contentsline {table}{\numberline {12.67}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zaktualizowana mapa zależności typów --- Faza 19--20}}{269}{table.caption.327}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {13.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Status parserów komunikatorów}}{259}{table.caption.306}%
-\contentsline {table}{\numberline {13.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Aktualny stos technologiczny \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{261}{table.caption.307}%
-\contentsline {table}{\numberline {13.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Model cenowy \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{262}{table.caption.308}%
-\contentsline {table}{\numberline {13.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Harmonogram lokalizacji interfejsu}}{265}{table.caption.309}%
-\contentsline {table}{\numberline {13.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Status funkcji --- Fazy 19--20}}{268}{table.caption.311}%
-\contentsline {table}{\numberline {13.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zrealizowane funkcje rozrywkowe --- zestawienie}}{269}{table.caption.312}%
-\contentsline {table}{\numberline {13.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zrealizowane usprawnienia TIER}}{270}{table.caption.313}%
-\addvspace {10\p@ }
-\contentsline {table}{\numberline {14.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Metryki strony analizy --- stan obecny}}{272}{table.caption.314}%
-\contentsline {table}{\numberline {14.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Proponowana architektura tabowa strony analizy}}{273}{table.caption.316}%
-\contentsline {table}{\numberline {14.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Model cenowy --- porównanie tierów}}{274}{table.caption.322}%
-\contentsline {table}{\numberline {14.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Strategia wiralowa --- karty share}}{276}{table.caption.329}%
-\contentsline {table}{\numberline {14.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Projekcja przychodów (12 miesięcy)}}{277}{table.caption.330}%
-\contentsline {table}{\numberline {14.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces IntersectionObserver --- rozkład instancji}}{278}{table.caption.334}%
-\contentsline {table}{\numberline {14.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komponenty wymagające React.memo}}{279}{table.caption.339}%
-\contentsline {table}{\numberline {14.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Metryki wydajności --- stan obecny vs docelowy}}{280}{table.caption.346}%
-\contentsline {table}{\numberline {14.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Roadmapa implementacji wyników audytu}}{281}{table.caption.347}%
+\contentsline {table}{\numberline {13.1}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Status parserów komunikatorów}}{271}{table.caption.328}%
+\contentsline {table}{\numberline {13.2}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Aktualny stos technologiczny \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{273}{table.caption.329}%
+\contentsline {table}{\numberline {13.3}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Model cenowy \textbf {\textcolor {PodBlue}{Pod}\textcolor {PodPurple}{TeksT}}\xspace }}{274}{table.caption.330}%
+\contentsline {table}{\numberline {13.4}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Harmonogram lokalizacji interfejsu}}{277}{table.caption.331}%
+\contentsline {table}{\numberline {13.5}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Status funkcji --- Fazy 19--20}}{280}{table.caption.333}%
+\contentsline {table}{\numberline {13.6}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zrealizowane funkcje rozrywkowe --- zestawienie}}{281}{table.caption.334}%
+\contentsline {table}{\numberline {13.7}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Komponenty Fazy 24}}{282}{table.caption.335}%
+\contentsline {table}{\numberline {13.8}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Przemianowania terminologiczne w~Fazie 26}}{283}{table.caption.336}%
+\contentsline {table}{\numberline {13.9}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Poprawki algorytmiczne w~Fazie 27}}{284}{table.caption.337}%
+\contentsline {table}{\numberline {13.10}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Nowe moduły ilościowe Fazy 28}}{285}{table.caption.338}%
+\contentsline {table}{\numberline {13.11}{\ignorespaces \xpg@aux {}{polish}\ignorespaces Zrealizowane usprawnienia TIER}}{286}{table.caption.339}%
 \providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

@@ -248,6 +248,10 @@ export function sampleMessages(
 ): AnalysisSamples {
   const eligible = conversation.messages.filter(isEligible).map(toSimplified);
 
+  if (eligible.length < 10) {
+    throw new Error('Za mało wiadomości do analizy AI — potrzeba minimum 10 wiadomości z treścią.');
+  }
+
   // Overview: 250 messages, stratified by month, 60% weight on recent 25%
   const overview = stratifiedSample(eligible, 250);
 

@@ -36,7 +36,7 @@ const FEATURES: FeatureCard[] = [
     emoji: '🧠',
     title: 'Profil osobowości',
     description:
-      'Big Five, styl przywiązania, inteligencja emocjonalna — pełny profil psychologiczny obu osób.',
+      'Big Five, styl przywiązania, inteligencja emocjonalna — profil komunikacyjny obu osób.',
     accent: '#3b82f6',
     span: 'wide',
   },
@@ -48,7 +48,7 @@ const FEATURES: FeatureCard[] = [
   },
   {
     emoji: '🧾',
-    title: '15+ kart Stories',
+    title: '23 karty Stories',
     description: 'Paragon, Red Flag Report, Paszport, Etykietka — gotowe do pobrania 1080×1920.',
     accent: '#f472b6',
   },
@@ -61,7 +61,7 @@ function MiniGauge({ score, color }: { score: number; color: string }) {
   const pct = score / 100;
 
   return (
-    <svg width="88" height="88" viewBox="0 0 88 88" className="shrink-0">
+    <svg width="88" height="88" viewBox="0 0 88 88" className="shrink-0" aria-hidden="true">
       {/* Track */}
       <circle
         cx="44"
@@ -127,7 +127,7 @@ export default function LandingFeatureShowcase() {
           Co odkryjesz?
         </h2>
         <p className="mt-2 font-story-body text-sm text-muted-foreground">
-          28+ metryk ilościowych + 4 passy analizy AI
+          60+ metryk ilościowych + 4 passy analizy AI
         </p>
       </motion.div>
 

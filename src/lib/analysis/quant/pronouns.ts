@@ -7,7 +7,20 @@
  *
  * Full Polish declension coverage to avoid undercounting in a highly inflected language.
  *
- * Reference: Pennebaker, J. W. (2011). The Secret Life of Pronouns.
+ * IMPORTANT — Polish pro-drop grammar:
+ * Polish is a pro-drop language: subject pronouns are regularly OMITTED because
+ * verb conjugations encode person, number, and gender. "Broniłam" (I was defending,
+ * feminine) encodes "I" + gender within the verb form — no explicit pronoun needed.
+ * Consequence: when a Polish speaker explicitly uses "ja" (I) or "my" (we), it carries
+ * PRAGMATIC EMPHASIS or CONTRAST — it is a marked, non-neutral choice.
+ * English LIWC norms (I ≈ 4–6‰, We ≈ 0.5–1.5‰ of all words) cannot be directly
+ * applied to Polish text. Rates will be systematically lower in Polish-dominant
+ * conversations. Require ≥200 words per person for stable I-rates; ≥1000 for We-rates.
+ *
+ * References:
+ * - Pennebaker, J. W. (2011). The Secret Life of Pronouns.
+ * - Szymczyk, Żakowicz, & Stemplewska-Żakowicz (2012). Przegląd Psychologiczny, 55(2).
+ * - LIWC minimum: ≥100 words (skepticism), ≥200 for stable I-rates (practical minimum).
  */
 
 import type { UnifiedMessage, PronounAnalysis, PersonPronounStats } from '../../parsers/types';
@@ -104,7 +117,9 @@ export function computePronounAnalysis(
 
   for (const name of participantNames) {
     const s = stats[name];
-    if (s.totalWords < 50) continue;
+    // LIWC recommends ≥100 words minimum; 200 is practical minimum for stable I-rates.
+    // Polish pro-drop means explicit pronoun rates are inherently lower — be generous.
+    if (s.totalWords < 200) continue;
 
     const iRate = (s.iCount / s.totalWords) * 1000;
     const weRate = (s.weCount / s.totalWords) * 1000;

@@ -1,0 +1,113 @@
+\begin{theindex}
+
+  \item badges, \hyperpage{89}
+  \item BestTimeToText, \hyperpage{91}
+  \item burst detection, \hyperpage{83}
+
+  \indexspace
+
+  \item catchphrases, \hyperpage{92}
+  \item centralność stopniowa, \hyperpage{93}
+  \item compatibility score, \hyperpage{87}
+  \item czat grupowy, \hyperpage{92}
+
+  \indexspace
+
+  \item delusion score, \hyperpage{88}
+
+  \indexspace
+
+  \item emoji
+    \subitem ekstrakcja, \hyperpage{73}
+    \subitem metryki, \hyperpage{77}
+  \item EngagementMetrics, \hyperpage{81}
+
+  \indexspace
+
+  \item frazy charakterystyczne, \hyperpage{92}
+
+  \indexspace
+
+  \item ghost risk, \hyperpage{88}
+
+  \indexspace
+
+  \item Health Score
+    \subitem balance, \hyperpage{144}
+    \subitem emotional safety, \hyperpage{145}
+    \subitem etykiety, \hyperpage{148}
+    \subitem formuła, \hyperpage{146}
+    \subitem growth trajectory, \hyperpage{146}
+    \subitem komponenty, \hyperpage{144}
+    \subitem normalizacja, \hyperpage{149}
+    \subitem przegląd, \hyperpage{143}
+    \subitem reciprocity, \hyperpage{145}
+    \subitem response pattern, \hyperpage{145}
+    \subitem walidacja krzyżowa, \hyperpage{150}
+  \item heatmap, \hyperpage{84}
+
+  \indexspace
+
+  \item indeks wzajemności, \hyperpage{85}
+  \item interest score, \hyperpage{87}
+
+  \indexspace
+
+  \item mapa cieplna, \hyperpage{84}
+  \item metryki
+    \subitem czasowe, \hyperpage{79}
+    \subitem per osoba, \hyperpage{75}
+    \subitem trendów, \hyperpage{85}
+    \subitem wzorców, \hyperpage{82}
+    \subitem zaangażowania, \hyperpage{81}
+  \item metryki sieci, \hyperpage{92}
+
+  \indexspace
+
+  \item najlepszy czas, \hyperpage{91}
+  \item NetworkMetrics, \hyperpage{92}
+
+  \indexspace
+
+  \item odznaki, \hyperpage{89}
+
+  \indexspace
+
+  \item PatternMetrics, \hyperpage{82}
+  \item PersonMetrics, \hyperpage{75}
+
+  \indexspace
+
+  \item reakcje
+    \subitem metryki, \hyperpage{78}
+  \item ReciprocityIndex, \hyperpage{85}
+  \item regresja liniowa, \hyperpage{72}
+
+  \indexspace
+
+  \item silnik ilościowy
+    \subitem architektura, \hyperpage{69}
+    \subitem funkcje pomocnicze, \hyperpage{73}
+    \subitem refaktoryzacja, \hyperpage{94}
+    \subitem stałe, \hyperpage{71}
+    \subitem złożoność O(n), \hyperpage{70}
+  \item stopwords, \hyperpage{72}
+  \item streak
+    \subitem algorytm, \hyperpage{90}
+  \item słownictwo
+    \subitem metryki, \hyperpage{78}
+
+  \indexspace
+
+  \item TimingMetrics, \hyperpage{79}
+  \item TrendData, \hyperpage{85}
+
+  \indexspace
+
+  \item ViralScores, \hyperpage{86}
+
+  \indexspace
+
+  \item wyniki wiralne, \hyperpage{86}
+
+\end{theindex}

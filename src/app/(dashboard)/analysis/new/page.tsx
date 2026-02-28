@@ -131,8 +131,8 @@ function NewAnalysisContent() {
             throw new Error('Telegram: przesyłaj jeden plik result.json na raz.');
           }
           conversation = parseTelegramJSON(jsonDataArray[0]);
-        } else if (format === 'messenger') {
-          // Could be Messenger or Instagram (nearly identical)
+        } else if (format === 'messenger' || format === 'instagram') {
+          // Messenger and Instagram use the same Meta export format
           conversation =
             jsonDataArray.length === 1
               ? parseMessengerJSON(jsonDataArray[0])
@@ -236,6 +236,8 @@ function NewAnalysisContent() {
     return null;
   }, [files, isProcessing]);
 
+  const currentStep = isProcessing ? 3 : files.length > 0 ? 2 : 1;
+
   return (
     <div className="mx-auto w-full max-w-[640px] px-4 py-12">
       {/* Header */}
@@ -249,6 +251,31 @@ function NewAnalysisContent() {
             : 'Wgraj eksport rozmowy lub pobierz wiadomości z Discorda'}
         </p>
       </div>
+
+      {/* Step indicator — hidden in kiosk and discord modes */}
+      {!isKioskMode && importMode === 'file' && (
+        <div className="mb-8 flex items-center gap-2" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={3} aria-label="Postep analizy">
+          {[
+            { num: 1, label: 'Przeslij plik' },
+            { num: 2, label: 'Konfiguracja' },
+            { num: 3, label: 'Analiza' },
+          ].map((step, i) => (
+            <div key={step.num} className="flex items-center gap-2 flex-1">
+              <div className={`flex items-center gap-2 ${step.num <= currentStep ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+                <span className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  step.num < currentStep ? 'bg-success text-white' :
+                  step.num === currentStep ? 'bg-primary text-white' :
+                  'bg-card border border-border'
+                }`}>
+                  {step.num < currentStep ? '\u2713' : step.num}
+                </span>
+                <span className="text-xs font-medium whitespace-nowrap">{step.label}</span>
+              </div>
+              {i < 2 && <div className={`h-px flex-1 ${step.num < currentStep ? 'bg-success/50' : 'bg-border'}`} />}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Import mode tabs — hidden in kiosk mode */}
       {!isKioskMode && (
@@ -277,6 +304,17 @@ function NewAnalysisContent() {
             <Bot className="size-4" />
             Discord Bot
           </button>
+        </div>
+      )}
+
+      {/* Privacy notice — shown above upload area */}
+      {!isKioskMode && (
+        <div className="mb-4 rounded-md border border-border bg-card/50 px-4 py-2.5">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {importMode === 'file'
+              ? '\u{1F512} Twoje wiadomosci sa przetwarzane lokalnie w przegladarce. Zadne dane nie trafiaja na serwer.'
+              : '\u{1F512} Token bota jest uzywany jednorazowo i nie jest nigdzie zapisywany.'}
+          </p>
         </div>
       )}
 
@@ -330,7 +368,7 @@ function NewAnalysisContent() {
               size="lg"
               className="gap-2"
             >
-              Analizuj
+              Analizuj <span className="text-xs opacity-70">(~30s)</span>
               <ArrowRight className="size-4" />
             </Button>
           </div>
@@ -364,16 +402,7 @@ function NewAnalysisContent() {
         )}
       </div>
 
-      {/* Privacy notice — hidden in kiosk mode */}
-      {!isKioskMode && (
-        <div className="mt-10 rounded-md border border-border bg-card/50 px-4 py-3">
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {importMode === 'file'
-              ? 'Twoje wiadomości są przetwarzane lokalnie w przeglądarce. Żadne dane nie trafiają na serwer. Tylko zagregowane wyniki zapisywane są w pamięci lokalnej.'
-              : 'Token bota jest używany jednorazowo do pobrania wiadomości i nie jest nigdzie zapisywany. Wiadomości są przetwarzane lokalnie w przeglądarce.'}
-          </p>
-        </div>
-      )}
+      {/* (Privacy notice moved above upload area) */}
 
       {/* Export instructions — file mode only, hidden in kiosk mode */}
       {!isKioskMode && importMode === 'file' && <div className="mt-3 rounded-md border border-border bg-card/50 px-4 py-3">

@@ -85,7 +85,7 @@ export default function StatsCard({ quantitative, conversation, participants }: 
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: 'min(360px, 100vw - 2rem)',
           height: 640,
           background: '#060608',
           position: 'relative',
