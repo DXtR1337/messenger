@@ -333,35 +333,6 @@ Three fabricated citations (Jarmolowicz 2022, Alikhan 2023, Vanderbilt 2025) wer
 
 ---
 
-## Getting Started
-
-```bash
-pnpm install
-pnpm dev          # Start dev server
-pnpm build        # Production build
-pnpm lint         # ESLint
-```
-
-Required environment variables:
-```
-GEMINI_API_KEY=your_gemini_api_key
-```
-
-Optional (Discord bot):
-```
-DISCORD_BOT_TOKEN=...
-DISCORD_APP_ID=...
-DISCORD_PUBLIC_KEY=...
-```
-
-Optional (Auth — requires Supabase project):
-```
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-```
-
----
-
 ## Try It Now
 
 **[podtekst.app](https://podtekst.app)** — upload your chat export and see the magic.
