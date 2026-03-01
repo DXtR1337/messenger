@@ -118,6 +118,7 @@ function SubtextItemCard({ item, index }: { item: SubtextItem; index: number }) 
         {item.exchangeContext && (
           <button
             onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
             className="flex items-center gap-1 text-[10px] text-text-muted hover:text-foreground transition-colors"
           >
             {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
@@ -223,9 +224,9 @@ export default function SubtextDecoder({
         </div>
 
         <p className="text-xs text-text-secondary leading-relaxed">
-          Analiza szuka wiadomosci z ukrytym podtekstem — krotkie odpowiedzi po dlugich wiadomosciach,
+          Analiza szuka wiadomości z ukrytym podtekstem — krótkie odpowiedzi po długich wiadomościach,
           pasywne markery (&ldquo;ok&rdquo;, &ldquo;spoko&rdquo;, &ldquo;jak chcesz&rdquo;), nagłe zmiany tematu,
-          opoznione odpowiedzi. Dla kazdej odkodowuje co naprawde mial/a na mysli.
+          opóźnione odpowiedzi. Dla każdej odkodowuje co naprawdę miał/a na myśli.
         </p>
 
         {error && (
@@ -291,8 +292,8 @@ export default function SubtextDecoder({
           <Search className="size-5 text-purple-400" />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-foreground">Translator Podtekstow</h3>
-          <p className="text-xs text-text-muted">{items.length} zdekodowanych wiadomosci</p>
+          <h3 className="text-base font-semibold text-foreground">Translator Podtekstów</h3>
+          <p className="text-xs text-text-muted">{items.length} zdekodowanych wiadomości</p>
         </div>
       </div>
 

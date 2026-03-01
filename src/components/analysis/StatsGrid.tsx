@@ -91,7 +91,7 @@ function StatCard({ icon, label, value, breakdown, delay }: StatCardProps) {
                       className="inline-block size-2 rounded-full"
                       style={{ backgroundColor: PERSON_COLORS[entry.index % PERSON_COLORS.length] }}
                     />
-                    <span className="text-white/50 truncate max-w-[80px] sm:max-w-none">{entry.name}</span>
+                    <span className="text-white/50 truncate max-w-[120px] sm:max-w-none" title={entry.name}>{entry.name}</span>
                   </span>
                   <span className="font-mono font-medium text-foreground">{entry.value}</span>
                 </div>
@@ -210,11 +210,11 @@ export default function StatsGrid({ quantitative, participants, platform }: Stat
           .map((p) => perPerson[p]?.vocabularyRichness)
           .filter((v): v is number => v !== undefined);
         const avg = richness.length > 0 ? richness.reduce((a, b) => a + b, 0) / richness.length : 0;
-        return `${(avg * 100).toFixed(1)}%`;
+        return avg.toFixed(1);
       })(),
       breakdown: participants.map((name, index) => ({
         name,
-        value: `${((perPerson[name]?.vocabularyRichness ?? 0) * 100).toFixed(1)}%`,
+        value: (perPerson[name]?.vocabularyRichness ?? 0).toFixed(1),
         index,
       })),
     },

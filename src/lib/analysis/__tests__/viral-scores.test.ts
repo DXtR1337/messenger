@@ -318,34 +318,34 @@ describe('Viral Scores — Ghost Risk', () => {
     }
   });
 
-  it('ghostRisk.score is in [0, 100]', () => {
+  it('ghostRisk.score is in [0, 100] when data is present', () => {
     const { conversation, quantitative } = buildBalancedConversation(8);
     const scores = computeViralScores(quantitative, conversation);
     for (const [, data] of Object.entries(scores.ghostRisk)) {
+      if (data == null) continue; // null = insufficient data
       expect(data.score).toBeGreaterThanOrEqual(0);
       expect(data.score).toBeLessThanOrEqual(100);
     }
   });
 
-  it('ghostRisk.score is 50 (unknown) for conversation with < 3 months of data (monthlyVolume < 3)', () => {
-    // Build conversation with only 1 month of data → monthlyVolume.length < 3 → neutral score 50
-    // Source code: "return { score: 50, factors: [...] }" when months.length < 3
+  it('ghostRisk is null for conversation with < 3 months of data (monthlyVolume < 3)', () => {
+    // Build conversation with only 1 month of data → monthlyVolume.length < 3 → null (insufficient data)
     const { conversation, quantitative } = buildBalancedConversation(1);
     const scores = computeViralScores(quantitative, conversation);
     for (const [, data] of Object.entries(scores.ghostRisk)) {
-      // < 3 months → insufficient data → score = 50 (neutral/unknown, not a risk indicator)
-      expect(data.score).toBe(50);
-      expect(data.factors).toContain('Za mało danych (< 3 miesiące) — ryzyko nieoznaczone');
+      // < 3 months → insufficient data → null (UI shows "Brak wystarczających danych")
+      expect(data).toBeNull();
     }
   });
 
-  it('ghostRisk.factors is an array (may be empty when score=0 and no factor thresholds exceeded)', () => {
+  it('ghostRisk.factors is an array when data is present (may be empty when score=0)', () => {
     // factors.length > 0 only when: score > 0 and some individual sub-score > 30.
     // With perfectly balanced conversation, score ≈ 0 → factors may be empty.
     // The "Niewielkie zmiany" fallback only fires when score > 0.
     const { conversation, quantitative } = buildBalancedConversation(8);
     const scores = computeViralScores(quantitative, conversation);
     for (const [, data] of Object.entries(scores.ghostRisk)) {
+      if (data == null) continue; // null = insufficient data
       expect(Array.isArray(data.factors)).toBe(true);
       // factors.length can be 0 when score === 0 (no changes detected)
       expect(data.factors.length).toBeGreaterThanOrEqual(0);

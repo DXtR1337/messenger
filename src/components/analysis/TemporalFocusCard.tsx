@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { TemporalFocusResult } from '@/lib/analysis/quant/temporal-focus';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
 
 interface TemporalFocusCardProps {
   result: TemporalFocusResult;
@@ -44,6 +45,7 @@ export default function TemporalFocusCard({ result, participants }: TemporalFocu
         </div>
         <div>
           <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Orientacja Temporalna</h3>
+          <ExperimentalBadge metricKey="temporalFocus" />
           <p className="text-sm text-white/50">Przeszłość · Teraźniejszość · Przyszłość</p>
         </div>
       </div>

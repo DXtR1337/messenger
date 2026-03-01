@@ -50,7 +50,7 @@ export function computeGottmanHorsemen(
 
   // Ghost risk as additional signal for stonewalling
   const maxGhostRisk = quant?.viralScores?.ghostRisk
-    ? Math.max(...Object.values(quant.viralScores.ghostRisk).map(g => g.score))
+    ? Math.max(...Object.values(quant.viralScores.ghostRisk).filter((g): g is NonNullable<typeof g> => g != null).map(g => g.score), 0)
     : 0;
 
   // Response asymmetry signal for contempt

@@ -6,6 +6,7 @@
 
 import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod/v4';
+import { verifyDiscordPin } from '../lib/verify-pin';
 
 const checkLimit = rateLimit(10, 10 * 60 * 1000);
 
@@ -13,6 +14,7 @@ const DISCORD_API = 'https://discord.com/api/v10';
 
 const megaRoastSchema = z.object({
   channelId: z.string().min(1),
+  pin: z.optional(z.string()),
   type: z.optional(z.literal('megaRoast')),
   megaRoast: z.object({
     targetName: z.string(),
@@ -28,6 +30,7 @@ const megaRoastSchema = z.object({
 
 const cwelSchema = z.object({
   channelId: z.string().min(1),
+  pin: z.optional(z.string()),
   type: z.literal('cwelTygodnia'),
   cwelTygodnia: z.object({
     winner: z.string(),
@@ -100,6 +103,10 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.success) {
     return Response.json({ error: 'Validation error.' }, { status: 400 });
   }
+
+  // PIN protection — mandatory, blocks all unauthenticated access
+  const pinError = verifyDiscordPin(parsed.data.pin);
+  if (pinError) return pinError;
 
   const { channelId } = parsed.data;
   const payloadType = ('type' in parsed.data && parsed.data.type === 'cwelTygodnia') ? 'cwelTygodnia' : 'megaRoast';

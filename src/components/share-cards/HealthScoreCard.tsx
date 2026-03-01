@@ -569,7 +569,7 @@ export default function HealthScoreCard({ pass4, participants }: HealthScoreCard
           opacity: isDownloading ? 0.5 : 1,
         }}
       >
-        {isDownloading ? 'Pobieranie...' : 'Pobierz karte'}
+        {isDownloading ? 'Pobieranie...' : 'Pobierz kartę'}
       </button>
     </div>
   );

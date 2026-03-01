@@ -139,6 +139,16 @@ function makeTimingPerPerson(names: string[]): TimingMetrics['perPerson'] {
       fastestResponseMs: 60_000,
       slowestResponseMs: 86_400_000,
       responseTimeTrend: 0,
+      trimmedMeanMs: 3_600_000,
+      stdDevMs: 1_800_000,
+      q1Ms: 1_200_000,
+      q3Ms: 5_400_000,
+      iqrMs: 4_200_000,
+      p75Ms: 5_400_000,
+      p90Ms: 7_200_000,
+      p95Ms: 10_800_000,
+      skewness: 1.2,
+      sampleSize: 100,
     };
   }
   return pp;

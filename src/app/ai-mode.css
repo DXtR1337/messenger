@@ -2147,11 +2147,11 @@
 
 /* ═══ PERFORMANCE — containment, GPU promotion, content-visibility ═══ */
 
-/* Content-visibility: auto defers rendering of off-screen cards.
-   contain-intrinsic-size hints prevent layout shift when cards scroll into view. */
+/* Layout containment on card wrappers — prevents layout recalculations from propagating.
+   NOTE: content-visibility:auto removed — it caused CLS (layout jumps) because the 500px
+   intrinsic-size hint was wrong for cards of varying heights (350px–600px+). */
 [data-ai-card] {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 500px;
+  contain: layout style;
 }
 
 /* Layout containment on card wrappers — prevents layout recalculations from propagating */
@@ -2206,10 +2206,9 @@
   will-change: transform;
 }
 
-/* FIN separator: large section, defer when off-screen */
+/* FIN separator: layout containment (content-visibility:auto removed — caused CLS) */
 .ai-fin-separator {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 700px;
+  contain: layout style;
 }
 
 /* ═══ GLOBAL PERFORMANCE — clean version everywhere (matches localhost clean look) ═══ */

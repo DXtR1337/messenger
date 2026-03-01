@@ -124,7 +124,7 @@ export default function CPSModePage() {
 
   const reasonsCannotRun: string[] = [];
   if (!hasQualitative) reasonsCannotRun.push('Wymaga ukonczonej analizy AI');
-  if (messageCount < 100) reasonsCannotRun.push('Minimum 100 wiadomosci');
+  if (messageCount < 100) reasonsCannotRun.push('Minimum 100 wiadomości');
   const canRun = hasQualitative && !cpsResult && !isLoading && reasonsCannotRun.length === 0;
 
   const handleRunCPS = useCallback(() => {
@@ -243,7 +243,7 @@ export default function CPSModePage() {
 
           <div className="mt-12 flex flex-wrap justify-center gap-6">
             <Link href={`/analysis/${id}/moral`} className="font-mono text-xs uppercase tracking-widest text-[#f97316]/50 transition-colors hover:text-[#f97316]">Moral Foundations &rarr;</Link>
-            <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#10b981]/40 transition-colors hover:text-[#10b981]"><ArrowLeft className="size-3" /> Command Center</Link>
+            <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#10b981]/40 transition-colors hover:text-[#10b981]"><ArrowLeft className="size-3" /> Centrum Dowodzenia</Link>
           </div>
         </div>
       </section>

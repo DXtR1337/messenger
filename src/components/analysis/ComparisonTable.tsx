@@ -220,11 +220,11 @@ export default function ComparisonTable({ analysisA, analysisB }: ComparisonTabl
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-xs text-muted-foreground">
-              <th className="w-1/3 py-3 text-left font-mono font-medium" style={{ color: '#3b82f6' }}>
+              <th className="w-1/3 py-3 text-left font-mono font-medium text-blue-400">
                 {titleA}
               </th>
               <th className="w-1/3 py-3 text-center font-medium">Metryka</th>
-              <th className="w-1/3 py-3 text-right font-mono font-medium" style={{ color: '#a855f7' }}>
+              <th className="w-1/3 py-3 text-right font-mono font-medium text-purple-400">
                 {titleB}
               </th>
             </tr>

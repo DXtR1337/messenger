@@ -28,7 +28,7 @@ function buildCanonicalConversation() {
           ? 'nie wiem co o tym myślę...'
           : `wiadomość numer ${i}`;
     msgs.push(makeMsg(sender, content, ts, {
-      reactions: i % 15 === 0 ? [{ reaction: '❤️', actor: senders[(i + 1) % 2] }] : [],
+      reactions: i % 15 === 0 ? [{ emoji: '❤️', actor: senders[(i + 1) % 2] }] : [],
       hasMedia: i % 20 === 0,
       hasLink: i % 25 === 0,
     }));
@@ -45,7 +45,7 @@ function buildCanonicalConversation() {
         ? 'sorry za zwłokę, byłam zajęta'
         : `msg miesiąc 2 nr ${i}`;
     msgs.push(makeMsg(sender, content, ts, {
-      reactions: i % 10 === 0 ? [{ reaction: '👍', actor: senders[(i + 1) % 2] }] : [],
+      reactions: i % 10 === 0 ? [{ emoji: '👍', actor: senders[(i + 1) % 2] }] : [],
     }));
   }
 
@@ -62,7 +62,7 @@ function buildCanonicalConversation() {
           ? 'ok.'
           : `msg miesiąc 3 nr ${i}`;
     msgs.push(makeMsg(sender, content, ts, {
-      reactions: i % 8 === 0 ? [{ reaction: '😮', actor: senders[(i + 1) % 2] }] : [],
+      reactions: i % 8 === 0 ? [{ emoji: '😮', actor: senders[(i + 1) % 2] }] : [],
     }));
   }
 

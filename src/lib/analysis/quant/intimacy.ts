@@ -13,7 +13,7 @@
  */
 
 import type { UnifiedMessage, HeatmapData } from '../../parsers/types';
-import { getMonthKey, countWords, extractEmojis } from './helpers';
+import { getMonthKey, countWords, extractEmojis, isLateNight } from './helpers';
 import { linearRegressionSlope } from '../constants';
 
 // ============================================================
@@ -88,12 +88,6 @@ interface MonthBucket {
   lateNightCount: number;
 }
 
-/** Check if a timestamp falls in late-night hours (22:00-04:00). */
-function isLateNight(timestamp: number): boolean {
-  const hour = new Date(timestamp).getHours();
-  return hour >= 22 || hour < 4;
-}
-
 /** Count emotional words in a message. */
 function countEmotionalWords(text: string): number {
   const words = text.toLowerCase().split(/\s+/);
@@ -119,10 +113,17 @@ function computeMessageInformalityScore(text: string): number {
   return exclamations * 1 + emojis * 2;
 }
 
-/** Safely normalize a value: (value / max) * 100, returning 0 if max is 0. */
-function normalize(value: number, max: number): number {
-  if (max <= 0) return 0;
-  return Math.min(100, Math.round((value / max) * 100));
+/**
+ * Normalize a value to 0-100 using fixed benchmarks instead of per-conversation max.
+ *
+ * Fixed benchmarks enable cross-conversation comparison — the score reflects
+ * absolute intimacy level, not relative position within a single conversation.
+ * Max-normalization (old approach) always made the peak month = 100%, destroying comparability.
+ */
+function normalizeFixed(value: number, minBench: number, maxBench: number): number {
+  if (maxBench <= minBench) return 0;
+  const clamped = Math.max(minBench, Math.min(maxBench, value));
+  return Math.round(((clamped - minBench) / (maxBench - minBench)) * 100);
 }
 
 // ============================================================
@@ -183,8 +184,9 @@ export function computeIntimacyProgression(
     }
   }
 
-  // Need at least 2 months for a meaningful trend
-  if (monthBuckets.size < 2) {
+  // Need at least 3 months for a meaningful trend — 2 data points
+  // cannot distinguish trend from noise
+  if (monthBuckets.size < 3) {
     return defaultResult;
   }
 
@@ -223,19 +225,18 @@ export function computeIntimacyProgression(
     monthlyLateNightPct.push(lateNightPct);
   }
 
-  // --- Find max values for normalization ---
-  const maxAvgLength = Math.max(...monthlyAvgLength, 0.001);
-  const maxEmotionalDensity = Math.max(...monthlyAvgEmotionalDensity, 0.001);
-  const maxInformality = Math.max(...monthlyAvgInformality, 0.001);
-  const maxLateNightPct = Math.max(...monthlyLateNightPct, 0.001);
+  // --- Fixed benchmarks for normalization (enable cross-conversation comparison) ---
+  // messageLengthFactor: avg ≤3 words = 0 (minimal effort), avg ≥20 words = 100 (invested)
+  // emotionalWordsFactor: 0% density = 0, ≥5% density = 100 (high emotional content)
+  // informalityFactor: 0 points/msg = 0, ≥5 points/msg = 100 (very casual)
+  // lateNightFactor: 0% late-night = 0, ≥30% late-night = 100 (high comfort)
 
   // --- Build data points ---
   const trend: IntimacyDataPoint[] = sortedMonths.map((month, i) => {
-    const messageLengthFactor = normalize(monthlyAvgLength[i], maxAvgLength);
-    const emotionalWordsFactor = normalize(monthlyAvgEmotionalDensity[i], maxEmotionalDensity);
-    // Use consistent value/max normalization — same as other 3 components (no min-shift)
-    const informalityFactor = normalize(monthlyAvgInformality[i], maxInformality);
-    const lateNightFactor = normalize(monthlyLateNightPct[i], maxLateNightPct);
+    const messageLengthFactor = normalizeFixed(monthlyAvgLength[i], 3, 20);
+    const emotionalWordsFactor = normalizeFixed(monthlyAvgEmotionalDensity[i], 0, 0.05);
+    const informalityFactor = normalizeFixed(monthlyAvgInformality[i], 0, 5);
+    const lateNightFactor = normalizeFixed(monthlyLateNightPct[i], 0, 0.30);
 
     // Weighted composite
     const score = Math.round(

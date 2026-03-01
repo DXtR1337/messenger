@@ -39,6 +39,8 @@ export function computeDamageReport(
   // Component 4: AI health as sanity check (20% only)
   const aiHealthDamage = 100 - healthScore;
 
+  // Weights sum to 1.0 (0.35+0.25+0.20+0.20), each component 0-100.
+  // Theoretical max = 100. Math.min guards against floating point drift.
   const emotionalDamage = Math.min(100, Math.round(
     negativeDamage       * 0.35 +
     conflictDamage       * 0.25 +

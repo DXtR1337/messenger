@@ -42,6 +42,11 @@ export function computeReciprocityIndex(
 
   if (participantNames.length < 2) return defaultResult;
 
+  // Need minimum message volume for balance metrics to be meaningful.
+  // With <30 messages, ratios are highly sensitive to individual messages.
+  const totalMessages = Object.values(perPerson).reduce((sum, p) => sum + (p?.totalMessages ?? 0), 0);
+  if (totalMessages < 30) return defaultResult;
+
   // Use first two participants for 1:1 analysis
   const [a, b] = participantNames;
 

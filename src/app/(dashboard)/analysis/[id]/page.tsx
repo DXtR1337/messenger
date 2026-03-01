@@ -407,10 +407,20 @@ export default function CommandCenterPage() {
   const hubVideoRef = useRef<HTMLVideoElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Hub video cycling — load next video on index change
+  // Hub video — defer initial load, then cycle on index change
+  const videoInitRef = useRef(false);
   useEffect(() => {
     const video = hubVideoRef.current;
     if (!video) return;
+    if (!videoInitRef.current) {
+      // Defer first load to after initial paint
+      const t = setTimeout(() => {
+        videoInitRef.current = true;
+        video.load();
+        video.play().catch(() => {});
+      }, 2000);
+      return () => clearTimeout(t);
+    }
     video.load();
     video.play().catch(() => {});
   }, [hubVideoIdx]);
@@ -446,8 +456,6 @@ export default function CommandCenterPage() {
       if (col !== lastCellRef.current.col || row !== lastCellRef.current.row) {
         lastCellRef.current = { col, row };
         grid.classList.remove('grid-pulse');
-        // Force reflow to restart animation
-        void grid.offsetWidth;
         grid.classList.add('grid-pulse');
       }
     };
@@ -458,8 +466,13 @@ export default function CommandCenterPage() {
       if (!rafId) rafId = requestAnimationFrame(tick);
     };
 
-    document.addEventListener('mousemove', handleMouseMove, { passive: true });
+    // Defer grid tracking to after initial paint
+    const delay = setTimeout(() => {
+      document.addEventListener('mousemove', handleMouseMove, { passive: true });
+    }, 1000);
+
     return () => {
+      clearTimeout(delay);
       document.removeEventListener('mousemove', handleMouseMove);
       if (rafId) cancelAnimationFrame(rafId);
     };
@@ -612,7 +625,7 @@ export default function CommandCenterPage() {
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.5 }}
+            transition={{ delay: 0 }}
             onClick={() => setShowQuizGate(false)}
             className="mx-auto mt-6 flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-text-muted transition-colors hover:border-border-hover hover:text-foreground"
           >
@@ -657,10 +670,9 @@ export default function CommandCenterPage() {
           ref={hubVideoRef}
           className="h-full w-full object-cover opacity-20 mix-blend-screen"
           style={{ transform: 'scale(1.4)', transformOrigin: 'center 40%' }}
-          autoPlay
           muted
           playsInline
-          preload="auto"
+          preload="none"
           onEnded={() => setHubVideoIdx(prev => (prev + 1) % HUB_VIDEOS.length)}
         >
           <source src={HUB_VIDEOS[hubVideoIdx]} type="video/mp4" />
@@ -672,13 +684,7 @@ export default function CommandCenterPage() {
         <div className="aurora-blob-3" />
       </div>
 
-      {/* CRT noise + scanlines cinematic grain */}
-      <svg className="crt-noise-overlay" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <filter id="cinematicNoise">
-          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#cinematicNoise)" />
-      </svg>
+      {/* Scanlines grain (lightweight CSS-only) */}
       <div className="crt-scanlines" aria-hidden="true" />
 
       {/* Interactive Grid — Gemini cursor-following */}
@@ -730,7 +736,7 @@ export default function CommandCenterPage() {
 
         {/* ═══ 2. KPI STRIP — Gemini scramble counters ═══ */}
         <SectionErrorBoundary section="KPI">
-          <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 lg:gap-5">
+          <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 lg:gap-5 [&>:last-child]:col-span-2 sm:[&>:last-child]:col-span-1">
             <KPICard
               label="Wiadomości"
               value={totalMessages}
@@ -841,15 +847,15 @@ export default function CommandCenterPage() {
                   animate="visible"
                   variants={{
                     hidden: {},
-                    visible: { transition: { staggerChildren: 0.08 } },
+                    visible: { transition: { staggerChildren: 0.03 } },
                   }}
                 >
                   {catModes.map((mode) => (
                     <motion.div
                       key={mode.id}
                       variants={{
-                        hidden: { opacity: 0, y: 30, scale: 0.95 },
-                        visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+                        hidden: { opacity: 0, y: 12 },
+                        visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } },
                       }}
                     >
                       <PortalCard

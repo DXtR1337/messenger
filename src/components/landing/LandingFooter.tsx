@@ -39,7 +39,7 @@ export default function LandingFooter() {
               <li>
                 <Link
                   href="/analysis/new"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Analizuj
                 </Link>
@@ -47,7 +47,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#social-proof"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Karty do pobrania
                 </a>
@@ -55,7 +55,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#demo"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Wzorce komunikacyjne
                 </a>
@@ -63,7 +63,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#demo"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Demo
                 </a>
@@ -80,7 +80,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#demo"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Profil osobowości
                 </a>
@@ -88,7 +88,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#demo"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Viral Scores
                 </a>
@@ -96,7 +96,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#demo"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Red Flag Report
                 </a>
@@ -104,7 +104,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#demo"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Styl przywiązania
                 </a>
@@ -121,7 +121,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#faq"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Jak eksportować
                 </a>
@@ -129,7 +129,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#faq"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   Prywatność
                 </a>
@@ -137,7 +137,7 @@ export default function LandingFooter() {
               <li>
                 <a
                   href="#faq"
-                  className="text-sm text-[#555555] hover:text-foreground transition-colors"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
                 >
                   FAQ
                 </a>
@@ -148,10 +148,10 @@ export default function LandingFooter() {
 
         {/* Bottom row */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <p className="font-mono text-xs text-[#555555]">
+          <p className="font-mono text-xs text-[#888888]">
             &copy; 2026 PodTeksT
           </p>
-          <p className="font-mono text-xs text-[#555555]">
+          <p className="font-mono text-xs text-[#888888]">
             Zbudowane z 🔬 przez PodTeksT
           </p>
         </div>

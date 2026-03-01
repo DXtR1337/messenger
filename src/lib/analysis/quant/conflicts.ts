@@ -57,14 +57,38 @@ export interface ConflictAnalysis {
 }
 
 // ============================================================
-// Constants
+// Constants — See THRESHOLDS.md for full rationale
 // ============================================================
 
+/**
+ * Rolling window size for per-person average word count baseline.
+ * 10 messages provides stable baseline without over-smoothing.
+ * Lower values (5) make the detector too sensitive to normal variation.
+ */
 const ROLLING_WINDOW_SIZE = 10;
+
+/**
+ * Escalation spike multiplier — message must exceed 2× rolling average.
+ * At 1.5×, normal emphasis messages trigger false positives.
+ * At 3×, only extreme rants are detected (misses moderate heated exchanges).
+ */
 const ESCALATION_MULTIPLIER = 2;
-/** Two spikes within this window confirm an escalation */
+
+/**
+ * Two spikes within this window confirm an escalation (15 minutes).
+ * Rationale: heated back-and-forth exchanges typically have rapid replies.
+ * 15min captures exchanges with 2-5 minute reply gaps (3-7 messages).
+ * At 5min: misses exchanges where people compose longer responses.
+ * At 30min: starts including unrelated spikes in separate conversation turns.
+ */
 const ESCALATION_CONFIRM_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-/** Minimum gap between reported escalation events to avoid clustering */
+
+/**
+ * Minimum gap between reported escalation events — deduplication (4 hours).
+ * A single argument can produce multiple spike clusters. 4h gap ensures
+ * each reported escalation is a distinct conflict event.
+ * Cross-reference: pursuit-withdrawal.ts uses 4h as withdrawal threshold.
+ */
 const MIN_ESCALATION_GAP_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 // ── Bigram-based conflict keywords ───────────────────────
@@ -128,13 +152,34 @@ function hasLexicalConflictSignals(
   }
   return false;
 }
-/** Intensity threshold: messages per hour to consider "intense" */
+/**
+ * Intensity threshold: ≥8 messages per hour to qualify as "intense" exchange.
+ * Average casual chat: 2-4 msg/h. Heated exchange: 10-20 msg/h.
+ * 8 msg/h sits above casual but below extreme — catches moderate arguments.
+ */
 const INTENSE_MSG_PER_HOUR = 8;
-/** Minimum silence duration after intense exchange to flag */
+
+/**
+ * Minimum silence after intense exchange to flag as "cold silence" (24 hours).
+ * Distinguishes deliberate disengagement from normal daily rhythms:
+ * - 6h gap: could be sleep/work (see SESSION_GAP_MS in constants.ts)
+ * - 12h gap: could be busy day, not necessarily conflict-driven
+ * - 24h gap after 8+ msg/h: strong signal of deliberate avoidance
+ * Cross-reference: pursuit-withdrawal.ts uses 4h (within-session withdrawal).
+ */
 const COLD_SILENCE_MS = 24 * 60 * 60 * 1000; // 24 hours
-/** How far back to look for intensity before a silence gap */
+
+/**
+ * Lookback window for pre-silence intensity measurement (1 hour).
+ * We count messages in the hour before silence starts. 1h aligns with
+ * INTENSE_MSG_PER_HOUR threshold (8 messages in this window = intense).
+ */
 const INTENSITY_LOOKBACK_MS = 60 * 60 * 1000; // 1 hour
-/** Messages to inspect before a silence gap */
+
+/**
+ * Number of messages to inspect before a silence gap for back-and-forth check.
+ * 5 messages: enough to confirm bidirectional exchange (not monologue).
+ */
 const PRE_SILENCE_MSG_COUNT = 5;
 
 // ============================================================
@@ -526,8 +571,9 @@ export function detectConflicts(
     totalConflicts: 0,
   };
 
-  // Need a meaningful conversation to detect conflicts
-  if (messages.length < 20) return emptyResult;
+  // Need a meaningful conversation to detect conflicts.
+  // 50 messages ensures enough history for rolling window baselines.
+  if (messages.length < 50) return emptyResult;
 
   const escalations = detectEscalations(messages);
   const coldSilences = detectColdSilences(messages);

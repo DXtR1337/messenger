@@ -17,39 +17,53 @@ interface ShareCaptionModalProps {
 
 const CAPTION_TEMPLATES = [
   {
-    id: "roast",
+    id: "roast-pl",
     emoji: "\ud83d\udd25",
     label: "Roast",
-    template: (p: string[], scores: Scores) =>
-      "\ud83d\udd25 Just got our chat roasted by AI and I'm deceased\n\nDelusion score: " + (scores.delusion ?? 0) + "/100 \ud83d\udc80\n\n#podtekst #roasted",
+    template: (_p: string[], scores: Scores) =>
+      "\ud83d\udd25 AI zroastowało nasz czat i nie żyję\n\nPoziom deluzji: " + (scores.delusion ?? 0) + "/100 \ud83d\udc80\n\n#podtekst #roast",
   },
   {
-    id: "compatibility",
+    id: "compatibility-pl",
     emoji: "\ud83d\udc95",
-    label: "Match",
-    template: (p: string[], scores: Scores) =>
-      "Our compatibility score is " + (scores.compatibility ?? 0) + "% " + ((scores.compatibility ?? 0) > 70 ? "\ud83d\udc95" : "\ud83d\udc80") + "\n\nDon't ask about the rest...\n\n#podtekst #compatibility",
+    label: "Dopasowanie",
+    template: (_p: string[], scores: Scores) =>
+      "Nasz wynik kompatybilności: " + (scores.compatibility ?? 0) + "% " + ((scores.compatibility ?? 0) > 70 ? "\ud83d\udc95" : "\ud83d\udc80") + "\n\nO resztę nie pytajcie...\n\n#podtekst #kompatybilność",
   },
   {
-    id: "receipts",
+    id: "receipts-pl",
     emoji: "\ud83e\uddfe",
     label: "Paragon",
     template: (_p: string[], _scores: Scores) =>
-      "\ud83e\uddfe The receipts are in.\n\nAI przeanalizowało naszą rozmowę i... wow.\n\n#podtekst #thereceipts",
+      "\ud83e\uddfe Paragon wystawiony.\n\nAI przeanalizowało naszą rozmowę i... wow.\n\n#podtekst #paragon",
   },
   {
-    id: "redflag",
+    id: "redflag-pl",
     emoji: "\ud83d\udea9",
     label: "Red Flag",
     template: (_p: string[], scores: Scores) =>
-      "\ud83d\udea9 RED FLAG REPORT \ud83d\udea9\n\nKlasyfikacja: " + ((scores.delusion ?? 0) > 60 ? "CRITICAL" : "MODERATE") + "\n\nI already knew, but now I have proof.\n\n#podtekst #redflag",
+      "\ud83d\udea9 RAPORT RED FLAG \ud83d\udea9\n\nKlasyfikacja: " + ((scores.delusion ?? 0) > 60 ? "KRYTYCZNY" : "UMIARKOWANY") + "\n\nWiedziałam/em, ale teraz mam dowody.\n\n#podtekst #redflag",
   },
   {
-    id: "ghost",
+    id: "ghost-pl",
     emoji: "\ud83d\udc7b",
     label: "Ghost",
     template: (_p: string[], scores: Scores) =>
-      "\ud83d\udc7b Ghost Forecast: " + (scores.health && scores.health < 40 ? "\ud83c\udf2a\ufe0f EWAKUACJA" : "\u26c5 zachmurzenie") + "\n\nAI wie więcej niż my sami\n\n#podtekst #ghosted",
+      "\ud83d\udc7b Prognoza ghostingu: " + (scores.health && scores.health < 40 ? "\ud83c\udf2a\ufe0f EWAKUACJA" : "\u26c5 zachmurzenie") + "\n\nAI wie więcej niż my sami\n\n#podtekst #ghost",
+  },
+  {
+    id: "roast-en",
+    emoji: "\ud83d\udd25",
+    label: "Roast (EN)",
+    template: (_p: string[], scores: Scores) =>
+      "\ud83d\udd25 Just got our chat roasted by AI and I'm deceased\n\nDelusion score: " + (scores.delusion ?? 0) + "/100 \ud83d\udc80\n\n#podtekst #roasted",
+  },
+  {
+    id: "compatibility-en",
+    emoji: "\ud83d\udc95",
+    label: "Match (EN)",
+    template: (_p: string[], scores: Scores) =>
+      "Our compatibility score is " + (scores.compatibility ?? 0) + "% " + ((scores.compatibility ?? 0) > 70 ? "\ud83d\udc95" : "\ud83d\udc80") + "\n\nDon't ask about the rest...\n\n#podtekst #compatibility",
   },
 ];
 

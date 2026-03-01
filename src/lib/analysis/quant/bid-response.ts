@@ -54,9 +54,23 @@ const DISMISS_TOKENS = [
 function isBid(msg: UnifiedMessage): boolean {
   if (!msg.content) return false;
   const text = msg.content.toLowerCase();
-  if (msg.content.includes('?')) return true;
+
+  // Strip URLs before question mark detection — URLs contain `?` for query params
+  const textWithoutUrls = text.replace(/https?:\/\/\S+/g, '').replace(/www\.\S+/g, '');
+
+  // Question mark at sentence boundary (not mid-URL or in code)
+  if (/\?\s*$/.test(textWithoutUrls) || /\?\s+[A-ZĄĆĘŁŃÓŚŹŻ]/u.test(msg.content)) return true;
+
   for (const s of DISCLOSURE_STARTERS) if (text.startsWith(s)) return true;
-  if (text.includes('http') || text.includes('www.')) return true;
+
+  // URL-only shares without accompanying text are NOT bids
+  const hasUrl = text.includes('http') || text.includes('www.');
+  if (hasUrl) {
+    const nonUrlText = textWithoutUrls.trim();
+    if (nonUrlText.length >= 5) return true; // URL + commentary = bid
+    return false; // bare link without context = not a bid
+  }
+
   return false;
 }
 
@@ -73,7 +87,9 @@ function classifyBidResponse(bid: UnifiedMessage, response: UnifiedMessage | und
     const overlap = response.content.toLowerCase().split(/\s+/).filter(w => w.length > 3 && bidWords.has(w)).length;
     if (overlap >= 1) return 'toward';
   }
-  if (response.content.trim().length >= 5) return 'toward';
+  // Require meaningful response: ≥10 chars OR ≥2 words (up from ≥5 chars)
+  const trimmed = response.content.trim();
+  if (trimmed.length >= 10 || trimmed.split(/\s+/).length >= 2) return 'toward';
   return 'away';
 }
 

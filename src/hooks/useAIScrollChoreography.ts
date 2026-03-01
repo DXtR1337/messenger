@@ -127,63 +127,11 @@ export function useAIScrollChoreography(
               const accent = card.querySelector<HTMLElement>('.analysis-card-accent');
               if (accent) accent.classList.add('ai-scanned');
 
-              // Inner content stagger — cascade fade-in of card internals
-              if (accent) {
-                const innerElements = accent.querySelectorAll<HTMLElement>(
-                  ':scope > div > h3, :scope > div > h4, :scope > div > p, :scope > div > div:not([aria-hidden])',
-                );
-                innerElements.forEach((el, i) => {
-                  gsap.fromTo(el,
-                    { opacity: 0, y: 20, filter: 'blur(4px)' },
-                    {
-                      opacity: 1,
-                      y: 0,
-                      filter: 'blur(0px)',
-                      duration: 0.6,
-                      delay: 0.1 + i * 0.1,
-                      ease: EASE.enter,
-                    },
-                  );
-                });
-              }
-
               // Ink-reveal on card headings — luminous sweep across title text
               if (accent) {
                 const headings = accent.querySelectorAll<HTMLElement>('h3, h4');
                 headings.forEach((h, hi) => {
                   setTimeout(() => h.classList.add('ai-ink-revealed'), 200 + hi * 150);
-                });
-              }
-
-              // Shockwave ring burst — expanding purple ring on card reveal
-              if (!isMobile && accent) {
-                const rect = accent.getBoundingClientRect();
-                const ring = document.createElement('div');
-                ring.setAttribute('aria-hidden', 'true');
-                const size = Math.max(rect.width, rect.height) * 0.6;
-                Object.assign(ring.style, {
-                  position: 'absolute',
-                  left: '50%',
-                  top: '50%',
-                  width: `${size * 0.15}px`,
-                  height: `${size * 0.15}px`,
-                  borderRadius: '50%',
-                  border: '1.5px solid rgba(192,132,252,0.5)',
-                  boxShadow: '0 0 12px rgba(168,85,247,0.3)',
-                  transform: 'translate(-50%, -50%)',
-                  pointerEvents: 'none',
-                  zIndex: '25',
-                  opacity: '1',
-                });
-                accent.style.position = accent.style.position || 'relative';
-                accent.appendChild(ring);
-                requestAnimationFrame(() => {
-                  ring.style.transition = 'all 0.7s cubic-bezier(0.16,1,0.3,1)';
-                  ring.style.width = `${size}px`;
-                  ring.style.height = `${size}px`;
-                  ring.style.opacity = '0';
-                  ring.style.borderColor = 'rgba(168,85,247,0.05)';
-                  setTimeout(() => ring.remove(), 750);
                 });
               }
             },
@@ -877,8 +825,15 @@ export function useAIScrollChoreography(
           const targetVelocity = Math.max(-1, Math.min(1, delta / 20));
           scrollVelocity += (targetVelocity - scrollVelocity) * 0.1;
 
+          // Skip when scroll hasn't moved (no delta = nothing changed)
+          if (delta === 0 && Math.abs(scrollVelocity) < 0.001) return;
+
           proximityCards.forEach((card) => {
             const rect = card.getBoundingClientRect();
+
+            // Skip style writes for off-screen cards — avoids unnecessary recalculations
+            if (rect.bottom < -100 || rect.top > viewH + 100) return;
+
             const cardCenter = rect.top + rect.height / 2;
             const dist = Math.abs(cardCenter - center);
             const maxDist = viewH * 0.6;
@@ -889,15 +844,8 @@ export function useAIScrollChoreography(
             const accent = card.querySelector<HTMLElement>('.analysis-card-accent');
             if (accent) {
               accent.style.setProperty('--proximity-glow', (proximity * 0.45).toFixed(3));
-
-              // Scroll-direction parallax tilt — subtle 3D lean
-              // Only apply to cards near viewport center for a focused effect
-              if (proximity > 0.3) {
-                const tiltX = scrollVelocity * 1.5 * proximity; // Max ~1.5deg
-                accent.style.transform = `perspective(1200px) rotateX(${tiltX.toFixed(2)}deg)`;
-              } else {
-                accent.style.transform = '';
-              }
+              // NOTE: Removed inline style.transform overwrite — it was clobbering the CSS
+              // proximity-based translateY/scale from ai-mode.css line 314.
             }
           });
         };
@@ -911,45 +859,8 @@ export function useAIScrollChoreography(
         });
       }
 
-      // =================================================================
-      // 9) INNER CONTENT PARALLAX — multi-layer depth within cards
-      // =================================================================
-      if (!isMobile) {
-        allCards.forEach((card) => {
-          const innerCard = card.querySelector('.analysis-card-accent') || card.firstElementChild;
-          if (!innerCard) return;
-
-          // Layer 1: Headings — closest to viewer, drifts furthest
-          const heading = innerCard.querySelector('h3, h4');
-          if (heading) {
-            gsap.fromTo(heading, { y: 14 }, {
-              y: -8,
-              ease: EASE.scrub,
-              scrollTrigger: { trigger: card, start: 'top bottom', end: 'bottom top', scrub: 1.2 },
-            });
-          }
-
-          // Layer 2: Icons/SVGs — medium depth
-          const icons = innerCard.querySelectorAll(':scope > div > svg, :scope > div > .lucide');
-          if (icons.length) {
-            gsap.fromTo(icons, { y: 8 }, {
-              y: -4,
-              ease: EASE.scrub,
-              scrollTrigger: { trigger: card, start: 'top bottom', end: 'bottom top', scrub: 2.0 },
-            });
-          }
-
-          // Layer 3: Charts — deep background, slowest
-          const charts = innerCard.querySelectorAll('.recharts-wrapper, .recharts-responsive-container');
-          if (charts.length) {
-            gsap.fromTo(charts, { y: 6 }, {
-              y: -3,
-              ease: EASE.scrub,
-              scrollTrigger: { trigger: card, start: 'top bottom', end: 'bottom top', scrub: 3.0 },
-            });
-          }
-        });
-      }
+      // (Section 9 — inner content parallax removed: GSAP fromTo on h3/h4, SVGs,
+      // charts conflicted with CSS transitions on the same elements, causing jumps.)
 
       // =================================================================
       // 10) SCROLL PROGRESS BAR — GSAP-driven scaleX on progress bar
@@ -1029,6 +940,12 @@ export function useAIScrollChoreography(
           const speed = Math.min(delta / 40, 1); // 40px/frame = max
           velocityGlow += (speed - velocityGlow) * 0.15; // Smooth lerp
 
+          // Skip style writes when glow has decayed to nothing
+          if (delta === 0 && velocityGlow < 0.005) {
+            velocityGlow = 0;
+            return;
+          }
+
           if (viewportFrame) {
             const intensity = velocityGlow * 0.6;
             viewportFrame.style.boxShadow = intensity > 0.02
@@ -1098,16 +1015,6 @@ export function useAIScrollChoreography(
                     // Ink-reveal headings
                     accent.querySelectorAll<HTMLElement>('h3, h4').forEach((h, hi) => {
                       setTimeout(() => h.classList.add('ai-ink-revealed'), 200 + hi * 150);
-                    });
-                    // Inner content stagger
-                    const innerElements = accent.querySelectorAll<HTMLElement>(
-                      ':scope > div > h3, :scope > div > h4, :scope > div > p, :scope > div > div:not([aria-hidden])',
-                    );
-                    innerElements.forEach((el, i) => {
-                      gsap.fromTo(el,
-                        { opacity: 0, y: 20, filter: 'blur(4px)' },
-                        { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.6, delay: 0.1 + i * 0.1, ease: EASE.enter },
-                      );
                     });
                   }
                 },

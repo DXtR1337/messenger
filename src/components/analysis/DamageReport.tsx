@@ -5,6 +5,8 @@ import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { DamageReportResult } from '@/lib/parsers/types';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import { QuantBadge } from '@/components/shared/SourceBadge';
 
 interface DamageReportProps {
   report: DamageReportResult;
@@ -71,11 +73,13 @@ function getBenefitConfig(val: DamageReportResult['therapyBenefit']): { color: s
 // --- Circular gauge with glow ---
 function GlowGauge({
   value,
+  label,
   colors,
   index,
   isInView,
 }: {
   value: number;
+  label: string;
   colors: GaugeColors;
   index: number;
   isInView: boolean;
@@ -90,7 +94,7 @@ function GlowGauge({
 
   return (
     <div className="relative h-28 w-28 sm:h-32 sm:w-32">
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+      <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" role="img" aria-label={`${label}: ${value}%`}>
         <defs>
           <filter id={filterId} x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur stdDeviation="3" result="blur" />
@@ -224,7 +228,11 @@ export default function DamageReport({ report }: DamageReportProps) {
           🩹
         </motion.span>
         <div>
-          <h3 className="font-display text-[15px] font-bold">Raport Szkód</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-[15px] font-bold">Raport Szkód</h3>
+            <QuantBadge />
+          </div>
+          <ExperimentalBadge metricKey="damageReport" />
           <p className="text-xs text-text-muted mt-0.5">Bilans emocjonalnych zniszczeń w konwersacji</p>
         </div>
       </div>
@@ -235,6 +243,7 @@ export default function DamageReport({ report }: DamageReportProps) {
         <MetricCard label="Emotional Damage" index={0} isInView={isInView}>
           <GlowGauge
             value={report.emotionalDamage}
+            label="Emotional Damage"
             colors={damageColors}
             index={0}
             isInView={isInView}
@@ -267,6 +276,7 @@ export default function DamageReport({ report }: DamageReportProps) {
         <MetricCard label="Potencjał naprawy" index={2} isInView={isInView}>
           <GlowGauge
             value={report.repairPotential}
+            label="Potencjał naprawy"
             colors={repairColors}
             index={2}
             isInView={isInView}

@@ -5,6 +5,8 @@ import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { ShiftSupportResult } from '@/lib/analysis/quant/shift-support';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import LowSampleBanner from '@/components/shared/LowSampleBanner';
 
 interface ConversationalNarcissismCardProps {
   result?: ShiftSupportResult;
@@ -56,6 +58,8 @@ export default function ConversationalNarcissismCard({
           </div>
           <div>
             <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Konwersacyjny narcyzm</h3>
+            <ExperimentalBadge metricKey="shiftSupport" />
+            <LowSampleBanner show={entries.reduce((sum, e) => sum + e.data.shiftCount + e.data.supportCount, 0) < 20} className="ml-1" />
             <p className="text-sm text-white/50">Shift-response vs support-response (Derber, 1979)</p>
           </div>
         </div>

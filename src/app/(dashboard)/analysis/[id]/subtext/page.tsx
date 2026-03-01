@@ -162,7 +162,7 @@ export default function SubtextModePage() {
                 Dating Profile &rarr;
               </Link>
               <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#00ff41]/40 transition-colors hover:text-[#00ff41]">
-                <ArrowLeft className="size-3" /> Command Center
+                <ArrowLeft className="size-3" /> Centrum Dowodzenia
               </Link>
             </div>
           </div>

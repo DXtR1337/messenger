@@ -121,8 +121,8 @@ function buildMockAnalysis() {
       },
       timing: {
         perPerson: {
-          Alex: { averageResponseTimeMs: 180000, medianResponseTimeMs: 120000, fastestResponseMs: 5000, slowestResponseMs: 86400000, responseTimeTrend: 0.05 },
-          Jamie: { averageResponseTimeMs: 200000, medianResponseTimeMs: 140000, fastestResponseMs: 3000, slowestResponseMs: 172800000, responseTimeTrend: 0.08 },
+          Alex: { averageResponseTimeMs: 180000, medianResponseTimeMs: 120000, fastestResponseMs: 5000, slowestResponseMs: 86400000, responseTimeTrend: 0.05, trimmedMeanMs: 150000, stdDevMs: 240000, q1Ms: 30000, q3Ms: 300000, iqrMs: 270000, p75Ms: 300000, p90Ms: 600000, p95Ms: 900000, skewness: 2.5, sampleSize: 500 },
+          Jamie: { averageResponseTimeMs: 200000, medianResponseTimeMs: 140000, fastestResponseMs: 3000, slowestResponseMs: 172800000, responseTimeTrend: 0.08, trimmedMeanMs: 170000, stdDevMs: 310000, q1Ms: 40000, q3Ms: 350000, iqrMs: 310000, p75Ms: 350000, p90Ms: 720000, p95Ms: 1080000, skewness: 3.1, sampleSize: 480 },
         },
         conversationInitiations: { Alex: 180, Jamie: 170 },
         conversationEndings: { Alex: 175, Jamie: 172 },

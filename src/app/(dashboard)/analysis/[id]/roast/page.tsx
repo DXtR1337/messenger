@@ -868,7 +868,7 @@ export default function RoastModePage() {
                   className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#ff4500]/40 transition-colors hover:text-[#ff4500]"
                 >
                   <ArrowLeft className="size-3" />
-                  Command Center
+                  Centrum Dowodzenia
                 </Link>
               </div>
             </RoastAnimatedSection>

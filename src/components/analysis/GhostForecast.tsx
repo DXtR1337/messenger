@@ -33,7 +33,7 @@ export default function GhostForecast({ viralScores, participants }: GhostForeca
 
   const entries = participants
     .map((name) => ({ name, data: ghostRisk[name] }))
-    .filter((e) => e.data);
+    .filter((e): e is { name: string; data: NonNullable<typeof e.data> } => e.data != null);
 
   if (entries.length === 0) return null;
 
@@ -69,6 +69,11 @@ export default function GhostForecast({ viralScores, participants }: GhostForeca
               {/* Score bar — Plasma tube */}
               <div
                 className="relative mb-2 h-[5px] overflow-hidden rounded-full"
+                role="meter"
+                aria-label={`Ryzyko ghostingu: ${name}`}
+                aria-valuenow={data.score}
+                aria-valuemin={0}
+                aria-valuemax={100}
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3)',

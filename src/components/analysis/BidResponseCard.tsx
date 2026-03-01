@@ -5,6 +5,9 @@ import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { BidResponseResult } from '@/lib/analysis/quant/bid-response';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import LowSampleBanner from '@/components/shared/LowSampleBanner';
+import { QuantBadge } from '@/components/shared/SourceBadge';
 
 interface BidResponseCardProps {
   result?: BidResponseResult;
@@ -51,7 +54,12 @@ export default function BidResponseCard({ result, participants }: BidResponseCar
             <span className="text-lg">🤝</span>
           </div>
           <div>
-            <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Wskaźnik &quot;Turning Toward&quot;</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Wskaźnik &quot;Turning Toward&quot;</h3>
+              <QuantBadge />
+            </div>
+            <ExperimentalBadge metricKey="bidResponse" />
+            <LowSampleBanner show={entries.reduce((sum, e) => sum + e.data.bidsMade, 0) < 20} className="ml-1" />
             <p className="text-sm text-white/50">Odpowiedzi na próby nawiązania kontaktu (Gottman, 1999)</p>
           </div>
         </div>

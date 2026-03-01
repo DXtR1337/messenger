@@ -4,6 +4,8 @@
  * Includes retry logic for Discord 429 rate limits.
  */
 
+import { verifyDiscordPin } from '../lib/verify-pin';
+
 export const dynamic = 'force-dynamic';
 
 const DISCORD_API = 'https://discord.com/api/v10';
@@ -73,18 +75,10 @@ function guildIconUrl(guildId: string, icon: string | null): string | null {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  // PIN protection — only authorized users can list bot servers
-  const requiredPin = process.env.DISCORD_ACCESS_PIN;
-  if (requiredPin) {
-    const { searchParams } = new URL(request.url);
-    const pin = searchParams.get('pin');
-    if (pin !== requiredPin) {
-      return Response.json(
-        { error: 'Nieprawidłowy PIN dostępu.' },
-        { status: 401 },
-      );
-    }
-  }
+  // PIN protection — mandatory, blocks all unauthenticated access
+  const { searchParams } = new URL(request.url);
+  const pinError = verifyDiscordPin(searchParams.get('pin'));
+  if (pinError) return pinError;
 
   let botToken: string;
   try {

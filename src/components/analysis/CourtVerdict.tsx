@@ -51,6 +51,7 @@ function CollapsibleSection({ title, icon, children, defaultOpen = false }: {
     <div className="rounded-lg border border-[#1a1a1a] bg-[#0d0d0d]">
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-[#111111]"
       >
         <div className="flex items-center gap-2">

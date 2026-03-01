@@ -194,8 +194,16 @@ export interface PersonMetrics {
   topPhrases: Array<{ phrase: string; count: number }>;
   /** Number of unique words used */
   uniqueWords: number;
-  /** Vocabulary richness: unique words / total words */
+  /** Vocabulary richness: Guiraud's R = unique / sqrt(total) */
   vocabularyRichness: number;
+  /** Questions per 1000 messages — normalized for cross-conversation comparison */
+  questionsAskedPer1k?: number;
+  /** Media shares per 1000 messages */
+  mediaSharedPer1k?: number;
+  /** Links per 1000 messages */
+  linksSharedPer1k?: number;
+  /** Emoji messages per 1000 messages */
+  emojiRatePer1k?: number;
   /** @mentions this person made (Discord) */
   mentionsMade?: number;
   /** Times this person was @mentioned by others (Discord) */
@@ -216,6 +224,26 @@ export interface TimingMetrics {
     slowestResponseMs: number;
     /** Response time trend over months: positive = getting slower */
     responseTimeTrend: number;
+    /** 10% trimmed mean — robust to outliers on both tails */
+    trimmedMeanMs?: number;
+    /** Population standard deviation of response times */
+    stdDevMs?: number;
+    /** 25th percentile (Q1) */
+    q1Ms?: number;
+    /** 75th percentile (Q3) */
+    q3Ms?: number;
+    /** Interquartile range (Q3 - Q1) */
+    iqrMs?: number;
+    /** 75th percentile */
+    p75Ms?: number;
+    /** 90th percentile */
+    p90Ms?: number;
+    /** 95th percentile */
+    p95Ms?: number;
+    /** Fisher-Pearson skewness — positive = right-skewed (many fast, few slow) */
+    skewness?: number;
+    /** Number of response time data points (for sample-size awareness) */
+    sampleSize?: number;
   }>;
   /** First message after 6h+ gap, per person */
   conversationInitiations: Record<string, number>;
@@ -376,8 +404,8 @@ export interface ViralScores {
   compatibilityScore: number;
   /** Per-person interest score 0-100 based on initiation, response speed trends, message length trends */
   interestScores: Record<string, number>;
-  /** Per-person ghost risk 0-100 — higher = more likely to ghost/be ghosted */
-  ghostRisk: Record<string, GhostRiskData>;
+  /** Per-person ghost risk 0-100 — higher = more likely to ghost/be ghosted. null = insufficient data (<3 months) */
+  ghostRisk: Record<string, GhostRiskData | null>;
   /** Delusion score 0-100 — how mismatched interest levels are */
   delusionScore: number;
   /** Who is more "delusional" (has higher interest while other has lower) */
@@ -525,6 +553,8 @@ export interface RankingPercentile {
   value: number;
   percentile: number;
   emoji: string;
+  /** True when percentile is based on heuristic norms, not empirical population data */
+  isEstimated?: boolean;
 }
 
 export interface RankingPercentiles {

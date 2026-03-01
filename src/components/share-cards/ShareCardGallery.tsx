@@ -312,10 +312,29 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Podgląd karty"
               className="fixed inset-0 z-50 overflow-y-auto bg-black/95"
               onClick={(e) => {
                 // Close when tapping dark overlay area (not the card itself)
                 if (e.target === e.currentTarget) setActiveCard(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== 'Tab') return;
+                const focusable = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>(
+                  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                if (focusable.length === 0) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault();
+                  last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault();
+                  first.focus();
+                }
               }}
             >
               {/* Close button — fixed position for constant visibility */}

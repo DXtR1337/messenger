@@ -34,15 +34,40 @@ export interface ShiftSupportResult {
 
 // Tokens that signal self-redirecting start of a message
 const SELF_START = new Set([
+  // Polish
   'ja', 'mi', 'mnie', 'mój', 'moja', 'moje', 'mam', 'miałem', 'miałam',
-  'u', 'też', 'tez', 'zresztą', 'właściwie', 'swoją drogą', 'btw', 'nawiasem',
+  'u', 'też', 'tez', 'zresztą', 'właściwie', 'swoją', 'btw', 'nawiasem',
+  // Expanded: strong self-topic starts (no reference to partner)
+  'mój', 'moja', 'moje', 'moim', 'mojej', 'moich',
+  // English
   'me', 'my', 'mine', 'also', 'anyway', 'btw',
+  'i', // "I had...", "I was..." — strong shift signal when first token
+]);
+
+// Acknowledgment tokens that signal engagement / support
+const ACKNOWLEDGMENT_TOKENS = new Set([
+  // Polish
+  'tak', 'no', 'aha', 'mhm', 'dokładnie', 'dokladnie', 'racja', 'okej',
+  'faktycznie', 'właśnie', 'wlasnie', 'serio', 'naprawdę', 'naprawde',
+  'wow', 'ojej', 'omg', 'matko', 'jezus', 'kurde', 'boże', 'boze',
+  // English
+  'yeah', 'yes', 'right', 'exactly', 'true', 'sure', 'absolutely',
+  'definitely', 'totally', 'wow', 'omg', 'seriously', 'really',
+]);
+
+// Tokens referencing the partner (signal support)
+const PARTNER_REFERENCE = new Set([
+  // Polish
+  'ty', 'ci', 'ciebie', 'tobie', 'twój', 'twoja', 'twoje', 'twojej', 'twoim',
+  'u ciebie', 'twój', 'twoja',
+  // English
+  'you', 'your', 'yours', 'yourself',
 ]);
 
 // Tokens that signal engagement with partner's topic
 const QUESTION_STARTS = new Set([
   'co', 'jak', 'kiedy', 'gdzie', 'dlaczego', 'czemu', 'czy', 'kto',
-  'który', 'która', 'które', 'ile', 'skąd', 'po', 'na co',
+  'który', 'która', 'które', 'ile', 'skąd', 'po',
   'what', 'how', 'when', 'where', 'why', 'who', 'which',
   'did', 'do', 'does', 'is', 'are', 'was', 'were', 'will', 'have',
   'can', 'could', 'would', 'should',
@@ -61,16 +86,28 @@ function wordOverlapCount(a: string, b: string): number {
 
 function classifyResponse(prevContent: string, currContent: string): 'shift' | 'support' | 'ambiguous' {
   const firstToken = getFirstToken(currContent);
+  const lower = currContent.toLowerCase();
+  const tokens = lower.split(/\s+/);
   const hasQuestion = currContent.includes('?');
   const overlap = wordOverlapCount(prevContent, currContent);
 
-  // Support signals take precedence
+  // Support signals: engaging with partner's topic
   if (hasQuestion) return 'support';
   if (QUESTION_STARTS.has(firstToken)) return 'support';
   if (overlap >= 2) return 'support';
 
-  // Shift signals
+  // Acknowledgment tokens at start → support (responding to partner's point)
+  if (ACKNOWLEDGMENT_TOKENS.has(firstToken)) return 'support';
+
+  // Any partner-reference token in first 4 tokens → support
+  const headTokens = tokens.slice(0, 4);
+  if (headTokens.some(t => PARTNER_REFERENCE.has(t))) return 'support';
+
+  // Shift signals: redirecting to self without partner engagement
   if (SELF_START.has(firstToken) && overlap === 0) return 'shift';
+
+  // "I" as first token + no overlap + no partner reference → shift (English)
+  if (firstToken === 'i' && overlap === 0 && !headTokens.some(t => PARTNER_REFERENCE.has(t))) return 'shift';
 
   return 'ambiguous';
 }

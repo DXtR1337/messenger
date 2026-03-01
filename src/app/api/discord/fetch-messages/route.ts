@@ -1,6 +1,7 @@
 import { rateLimit } from '@/lib/rate-limit';
 import type { DiscordMessage, DiscordChannel } from '@/lib/parsers/discord';
 import { discordFetchRequestSchema, formatZodError } from '@/lib/validation/schemas';
+import { verifyDiscordPin } from '../lib/verify-pin';
 
 const checkLimit = rateLimit(3, 10 * 60 * 1000); // 3 requests per 10 min
 
@@ -55,17 +56,9 @@ export async function POST(request: Request): Promise<Response> {
   const { channelId } = parsed.data;
   const messageLimit = Math.min(parsed.data.messageLimit ?? 5000, MAX_MESSAGES);
 
-  // PIN protection — same as guilds endpoint
-  const requiredPin = process.env.DISCORD_ACCESS_PIN;
-  if (requiredPin) {
-    const pin = parsed.data.pin;
-    if (pin !== requiredPin) {
-      return Response.json(
-        { error: 'Nieprawidłowy PIN dostępu.' },
-        { status: 401 },
-      );
-    }
-  }
+  // PIN protection — mandatory, blocks all unauthenticated access
+  const pinError = verifyDiscordPin(parsed.data.pin);
+  if (pinError) return pinError;
 
   // Use server-side bot token
   const botToken = process.env.DISCORD_BOT_TOKEN;

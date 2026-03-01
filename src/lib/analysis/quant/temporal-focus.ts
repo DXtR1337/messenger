@@ -114,6 +114,13 @@ function countMarkers(tokens: string[], markers: Set<string>): number {
   return count;
 }
 
+/**
+ * Classify temporal orientation from futureIndex.
+ * Thresholds 0.35/0.20: empirical from observed Polish chat patterns, NOT LIWC-calibrated.
+ * Polish chat typically shows higher present-tense markers than LIWC English norms
+ * (common verb forms like "jest", "mam", "robię" are high-frequency present markers),
+ * so the futureIndex is naturally compressed. These thresholds account for that.
+ */
 function classify(futureIndex: number): { orientation: PersonTemporalFocus['orientation']; label: string } {
   if (futureIndex >= 0.35) return { orientation: 'prospective', label: 'Prospektywny/a' };
   if (futureIndex >= 0.20) return { orientation: 'present_focused', label: 'Teraźniejszy/a' };

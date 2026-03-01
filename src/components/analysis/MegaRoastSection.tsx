@@ -5,6 +5,7 @@ import { useRef, useState, useCallback } from 'react';
 import { Flame, Award, MessageCircle, Skull, Share2, Check, Loader2 } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import type { MegaRoastResult } from '@/lib/analysis/types';
+import { AIBadge } from '@/components/shared/SourceBadge';
 
 interface MegaRoastSectionProps {
   result: MegaRoastResult;
@@ -57,7 +58,7 @@ export default function MegaRoastSection({ result, discordChannelId }: MegaRoast
       const res = await fetch('/api/discord/send-roast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId: discordChannelId, megaRoast: result }),
+        body: JSON.stringify({ channelId: discordChannelId, megaRoast: result, pin: localStorage.getItem('podtekst-discord-pin') ?? '' }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -97,16 +98,19 @@ export default function MegaRoastSection({ result, discordChannelId }: MegaRoast
             <Flame className="size-5 text-orange-500" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">
-              Mega Roast — {result.targetName}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">
+                Mega Roast — {result.targetName}
+              </h2>
+              <AIBadge />
+            </div>
             <p className="text-xs text-muted-foreground">
               Ultra brutalny roast na podstawie całej konwersacji
             </p>
           </div>
         </div>
 
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 p-6" aria-live="polite">
           {/* Opening */}
           <motion.div
             initial={{ opacity: 0 }}

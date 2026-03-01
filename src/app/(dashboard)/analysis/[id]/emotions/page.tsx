@@ -124,7 +124,7 @@ export default function EmotionsModePage() {
 
             <div className="mt-12 flex flex-wrap justify-center gap-6">
               <Link href={`/analysis/${id}/cps`} className="font-mono text-xs uppercase tracking-widest text-[#10b981]/50 transition-colors hover:text-[#10b981]">CPS Screening &rarr;</Link>
-              <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#06b6d4]/40 transition-colors hover:text-[#06b6d4]"><ArrowLeft className="size-3" /> Command Center</Link>
+              <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#06b6d4]/40 transition-colors hover:text-[#06b6d4]"><ArrowLeft className="size-3" /> Centrum Dowodzenia</Link>
             </div>
           </div>
         </section>

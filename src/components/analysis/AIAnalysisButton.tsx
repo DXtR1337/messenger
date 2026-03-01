@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Check, AlertCircle, Loader2, Flame, X } from 'lucide-react';
+import { Sparkles, Check, AlertCircle, Loader2, Flame, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -48,6 +48,14 @@ interface ProgressStep {
   status: 'pending' | 'running' | 'complete';
 }
 
+function mapErrorToPolish(raw: string): string {
+  if (raw.includes('429')) return 'Zbyt wiele zapytań. Spróbuj za kilka minut.';
+  if (raw.includes('500') || raw.includes('503')) return 'Serwer AI jest tymczasowo niedostępny. Spróbuj ponownie.';
+  if (raw.includes('413')) return 'Rozmowa jest zbyt długa do analizy.';
+  if (raw.includes('timeout') || raw.includes('Timeout')) return 'Przekroczono czas oczekiwania. Spróbuj ponownie.';
+  return 'Analiza nie powiodła się. Spróbuj ponownie za chwilę.';
+}
+
 export default function AIAnalysisButton({
   analysisId,
   conversation,
@@ -68,6 +76,9 @@ export default function AIAnalysisButton({
   const [aiConsent, setAiConsent] = useState<boolean>(
     () => typeof window !== 'undefined' && localStorage.getItem('podtekst-ai-consent') === 'true',
   );
+  const [varianceDismissed, setVarianceDismissed] = useState<boolean>(
+    () => typeof window !== 'undefined' && localStorage.getItem('podtekst-ai-variance-dismissed') === 'true',
+  );
 
   const analysisControllerRef = useRef<AbortController | null>(null);
   const roastControllerRef = useRef<AbortController | null>(null);
@@ -85,6 +96,14 @@ export default function AIAnalysisButton({
       mountedRef.current = false;
     };
   }, []);
+
+  // Warn user before leaving page while analysis is running
+  useEffect(() => {
+    if (state !== 'running') return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [state]);
 
   const handleCancel = useCallback(() => {
     analysisControllerRef.current?.abort();
@@ -230,7 +249,7 @@ export default function AIAnalysisButton({
         if (mountedRef.current) {
           setState('complete');
           setCompletedAt(
-            new Date().toLocaleTimeString('en-US', {
+            new Date().toLocaleTimeString('pl-PL', {
               hour: '2-digit',
               minute: '2-digit',
             }),
@@ -247,7 +266,8 @@ export default function AIAnalysisButton({
       if (err instanceof DOMException && err.name === 'AbortError') return;
       if (mountedRef.current) {
         setState('error');
-        setError(err instanceof Error ? err.message : String(err));
+        const rawMsg = err instanceof Error ? err.message : String(err);
+        setError(mapErrorToPolish(rawMsg));
       }
     } finally {
       stopOperation('ai-analysis');
@@ -345,7 +365,8 @@ export default function AIAnalysisButton({
       if (err instanceof DOMException && err.name === 'AbortError') return;
       if (mountedRef.current) {
         setRoastState('error');
-        setRoastError(err instanceof Error ? err.message : String(err));
+        const rawMsg = err instanceof Error ? err.message : String(err);
+        setRoastError(mapErrorToPolish(rawMsg));
       }
     } finally {
       stopOperation('ai-roast');
@@ -505,7 +526,7 @@ export default function AIAnalysisButton({
           </div>
 
           {/* Progress steps */}
-          <div className="space-y-3">
+          <div className="space-y-3" aria-live="polite">
             <AnimatePresence>
               {steps.map((step) => (
                 <motion.div
@@ -650,6 +671,31 @@ export default function AIAnalysisButton({
                 Tryb Roast
               </Button>
             </div>
+          )}
+
+          {/* AI variance info banner — shown once after completion, dismissible */}
+          {state === 'complete' && !varianceDismissed && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="flex items-start gap-2.5 rounded-lg border border-blue-500/20 bg-blue-500/[0.06] px-4 py-3"
+            >
+              <Info className="size-4 shrink-0 text-blue-400 mt-0.5" />
+              <p className="flex-1 text-xs text-blue-300/80 leading-relaxed">
+                Wyniki AI mogą się nieznacznie różnić przy każdym uruchomieniu. Metryki ilościowe są zawsze identyczne.
+              </p>
+              <button
+                onClick={() => {
+                  setVarianceDismissed(true);
+                  localStorage.setItem('podtekst-ai-variance-dismissed', 'true');
+                }}
+                className="shrink-0 rounded p-0.5 text-blue-400/60 hover:text-blue-300 transition-colors"
+                aria-label="Zamknij"
+              >
+                <X className="size-3.5" />
+              </button>
+            </motion.div>
           )}
         </div>
       </CardContent>

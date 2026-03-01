@@ -129,11 +129,14 @@ function lookupInflectedPolish(
   posDict: Set<string>,
   negDict: Set<string>,
 ): 'positive' | 'negative' | undefined {
-  if (token.length < 5) return undefined;
+  // Lowered from 5 to 3 to catch inflected forms of short Polish emotional
+  // words: "złego" (of "zły"), "złym", "bólu" (of "ból"), "żalu" (of "żal").
+  // Safe because 3-letter tokens are too short for suffix stripping anyway.
+  if (token.length < 3) return undefined;
 
   // Suffix → endings to try (longest first to avoid partial strips)
   // Each entry: [suffix_to_strip, ...endings_to_try_after_stripping]
-  // Minimum stem length after stripping: 4 chars.
+  // Minimum stem length after stripping: 2 chars (lowered from 4 for short roots like "zł-").
   const INFLECTION_MAP: Array<[string, string[]]> = [
     // Present participle (gerundive) — strip -ującego/-ującemu → try -ujący/-ująca/-ujące/-ujący
     ['ującego', ['ujący', 'ująca', 'ujące']],
@@ -182,7 +185,7 @@ function lookupInflectedPolish(
   for (const [suffix, endings] of INFLECTION_MAP) {
     if (!token.endsWith(suffix)) continue;
     const root = token.slice(0, -suffix.length);
-    if (root.length < 4) continue;
+    if (root.length < 2) continue;
 
     for (const ending of endings) {
       const candidate = root + ending;
@@ -1417,10 +1420,14 @@ export function computePersonSentiment(
   const sum = scores.reduce((acc, s) => acc + s, 0);
   const avgSentiment = sum / totalScored;
 
-  // Standard deviation for emotional volatility
-  const squaredDiffs = scores.map((s) => (s - avgSentiment) ** 2);
-  const variance = squaredDiffs.reduce((acc, d) => acc + d, 0) / totalScored;
-  const emotionalVolatility = Math.sqrt(variance);
+  // Standard deviation for emotional volatility.
+  // With <20 scored messages, stddev is noisy and unreliable — return 0.
+  let emotionalVolatility = 0;
+  if (totalScored >= 20) {
+    const squaredDiffs = scores.map((s) => (s - avgSentiment) ** 2);
+    const variance = squaredDiffs.reduce((acc, d) => acc + d, 0) / totalScored;
+    emotionalVolatility = Math.sqrt(variance);
+  }
 
   return {
     avgSentiment,

@@ -13,6 +13,7 @@
 import type { UnifiedMessage } from '../../parsers/types';
 import type { ConflictEvent } from './conflicts';
 import { countWords, tokenizeWords } from './helpers';
+import { SESSION_GAP_MS } from '../constants';
 
 // ============================================================
 // Types
@@ -62,8 +63,7 @@ export interface ConflictFingerprintResult {
 const CONFLICT_WINDOW_PADDING = 30;
 /** Minimum conflict events to produce high-confidence results */
 const MIN_CONFLICT_EVENTS = 3;
-/** Session gap for computing response times */
-const SESSION_GAP_MS = 6 * 60 * 60 * 1000;
+// SESSION_GAP_MS imported from constants.ts
 /** Silence threshold during conversation (not cross-session) */
 const MID_CONVERSATION_SILENCE_MS = 2 * 60 * 60 * 1000;
 

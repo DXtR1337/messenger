@@ -16,6 +16,56 @@ export const GEMINI_MODEL_ID = 'gemini-3-flash-preview';
 export const SSE_HEARTBEAT_MS = 15_000;
 
 // ============================================================
+// Session & timing thresholds
+// ============================================================
+
+/**
+ * Session gap threshold — two messages separated by more than this
+ * are considered different conversation sessions.
+ *
+ * 6 hours (21,600,000ms) — convention covering overnight gaps while
+ * preserving intra-day multi-session conversations.
+ *
+ * Sensitivity analysis:
+ * - 4h: ~30% more sessions detected (splits afternoon pauses)
+ * - 8h: ~20% fewer sessions (merges some day-evening gaps)
+ *
+ * Cross-reference:
+ * - pursuit-withdrawal.ts uses 4h withdrawal gap (shorter, within-session)
+ * - conflicts.ts uses 24h cold silence (longer, deliberate disengagement)
+ * - This 6h sits between the two as the general session boundary.
+ */
+export const SESSION_GAP_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+/**
+ * Late-night hours definition — consistent across all modules.
+ * Used in: intimacy.ts, chronotype.ts, helpers.ts, quantitative.ts
+ */
+export const LATE_NIGHT_HOURS = { start: 22, end: 4 } as const;
+
+// ============================================================
+// Gemini temperature configuration
+// ============================================================
+
+/**
+ * Temperature settings per analysis type.
+ *
+ * Lower temperatures reduce run-to-run variance in structured outputs:
+ * - 0.1: Analytical passes — personality scoring, clinical observations, CPS.
+ *   Big Five scores can vary ±1.5 at 0.3 but only ±0.5 at 0.1.
+ * - 0.3: Synthesis — Pass 4 health score, predictions. Needs slight creativity
+ *   for narrative insights while keeping scores stable.
+ * - 0.5: Semi-creative — Court trial, enhanced roast. Balanced factual/stylistic.
+ * - 0.7: Creative — Dating profile, stand-up comedy. Maximum voice variety.
+ */
+export const TEMPERATURES = {
+    ANALYTICAL: 0.1,    // Pass 1-3A, CPS, capitalization, emotion causes
+    SYNTHESIS: 0.3,     // Pass 3B, Pass 4, moral foundations
+    SEMI_CREATIVE: 0.5, // Court trial, enhanced roast, subtext
+    CREATIVE: 0.7,      // Dating profile, stand-up, mega roast, cwel
+} as const;
+
+// ============================================================
 // Stopwords — Polish + English
 // ============================================================
 

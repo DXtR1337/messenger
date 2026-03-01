@@ -227,7 +227,7 @@ export default function ArgumentSummary({
                 <span className="ml-2 font-mono text-sm font-bold text-[#f59e0b]">
                   {summary.escalationMessageCount}
                 </span>
-                <span className="ml-1 text-sm text-[#888]">wiadomosci</span>
+                <span className="ml-1 text-sm text-[#888]">wiadomości</span>
               </div>
             </div>
 
@@ -310,7 +310,7 @@ export default function ArgumentSummary({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-[10px] uppercase tracking-widest text-[#888]">
-                        Wiadomosci
+                        Wiadomości
                       </span>
                       <span className="font-mono text-xs font-bold text-white">
                         {breakdown.messagesCount}

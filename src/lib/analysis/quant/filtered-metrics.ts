@@ -6,6 +6,7 @@
  */
 
 import type { UnifiedMessage, HeatmapData, ResponseTimeDistribution, ResponseTimeBin } from '../../parsers/types';
+import { SESSION_GAP_MS } from '../constants';
 
 // ── Time range helpers ─────────────────────────────────────
 
@@ -99,7 +100,7 @@ const RT_BINS: ReadonlyArray<{ label: string; minMs: number; maxMs: number }> = 
   { label: '24h+', minMs: 86_400_000, maxMs: Infinity },
 ];
 
-const SESSION_GAP_MS = 6 * 60 * 60 * 1000; // 6h
+// SESSION_GAP_MS imported from constants.ts
 
 /**
  * Recompute response time distribution from filtered messages.

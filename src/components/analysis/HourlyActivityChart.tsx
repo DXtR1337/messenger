@@ -131,7 +131,7 @@ export default function HourlyActivityChart({
                   backgroundColor: colors[i % colors.length],
                 }}
               />
-              <span className="truncate max-w-[60px] sm:max-w-[100px]">
+              <span className="truncate max-w-[80px] sm:max-w-[120px]" title={name}>
                 {name}
               </span>
             </span>

@@ -23,6 +23,11 @@ export function computeTrends(
   monthlyInitiations: Map<string, Record<string, number>>,
   participantNames: string[],
 ): TrendData {
+  // Trends require ≥2 months to be meaningful — single-month data has no trend direction.
+  if (sortedMonths.length < 2) {
+    return { responseTimeTrend: [], messageLengthTrend: [], initiationTrend: [] };
+  }
+
   // Response time trend: monthly medians (more robust than means), outlier-filtered
   const responseTimeTrend: TrendData['responseTimeTrend'] = sortedMonths.map(
     (month) => {

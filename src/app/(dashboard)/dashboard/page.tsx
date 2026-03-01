@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { X, Brain, GitCompareArrows, MessageSquareText, BarChart3, ArrowRight, Layers } from 'lucide-react';
+import { X, Brain, GitCompareArrows, MessageSquareText, BarChart3, ArrowRight, Layers, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,12 +34,16 @@ export default function DashboardPage() {
   const router = useRouter();
   const [analyses, setAnalyses] = useState<AnalysisIndexEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string>();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [groupByConversation, setGroupByConversation] = useState(false);
 
   useEffect(() => {
     listAnalyses().then(entries => {
       setAnalyses(entries);
+      setLoaded(true);
+    }).catch(() => {
+      setError('Nie udało się wczytać analiz. Spróbuj odświeżyć stronę.');
       setLoaded(true);
     });
   }, []);
@@ -77,6 +81,20 @@ export default function DashboardPage() {
               className="h-48 animate-pulse rounded-xl border border-border bg-card"
             />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="font-display text-2xl font-bold">Twoje analizy</h1>
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-6 py-8 text-center">
+            <AlertCircle className="mx-auto mb-3 size-8 text-destructive" />
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
         </div>
       </div>
     );
@@ -227,9 +245,9 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.3, ease: 'easeOut' }}
           >
+            <Link href={`/analysis/${entry.id}`} className="block">
             <Card
-              className="relative cursor-pointer overflow-hidden border-border transition-all duration-200 hover:border-border-hover hover:-translate-y-[2px] hover:shadow-lg hover:shadow-primary/5"
-              onClick={() => router.push(`/analysis/${entry.id}`)}
+              className="relative overflow-hidden border-border transition-all duration-200 hover:border-border-hover hover:-translate-y-[2px] hover:shadow-lg hover:shadow-primary/5"
             >
               <CardHeader>
                 <CardTitle className="truncate text-sm">{entry.title}</CardTitle>
@@ -306,6 +324,7 @@ export default function DashboardPage() {
                 </motion.div>
               )}
             </Card>
+            </Link>
           </motion.div>
         ))}
       </div>
@@ -363,9 +382,9 @@ function GroupedAnalysesList({ analyses, pendingDeleteId, onDeleteClick, onConfi
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03, duration: 0.25 }}
               >
+                <Link href={`/analysis/${entry.id}`} className="block">
                 <Card
-                  className="relative cursor-pointer overflow-hidden border-border transition-all duration-200 hover:border-border-hover hover:-translate-y-[2px]"
-                  onClick={() => router.push(`/analysis/${entry.id}`)}
+                  className="relative overflow-hidden border-border transition-all duration-200 hover:border-border-hover hover:-translate-y-[2px]"
                 >
                   <CardContent className="space-y-2 pt-3 pb-3">
                     <div className="flex items-center justify-between">
@@ -407,6 +426,7 @@ function GroupedAnalysesList({ analyses, pendingDeleteId, onDeleteClick, onConfi
                     </motion.div>
                   )}
                 </Card>
+                </Link>
               </motion.div>
             ))}
           </div>
@@ -424,9 +444,9 @@ function GroupedAnalysesList({ analyses, pendingDeleteId, onDeleteClick, onConfi
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03, duration: 0.25 }}
               >
+                <Link href={`/analysis/${entry.id}`} className="block">
                 <Card
-                  className="relative cursor-pointer overflow-hidden border-border transition-all duration-200 hover:border-border-hover"
-                  onClick={() => router.push(`/analysis/${entry.id}`)}
+                  className="relative overflow-hidden border-border transition-all duration-200 hover:border-border-hover"
                 >
                   <CardContent className="space-y-2 pt-3 pb-3">
                     <div className="text-xs font-medium truncate">{entry.title}</div>
@@ -436,6 +456,7 @@ function GroupedAnalysesList({ analyses, pendingDeleteId, onDeleteClick, onConfi
                     </div>
                   </CardContent>
                 </Card>
+                </Link>
               </motion.div>
             ))}
           </div>

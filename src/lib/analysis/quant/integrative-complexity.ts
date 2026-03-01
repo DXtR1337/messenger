@@ -37,8 +37,6 @@ export interface IntegrativeComplexityResult {
   perPerson: Record<string, PersonICStats>;
   /** Who shows higher IC */
   higherIC: string;
-  /** How much IC correlates with conflict months (-1 to 1) */
-  conflictCorrelation: number;
 }
 
 // ============================================================
@@ -106,7 +104,10 @@ function normalizeIC(rawDiff: number, rawInteg: number, totalMessages: number): 
   if (totalMessages < 10) return 0;
   // IC = (diff + integ*2) per 100 messages, compressed to 0-100
   const raw = (rawDiff + rawInteg * 2) / totalMessages * 100;
-  // Compress: typical values 0-15 → map to 0-100
+  // ×6.5: compression factor that maps typical chat IC range (0–15 phrases per 100 msgs)
+  // to 0–100 score. Heuristic — academic AutoIC tools (Conway 2014) are calibrated for
+  // formal texts (speeches, essays), not informal chat. Chat IC density is much lower,
+  // so we use a steeper mapping to distribute scores across the full 0–100 range.
   return Math.round(Math.min(100, raw * 6.5));
 }
 
@@ -196,12 +197,8 @@ export function computeIntegrativeComplexity(
 
   const sorted = [...validNames].sort((a, b) => perPerson[b].icScore - perPerson[a].icScore);
 
-  // Conflict correlation: negative IC trend in conflict months (simplified — return 0 if no conflict data)
-  const conflictCorrelation = 0;
-
   return {
     perPerson,
     higherIC: sorted[0],
-    conflictCorrelation,
   };
 }

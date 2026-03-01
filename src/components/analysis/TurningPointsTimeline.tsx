@@ -1,12 +1,9 @@
 'use client';
 
-import { motion, useInView } from 'framer-motion';
+import { useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { Pass2Result, Pass4Result } from '@/lib/analysis/types';
-
-// Skip ALL Framer Motion work on mobile — JS animations cause flickering
-const MOBILE = typeof window !== 'undefined' && window.innerWidth < 768;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -278,169 +275,73 @@ const SOURCE_BADGE_STYLES: Record<EntrySource, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Timeline node — the dot + pulse ring on the vertical line
+// Timeline node — static dot on the vertical line (no motion.div)
 // ---------------------------------------------------------------------------
 
-function TimelineNode({ significance, index, isInView }: { significance: Significance; index: number; isInView: boolean }) {
+function TimelineNode({ significance, visible, delay }: { significance: Significance; visible: boolean; delay: string }) {
   const config = DOT_CONFIG[significance];
-
-  // Mobile: static dot, no pulse rings, no spring physics
-  if (MOBILE) {
-    return (
-      <div className="relative flex shrink-0 items-center justify-center" style={{ width: 24, height: 24 }}>
-        <div
-          className={cn('h-3 w-3 rounded-full', config.bg)}
-          style={{ boxShadow: `0 0 8px ${config.glow}` }}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="relative flex shrink-0 items-center justify-center" style={{ width: 24, height: 24 }}>
-      {/* Outer pulse ring — double sonar */}
-      <motion.div
-        className={cn('absolute inset-0 rounded-full ring-2', config.ring)}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={isInView ? { scale: [0, 2, 2.5], opacity: [0, 0.5, 0] } : { scale: 0, opacity: 0 }}
-        transition={{ duration: 1.8, delay: 0.3 + index * 0.1, repeat: 0 }}
-      />
-      <motion.div
-        className={cn('absolute inset-0 rounded-full ring-1', config.ring)}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={isInView ? { scale: [0, 1.8, 2.2], opacity: [0, 0.3, 0] } : { scale: 0, opacity: 0 }}
-        transition={{ duration: 1.8, delay: 0.5 + index * 0.1, repeat: 0 }}
-      />
-      {/* Inner glowing dot */}
-      <motion.div
-        className={cn('h-3 w-3 rounded-full', config.bg)}
-        style={{ boxShadow: `0 0 12px ${config.glow}, 0 0 24px ${config.glow}, 0 0 4px rgba(255,255,255,0.3)` }}
-        initial={{ scale: 0 }}
-        animate={isInView ? { scale: 1 } : { scale: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 + index * 0.1, type: 'spring', stiffness: 300, damping: 15 }}
+      <div
+        className={cn('h-3 w-3 rounded-full transition-transform duration-400', config.bg, visible ? 'scale-100' : 'scale-0')}
+        style={{ boxShadow: `0 0 10px ${config.glow}`, transitionDelay: delay }}
       />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Timeline item component — premium purple glass card
+// Timeline item — CSS transition driven (no per-item useInView)
 // ---------------------------------------------------------------------------
 
 function TimelineItem({
   entry,
   isLast,
   index,
-  total,
+  visible,
 }: {
   entry: TimelineEntry;
   isLast: boolean;
   index: number;
-  total: number;
+  visible: boolean;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  // Still call hook (React rules) but force true on mobile to skip animation work
-  const isInViewRaw = useInView(ref, { once: true, margin: MOBILE ? '9999px' : '-40px' });
-  const isInView = MOBILE ? true : isInViewRaw;
-
   const hasDate = entry.date.length > 0;
   const config = DOT_CONFIG[entry.significance];
-
-  // Mobile: fully static render — no motion.div, no animations, no filters
-  if (MOBILE) {
-    return (
-      <div ref={ref} className={cn('tp-entry relative flex gap-4', isLast && 'pb-0')}>
-        <div className="flex shrink-0 flex-col items-center" style={{ width: 24 }}>
-          <TimelineNode significance={entry.significance} index={index} isInView />
-          {!isLast && (
-            <div
-              className="tp-connector w-px flex-1"
-              style={{
-                background: `linear-gradient(180deg, ${config.color} 0%, rgba(168,85,247,0.15) 50%, rgba(168,85,247,0.04) 100%)`,
-                minHeight: 24,
-              }}
-            />
-          )}
-        </div>
-        <div
-          className={cn(
-            'tp-card relative mb-6 flex-1 overflow-hidden rounded-xl',
-            'border border-purple-500/[0.08] bg-purple-950/[0.15]',
-            isLast && 'mb-0',
-          )}
-        >
-          <div
-            className="absolute left-0 top-0 bottom-0 w-[2px]"
-            style={{ background: `linear-gradient(180deg, ${config.glow} 0%, ${config.color} 60%, transparent 100%)` }}
-          />
-          <div className="relative px-4 py-3.5">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              {hasDate && (
-                <span className="font-mono text-[11px] font-semibold tracking-wider text-purple-200/80">
-                  {entry.date}
-                </span>
-              )}
-              <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider', SOURCE_BADGE_STYLES[entry.source])}>
-                {SOURCE_ICONS[entry.source]}
-                {SOURCE_LABELS[entry.source]}
-              </span>
-            </div>
-            <h4 className="text-sm font-semibold leading-snug text-purple-50/90">{entry.title}</h4>
-            {entry.detail && <p className="mt-1.5 text-[12px] leading-relaxed text-purple-200/50">{entry.detail}</p>}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const delay = `${0.1 + index * 0.06}s`;
 
   return (
-    <div ref={ref} className={cn('tp-entry relative flex gap-4 sm:gap-5', isLast && 'pb-0')}>
+    <div className={cn('tp-entry relative flex gap-4 sm:gap-5', isLast && 'pb-0')}>
       {/* ── Left column: node + connector ── */}
       <div className="flex shrink-0 flex-col items-center" style={{ width: 24 }}>
-        <TimelineNode significance={entry.significance} index={index} isInView={isInView} />
+        <TimelineNode significance={entry.significance} visible={visible} delay={delay} />
 
-        {/* Vertical connector line — glowing gradient */}
+        {/* Vertical connector line */}
         {!isLast && (
-          <motion.div
-            className="tp-connector relative w-px flex-1"
+          <div
+            className={cn('tp-connector w-px flex-1 transition-[transform,opacity] duration-500 origin-top', visible ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0')}
             style={{
               background: `linear-gradient(180deg, ${config.color} 0%, rgba(168,85,247,0.15) 50%, rgba(168,85,247,0.04) 100%)`,
               minHeight: 24,
-              transformOrigin: 'top',
+              transitionDelay: `${0.15 + index * 0.06}s`,
             }}
-            initial={{ scaleY: 0, opacity: 0 }}
-            animate={isInView ? { scaleY: 1, opacity: 1 } : { scaleY: 0, opacity: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 + index * 0.1, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {/* Traveling energy pulse on the connector */}
-            <motion.div
-              className="absolute left-1/2 top-0 h-6 w-px -translate-x-1/2"
-              style={{
-                background: `linear-gradient(180deg, transparent, ${config.glow}, transparent)`,
-                filter: 'blur(0.5px)',
-              }}
-              initial={{ top: '0%', opacity: 0 }}
-              animate={isInView ? { top: ['0%', '100%'], opacity: [0, 0.8, 0] } : { opacity: 0 }}
-              transition={{ duration: 1.2, delay: 0.8 + index * 0.15, ease: 'easeInOut' }}
-            />
-          </motion.div>
+          />
         )}
       </div>
 
       {/* ── Right column: content card ── */}
-      <motion.div
+      <div
         className={cn(
           'tp-card group relative mb-6 flex-1 overflow-hidden rounded-xl',
           'border border-purple-500/[0.08] bg-purple-950/[0.15]',
-          'transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          'transition-[opacity,transform,border-color] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
           'hover:bg-purple-900/[0.12] hover:border-purple-400/20 hover:shadow-[0_4px_24px_-4px_rgba(168,85,247,0.15)]',
           isLast && 'mb-0',
+          visible ? 'opacity-100 translate-x-0' : cn('opacity-0', index % 2 === 0 ? '-translate-x-4' : 'translate-x-4'),
         )}
-        initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30, scale: 0.96 }}
-        animate={isInView ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: index % 2 === 0 ? -30 : 30, scale: 0.96 }}
-        transition={{ duration: 0.6, delay: 0.15 + index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+        style={{ transitionDelay: delay }}
       >
-        {/* Left accent stripe — glowing edge */}
+        {/* Left accent stripe */}
         <div
           className="absolute left-0 top-0 bottom-0 w-[2px]"
           style={{
@@ -449,19 +350,15 @@ function TimelineItem({
           }}
         />
 
-        {/* Top shimmer line — draws on entry */}
-        <motion.div
-          className="absolute inset-x-0 top-0 h-px"
+        {/* Top accent line */}
+        <div
+          className="absolute inset-x-0 top-0 h-px opacity-40"
           style={{
             background: `linear-gradient(90deg, transparent 10%, ${config.color} 30%, ${config.glow} 50%, ${config.color} 70%, transparent 90%)`,
-            transformOrigin: 'left',
           }}
-          initial={{ scaleX: 0, opacity: 0 }}
-          animate={isInView ? { scaleX: 1, opacity: 0.6 } : { scaleX: 0, opacity: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 + index * 0.1, ease: [0.22, 1, 0.36, 1] }}
         />
 
-        {/* Background glow gradient — significance-tinted */}
+        {/* Background glow gradient */}
         <div
           className="pointer-events-none absolute inset-0 rounded-xl opacity-40"
           style={{
@@ -504,14 +401,14 @@ function TimelineItem({
           )}
         </div>
 
-        {/* Hover glow — mouse-responsive radial */}
+        {/* Hover glow */}
         <div
           className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
           style={{
             background: `radial-gradient(ellipse 70% 100% at 5% 50%, ${config.color.replace(')', ',0.12)')}, transparent 60%)`,
           }}
         />
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -528,8 +425,7 @@ export default function TurningPointsTimeline({
 }: TurningPointsTimelineProps) {
   const entries = buildTimelineEntries(pass2, pass4, dateRange);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInViewRaw = useInView(containerRef, { once: true, margin: MOBILE ? '9999px' : '-60px' });
-  const isInView = MOBILE ? true : isInViewRaw;
+  const isInView = useInView(containerRef, { once: true, margin: '-60px' });
 
   // If no data available, don't render
   if (entries.length === 0) return null;
@@ -548,32 +444,25 @@ export default function TurningPointsTimeline({
             Kluczowe momenty wykryte przez AI
           </p>
         </div>
-        {MOBILE ? (
-          <span className="flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/[0.08] px-3 py-1.5 font-mono text-[10px] tracking-wider text-purple-300/70">
-            <span className="relative flex h-2 w-2">
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400/80" />
-            </span>
-            {countLabel}
+        <span
+          className={cn(
+            'flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/[0.08] px-3 py-1.5 font-mono text-[10px] tracking-wider text-purple-300/70',
+            'transition-[opacity,transform] duration-400',
+            isInView ? 'opacity-100 scale-100' : 'opacity-0 scale-75',
+          )}
+          style={{ transitionDelay: '0.3s' }}
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-40" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400/80" style={{ boxShadow: '0 0 6px rgba(168,85,247,0.5)' }} />
           </span>
-        ) : (
-          <motion.span
-            className="flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/[0.08] px-3 py-1.5 font-mono text-[10px] tracking-wider text-purple-300/70"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-40" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400/80" style={{ boxShadow: '0 0 6px rgba(168,85,247,0.5)' }} />
-            </span>
-            {countLabel}
-          </motion.span>
-        )}
+          {countLabel}
+        </span>
       </div>
 
       {/* Timeline */}
       <div className="relative pl-2">
-        {/* Background timeline track — faint vertical glow line */}
+        {/* Background timeline track */}
         <div
           className="absolute left-[13px] top-0 bottom-0 w-px"
           style={{
@@ -581,17 +470,13 @@ export default function TurningPointsTimeline({
           }}
           aria-hidden="true"
         />
-        {/* Timeline progress glow — fills as entries appear */}
-        {!MOBILE && (
-          <motion.div
-            className="absolute left-[12px] top-0 w-[3px] rounded-full"
+        {/* Timeline progress glow */}
+        {isInView && (
+          <div
+            className="absolute left-[12px] top-0 bottom-0 w-[3px] rounded-full opacity-50"
             style={{
               background: 'linear-gradient(180deg, rgba(192,132,252,0.4) 0%, rgba(168,85,247,0.2) 60%, rgba(168,85,247,0.05) 100%)',
-              filter: 'blur(1px)',
             }}
-            initial={{ height: 0, opacity: 0 }}
-            animate={isInView ? { height: '100%', opacity: 0.6 } : { height: 0, opacity: 0 }}
-            transition={{ duration: 2 + entries.length * 0.2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
             aria-hidden="true"
           />
         )}
@@ -602,7 +487,7 @@ export default function TurningPointsTimeline({
             entry={entry}
             isLast={index === entries.length - 1}
             index={index}
-            total={entries.length}
+            visible={isInView}
           />
         ))}
       </div>

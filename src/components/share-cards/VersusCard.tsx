@@ -590,7 +590,7 @@ export default function VersusCard({ quantitative, participants }: VersusCardPro
           opacity: isDownloading ? 0.5 : 1,
         }}
       >
-        {isDownloading ? 'Pobieranie...' : 'Pobierz karte'}
+        {isDownloading ? 'Pobieranie...' : 'Pobierz kartę'}
       </button>
     </div>
   );

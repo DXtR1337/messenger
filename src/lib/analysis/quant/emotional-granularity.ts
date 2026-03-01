@@ -139,6 +139,13 @@ function tokenize(text: string): string[] {
     .filter(w => w.length >= 2);
 }
 
+/**
+ * Score = 70% diversity + 30% coverage.
+ * - Diversity (70% weight): fraction of the 12 emotion categories used. Prioritized because
+ *   range of emotions used is the core granularity signal (Kashdan 2015).
+ * - Coverage (30% weight): emotional word density. ×300 maps 0–0.33 density to 0–100;
+ *   10% emotion word density → max coverage score. Typical chat: 3–8% emotional words.
+ */
 function computeScore(distinctCats: number, emotionWords: number, totalWords: number): number {
   if (totalWords < 50) return 0;
   const diversityScore = (distinctCats / 12) * 70;
@@ -200,8 +207,11 @@ export function computeEmotionalGranularity(
       ? Math.round((s.msgsWithMultipleCats / s.msgsWithEmotion) * 100) / 100
       : 0;
 
-    // V2 score: penalize for high co-occurrence (indicates low differentiation, not true granularity)
-    // Clamp cooccurrenceIndex to [0, 1] to prevent negative scores from floating-point edge cases
+    // V2 score: penalize for high co-occurrence (indicates low differentiation, not true granularity).
+    // ×0.3: moderate 30% max reduction for same-category co-occurrence.
+    // Prevents double-counting emotions that always appear together, but doesn't over-penalize
+    // messages that legitimately contain multiple distinct emotions (e.g., bittersweet).
+    // Clamp cooccurrenceIndex to [0, 1] to prevent negative scores from floating-point edge cases.
     const clampedCooccurrence = Math.min(1, Math.max(0, cooccurrenceIndex));
     const granularityScoreV2 = Math.max(0, Math.round(score * (1 - clampedCooccurrence * 0.3)));
 

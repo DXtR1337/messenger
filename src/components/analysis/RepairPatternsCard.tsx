@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import type { RepairPatternsResult } from '@/lib/analysis/quant/repair-patterns';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import LowSampleBanner from '@/components/shared/LowSampleBanner';
 
 interface RepairPatternsCardProps {
   result: RepairPatternsResult;
@@ -55,6 +57,8 @@ export default function RepairPatternsCard({ result, participants }: RepairPatte
         </div>
         <div>
           <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Wzorce Napraw Konwersacyjnych</h3>
+          <ExperimentalBadge metricKey="repairPatterns" />
+          <LowSampleBanner show={entries.reduce((sum, e) => sum + e.stats.selfRepairCount + e.stats.otherRepairInitiationCount, 0) < 10} className="ml-1" />
           <p className="text-sm text-white/50">Jak wyjaśniacie i prosicie o wyjaśnienia</p>
         </div>
       </div>

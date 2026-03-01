@@ -133,7 +133,7 @@ export default function MoralModePage() {
 
             <div className="mt-12 flex flex-wrap justify-center gap-6">
               <Link href={`/analysis/${id}/emotions`} className="font-mono text-xs uppercase tracking-widest text-[#06b6d4]/50 transition-colors hover:text-[#06b6d4]">Emotion Causes &rarr;</Link>
-              <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#f97316]/40 transition-colors hover:text-[#f97316]"><ArrowLeft className="size-3" /> Command Center</Link>
+              <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#f97316]/40 transition-colors hover:text-[#f97316]"><ArrowLeft className="size-3" /> Centrum Dowodzenia</Link>
             </div>
           </div>
         </section>

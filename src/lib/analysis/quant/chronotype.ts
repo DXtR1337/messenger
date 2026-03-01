@@ -89,6 +89,18 @@ function circularDelta(a: number, b: number): number {
   return Math.min(raw, 24 - raw);
 }
 
+/**
+ * Map chronotype delta (hours between midpoints) to compatibility score 0–100.
+ * Heuristic step curve — Jarmolowicz (2022) found that chronotype mismatch predicts
+ * lower relationship satisfaction (F(1,58)=19.57), but published no continuous
+ * hour-to-score mapping. These thresholds are hand-tuned:
+ *   <=1h: 95 (nearly identical rhythms)
+ *   <=2h: 80 (normal variation within couples)
+ *   <=3h: 60 (noticeable but manageable)
+ *   <=4h: 40 (early bird vs intermediate)
+ *   <=6h: 20 (significant mismatch)
+ *   >6h:  5 (extreme — one sleeps while other is active)
+ */
 function scoreFromDelta(delta: number): number {
   if (delta <= 1) return 95;
   if (delta <= 2) return 80;

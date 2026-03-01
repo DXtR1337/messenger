@@ -3,7 +3,7 @@
 import { useRef, useMemo, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { MotionValue } from 'framer-motion';
+import { useScroll, type MotionValue } from 'framer-motion';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -309,14 +309,13 @@ function SceneInner({ scrollProgress, isMobile, particleCount }: SceneInnerProps
 // ---------------------------------------------------------------------------
 
 interface MetricsScene3DProps {
-  scrollProgress: MotionValue<number>;
   isMobile?: boolean;
 }
 
 export default function MetricsScene3D({
-  scrollProgress,
   isMobile = false,
 }: MetricsScene3DProps) {
+  const { scrollYProgress } = useScroll();
   const particleCount = isMobile ? 60 : 150;
 
   return (
@@ -337,7 +336,7 @@ export default function MetricsScene3D({
       }}
     >
       <SceneInner
-        scrollProgress={scrollProgress}
+        scrollProgress={scrollYProgress}
         isMobile={isMobile}
         particleCount={particleCount}
       />

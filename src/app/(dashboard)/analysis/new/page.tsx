@@ -147,7 +147,7 @@ function NewAnalysisContent() {
       // Validate minimum message count
       if (conversation.metadata.totalMessages < 100) {
         throw new Error(
-          `This conversation has only ${conversation.metadata.totalMessages} messages. A minimum of 100 messages is required for meaningful analysis.`
+          `Ta rozmowa ma tylko ${conversation.metadata.totalMessages} wiadomości. Minimum 100 wiadomości jest wymagane do analizy.`
         );
       }
 
@@ -209,7 +209,7 @@ function NewAnalysisContent() {
       const message =
         thrown instanceof Error
           ? thrown.message
-          : 'An unexpected error occurred during analysis.';
+          : 'Wystąpił nieoczekiwany błąd podczas analizy. Spróbuj ponownie.';
       setError(message);
     }
   }, [files, relationshipType, router]);
@@ -312,8 +312,8 @@ function NewAnalysisContent() {
         <div className="mb-4 rounded-md border border-border bg-card/50 px-4 py-2.5">
           <p className="text-xs leading-relaxed text-muted-foreground">
             {importMode === 'file'
-              ? '\u{1F512} Twoje wiadomosci sa przetwarzane lokalnie w przegladarce. Zadne dane nie trafiaja na serwer.'
-              : '\u{1F512} Token bota jest uzywany jednorazowo i nie jest nigdzie zapisywany.'}
+              ? '\u{1F512} Twoje wiadomości są przetwarzane lokalnie w przeglądarce. Żadne dane nie trafiają na serwer.'
+              : '\u{1F512} Token bota jest używany jednorazowo i nie jest nigdzie zapisywany.'}
           </p>
         </div>
       )}
@@ -406,9 +406,12 @@ function NewAnalysisContent() {
 
       {/* Export instructions — file mode only, hidden in kiosk mode */}
       {!isKioskMode && importMode === 'file' && <div className="mt-3 rounded-md border border-border bg-card/50 px-4 py-3">
-        <div
-          className="flex cursor-pointer items-center justify-between"
+        <button
+          type="button"
+          className="flex w-full cursor-pointer items-center justify-between"
           onClick={() => setShowInstructions((prev) => !prev)}
+          aria-expanded={showInstructions}
+          aria-controls="export-instructions"
         >
           <span className="text-xs font-medium text-muted-foreground">
             Jak wyeksportować rozmowę?
@@ -417,9 +420,9 @@ function NewAnalysisContent() {
             className="size-4 text-muted-foreground transition-transform duration-200"
             style={{ transform: showInstructions ? 'rotate(180deg)' : 'rotate(0deg)' }}
           />
-        </div>
+        </button>
         {showInstructions && (
-          <div>
+          <div id="export-instructions">
             <p className="mt-3 mb-2 text-xs font-medium text-foreground/80">Messenger (przez aplikację):</p>
             <ol className="list-decimal pl-5 text-xs leading-relaxed text-muted-foreground">
               <li>

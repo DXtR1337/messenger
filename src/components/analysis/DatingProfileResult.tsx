@@ -276,12 +276,6 @@ function ProfileCard({ profile, index, personality, messages, analysisId, savedI
     }
   };
 
-  // Auto-trigger on mount — skip if already cached or persisted
-  useEffect(() => {
-    if (!photoCache.has(profile.name) && !savedImages?.[imageKey] && !inflightRef.current) {
-      generatePhoto();
-    }
-  }, [profile.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <PhoneMockup index={index}>
@@ -338,7 +332,7 @@ function ProfileCard({ profile, index, personality, messages, analysisId, savedI
                   style={{ boxShadow: '0 0 30px rgba(255,0,110,0.3)' }}
                 >
                   <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
-                  {photoError ? 'Wygeneruj ponownie' : 'Wygeneruj zdjecie AI'}
+                  {photoError ? 'Wygeneruj ponownie' : 'Wygeneruj zdjęcie AI'}
                 </button>
               </div>
             )}

@@ -915,6 +915,7 @@ export default function AIModePage() {
   // forcePurple DOM sweep removed — clean version uses CSS-only purple theming
 
   // Cursor glow — ambient purple orb with lerp trailing (desktop only)
+  // RAF auto-stops when glow reaches target (no continuous loop when mouse is still)
   const cursorGlowRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const glow = cursorGlowRef.current;
@@ -927,19 +928,33 @@ export default function AIModePage() {
     let targetY = window.innerHeight / 2;
     let currentX = targetX;
     let currentY = targetY;
-    const LERP = 0.07; // Lower = more trailing lag (0.07 ≈ 150ms perceived delay)
-    const HALF = 350; // Glow is 700px — offset to center on cursor
+    const LERP = 0.07;
+    const HALF = 350;
+    let raf = 0;
+
+    const update = () => {
+      raf = 0;
+      const dx = targetX - currentX;
+      const dy = targetY - currentY;
+      currentX += dx * LERP;
+      currentY += dy * LERP;
+      glow.style.transform = `translate3d(${currentX - HALF}px, ${currentY - HALF}px, 0)`;
+      // Stop RAF when close enough to target (< 0.5px)
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        raf = requestAnimationFrame(update);
+      }
+    };
 
     const onMove = (e: MouseEvent) => {
       targetX = e.clientX;
       targetY = e.clientY;
       if (!visible) {
         visible = true;
-        // Snap to cursor on first move (no trailing from center)
         currentX = targetX;
         currentY = targetY;
         glow.style.opacity = '1';
       }
+      if (!raf) raf = requestAnimationFrame(update);
     };
 
     const onLeave = () => {
@@ -947,49 +962,36 @@ export default function AIModePage() {
       glow.style.opacity = '0';
     };
 
-    let raf: number;
-    const update = () => {
-      currentX += (targetX - currentX) * LERP;
-      currentY += (targetY - currentY) * LERP;
-      glow.style.transform = `translate3d(${currentX - HALF}px, ${currentY - HALF}px, 0)`;
-      raf = requestAnimationFrame(update);
-    };
-    raf = requestAnimationFrame(update);
-
     document.addEventListener('mousemove', onMove, { passive: true });
     document.addEventListener('mouseleave', onLeave);
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf) cancelAnimationFrame(raf);
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseleave', onLeave);
     };
   }, []);
 
   // Neural network canvas — faint lines between nearby floating particles + cursor node
+  // Only redraws on mousemove (not continuous RAF) to prevent layout thrashing
   useEffect(() => {
     const canvas = neuralCanvasRef.current;
     if (!canvas) return;
-    if (window.innerWidth < 640) return; // Particles hidden on mobile
+    if (window.innerWidth < 640) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const MAX_DIST = 350; // Max distance for particle-particle connections
-    const CURSOR_DIST = 250; // Max distance for cursor-particle connections
+    const MAX_DIST = 350;
+    const CURSOR_DIST = 250;
     const particles = document.querySelectorAll<HTMLElement>('.ai-particle');
     if (particles.length < 2) return;
 
-    // Track cursor position (the cursor becomes a node in the network)
     let mouseX = -999;
     let mouseY = -999;
     let mouseActive = false;
-    const onMove = (e: MouseEvent) => { mouseX = e.clientX; mouseY = e.clientY; mouseActive = true; };
-    const onLeave = () => { mouseActive = false; };
-    document.addEventListener('mousemove', onMove, { passive: true });
-    document.addEventListener('mouseleave', onLeave);
+    let drawId = 0;
 
-    // Resize canvas to match viewport
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -997,25 +999,22 @@ export default function AIModePage() {
     resize();
     window.addEventListener('resize', resize, { passive: true });
 
-    let raf: number;
     const draw = () => {
+      drawId = 0;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Read positions of all particles (center points)
       const positions: { x: number; y: number }[] = [];
       particles.forEach((p) => {
         const rect = p.getBoundingClientRect();
         positions.push({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
       });
 
-      // Draw connections between nearby particles
       for (let i = 0; i < positions.length; i++) {
         for (let j = i + 1; j < positions.length; j++) {
           const dx = positions[j].x - positions[i].x;
           const dy = positions[j].y - positions[i].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist > MAX_DIST) continue;
-
           const opacity = (1 - dist / MAX_DIST) * 0.12;
           ctx.strokeStyle = `rgba(168,85,247,${opacity.toFixed(4)})`;
           ctx.lineWidth = 0.5;
@@ -1026,31 +1025,42 @@ export default function AIModePage() {
         }
       }
 
-      // Draw cursor → particle connections (brighter, makes cursor feel like a node)
       if (mouseActive) {
         for (let i = 0; i < positions.length; i++) {
           const dx = positions[i].x - mouseX;
           const dy = positions[i].y - mouseY;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist > CURSOR_DIST) continue;
-
           const t = 1 - dist / CURSOR_DIST;
-          const opacity = t * 0.18; // Slightly brighter than particle-particle
-          ctx.strokeStyle = `rgba(192,132,252,${opacity.toFixed(4)})`;
-          ctx.lineWidth = 0.6 + t * 0.4; // Thicker when closer
+          ctx.strokeStyle = `rgba(192,132,252,${(t * 0.18).toFixed(4)})`;
+          ctx.lineWidth = 0.6 + t * 0.4;
           ctx.beginPath();
           ctx.moveTo(mouseX, mouseY);
           ctx.lineTo(positions[i].x, positions[i].y);
           ctx.stroke();
         }
       }
-
-      raf = requestAnimationFrame(draw);
     };
-    raf = requestAnimationFrame(draw);
+
+    // Draw once on init, then only on mousemove (not continuous RAF)
+    draw();
+
+    const onMove = (e: MouseEvent) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      mouseActive = true;
+      if (!drawId) drawId = requestAnimationFrame(draw);
+    };
+    const onLeave = () => {
+      mouseActive = false;
+      if (!drawId) drawId = requestAnimationFrame(draw);
+    };
+
+    document.addEventListener('mousemove', onMove, { passive: true });
+    document.addEventListener('mouseleave', onLeave);
 
     return () => {
-      cancelAnimationFrame(raf);
+      if (drawId) cancelAnimationFrame(drawId);
       window.removeEventListener('resize', resize);
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseleave', onLeave);
@@ -1122,25 +1132,9 @@ export default function AIModePage() {
     <MotionConfig reducedMotion={isMobileRef.current ? 'always' : 'never'}>
     <div className="ai-perf-kill">
 
-    {/* PERF: Kill will-change to prevent compositor layer explosion.
-         CSS animations now run freely — only will-change is neutralized. */}
+    {/* PERF: Contain paint within cards to prevent cross-card repaint cascades */}
     <style dangerouslySetInnerHTML={{ __html: `
-      /* PERF: Neutralize will-change to prevent compositor layer explosion.
-         GSAP controls opacity/transform via inline styles — CSS animations run freely. */
-      .ai-perf-kill * { will-change: auto !important; }
-      /* Card sway — alternating left/right drift for organic feel (post-reveal) — desktop only */
-      @keyframes ai-gentle-sway {
-        0%, 100% { transform: translateX(0); }
-        50% { transform: translateX(5px); }
-      }
-      @media (min-width: 768px) {
-        .ai-perf-kill [data-ai-card]:nth-child(odd) .analysis-card-accent.ai-scanned {
-          animation: ai-card-breathe 6s ease-in-out infinite, ai-gentle-sway 12s ease-in-out infinite !important;
-        }
-        .ai-perf-kill [data-ai-card]:nth-child(even) .analysis-card-accent.ai-scanned {
-          animation: ai-card-breathe 6s ease-in-out infinite, ai-gentle-sway 14s ease-in-out 1s infinite reverse !important;
-        }
-      }
+      .ai-perf-kill .analysis-card-accent { contain: layout style paint; }
     ` }} />
 
     {/* DEV: Animation debug panel — press ";" to toggle */}
@@ -1535,6 +1529,16 @@ export default function AIModePage() {
               </div>
             </div>
 
+            {/* ── Sampling disclosure ── */}
+            <div className="mx-auto max-w-2xl px-4 py-2 text-center">
+              <p className="font-mono text-[10px] leading-relaxed text-purple-300/30">
+                Analiza AI opiera się na próbie 200-500 wiadomości z ważeniem ostatnich 3 miesięcy
+                {conversation.messages.length > 0 && (
+                  <> · Przeanalizowano ~{Math.min(500, conversation.messages.length)} z {conversation.messages.length.toLocaleString('pl-PL')} wiadomości ({Math.min(100, Math.round(Math.min(500, conversation.messages.length) / conversation.messages.length * 100))}%)</>
+                )}
+              </p>
+            </div>
+
             {/* ── Scroll indicator — gateway portal effect ── */}
             <div className="ai-scroll-cue flex flex-col items-center gap-6 py-24 sm:py-32" aria-hidden="true">
               {/* Gateway orb — concentric rings radiating from center */}
@@ -1782,7 +1786,7 @@ export default function AIModePage() {
                     <div className="ai-fin-ring ai-fin-ring-3" />
                     <div className="ai-fin-ring ai-fin-ring-4" />
                   </div>
-                  <div className="ai-fin-aurora pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: 'conic-gradient(from 0deg, transparent 0%, rgba(168,85,247,0.20) 20%, rgba(192,132,252,0.08) 35%, transparent 50%, rgba(139,92,246,0.15) 70%, rgba(168,85,247,0.06) 85%, transparent 100%)', filter: 'blur(32px)' }} />
+                  <div className="ai-fin-aurora pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: 'conic-gradient(from 0deg, transparent 0%, rgba(168,85,247,0.20) 20%, rgba(192,132,252,0.08) 35%, transparent 50%, rgba(139,92,246,0.15) 70%, rgba(168,85,247,0.06) 85%, transparent 100%)', filter: 'blur(16px)' }} />
                   <div className="ai-fin-crosshair pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                     <div className="ai-fin-cross-h" />
                     <div className="ai-fin-cross-v" />

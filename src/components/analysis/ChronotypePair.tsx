@@ -5,6 +5,8 @@ import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { ChronotypeCompatibility } from '@/lib/analysis/quant/chronotype';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import { QuantBadge } from '@/components/shared/SourceBadge';
 
 interface ChronotypePairProps {
   result?: ChronotypeCompatibility;
@@ -51,9 +53,13 @@ export default function ChronotypePair({ result }: ChronotypePairProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
-            Chronotypy i kompatybilność
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
+              Chronotypy i kompatybilność
+            </h3>
+            <QuantBadge />
+          </div>
+          <ExperimentalBadge metricKey="chronotype" />
           <p className="text-sm text-muted-foreground mt-0.5">Behawioralne rytmy dobowe z timestampów</p>
         </div>
         <span

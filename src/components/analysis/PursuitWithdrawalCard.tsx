@@ -6,6 +6,8 @@ import { cn, formatDuration } from '@/lib/utils';
 import type { PursuitWithdrawalAnalysis } from '@/lib/parsers/types';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import { QuantBadge } from '@/components/shared/SourceBadge';
 
 interface PursuitWithdrawalCardProps {
   analysis: PursuitWithdrawalAnalysis | undefined;
@@ -44,9 +46,13 @@ export default function PursuitWithdrawalCard({ analysis }: PursuitWithdrawalCar
           <AlertTriangle className="h-5 w-5 text-orange-400" />
         </div>
         <div>
-          <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
-            Pętla pursuit-withdrawal
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
+              Pętla pursuit-withdrawal
+            </h3>
+            <QuantBadge />
+          </div>
+          <ExperimentalBadge metricKey="pursuitWithdrawal" />
           <p className="text-sm text-muted-foreground">
             Cykl gonienia i ucieczki
           </p>
@@ -63,7 +69,7 @@ export default function PursuitWithdrawalCard({ analysis }: PursuitWithdrawalCar
         {/* Pursuer */}
         <div className="flex flex-col items-center gap-1">
           <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-4 py-2">
-            <span className="text-base font-semibold text-blue-400 truncate max-w-[120px] block">
+            <span className="text-base font-semibold text-blue-400 truncate max-w-[160px] block" title={pursuer}>
               {pursuer}
             </span>
           </div>
@@ -85,7 +91,7 @@ export default function PursuitWithdrawalCard({ analysis }: PursuitWithdrawalCar
         {/* Withdrawer */}
         <div className="flex flex-col items-center gap-1">
           <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 px-4 py-2">
-            <span className="text-base font-semibold text-purple-400 truncate max-w-[120px] block">
+            <span className="text-base font-semibold text-purple-400 truncate max-w-[160px] block" title={withdrawer}>
               {withdrawer}
             </span>
           </div>

@@ -35,12 +35,13 @@ export function detectPursuitWithdrawal(
   const WITHDRAWAL_THRESHOLD_MS = 4 * 60 * 60 * 1000; // 4 hours of silence (2h gaps are normal: lunch, meetings, commute)
   const MIN_CONSECUTIVE = 4; // minimum messages to count as pursuit (3 is normal message-splitting)
 
-  /** Returns true if this gap starts at nighttime (22:00–08:00) and is short enough
-   *  to be plausibly just "sleep". Gaps > 12h are not suppressed even if starting at night. */
+  /** Returns true if this gap is plausibly just sleep/routine.
+   *  Extended window 21:00–09:00 accounts for timezone uncertainty.
+   *  Gaps >12h always suppressed regardless of hour — could be day off. */
   function isOvernightGap(startTs: number, gapMs: number): boolean {
-    if (gapMs > 12 * 3600_000) return false; // >12h — not just overnight
+    if (gapMs > 12 * 3600_000) return true; // >12h — always suppress (could be day off, not withdrawal)
     const hour = new Date(startTs).getHours();
-    return hour >= 22 || hour < 8;
+    return hour >= 21 || hour < 9;
   }
 
   let i = 0;
@@ -96,8 +97,9 @@ export function detectPursuitWithdrawal(
   const sorted = Object.entries(pursuitBySender).sort((a, b) => b[1] - a[1]);
   const topCount = sorted[0]?.[1] ?? 0;
   const bottomCount = sorted.length > 1 ? sorted[sorted.length - 1][1] : 0;
-  // If difference < 10% of total cycles, roles are ambiguous — label as "mutual"
-  const isBalanced = cycles.length > 0 && (topCount - bottomCount) / cycles.length < 0.1;
+  // If difference < 20% of total cycles, roles are ambiguous — label as "mutual"
+  // Raised from 10% to reduce false labeling in near-symmetric patterns
+  const isBalanced = cycles.length > 0 && (topCount - bottomCount) / cycles.length < 0.2;
   const pursuer = isBalanced ? 'mutual' : (sorted[0]?.[0] ?? participantNames[0]);
   const withdrawer = isBalanced ? 'mutual' : (sorted.length > 1 ? sorted[sorted.length - 1][0] : participantNames[1]);
 

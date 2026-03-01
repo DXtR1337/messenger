@@ -75,6 +75,7 @@ html {
 }
 
 :root {
+  color-scheme: dark;
   --radius: 0.5rem;
   --background: #050505;
   --foreground: #fafafa;
@@ -233,6 +234,10 @@ html {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
   html {
     overflow-x: hidden;
@@ -609,16 +614,16 @@ body::after {
    VIEW TRANSITIONS — mode-to-mode page shifts
 ═══════════════════════════════════════ */
 ::view-transition-old(root) {
-  animation: 0.25s ease-out both vt-fade-out;
+  animation: 0.15s ease-out both vt-fade-out;
 }
 ::view-transition-new(root) {
-  animation: 0.25s ease-in both vt-fade-in;
+  animation: 0.15s ease-in both vt-fade-in;
 }
 @keyframes vt-fade-out {
-  to { opacity: 0; transform: scale(0.98); }
+  to { opacity: 0; }
 }
 @keyframes vt-fade-in {
-  from { opacity: 0; transform: scale(1.02); }
+  from { opacity: 0; }
 }
 
 /* ═══════════════════════════════════════
@@ -640,25 +645,23 @@ body::after {
    MODE PAGE ENTRY — choreographed content reveal
 ═══════════════════════════════════════ */
 @keyframes mode-fade-in {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 .mode-enter {
-  animation: mode-fade-in 0.4s ease-out both;
+  animation: mode-fade-in 0.2s ease-out both;
 }
-.mode-enter-delay-1 { animation-delay: 0.1s; }
-.mode-enter-delay-2 { animation-delay: 0.2s; }
-.mode-enter-delay-3 { animation-delay: 0.3s; }
-.mode-enter-delay-4 { animation-delay: 0.4s; }
-.mode-enter-delay-5 { animation-delay: 0.5s; }
+.mode-enter-delay-1 { animation-delay: 0.03s; }
+.mode-enter-delay-2 { animation-delay: 0.06s; }
+.mode-enter-delay-3 { animation-delay: 0.09s; }
+.mode-enter-delay-4 { animation-delay: 0.12s; }
+.mode-enter-delay-5 { animation-delay: 0.15s; }
 
 /* ═══════════════════════════════════════
    PORTAL CARD — Gemini reference 1:1
 ═══════════════════════════════════════ */
 .portal-card {
-  background: rgba(10, 10, 10, 0.45);
-  backdrop-filter: blur(48px);
-  -webkit-backdrop-filter: blur(48px);
+  background: rgba(10, 10, 10, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   transform-style: flat;
@@ -2989,7 +2992,7 @@ body::after {
   content: '';
   position: absolute;
   border-radius: 50%;
-  filter: blur(120px);
+  filter: blur(60px);
   will-change: transform;
 }
 .aurora-mesh::before {

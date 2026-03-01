@@ -46,13 +46,13 @@ export default function PsychDisclaimer({ text, citation, showGenericFooter, cla
         <circle cx="8" cy="5" r="0.8" fill="currentColor" />
       </svg>
 
-      <p className="text-[11px] leading-relaxed text-muted-foreground/60">
+      <p className="text-xs leading-relaxed text-muted-foreground/80">
         {text}
         {citation && (
-          <span className="ml-1 text-purple-400/30 italic">({citation})</span>
+          <span className="ml-1 text-purple-400/60 italic">({citation})</span>
         )}
         {showGenericFooter && (
-          <span className="text-muted-foreground/40"> {GENERIC_DISCLAIMER_PL}</span>
+          <span className="text-muted-foreground/70"> {GENERIC_DISCLAIMER_PL}</span>
         )}
       </p>
     </div>

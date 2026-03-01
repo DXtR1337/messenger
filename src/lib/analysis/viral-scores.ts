@@ -200,8 +200,9 @@ function computeInterestScore(
     .filter((v) => v > 0);
   const rtSlope = linearRegressionSlope(rtValues);
   // Normalize: negative slope is good (getting faster at responding).
-  // Map range: slope <= -60000ms/month -> 100, slope >= 60000 -> 0
-  // Constant 1200 = 60000/50: maps ±60s/month change to ±50 points around midpoint 50
+  // Map range: slope <= -60000ms/month -> 100, slope >= 60000 -> 0.
+  // 1200 = 60000ms / 50pts: maps ±60s/month RT change to ±50 points around midpoint 50.
+  // 1 min/month change = moderate drift signal, fully saturates at ±60s/month.
   const rtScore = clamp(50 - safeDivide(rtSlope, 1200), 0, 100);
 
   // 3. Message length trend — 15% weight
@@ -209,13 +210,15 @@ function computeInterestScore(
     .map((entry) => entry.perPerson[name] ?? 0)
     .filter((v) => v > 0);
   const mlSlope = linearRegressionSlope(mlValues);
-  // Positive slope = longer messages = more engaged
-  // Map: slope of +2 words/month -> 100, slope of -2 -> 0
-  // Constant 25 = 50/2: maps ±2 words/month change to ±50 points around midpoint 50
+  // Positive slope = longer messages = more engaged.
+  // Map: slope of +2 words/month -> 100, slope of -2 -> 0.
+  // 25 = 50pts / 2 words: maps ±2 words/month avg length change to ±50 points around midpoint 50.
   const mlScore = clamp(50 + mlSlope * 25, 0, 100);
 
   // 4. Engagement frequency — 20% weight
-  // Use receiveRate: measures how much engagement this person's messages attract from others
+  // Use receiveRate: measures how much engagement this person's messages attract from others.
+  // ×500: reactionRate 0.2 (20% of messages get reactions) → score 100.
+  // Maps 0–0.2 receive rate to 0–100 score range.
   let engagementScore: number;
   const receiveRate = engagement.reactionReceiveRate?.[name] ?? engagement.reactionRate[name] ?? 0;
   if (receiveRate > 0) {
@@ -257,22 +260,22 @@ function computeInterestScore(
 function computeGhostRisk(
   name: string,
   quantitative: QuantitativeInput,
-): GhostRiskData {
+): GhostRiskData | null {
   const { trends, patterns } = quantitative;
 
   const months = patterns.monthlyVolume;
   if (months.length < 3) {
-    // Return neutral score (50) — insufficient data to assess ghost risk
-    return { score: 50, factors: ['Za mało danych (< 3 miesiące) — ryzyko nieoznaczone'] };
+    return null; // Insufficient data — UI shows "Brak wystarczających danych"
   }
 
-  // Split into recent (last 3 months) and earlier
+  // Split into recent (last 3 months) and earlier.
+  // 3-month window: shorter windows trigger false positives from vacations, exams, or busy periods.
+  // 3 months of declining activity required to flag ghost risk as a meaningful trend.
   const recentMonths = months.slice(-3);
   const earlierMonths = months.slice(0, -3);
 
   if (earlierMonths.length === 0) {
-    // Neutral fallback when all months are "recent" (exactly 3 months of data)
-    return { score: 50, factors: ['Za mało danych (< 3 miesiące) — ryzyko nieoznaczone'] };
+    return null; // All months are "recent" — can't assess trend
   }
 
   const factors: string[] = [];
@@ -420,7 +423,7 @@ export function computeViralScores(
   }
 
   // ── Ghost Risk ───────────────────────────────────────────
-  const ghostRisk: Record<string, GhostRiskData> = {};
+  const ghostRisk: Record<string, GhostRiskData | null> = {};
   for (const name of names) {
     ghostRisk[name] = computeGhostRisk(name, quantitative);
   }

@@ -4,6 +4,7 @@ import { motion, useInView } from 'framer-motion';
 import { useRef, useState, useCallback } from 'react';
 import { Skull, Award, MessageCircle, Trophy, Share2, Check, Loader2 } from 'lucide-react';
 import type { CwelTygodniaResult } from '@/lib/analysis/types';
+import { AIBadge } from '@/components/shared/SourceBadge';
 
 interface CwelTygodniaSectionProps {
   result: CwelTygodniaResult;
@@ -25,7 +26,7 @@ export default function CwelTygodniaSection({ result, discordChannelId }: CwelTy
       const res = await fetch('/api/discord/send-roast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId: discordChannelId, type: 'cwelTygodnia', cwelTygodnia: result }),
+        body: JSON.stringify({ channelId: discordChannelId, type: 'cwelTygodnia', cwelTygodnia: result, pin: localStorage.getItem('podtekst-discord-pin') ?? '' }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -65,9 +66,12 @@ export default function CwelTygodniaSection({ result, discordChannelId }: CwelTy
             <Skull className="size-5 text-red-500" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">
-              Cwel Tygodnia — {result.winner}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">
+                Cwel Tygodnia — {result.winner}
+              </h2>
+              <AIBadge />
+            </div>
             <p className="text-xs text-muted-foreground">
               Ceremonia wręczenia najgorszych nagród
             </p>

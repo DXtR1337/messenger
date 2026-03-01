@@ -180,7 +180,7 @@ export default function CapitalizationModePage() {
                 href={`/analysis/${id}`}
                 className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#ec4899]/40 transition-colors hover:text-[#ec4899]"
               >
-                <ArrowLeft className="size-3" /> Command Center
+                <ArrowLeft className="size-3" /> Centrum Dowodzenia
               </Link>
             </div>
           </div>

@@ -30,14 +30,19 @@ import { computeViralScores } from './viral-scores';
 import { computeBadges } from './badges';
 import { computeCatchphrases, computeBestTimeToText } from './catchphrases';
 import { computeNetworkMetrics } from './network';
-import { linearRegressionSlope } from './constants';
+import { linearRegressionSlope, SESSION_GAP_MS } from './constants';
 
 import {
   extractEmojis,
   countWords,
   tokenizeWords,
   median,
+  percentile,
+  stdDev,
+  trimmedMean,
+  skewness,
   filterResponseTimeOutliers,
+  filterResponseTimeOutliersWithStats,
   getMonthKey,
   getDayKey,
   isLateNight,
@@ -69,12 +74,6 @@ import {
 } from './quant';
 import type { PersonAccumulator } from './quant';
 import { computeRankingPercentiles } from './ranking-percentiles';
-
-// ============================================================
-// Constants
-// ============================================================
-
-const SESSION_GAP_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 // ============================================================
 // Main Computation Function
@@ -159,6 +158,12 @@ export function computeQuantitativeAnalysis(
   // ── Consecutive message tracking ───────────────────────────
   let consecutiveCount = 0;
   let consecutiveSender = '';
+
+  // ── Burst-aware response time: track first unanswered message per sender ──
+  // When A sends multiple messages before B replies, RT should measure from
+  // A's FIRST unanswered message (actual perceived wait time), not the last.
+  let firstUnansweredSender = '';
+  let firstUnansweredTimestamp = 0;
 
   // ============================================================
   // MAIN PASS: iterate over messages once
@@ -324,16 +329,33 @@ export function computeQuantitativeAnalysis(
       };
     }
 
-    // ── Response time ────────────────────────────────────────
-    // Only count when sender differs from previous AND gap < 6h
-    if (prevMsg && prevMsg.sender !== sender && gap < SESSION_GAP_MS) {
-      acc.responseTimes.push(gap);
+    // ── Response time (burst-aware) ──────────────────────────
+    // Track the first unanswered message in a burst. When A sends 5 messages
+    // then B replies, RT = time from A's FIRST message to B's reply (actual
+    // perceived wait time), not from A's last message.
+    if (prevMsg && prevMsg.sender !== sender) {
+      // Sender changed — this is a reply. Measure RT from first unanswered.
+      const rtStart = firstUnansweredTimestamp > 0 ? firstUnansweredTimestamp : prevMsg.timestamp;
+      const adjustedGap = msg.timestamp - rtStart;
+      if (adjustedGap > 0 && adjustedGap < SESSION_GAP_MS) {
+        acc.responseTimes.push(adjustedGap);
 
-      const monthKey = getMonthKey(msg.timestamp);
-      if (!acc.monthlyResponseTimes.has(monthKey)) {
-        acc.monthlyResponseTimes.set(monthKey, []);
+        const monthKey = getMonthKey(msg.timestamp);
+        if (!acc.monthlyResponseTimes.has(monthKey)) {
+          acc.monthlyResponseTimes.set(monthKey, []);
+        }
+        acc.monthlyResponseTimes.get(monthKey)!.push(adjustedGap);
       }
-      acc.monthlyResponseTimes.get(monthKey)!.push(gap);
+      // New sender starts — track their first message as unanswered
+      firstUnansweredSender = sender;
+      firstUnansweredTimestamp = msg.timestamp;
+    } else if (prevMsg && prevMsg.sender === sender) {
+      // Same sender continues — keep the first unanswered timestamp
+      // (don't update it; we want the FIRST message in the burst)
+    } else {
+      // First message in conversation
+      firstUnansweredSender = sender;
+      firstUnansweredTimestamp = msg.timestamp;
     }
 
     // ── Late night messages ──────────────────────────────────
@@ -574,7 +596,7 @@ export function computeQuantitativeAnalysis(
   return {
     ...baseResult,
     rankingPercentiles,
-    _version: 2,
+    _version: 3, // Bumped: Phase 1-2 audit changes (response time stats, Guiraud's R, burst RT, etc.)
   };
 }
 
@@ -617,11 +639,19 @@ function buildPerPersonMetrics(
       topPhrases: topNPhrases(acc.phraseFreq, 10),
       uniqueWords: acc.wordFreq.size,
       vocabularyRichness: (() => {
-        // Use total tokenized words (same pipeline as wordFreq) to avoid mismatch
+        // Guiraud's R = unique / sqrt(total) — corrects for Heaps' Law.
+        // TTR (unique/total) decreases monotonically with sample size, making
+        // cross-conversation comparison meaningless. Guiraud (1960) showed R
+        // stabilizes much earlier. Typical R: 3-6 casual, 7-10 formal, 10+ literary.
         let totalTokens = 0;
         for (const v of acc.wordFreq.values()) totalTokens += v;
-        return totalTokens > 0 ? acc.wordFreq.size / totalTokens : 0;
+        return totalTokens > 0 ? acc.wordFreq.size / Math.sqrt(totalTokens) : 0;
       })(),
+      // Per-1000-messages normalized rates — enable cross-conversation comparison
+      questionsAskedPer1k: acc.totalMessages > 0 ? Math.round((acc.questionsAsked / acc.totalMessages) * 1000) : 0,
+      mediaSharedPer1k: acc.totalMessages > 0 ? Math.round((acc.mediaShared / acc.totalMessages) * 1000) : 0,
+      linksSharedPer1k: acc.totalMessages > 0 ? Math.round((acc.linksShared / acc.totalMessages) * 1000) : 0,
+      emojiRatePer1k: acc.totalMessages > 0 ? Math.round((acc.messagesWithEmoji / acc.totalMessages) * 1000) : 0,
     };
   }
   return perPerson;
@@ -633,12 +663,21 @@ function buildTimingPerPerson(
 ): TimingMetrics['perPerson'] {
   const timingPerPerson: TimingMetrics['perPerson'] = {};
   for (const [name, acc] of accumulators) {
-    const rts = filterResponseTimeOutliers(acc.responseTimes);
+    const { filtered: rts, q1, q3, iqr } = filterResponseTimeOutliersWithStats(acc.responseTimes);
     const avg =
       rts.length > 0 ? rts.reduce((a, b) => a + b, 0) / rts.length : 0;
     const med = median(rts);
     const fastest = rts.length > 0 ? rts.reduce((a, b) => a < b ? a : b, rts[0]) : 0;
     const slowest = rts.length > 0 ? rts.reduce((a, b) => a > b ? a : b, rts[0]) : 0;
+
+    // Full descriptive statistics
+    const sorted = rts.length > 0 ? [...rts].sort((a, b) => a - b) : [];
+    const p75 = sorted.length > 0 ? percentile(sorted, 75) : 0;
+    const p90 = sorted.length > 0 ? percentile(sorted, 90) : 0;
+    const p95 = sorted.length > 0 ? percentile(sorted, 95) : 0;
+    const sd = stdDev(rts);
+    const tMean = trimmedMean(rts, 0.1);
+    const skew = skewness(rts);
 
     const monthKeys = [...acc.monthlyResponseTimes.keys()].sort();
     const monthlyMedians = monthKeys.map((mk) => {
@@ -653,6 +692,16 @@ function buildTimingPerPerson(
       fastestResponseMs: fastest,
       slowestResponseMs: slowest,
       responseTimeTrend: rtTrend,
+      trimmedMeanMs: tMean,
+      stdDevMs: sd,
+      q1Ms: q1,
+      q3Ms: q3,
+      iqrMs: iqr,
+      p75Ms: p75,
+      p90Ms: p90,
+      p95Ms: p95,
+      skewness: skew,
+      sampleSize: rts.length,
     };
   }
   return timingPerPerson;

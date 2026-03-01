@@ -43,7 +43,7 @@ import { extractExchangeWindows, SUBTEXT_DISCLAIMER } from './subtext';
 
 import type { AnalysisSamples } from './qualitative';
 import { logger } from '@/lib/logger';
-import { GEMINI_MODEL_ID } from './constants';
+import { GEMINI_MODEL_ID, TEMPERATURES } from './constants';
 
 // ============================================================
 // Private: Gemini API helpers
@@ -245,6 +245,69 @@ function buildRelationshipPrefix(relationshipContext?: string): string {
 }
 
 // ============================================================
+// Post-processing: Evidence index validation + Confidence capping
+// ============================================================
+
+/**
+ * Recursively walk an object and clamp any `evidence_indices` arrays
+ * so that every index falls within [0, maxIndex]. Out-of-range indices
+ * are removed to prevent the UI from referencing non-existent messages.
+ */
+function validateEvidenceIndices<T>(obj: T, maxIndex: number): T {
+    if (obj === null || obj === undefined || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+        return obj.map(item => validateEvidenceIndices(item, maxIndex)) as unknown as T;
+    }
+    const result = { ...obj } as Record<string, unknown>;
+    for (const key of Object.keys(result)) {
+        if (key === 'evidence_indices' && Array.isArray(result[key])) {
+            result[key] = (result[key] as number[]).filter(
+                idx => typeof idx === 'number' && idx >= 0 && idx <= maxIndex
+            );
+        } else if (typeof result[key] === 'object' && result[key] !== null) {
+            result[key] = validateEvidenceIndices(result[key], maxIndex);
+        }
+    }
+    return result as T;
+}
+
+/**
+ * Confidence caps per pass/component — prompts declare these but Gemini
+ * may exceed them. Code enforcement is the safety net.
+ *
+ * Pass 3A personality: 85 (text-only limitation)
+ * Pass 3B clinical: 60 (not clinical diagnosis)
+ * Pass 4 predictions: 75 (inherent uncertainty)
+ * Attachment: 65 (limited window into attachment)
+ */
+const CONFIDENCE_CAPS: Record<string, number> = {
+    pass3a_personality: 85,
+    pass3b_clinical: 60,
+    pass4_predictions: 75,
+    attachment: 65,
+};
+
+/**
+ * Recursively walk an object and clamp any `confidence` fields to maxConfidence.
+ * Handles nested objects and arrays.
+ */
+function clampConfidenceValues<T>(obj: T, maxConfidence: number): T {
+    if (obj === null || obj === undefined || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+        return obj.map(item => clampConfidenceValues(item, maxConfidence)) as unknown as T;
+    }
+    const result = { ...obj } as Record<string, unknown>;
+    for (const key of Object.keys(result)) {
+        if (key === 'confidence' && typeof result[key] === 'number') {
+            result[key] = Math.min(result[key] as number, maxConfidence);
+        } else if (typeof result[key] === 'object' && result[key] !== null) {
+            result[key] = clampConfidenceValues(result[key], maxConfidence);
+        }
+    }
+    return result as T;
+}
+
+// ============================================================
 // Public: Run analysis passes (server-side only)
 // ============================================================
 
@@ -275,8 +338,9 @@ export async function runAnalysisPasses(
         // Pass 1: Overview — tone, style, relationship type
         onProgress(1, 'Analyzing overall tone and relationship type...');
         const pass1Input = buildRelationshipPrefix(relationshipContext) + formatMessagesForAnalysis(samples.overview);
-        const pass1Raw = await callGeminiWithRetry(PASS_1_SYSTEM, pass1Input);
-        const pass1 = parseGeminiJSON<Pass1Result>(pass1Raw);
+        const pass1Raw = await callGeminiWithRetry(PASS_1_SYSTEM, pass1Input, 3, 8192, TEMPERATURES.ANALYTICAL);
+        const pass1MaxIdx = samples.overview.length - 1;
+        const pass1 = validateEvidenceIndices(parseGeminiJSON<Pass1Result>(pass1Raw), pass1MaxIdx);
         result.pass1 = pass1;
         result.currentPass = 2;
 
@@ -286,8 +350,9 @@ export async function runAnalysisPasses(
             samples.dynamics,
             samples.quantitativeContext,
         );
-        const pass2Raw = await callGeminiWithRetry(PASS_2_SYSTEM, pass2Input);
-        const pass2 = parseGeminiJSON<Pass2Result>(pass2Raw);
+        const pass2Raw = await callGeminiWithRetry(PASS_2_SYSTEM, pass2Input, 3, 8192, TEMPERATURES.ANALYTICAL);
+        const pass2MaxIdx = samples.dynamics.length - 1;
+        const pass2 = validateEvidenceIndices(parseGeminiJSON<Pass2Result>(pass2Raw), pass2MaxIdx);
         result.pass2 = pass2;
         result.currentPass = 3;
 
@@ -337,8 +402,8 @@ export async function runAnalysisPasses(
 
             // Run both halves in parallel — if one fails, the other still returns data
             const [settledA, settledB] = await Promise.allSettled([
-                callGeminiWithRetry(PASS_3A_SYSTEM, userPrompt, 3, 8192),
-                callGeminiWithRetry(PASS_3B_SYSTEM, userPrompt, 3, 8192),
+                callGeminiWithRetry(PASS_3A_SYSTEM, userPrompt, 3, 8192, TEMPERATURES.ANALYTICAL),
+                callGeminiWithRetry(PASS_3B_SYSTEM, userPrompt, 3, 8192, TEMPERATURES.SYNTHESIS),
             ]);
 
             const rawA = settledA.status === 'fulfilled' ? settledA.value : null;
@@ -358,7 +423,7 @@ export async function runAnalysisPasses(
             if (!isValidBigFive(partA.big_five_approximation)) {
                 logger.warn(`[Pass 3] ${name}: Big Five invalid or missing — retrying 3A`);
                 try {
-                    const retryRaw = await callGeminiWithRetry(PASS_3A_SYSTEM, userPrompt, 2, 8192);
+                    const retryRaw = await callGeminiWithRetry(PASS_3A_SYSTEM, userPrompt, 2, 8192, TEMPERATURES.ANALYTICAL);
                     const retryPart = safeParse(retryRaw, `${name}/3A-retry`);
                     if (isValidBigFive(retryPart.big_five_approximation)) {
                         partA = { ...partA, ...retryPart };
@@ -368,14 +433,27 @@ export async function runAnalysisPasses(
                 }
             }
 
-            // Merge both halves into one PersonProfile
+            // Merge both halves into one PersonProfile + apply confidence caps
+            const personMaxIdx = personMessages.length - 1;
             const profile: PersonProfile = {
-                big_five_approximation: partA.big_five_approximation ?? partB.big_five_approximation,
-                attachment_indicators: partA.attachment_indicators ?? partB.attachment_indicators,
+                big_five_approximation: clampConfidenceValues(
+                    partA.big_five_approximation ?? partB.big_five_approximation,
+                    CONFIDENCE_CAPS.pass3a_personality,
+                ),
+                attachment_indicators: clampConfidenceValues(
+                    validateEvidenceIndices(
+                        partA.attachment_indicators ?? partB.attachment_indicators,
+                        personMaxIdx,
+                    ),
+                    CONFIDENCE_CAPS.attachment,
+                ),
                 communication_profile: partA.communication_profile ?? partB.communication_profile,
                 communication_needs: partB.communication_needs ?? partA.communication_needs,
                 emotional_patterns: partB.emotional_patterns ?? partA.emotional_patterns,
-                clinical_observations: partB.clinical_observations ?? partA.clinical_observations,
+                clinical_observations: clampConfidenceValues(
+                    partB.clinical_observations ?? partA.clinical_observations,
+                    CONFIDENCE_CAPS.pass3b_clinical,
+                ),
                 conflict_resolution: partB.conflict_resolution ?? partA.conflict_resolution,
                 emotional_intelligence: partB.emotional_intelligence ?? partA.emotional_intelligence,
                 mbti: partA.mbti ?? partB.mbti,
@@ -450,8 +528,18 @@ export async function runAnalysisPasses(
         // Pass 4: Synthesis — final report
         onProgress(4, 'Synthesizing final report...');
         const synthesisInput = buildRelationshipPrefix(relationshipContext) + buildSynthesisInputFromPasses(pass1, pass2, pass3, samples.quantitativeContext);
-        const pass4Raw = await callGeminiWithRetry(PASS_4_SYSTEM, synthesisInput);
-        const pass4 = parseGeminiJSON<Pass4Result>(pass4Raw);
+        const pass4Raw = await callGeminiWithRetry(PASS_4_SYSTEM, synthesisInput, 3, 8192, TEMPERATURES.SYNTHESIS);
+        let pass4 = parseGeminiJSON<Pass4Result>(pass4Raw);
+        // Cap prediction confidence — inherent uncertainty in forecasting
+        if (pass4.predictions) {
+            pass4 = {
+                ...pass4,
+                predictions: pass4.predictions.map(p => ({
+                    ...p,
+                    confidence: Math.min(p.confidence, CONFIDENCE_CAPS.pass4_predictions),
+                })),
+            };
+        }
         result.pass4 = pass4;
 
         result.status = 'complete';
@@ -987,7 +1075,7 @@ Answer questions ${batchIds[0]} through ${batchIds[batchIds.length - 1]} based o
 
 ${formattedMessages}`;
 
-        const raw = await callGeminiWithRetry(systemPrompt, input, 3, 16384);
+        const raw = await callGeminiWithRetry(systemPrompt, input, 3, 16384, TEMPERATURES.ANALYTICAL);
         const parsed = parseGeminiJSON<CPSRawResponse>(raw);
         const batchAnswers = parseCPSBatchAnswers(parsed);
 
@@ -1366,7 +1454,7 @@ export async function runSubtextAnalysis(
             ? `${contextPrefix}\n\nPARTICIPANTS: ${participants.join(', ')}\n\n${formattedWindows}`
             : `PARTICIPANTS: ${participants.join(', ')}\n\n${formattedWindows}`;
 
-        const raw = await callGeminiWithRetry(SUBTEXT_SYSTEM, userContent, 3, 16384);
+        const raw = await callGeminiWithRetry(SUBTEXT_SYSTEM, userContent, 3, 16384, TEMPERATURES.SEMI_CREATIVE);
         const parsed = parseGeminiJSON<SubtextBatchRaw>(raw);
         const batchItems = parseSubtextBatch(parsed, i * BATCH_SIZE);
         allItems.push(...batchItems);

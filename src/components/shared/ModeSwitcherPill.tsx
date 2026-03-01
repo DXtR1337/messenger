@@ -98,7 +98,7 @@ export default function ModeSwitcherPill() {
 
   // Animate pill entry
   useEffect(() => {
-    const timer = setTimeout(() => setShowPill(true), 500);
+    const timer = setTimeout(() => setShowPill(true), 150);
     return () => clearTimeout(timer);
   }, []);
 
@@ -107,14 +107,14 @@ export default function ModeSwitcherPill() {
     if (!scrollRef.current) return;
     const activeEl = scrollRef.current.querySelector('[data-active="true"]');
     if (activeEl) {
-      activeEl.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+      activeEl.scrollIntoView({ inline: 'center', behavior: 'instant', block: 'nearest' });
     }
   }, [activeMode]);
 
   return (
     <div
       className={cn(
-        'fixed bottom-3 left-1/2 z-50 -translate-x-1/2 pb-[env(safe-area-inset-bottom)] transition-all duration-500 sm:bottom-4 md:bottom-6',
+        'fixed bottom-3 left-1/2 z-50 -translate-x-1/2 pb-[env(safe-area-inset-bottom)] transition-[opacity,transform] duration-200 sm:bottom-4 md:bottom-6',
         showPill ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0',
       )}
     >
@@ -142,7 +142,7 @@ export default function ModeSwitcherPill() {
                 href={href}
                 data-active={isActive}
                 className={cn(
-                  'relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-2 transition-all duration-200',
+                  'relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2.5 transition-all duration-200',
                   'sm:px-3 sm:py-1.5',
                   'hover:bg-white/[0.05]',
                   isActive
@@ -163,7 +163,7 @@ export default function ModeSwitcherPill() {
                 {completed && !isActive && (
                   <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-emerald-500 ring-1 ring-black" />
                 )}
-                <Icon className="relative size-4 shrink-0" />
+                <Icon className="relative size-5 shrink-0 sm:size-4" />
                 {/* Label — hidden on mobile, shown on desktop */}
                 <span className="relative hidden font-mono text-[10px] font-medium uppercase tracking-widest sm:inline">
                   {mode.label}

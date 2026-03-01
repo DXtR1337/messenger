@@ -5,6 +5,8 @@ import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { EmotionalGranularityResult } from '@/lib/analysis/quant/emotional-granularity';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import LowSampleBanner from '@/components/shared/LowSampleBanner';
 
 interface EmotionalGranularityCardProps {
   result?: EmotionalGranularityResult;
@@ -59,6 +61,8 @@ export default function EmotionalGranularityCard({
         </div>
         <div>
           <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Granularność emocji</h3>
+          <ExperimentalBadge metricKey="emotionalGranularity" />
+          <LowSampleBanner show={entries.some(e => e.data.emotionalWordCount < 15)} className="ml-1" />
           <p className="text-sm text-white/50">
             Różnorodność kategorii emocji — wskaźnik regulacji emocjonalnej
           </p>

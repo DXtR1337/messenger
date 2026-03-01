@@ -226,10 +226,16 @@ export function computeBadges(
     }
   }
 
-  // ── 4. Double Texter ─────────────────────────────────────
+  // ── 4. Double Texter — relative: ≥5% of messages are double-texts
   {
-    const winner = findWinner(engagement.doubleTexts);
-    if (winner && winner.value > 0) {
+    const dtRates: Record<string, number> = {};
+    for (const name of names) {
+      const total = perPerson[name]?.totalMessages ?? 0;
+      const dt = engagement.doubleTexts[name] ?? 0;
+      dtRates[name] = total >= 20 ? (dt / total) * 100 : 0;
+    }
+    const winner = findWinner(dtRates);
+    if (winner && winner.value >= 5) {
       badges.push({
         id: 'double-texter',
         name: 'Double Texter',
@@ -237,7 +243,7 @@ export function computeBadges(
         icon: 'double-texter.png',
         description: 'Najczęściej pisał(a) wielokrotnie bez odpowiedzi',
         holder: winner.name,
-        evidence: `${winner.value} razy pisał(a) bez odpowiedzi`,
+        evidence: `${winner.value.toFixed(1)}% wiadomości to double-texty`,
       });
     }
   }
@@ -364,22 +370,25 @@ export function computeBadges(
     }
   }
 
-  // ── 10. Link Lord ────────────────────────────────────────
+  // ── 10. Link Lord — relative: ≥2% of messages contain links
   {
-    const linkCounts: Record<string, number> = {};
+    const linkRates: Record<string, number> = {};
     for (const name of names) {
-      linkCounts[name] = perPerson[name]?.linksShared ?? 0;
+      const total = perPerson[name]?.totalMessages ?? 0;
+      const links = perPerson[name]?.linksShared ?? 0;
+      linkRates[name] = total >= 20 ? (links / total) * 100 : 0;
     }
-    const winner = findWinner(linkCounts);
-    if (winner && winner.value > 0) {
+    const winner = findWinner(linkRates);
+    if (winner && winner.value >= 2) {
+      const rawCount = perPerson[winner.name]?.linksShared ?? 0;
       badges.push({
         id: 'link-lord',
         name: 'Link Lord',
         emoji: '\u{1F4CE}',
         icon: 'link-lord.png',
-        description: 'Najwięcej udostępnionych linków',
+        description: 'Najwyższy % wiadomości z linkami',
         holder: winner.name,
-        evidence: `${winner.value} udostępnionych linków`,
+        evidence: `${winner.value.toFixed(1)}% wiadomości z linkami (${rawCount})`,
       });
     }
   }
@@ -401,22 +410,25 @@ export function computeBadges(
     }
   }
 
-  // ── 12. Question Master — "Detektyw" ─────────────────────
+  // ── 12. Question Master — relative: ≥10% of messages are questions
   {
-    const questionCounts: Record<string, number> = {};
+    const questionRates: Record<string, number> = {};
     for (const name of names) {
-      questionCounts[name] = perPerson[name]?.questionsAsked ?? 0;
+      const total = perPerson[name]?.totalMessages ?? 0;
+      const questions = perPerson[name]?.questionsAsked ?? 0;
+      questionRates[name] = total >= 20 ? (questions / total) * 100 : 0;
     }
-    const winner = findWinner(questionCounts);
-    if (winner && winner.value > 0) {
+    const winner = findWinner(questionRates);
+    if (winner && winner.value >= 10) {
+      const rawCount = perPerson[winner.name]?.questionsAsked ?? 0;
       badges.push({
         id: 'question-master',
         name: 'Detektyw',
         emoji: '\u{1F50D}',
         icon: 'question-master.png',
-        description: 'Najwięcej zadanych pytań',
+        description: 'Najwyższy % wiadomości z pytaniami',
         holder: winner.name,
-        evidence: `Zadał(a) ${winner.value} pytań`,
+        evidence: `${winner.value.toFixed(1)}% wiadomości to pytania (${rawCount})`,
       });
     }
   }

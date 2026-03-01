@@ -227,7 +227,7 @@ export default function DelusionModePage() {
 
           <div className="mt-12 flex flex-wrap justify-center gap-6">
             <Link href={`/analysis/${id}/cps`} className="font-mono text-xs uppercase tracking-widest text-[#10b981]/50 transition-colors hover:text-[#10b981]">CPS Screening &rarr;</Link>
-            <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#8b5cf6]/40 transition-colors hover:text-[#8b5cf6]"><ArrowLeft className="size-3" /> Command Center</Link>
+            <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#8b5cf6]/40 transition-colors hover:text-[#8b5cf6]"><ArrowLeft className="size-3" /> Centrum Dowodzenia</Link>
           </div>
         </div>
       </section>

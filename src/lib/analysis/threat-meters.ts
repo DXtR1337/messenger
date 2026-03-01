@@ -5,7 +5,7 @@
  * Each scored 0-100 with level classification and contributing factors.
  */
 
-import type { QuantitativeAnalysis, ThreatMeter, ThreatMetersResult } from '../parsers/types';
+import type { GhostRiskData, QuantitativeAnalysis, ThreatMeter, ThreatMetersResult } from '../parsers/types';
 
 function clamp(v: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, v));
@@ -24,8 +24,10 @@ export function computeThreatMeters(quant: QuantitativeAnalysis): ThreatMetersRe
 
   // --- Ghost Risk: reuse from viralScores ---
   const ghostScores = quant.viralScores?.ghostRisk ?? {};
-  const maxGhostRisk = Math.max(...Object.values(ghostScores).map(g => g.score), 0);
-  const ghostFactors = Object.entries(ghostScores)
+  const validGhostEntries = Object.entries(ghostScores)
+    .filter((entry): entry is [string, GhostRiskData] => entry[1] != null);
+  const maxGhostRisk = Math.max(...validGhostEntries.map(([, g]) => g.score), 0);
+  const ghostFactors = validGhostEntries
     .filter(([, g]) => g.score > 30)
     .flatMap(([name, g]) => g.factors.map(f => `${name}: ${f}`));
 
@@ -47,13 +49,17 @@ export function computeThreatMeters(quant: QuantitativeAnalysis): ThreatMetersRe
   const rtRatio = responseTimes[1] > 0 ? responseTimes[0] / responseTimes[1] : 1;
   // RT asymmetry: log scale, directionality-agnostic by design
   // (measures imbalance magnitude regardless of who responds slower)
+  // ×30: log10(2)×30 ≈ 9 for 2× RT difference → moderate signal.
+  // Maps ±1 order of magnitude (10× RT ratio) to 0–30 range.
   const rtAsymmetry = Math.abs(Math.log10(Math.max(rtRatio, 0.01))) * 30;
 
-  // Normalize double-text rate: cap at 80/1000 to prevent it from dominating the score
+  // Normalize double-text rate: cap at 80 per 1000 messages (= 8% double-text rate).
+  // Above this threshold, DT rate saturates — diminishing diagnostic value for codependency.
   const dtNorm = Math.min(maxDoubleTextRate, 80);
 
-  // Pursuit intensity: maximum pursuit streak from pursuit-withdrawal cycles
-  // 8 consecutive messages in a pursuit burst = 100% intensity
+  // Pursuit intensity: maximum pursuit streak from pursuit-withdrawal cycles.
+  // /8: 8 consecutive messages in a pursuit burst = 100% intensity.
+  // Based on observed pursuit-withdrawal cycles where 8+ msgs without reply is extreme.
   const pw = quant.pursuitWithdrawal;
   let pursuitIntensity = 0;
   if (pw?.cycles && pw.cycles.length > 0) {
@@ -61,8 +67,11 @@ export function computeThreatMeters(quant: QuantitativeAnalysis): ThreatMetersRe
     pursuitIntensity = Math.min(100, Math.round((maxStreak / 8) * 100));
   }
 
-  // Weights sum to 1.0:
-  // initiationImbalance 0.35 + dtNorm 0.18 + rtAsymmetry 0.27 + pursuitIntensity 0.20
+  // Weights sum to 1.0 (0.35 + 0.18 + 0.27 + 0.20).
+  // Initiation imbalance weighted highest (0.35) as strongest signal of asymmetric investment.
+  // RT asymmetry (0.27) second — persistent timing imbalance reflects avoidance/anxiousness.
+  // Pursuit intensity (0.20) captures acute one-sided messaging bursts.
+  // DT norm (0.18) is supplementary — common in normal texting, lower diagnostic weight.
   const codependencyScore = clamp(
     initiationImbalance * 0.35 +
     dtNorm * 0.18 +
@@ -78,6 +87,7 @@ export function computeThreatMeters(quant: QuantitativeAnalysis): ThreatMetersRe
   // --- Power Imbalance Index ---
   // Based on: reciprocity asymmetry, reaction imbalance, initiation imbalance
   const reciprocity = quant.reciprocityIndex;
+  // ×2: scales 0–50 raw range to 0–100. reciprocity.overall = 50 means balanced → 0 imbalance.
   const recipImbalance = reciprocity ? Math.abs(reciprocity.overall - 50) * 2 : 0;
   const reactionImbalance = reciprocity ? Math.abs(reciprocity.reactionBalance - 50) * 2 : 0;
   const powerImbalanceScore = clamp(recipImbalance * 0.5 + reactionImbalance * 0.3 + initiationImbalance * 0.2);

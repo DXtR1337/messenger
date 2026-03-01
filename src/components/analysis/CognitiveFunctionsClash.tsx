@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import type { CognitiveFunctionsResult, CognitiveFunction } from '@/lib/analysis/cognitive-functions';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import { AIBadge } from '@/components/shared/SourceBadge';
 
 interface CognitiveFunctionsClashProps {
   result: CognitiveFunctionsResult | undefined;
@@ -225,7 +227,11 @@ export default function CognitiveFunctionsClash({ result, participants }: Cognit
           <Brain className="h-4.5 w-4.5 text-purple-400" />
         </motion.div>
         <div>
-          <h3 className="font-display text-[15px] font-bold">Funkcje kognitywne</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-[15px] font-bold">Funkcje kognitywne</h3>
+            <AIBadge />
+          </div>
+          <ExperimentalBadge metricKey="cognitiveFunctions" />
           <p className="text-xs text-text-muted mt-0.5">Jak wasze mózgi się zderzają</p>
         </div>
       </div>

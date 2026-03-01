@@ -165,8 +165,14 @@ function HeatmapChart({ heatmap }: HeatmapChartProps) {
                           cursor: 'default',
                           filter: isHovered ? 'brightness(1.4)' : undefined,
                         }}
+                        tabIndex={0}
+                        role="gridcell"
+                        aria-label={`${dayLabels[cell.day]} ${cell.hour}:00 — ${cell.value} wiadomości`}
                         onMouseEnter={(e) => handleCellEnter(cell, e)}
                         onMouseLeave={handleCellLeave}
+                        onFocus={(e) => handleCellEnter(cell, e as unknown as React.MouseEvent<HTMLDivElement>)}
+                        onBlur={handleCellLeave}
+                        onClick={(e) => handleCellEnter(cell, e as unknown as React.MouseEvent<HTMLDivElement>)}
                       />
                     );
                   })}
@@ -217,7 +223,7 @@ function HeatmapChart({ heatmap }: HeatmapChartProps) {
                           backgroundColor: getHeatColor(tooltip.cell.intensity),
                         }} />
                       </div>
-                      <span style={{ color: '#666', fontSize: 10, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
+                      <span style={{ color: '#999', fontSize: 10, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
                         {Math.round(tooltip.cell.intensity * 100)}%
                       </span>
                     </div>

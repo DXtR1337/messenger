@@ -181,7 +181,7 @@ export default function CPSCard({ cpsResult }: CPSCardProps) {
                 margin: '0 auto',
               }}
             >
-              PACJENT: {cpsResult.participantName.toUpperCase()} | PROBKA: WIADOMOSCI | DATA: {today}
+              PACJENT: {cpsResult.participantName.toUpperCase()} | PRÓBKA: WIADOMOŚCI | DATA: {today}
             </div>
           </div>
 
@@ -573,7 +573,7 @@ export default function CPSCard({ cpsResult }: CPSCardProps) {
           opacity: isDownloading ? 0.5 : 1,
         }}
       >
-        {isDownloading ? 'Pobieranie...' : 'Pobierz karte'}
+        {isDownloading ? 'Pobieranie...' : 'Pobierz kartę'}
       </button>
     </div>
   );

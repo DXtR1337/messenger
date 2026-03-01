@@ -45,12 +45,23 @@ export function computeRankingPercentiles(quant: QuantitativeAnalysis): RankingP
   const maxInitRatio = totalInit > 0 ? Math.max(...initVals) / totalInit : 0.5;
   const asymmetry = Math.abs(maxInitRatio - 0.5) * 200; // 0-100 scale
 
-  // HEURISTIC MEDIANS — calibrated from informal estimates of typical chat conversations.
-  // These are NOT derived from empirical population data. Percentiles are approximate.
-  //   3000 msgs   = ~6 months of active daily conversations
-  //   480s (8min) = typical casual conversation median response time
-  //   12h silence = typical overnight gap in active relationships
-  //   20 asymmetry = ~60/40 initiation split (moderate imbalance)
+  /**
+   * HEURISTIC MEDIANS — NOT derived from empirical population data.
+   *
+   * These are calibrated from informal estimates of typical chat conversations:
+   *   3000 msgs   = ~6 months of active daily conversation
+   *   480s (8min) = typical casual conversation median response time
+   *   12h silence = typical overnight gap in active relationships
+   *   20 asymmetry = ~60/40 initiation split (moderate imbalance)
+   *
+   * Sigma values represent assumed log-normal spread:
+   *   1.2 for volume  = wide variance (some chat daily, some weekly)
+   *   1.0 for RT      = moderate variance
+   *   0.8 for silence = tighter range (most people have overnight gaps)
+   *   0.9 for asymmetry = moderate
+   *
+   * All resulting percentiles should be presented as APPROXIMATE ("szacunkowe").
+   */
   const rankings: RankingPercentile[] = [
     {
       metric: 'message_volume',
@@ -58,6 +69,7 @@ export function computeRankingPercentiles(quant: QuantitativeAnalysis): RankingP
       value: totalMessages,
       percentile: logNormalPercentile(totalMessages, 3000, 1.2),
       emoji: '💬',
+      isEstimated: true,
     },
     {
       metric: 'response_time',
@@ -65,6 +77,7 @@ export function computeRankingPercentiles(quant: QuantitativeAnalysis): RankingP
       value: fastestRT,
       percentile: fastestRT > 0 ? 100 - logNormalPercentile(fastestRT, 480_000, 1.0) : 50, // invert: faster = better
       emoji: '⚡',
+      isEstimated: true,
     },
     {
       metric: 'ghost_frequency',
@@ -72,6 +85,7 @@ export function computeRankingPercentiles(quant: QuantitativeAnalysis): RankingP
       value: longestSilenceH,
       percentile: logNormalPercentile(longestSilenceH, 12, 0.8),
       emoji: '👻',
+      isEstimated: true,
     },
     {
       metric: 'asymmetry',
@@ -79,6 +93,7 @@ export function computeRankingPercentiles(quant: QuantitativeAnalysis): RankingP
       value: asymmetry,
       percentile: logNormalPercentile(asymmetry + 1, 20, 0.9),
       emoji: '⚖️',
+      isEstimated: true,
     },
   ];
 

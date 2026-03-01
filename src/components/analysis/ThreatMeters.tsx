@@ -5,6 +5,8 @@ import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { ThreatMetersResult } from '@/lib/parsers/types';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import { QuantBadge } from '@/components/shared/SourceBadge';
 
 interface ThreatMetersProps {
   meters: ThreatMetersResult;
@@ -102,12 +104,14 @@ function useCountUp(end: number, duration: number, active: boolean) {
 // --- SVG Arc Gauge ---
 function ArcGauge({
   score,
+  label,
   colors,
   animate,
   delay,
   isHighSeverity,
 }: {
   score: number;
+  label: string;
   colors: MeterColorConfig;
   animate: boolean;
   delay: number;
@@ -142,7 +146,7 @@ function ArcGauge({
 
   return (
     <div className="relative flex flex-col items-center">
-      <svg width={size} height={size / 2 + 20} viewBox={`0 0 ${size} ${size / 2 + 20}`} className="overflow-visible">
+      <svg width={size} height={size / 2 + 20} viewBox={`0 0 ${size} ${size / 2 + 20}`} className="overflow-visible" role="img" aria-label={`${label}: ${score} na 100`}>
         {/* Glow filter */}
         <defs>
           <filter id={`glow-${score}`} x="-50%" y="-50%" width="200%" height="200%">
@@ -239,6 +243,7 @@ function MeterCard({
         {/* Arc gauge */}
         <ArcGauge
           score={meter.score}
+          label={meter.label}
           colors={colors}
           animate={isInView}
           delay={delay + 0.2}
@@ -304,7 +309,11 @@ export default function ThreatMeters({ meters }: ThreatMetersProps) {
       <div className="px-5 pt-4 flex items-center gap-2.5">
         <span className="text-lg">🎯</span>
         <div>
-          <h3 className="font-display text-[15px] font-bold">Wskaźniki Dynamiki</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-[15px] font-bold">Wskaźniki Dynamiki</h3>
+            <QuantBadge />
+          </div>
+          <ExperimentalBadge metricKey="threatMeters" />
           <p className="text-xs text-text-muted mt-0.5">Ilościowe wskaźniki wzorców komunikacyjnych</p>
         </div>
       </div>

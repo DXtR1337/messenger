@@ -177,7 +177,7 @@ export default function LandingFeatureShowcase() {
 
                   <h3
                     className="mb-1.5 font-story-display text-sm font-bold"
-                    style={{ color: feature.accent }}
+                    style={{ color: feature.accent === '#3b82f6' ? '#60a5fa' : feature.accent === '#a855f7' ? '#c084fc' : feature.accent === '#ef4444' ? '#f87171' : feature.accent }}
                   >
                     {feature.title}
                   </h3>

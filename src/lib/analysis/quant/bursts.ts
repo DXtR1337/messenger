@@ -28,7 +28,11 @@ export function detectBursts(
   );
 
   // Compute rolling 7-day average for each day.
-  // For the first 7 days, use the overall average as baseline.
+  // Bootstrap period (first 7 days): uses overall conversation average as baseline.
+  // Tradeoff: overall average includes burst days themselves, making the bootstrap
+  // baseline slightly inflated. This means early bursts are harder to detect.
+  // After day 7, the rolling window provides a local baseline unaffected by
+  // distant activity spikes.
   const overallAvg =
     dayValues.reduce((sum, d) => sum + d.count, 0) / dayValues.length;
 

@@ -162,7 +162,7 @@ export default function StatsCard({ quantitative, conversation, participants }: 
             { label: 'LOT', value: flightTitle },
             { label: 'ZALOGA', value: participants.map(n => n.substring(0, 14)).join(', ') },
             { label: 'CZAS LOTU', value: durationLabel },
-            { label: 'WIADOMOSCI', value: conversation.metadata.totalMessages.toLocaleString('pl-PL') },
+            { label: 'WIADOMOŚCI', value: conversation.metadata.totalMessages.toLocaleString('pl-PL') },
           ].map((item) => (
             <div key={item.label} style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 5 }}>
               <span
@@ -454,7 +454,7 @@ export default function StatsCard({ quantitative, conversation, participants }: 
           opacity: isDownloading ? 0.5 : 1,
         }}
       >
-        {isDownloading ? 'Pobieranie...' : 'Pobierz karte'}
+        {isDownloading ? 'Pobieranie...' : 'Pobierz kartę'}
       </button>
     </div>
   );

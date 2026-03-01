@@ -535,23 +535,4 @@ describe('computeIntegrativeComplexity', () => {
     });
   });
 
-  describe('conflictCorrelation', () => {
-    it('should return conflictCorrelation (currently 0)', () => {
-      const messages: UnifiedMessage[] = [];
-      for (let i = 0; i < 80; i++) {
-        messages.push(
-          createMessage(i, 'Alice', 'z drugiej strony jednak', 1000000000000 + i * 1000)
-        );
-      }
-      for (let i = 80; i < 160; i++) {
-        messages.push(
-          createMessage(i, 'Bob', 'ok zatem', 1000000000000 + i * 1000)
-        );
-      }
-
-      const result = computeIntegrativeComplexity(messages, ['Alice', 'Bob']);
-      expect(result).toBeDefined();
-      expect(result!.conflictCorrelation).toBe(0);
-    });
-  });
 });

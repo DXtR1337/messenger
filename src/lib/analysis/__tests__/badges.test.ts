@@ -124,6 +124,7 @@ function createMockQuantitative() {
           fastestResponseMs: 60000,
           slowestResponseMs: 86400000,
           responseTimeTrend: 0,
+          trimmedMeanMs: 3600000, stdDevMs: 1800000, q1Ms: 1200000, q3Ms: 5400000, iqrMs: 4200000, p75Ms: 5400000, p90Ms: 7200000, p95Ms: 10800000, skewness: 1.2, sampleSize: 100,
         },
         'Bob': {
           averageResponseTimeMs: 1800000, // faster
@@ -131,6 +132,7 @@ function createMockQuantitative() {
           fastestResponseMs: 30000,
           slowestResponseMs: 86400000,
           responseTimeTrend: 0,
+          trimmedMeanMs: 1800000, stdDevMs: 900000, q1Ms: 600000, q3Ms: 2700000, iqrMs: 2100000, p75Ms: 2700000, p90Ms: 3600000, p95Ms: 5400000, skewness: 1.2, sampleSize: 80,
         },
       },
       conversationInitiations: { 'Alice': 20, 'Bob': 15 },

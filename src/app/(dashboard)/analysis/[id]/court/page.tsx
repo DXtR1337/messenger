@@ -682,7 +682,7 @@ export default function CourtModePage() {
                   className="mt-8 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#d4a853]/40 transition-colors hover:text-[#d4a853]"
                 >
                   <ArrowLeft className="size-3" />
-                  Wroc do Command Center
+                  Wróć do Centrum Dowodzenia
                 </Link>
               </CourtSection>
             </div>

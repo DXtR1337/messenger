@@ -156,7 +156,10 @@ export function computeRepairPatterns(
   const validNames = participantNames.filter(n => perPerson[n]);
   if (validNames.length < 2) return undefined;
 
-  // Mutual repair index: how much repair activity vs total messages
+  // Mutual repair index: how much repair activity vs total messages.
+  // ×500: maps 0.2% repair rate (totalRepairs/totalMessages = 0.002) to index 100.
+  // Typical chat: 0.01–0.05% repair rate (1–5 repairs per 10,000 messages).
+  // Higher values indicate more active clarification behavior in the conversation.
   const totalMessages = validNames.reduce((sum, n) => sum + stats[n].total, 0);
   const mutualRepairIndex = Math.round(Math.min(100, (totalRepairs / totalMessages) * 500));
 

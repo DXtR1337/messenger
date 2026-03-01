@@ -365,7 +365,7 @@ function ArgumentChat({
 
       {/* Message counter */}
       <p className="text-center font-mono text-[10px] text-[#555]">
-        {currentMessageIndex} / {totalMessages} wiadomosci
+        {currentMessageIndex} / {totalMessages} wiadomości
       </p>
     </div>
   );
@@ -449,7 +449,7 @@ function ArgumentReviewChat({
 
       {/* Message count */}
       <p className="text-center font-mono text-[10px] text-[#555]">
-        {messages.length} wiadomosci
+        {messages.length} wiadomości
       </p>
     </div>
   );
@@ -625,12 +625,12 @@ export default function ArgumentSimulator() {
         <div className="flex flex-col items-center gap-4 py-12 text-center">
           <MessageSquare className="size-10 text-[#ef4444]/30" />
           <h3 className="font-[var(--font-syne)] text-lg font-bold text-white">
-            Za malo wiadomosci
+            Za mało wiadomości
           </h3>
           <p className="max-w-md font-mono text-xs text-[#888]">
-            Symulacja Klotni wymaga minimum 100 wiadomosci w konwersacji
+            Symulacja Kłótni wymaga minimum 100 wiadomości w konwersacji
             do zbudowania wiarygodnego profilu konfliktowego.
-            Twoja rozmowa ma {messageCount} wiadomosci.
+            Twoja rozmowa ma {messageCount} wiadomości.
           </p>
         </div>
       </AnalysisCard>

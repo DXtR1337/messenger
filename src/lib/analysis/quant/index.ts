@@ -8,7 +8,11 @@ export {
   tokenizeWords,
   median,
   percentile,
+  stdDev,
+  trimmedMean,
+  skewness,
   filterResponseTimeOutliers,
+  filterResponseTimeOutliersWithStats,
   getMonthKey,
   getDayKey,
   isLateNight,
@@ -17,6 +21,7 @@ export {
   topNWords,
   topNPhrases,
 } from './helpers';
+export type { IQRFilterResult } from './helpers';
 
 export { detectBursts } from './bursts';
 export { computeTrends, computeYearMilestones } from './trends';

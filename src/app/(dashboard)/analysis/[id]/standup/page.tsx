@@ -1087,7 +1087,7 @@ export default function StandUpModePage() {
                       className="flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-widest text-[#ff9f0a]/40 transition-colors hover:text-[#ff9f0a]"
                     >
                       <ArrowLeft className="size-3" />
-                      Command Center
+                      Centrum Dowodzenia
                     </Link>
                   </div>
                 </StandUpSection>

@@ -5,6 +5,7 @@
 
 import { rateLimit } from '@/lib/rate-limit';
 import { searchChannelMessages } from '../lib/discord-search';
+import { verifyDiscordPin } from '../lib/verify-pin';
 
 const checkLimit = rateLimit(5, 10 * 60 * 1000); // 5 requests per 10 min
 
@@ -26,12 +27,16 @@ export async function POST(request: Request): Promise<Response> {
         );
     }
 
-    let body: { channelId?: string; query?: string; offset?: number };
+    let body: { channelId?: string; query?: string; offset?: number; pin?: string };
     try {
         body = await request.json();
     } catch {
         return Response.json({ error: 'Invalid JSON.' }, { status: 400 });
     }
+
+    // PIN protection — mandatory, blocks all unauthenticated access
+    const pinError = verifyDiscordPin(body.pin);
+    if (pinError) return pinError;
 
     const { channelId, query, offset } = body;
 

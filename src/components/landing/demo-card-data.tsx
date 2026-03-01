@@ -147,8 +147,8 @@ const DEMO_QUANTITATIVE: QuantitativeAnalysis = {
   },
   timing: {
     perPerson: {
-      Ania: { averageResponseTimeMs: 342000, medianResponseTimeMs: 180000, fastestResponseMs: 8000, slowestResponseMs: 14400000, responseTimeTrend: -0.12 },
-      Kuba: { averageResponseTimeMs: 612000, medianResponseTimeMs: 420000, fastestResponseMs: 12000, slowestResponseMs: 28800000, responseTimeTrend: 0.08 },
+      Ania: { averageResponseTimeMs: 342000, medianResponseTimeMs: 180000, fastestResponseMs: 8000, slowestResponseMs: 14400000, responseTimeTrend: -0.12, trimmedMeanMs: 290000, stdDevMs: 420000, q1Ms: 45000, q3Ms: 540000, iqrMs: 495000, p75Ms: 540000, p90Ms: 900000, p95Ms: 1200000, skewness: 2.1, sampleSize: 850 },
+      Kuba: { averageResponseTimeMs: 612000, medianResponseTimeMs: 420000, fastestResponseMs: 12000, slowestResponseMs: 28800000, responseTimeTrend: 0.08, trimmedMeanMs: 510000, stdDevMs: 780000, q1Ms: 120000, q3Ms: 900000, iqrMs: 780000, p75Ms: 900000, p90Ms: 1800000, p95Ms: 3600000, skewness: 3.4, sampleSize: 720 },
     },
     conversationInitiations: { Ania: 312, Kuba: 198 },
     conversationEndings: { Ania: 234, Kuba: 276 },

@@ -3,7 +3,6 @@
 import { lazy, Suspense, type ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useScroll } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import VideoBackground from './VideoBackground';
 
@@ -52,7 +51,6 @@ export default function ModePageShell({
   const params = useParams();
   const id = params.id as string;
   const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll();
   const [isMobile, setIsMobile] = useState(false);
   const [webglSupported, setWebglSupported] = useState(true);
 
@@ -104,7 +102,7 @@ export default function ModePageShell({
       {mode === 'metrics' && webglSupported && !isMobile && (
         <div className="pointer-events-none fixed inset-0" style={{ zIndex: -1, opacity: 0.5 }} aria-hidden="true">
           <Suspense fallback={null}>
-            <MetricsScene3D scrollProgress={scrollYProgress} isMobile={isMobile} />
+            <MetricsScene3D isMobile={isMobile} />
           </Suspense>
         </div>
       )}
@@ -120,7 +118,7 @@ export default function ModePageShell({
                 className="mb-4 inline-flex items-center gap-2 rounded-lg border border-border/50 bg-card/50 px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-muted-foreground backdrop-blur-sm transition-colors hover:border-border-hover hover:text-foreground"
               >
                 <ArrowLeft className="size-3.5" />
-                Command Center
+                Centrum Dowodzenia
               </Link>
             )}
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { detectPursuitWithdrawal } from '../pursuit-withdrawal';
 import type { UnifiedMessage } from '@/lib/parsers/types';
 

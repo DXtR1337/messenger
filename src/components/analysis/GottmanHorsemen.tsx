@@ -7,6 +7,8 @@ import type { GottmanResult, HorsemanResult } from '@/lib/analysis/gottman-horse
 import { GOTTMAN_DISCLAIMER } from '@/lib/analysis/gottman-horsemen';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import { AIBadge } from '@/components/shared/SourceBadge';
 
 interface GottmanHorsemenProps {
   result?: GottmanResult;
@@ -36,9 +38,13 @@ export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
     <div ref={ref} className="bg-purple-950/[0.08] border border-purple-500/[0.06] rounded-xl overflow-hidden">
       <div className="flex justify-between items-start px-5 pt-4 pb-2">
         <div>
-          <h3 className="font-display text-[15px] font-bold">
-            Czterej jeźdźcy Gottmana
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-[15px] font-bold">
+              Czterej jeźdźcy Gottmana
+            </h3>
+            <AIBadge />
+          </div>
+          <ExperimentalBadge metricKey="gottmanHorsemen" />
           <p className="text-xs text-muted-foreground mt-0.5">
             4 predyktory rozpadu relacji wg Johna Gottmana
           </p>

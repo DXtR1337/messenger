@@ -2,7 +2,7 @@
  * Auto-detection of chat export format.
  */
 
-export type ChatFormat = 'messenger' | 'instagram' | 'whatsapp' | 'telegram' | 'unknown';
+export type ChatFormat = 'messenger' | 'instagram' | 'whatsapp' | 'telegram' | 'discord' | 'unknown';
 
 /**
  * Detect the chat format from a file and its parsed JSON data.
@@ -15,6 +15,18 @@ export function detectFormat(fileName: string, jsonData?: unknown): ChatFormat {
 
   if (!jsonData || typeof jsonData !== 'object') return 'unknown';
   const data = jsonData as Record<string, unknown>;
+
+  // Discord: messages[] with author.username structure (Discord export tools)
+  if (Array.isArray(data.messages)) {
+    const msgs = data.messages as Record<string, unknown>[];
+    const first = msgs[0];
+    if (first && typeof first === 'object' && first !== null) {
+      const author = (first as Record<string, unknown>).author;
+      if (author && typeof author === 'object' && author !== null && 'username' in (author as Record<string, unknown>)) {
+        return 'discord';
+      }
+    }
+  }
 
   // Telegram: has "name", "type", "id" (number), messages with "from" and "date_unixtime"
   if (

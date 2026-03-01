@@ -660,7 +660,7 @@ export default function MugshotCard({ personVerdict, caseNumber, cardRef: extern
             opacity: isDownloading ? 0.5 : 1,
           }}
         >
-          {isDownloading ? 'Pobieranie...' : 'Pobierz karte'}
+          {isDownloading ? 'Pobieranie...' : 'Pobierz kartę'}
         </button>
       )}
     </div>

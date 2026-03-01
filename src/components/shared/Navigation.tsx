@@ -43,8 +43,8 @@ const MODE_LABELS: Record<string, { label: string; accent: string }> = {
   moral: { label: 'Moral Foundations', accent: '#f97316' },
   emotions: { label: 'Emotion Causes', accent: '#06b6d4' },
   ai: { label: 'AI Deep Dive', accent: '#a855f7' },
-  metrics: { label: 'Data Observatory', accent: '#3b82f6' },
-  share: { label: 'Export Studio', accent: '#8b5cf6' },
+  metrics: { label: 'Obserwatorium Danych', accent: '#3b82f6' },
+  share: { label: 'Studio Eksportu', accent: '#8b5cf6' },
   couple: { label: 'Couple View', accent: '#ec4899' },
   story: { label: 'Story Mode', accent: '#f59e0b' },
   wrapped: { label: 'Wrapped', accent: '#a855f7' },
@@ -190,7 +190,7 @@ export function CinematicNav() {
               className="flex items-center gap-2 py-3 font-mono text-[12px] uppercase tracking-[0.15em] border-b border-white/[0.04] text-[#666] hover:text-white transition-colors"
             >
               <Compass className="size-3.5" />
-              Command Center
+              Centrum Dowodzenia
             </Link>
           )}
           {conversationTitle && (

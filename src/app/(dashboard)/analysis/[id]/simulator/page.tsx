@@ -127,7 +127,7 @@ export default function SimulatorModePage() {
             </motion.div>
             <div className="mt-12 flex flex-wrap justify-center gap-6">
               <Link href={`/analysis/${id}/delusion`} className="font-mono text-xs uppercase tracking-widest text-[#8b5cf6]/50 transition-colors hover:text-[#8b5cf6]">Quiz Deluzji &rarr;</Link>
-              <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#0084ff]/40 transition-colors hover:text-[#0084ff]"><ArrowLeft className="size-3" /> Command Center</Link>
+              <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#0084ff]/40 transition-colors hover:text-[#0084ff]"><ArrowLeft className="size-3" /> Centrum Dowodzenia</Link>
             </div>
           </div>
         </section>

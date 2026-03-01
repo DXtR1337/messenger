@@ -43,7 +43,8 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
   const grotesk = 'var(--font-space-grotesk)';
 
   // Get the higher ghost risk
-  const ghostEntries = Object.entries(viralScores.ghostRisk ?? {});
+  const ghostEntries = Object.entries(viralScores.ghostRisk ?? {})
+    .filter((entry): entry is [string, NonNullable<typeof entry[1]>] => entry[1] != null);
   const sorted = ghostEntries.sort(([, a], [, b]) => b.score - a.score);
   const topGhost = sorted[0];
   const topScore = topGhost?.[1]?.score ?? 0;
@@ -175,6 +176,8 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
 
         {/* Risk meter */}
         <div
+          role="img"
+          aria-label={`Poziom ryzyka ghostingu: ${forecast.label}, ${topScore}%`}
           style={{
             display: 'flex',
             gap: 3,
@@ -236,7 +239,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
                   </span>
                 </div>
                 {/* Risk bar */}
-                <div style={{ width: '100%', height: 3, borderRadius: 2, background: '#1a1a1a', overflow: 'hidden' }}>
+                <div role="meter" aria-label={`Ryzyko ghostingu: ${name}`} aria-valuenow={data.score} aria-valuemin={0} aria-valuemax={100} style={{ width: '100%', height: 3, borderRadius: 2, background: '#1a1a1a', overflow: 'hidden' }}>
                   <div
                     style={{
                       width: `${data.score}%`,

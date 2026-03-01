@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { LSMResult } from '@/lib/parsers/types';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
+import { QuantBadge } from '@/components/shared/SourceBadge';
 
 interface LSMCardProps {
   result: LSMResult;
@@ -57,7 +58,10 @@ export default function LSMCard({ result, participants }: LSMCardProps) {
           <span className="text-lg">🔗</span>
         </div>
         <div>
-          <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Language Style Matching</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Language Style Matching</h3>
+            <QuantBadge />
+          </div>
           <p className="text-sm text-white/50">Synchronizacja stylu językowego</p>
         </div>
       </div>

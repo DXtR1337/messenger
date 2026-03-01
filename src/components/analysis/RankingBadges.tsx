@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { RankingPercentiles } from '@/lib/parsers/types';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
 
 const METRIC_ICON: Record<string, string> = {
   message_volume: '/icons/ranking/ranking-message-volume.png',
@@ -74,6 +75,7 @@ export default function RankingBadges({ rankings }: RankingBadgesProps) {
         <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white">
           Ranking
         </h3>
+        <ExperimentalBadge metricKey="rankingPercentiles" />
       </div>
       <p className="mb-2 text-[11px] text-muted-foreground">
         Jak wypadacie na tle innych par
@@ -121,6 +123,11 @@ export default function RankingBadges({ rankings }: RankingBadgesProps) {
               <span className="text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">
                 {ranking.label}
               </span>
+              {ranking.isEstimated && (
+                <span className="text-[10px] text-gray-500" title="Percentyl oparty na szacunkowych normach statystycznych, nie na danych empirycznych">
+                  (szacunkowe)
+                </span>
+              )}
             </div>
           );
         })}

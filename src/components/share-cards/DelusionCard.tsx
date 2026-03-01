@@ -22,11 +22,11 @@ function getZoneLabel(index: number): string {
 }
 
 function getExaminerNote(index: number, label: string): string {
-  if (index <= 20) return `Podmiot wykazuje wysoki poziom samoswiadomosci. Klasyfikacja: ${label}. Brak oznak konfabulacji.`;
-  if (index <= 40) return `Podmiot przewaznie realistyczny, z drobnymi odchyleniami percepcji. Klasyfikacja: ${label}.`;
-  if (index <= 60) return `Wykryto znaczace rozbieznosci miedzy percepcja a danymi. Klasyfikacja: ${label}. Zalecana rewizja.`;
-  if (index <= 80) return `Podmiot wykazuje istotne znieksztalcenia poznawcze. Klasyfikacja: ${label}. Wynik niepokojacy.`;
-  return `Odczyty wariografu wskazuja na calkowite oderwanie od rzeczywistosci. Klasyfikacja: ${label}.`;
+  if (index <= 20) return `Podmiot wykazuje wysoki poziom samoświadomości. Klasyfikacja: ${label}. Brak oznak konfabulacji.`;
+  if (index <= 40) return `Podmiot przeważnie realistyczny, z drobnymi odchyleniami percepcji. Klasyfikacja: ${label}.`;
+  if (index <= 60) return `Wykryto znaczące rozbieżności między percepcją a danymi. Klasyfikacja: ${label}. Zalecana rewizja.`;
+  if (index <= 80) return `Podmiot wykazuje istotne zniekształcenia poznawcze. Klasyfikacja: ${label}. Wynik niepokojący.`;
+  return `Odczyty wariografu wskazują na całkowite oderwanie od rzeczywistości. Klasyfikacja: ${label}.`;
 }
 
 export default function DelusionCard({ result, participants }: DelusionCardProps) {
@@ -580,7 +580,7 @@ export default function DelusionCard({ result, participants }: DelusionCardProps
           opacity: isDownloading ? 0.5 : 1,
         }}
       >
-        {isDownloading ? 'Pobieranie...' : 'Pobierz karte'}
+        {isDownloading ? 'Pobieranie...' : 'Pobierz kartę'}
       </button>
     </div>
   );

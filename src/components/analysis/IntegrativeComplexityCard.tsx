@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import type { IntegrativeComplexityResult } from '@/lib/analysis/quant/integrative-complexity';
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
+import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
+import LowSampleBanner from '@/components/shared/LowSampleBanner';
 
 interface IntegrativeComplexityCardProps {
   result: IntegrativeComplexityResult;
@@ -59,6 +61,8 @@ export default function IntegrativeComplexityCard({ result, participants }: Inte
         </div>
         <div>
           <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Złożoność Integracyjna</h3>
+          <ExperimentalBadge metricKey="integrativeComplexity" />
+          <LowSampleBanner show={entries.some(e => e.stats.differentiationCount + e.stats.integrationCount < 5)} className="ml-1" />
           <p className="text-sm text-white/50">Jak nuansowo myślicie o rzeczach</p>
         </div>
       </div>

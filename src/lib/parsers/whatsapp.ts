@@ -59,16 +59,67 @@ interface DateParts {
 }
 
 /**
+ * Date format order — determines how ambiguous dates (both parts ≤12) are interpreted.
+ *   'dmy' = DD/MM/YYYY (default, most common outside US)
+ *   'mdy' = MM/DD/YYYY (US format)
+ */
+type DateOrder = 'dmy' | 'mdy';
+
+/**
+ * Pre-scan first N date-bearing lines to determine DD/MM vs MM/DD format.
+ *
+ * Strategy: look for unambiguous dates where one component >12:
+ *   - If first component >12 in ANY line → DD/MM (day first)
+ *   - If second component >12 in ANY line → MM/DD (month first, US format)
+ *   - If no unambiguous dates found → default to DD/MM (non-US convention)
+ *
+ * Only examines non-ISO dates (ISO YYYY-MM-DD is always unambiguous).
+ */
+function detectDateOrder(lines: string[], maxLines = 100): DateOrder {
+  let dmyVotes = 0;
+  let mdyVotes = 0;
+  let scanned = 0;
+
+  for (const line of lines) {
+    if (scanned >= maxLines) break;
+
+    const match = LINE_START_REGEX.exec(line);
+    if (!match) continue;
+    scanned++;
+
+    const dateStr = match[1];
+    const parts = dateStr.split(/[.\/-]/);
+    if (parts.length !== 3) continue;
+
+    // Skip ISO dates — unambiguous
+    if (dateStr.includes('-') && parts[0].length === 4) continue;
+
+    const a = Number(parts[0]);
+    const b = Number(parts[1]);
+
+    if (a > 12 && b <= 12) {
+      // First part can't be a month → must be day-first (DD/MM)
+      dmyVotes++;
+    } else if (b > 12 && a <= 12) {
+      // Second part can't be a month → must be month-first (MM/DD)
+      mdyVotes++;
+    }
+    // Both ≤12 → ambiguous, skip
+  }
+
+  if (mdyVotes > 0 && dmyVotes === 0) return 'mdy';
+  // Default to DD/MM — more common internationally and for WhatsApp exports
+  return 'dmy';
+}
+
+/**
  * Try to parse a date string that can be:
  *   DD.MM.YYYY | DD/MM/YYYY | MM/DD/YYYY | YYYY-MM-DD
  *
- * Heuristic to distinguish DD/MM from MM/DD:
- *   - If separator is '-' and first part is 4 digits -> YYYY-MM-DD
- *   - If first part > 12 -> it must be DD (DD/MM/YYYY)
- *   - If second part > 12 -> it must be DD (MM/DD/YYYY)
- *   - Otherwise default to DD/MM/YYYY (more common outside US)
+ * Uses `dateOrder` from pre-scan to resolve ambiguous dates (both parts ≤12).
+ * Per-line disambiguation still applies when one component >12.
  */
-function parseDateString(dateStr: string): DateParts {
+function parseDateString(dateStr: string, dateOrder: DateOrder): DateParts {
   const parts = dateStr.split(/[.\/-]/);
   if (parts.length !== 3) {
     throw new Error(`Cannot parse date: "${dateStr}"`);
@@ -96,7 +147,7 @@ function parseDateString(dateStr: string): DateParts {
     year = year < 70 ? 2000 + year : 1900 + year;
   }
 
-  // Distinguish DD/MM from MM/DD
+  // Distinguish DD/MM from MM/DD — per-line unambiguous check first
   if (a > 12) {
     // a can't be a month, so a=day b=month
     day = a;
@@ -106,9 +157,14 @@ function parseDateString(dateStr: string): DateParts {
     month = a;
     day = b;
   } else {
-    // Ambiguous — default to DD/MM (non-US, more common for WhatsApp)
-    day = a;
-    month = b;
+    // Ambiguous — use pre-scanned date order
+    if (dateOrder === 'mdy') {
+      month = a;
+      day = b;
+    } else {
+      day = a;
+      month = b;
+    }
   }
 
   return { year, month, day };
@@ -140,8 +196,8 @@ function parseTimeString(timeStr: string): { hours: number; minutes: number; sec
 /**
  * Combine date and time strings into a Unix timestamp in milliseconds.
  */
-function parseWhatsAppDate(dateStr: string, timeStr: string): number {
-  const { year, month, day } = parseDateString(dateStr);
+function parseWhatsAppDate(dateStr: string, timeStr: string, dateOrder: DateOrder): number {
+  const { year, month, day } = parseDateString(dateStr, dateOrder);
   const { hours, minutes, seconds } = parseTimeString(timeStr);
 
   const date = new Date(year, month - 1, day, hours, minutes, seconds);
@@ -251,6 +307,9 @@ export function parseWhatsAppText(text: string): ParsedConversation {
 
   const lines = cleaned.split(/\r?\n/);
 
+  // Pre-scan to determine DD/MM vs MM/DD date format
+  const dateOrder = detectDateOrder(lines);
+
   const rawMessages: RawMessage[] = [];
   let currentMessage: RawMessage | null = null;
 
@@ -272,7 +331,7 @@ export function parseWhatsAppText(text: string): ParsedConversation {
 
       let timestamp: number;
       try {
-        timestamp = parseWhatsAppDate(dateStr, timeStr);
+        timestamp = parseWhatsAppDate(dateStr, timeStr, dateOrder);
       } catch {
         // If date parsing fails, treat line as continuation of previous message
         if (currentMessage) {

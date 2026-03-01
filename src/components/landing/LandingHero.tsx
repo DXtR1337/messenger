@@ -78,6 +78,7 @@ export default function LandingHero() {
 
       {/* ─── DESKTOP: diagonal text layout ─── */}
       <div className="pointer-events-none relative hidden min-h-screen w-full flex-col items-center justify-center md:flex" style={{ zIndex: 10 }}>
+        <h1 className="contents">
         {/* Upper-left text: "Twoje rozmowy mówią" — BLUE — gentle float */}
         <div
           className="absolute"
@@ -123,6 +124,7 @@ export default function LandingHero() {
             ))}
           </div>
         </div>
+        </h1>
 
         {/* ─── CTA: Floating buttons ─── */}
         <div

@@ -85,14 +85,7 @@ export default function LandingDemo() {
     return () => window.removeEventListener('keydown', handler);
   }, [expandedSlide, total]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') setCurrent((p) => (p - 1 + total) % total);
-      if (e.key === 'ArrowRight') setCurrent((p) => (p + 1) % total);
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [total]);
+  // Arrow key handler is scoped to carousel container via onKeyDown (see JSX below)
 
   const goTo = useCallback((idx: number) => setCurrent(((idx % total) + total) % total), [total]);
 
@@ -152,7 +145,15 @@ export default function LandingDemo() {
     <section
       id="demo"
       ref={sectionRef}
-      className="mx-auto px-4 py-24 sm:px-6"
+      tabIndex={0}
+      role="region"
+      aria-label="Demo karuzela"
+      onKeyDown={(e) => {
+        if (expandedSlide !== null) return;
+        if (e.key === 'ArrowLeft') { setCurrent((p) => (p - 1 + total) % total); e.preventDefault(); }
+        if (e.key === 'ArrowRight') { setCurrent((p) => (p + 1) % total); e.preventDefault(); }
+      }}
+      className="mx-auto px-4 py-24 sm:px-6 outline-none"
       style={{ maxWidth: '100rem' }}
     >
       {/* Header */}
