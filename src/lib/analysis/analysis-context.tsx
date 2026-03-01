@@ -131,34 +131,30 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
     !!qualitative?.pass1 &&
     (qualitative?.status === 'complete' || qualitative?.status === 'partial');
 
-  // Derived computations
-  const threatMeters = useMemo(
-    () => (quantitative ? computeThreatMeters(quantitative) : undefined),
-    [quantitative],
-  );
+  // Derived computations — wrapped in try-catch to prevent data-shape crashes
+  const threatMeters = useMemo(() => {
+    try { return quantitative ? computeThreatMeters(quantitative) : undefined; }
+    catch (e) { console.error('[AnalysisContext] threatMeters computation failed:', e); return undefined; }
+  }, [quantitative]);
 
-  const damageReport = useMemo(
-    () =>
-      quantitative
-        ? computeDamageReport(quantitative, qualitative?.pass4, qualitative?.pass2)
-        : undefined,
-    [quantitative, qualitative?.pass4, qualitative?.pass2],
-  );
+  const damageReport = useMemo(() => {
+    try { return quantitative ? computeDamageReport(quantitative, qualitative?.pass4, qualitative?.pass2) : undefined; }
+    catch (e) { console.error('[AnalysisContext] damageReport computation failed:', e); return undefined; }
+  }, [quantitative, qualitative?.pass4, qualitative?.pass2]);
 
-  const cognitiveFunctions = useMemo(
-    () =>
-      qualitative?.pass3
-        ? computeCognitiveFunctions(
-            qualitative.pass3 as Record<string, { mbti?: { type: string } }>,
-          )
-        : undefined,
-    [qualitative?.pass3],
-  );
+  const cognitiveFunctions = useMemo(() => {
+    try {
+      return qualitative?.pass3
+        ? computeCognitiveFunctions(qualitative.pass3 as Record<string, { mbti?: { type: string } }>)
+        : undefined;
+    }
+    catch (e) { console.error('[AnalysisContext] cognitiveFunctions computation failed:', e); return undefined; }
+  }, [qualitative?.pass3]);
 
-  const gottmanResult = useMemo(
-    () => (quantitative ? computeGottmanHorsemen(qualitative?.cps, quantitative) : undefined),
-    [qualitative?.cps, quantitative],
-  );
+  const gottmanResult = useMemo(() => {
+    try { return quantitative ? computeGottmanHorsemen(qualitative?.cps, quantitative) : undefined; }
+    catch (e) { console.error('[AnalysisContext] gottmanResult computation failed:', e); return undefined; }
+  }, [qualitative?.cps, quantitative]);
 
   // ── Callbacks ──────────────────────────────────────────
 

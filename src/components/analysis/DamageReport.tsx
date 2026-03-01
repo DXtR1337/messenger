@@ -67,6 +67,7 @@ function getBenefitConfig(val: DamageReportResult['therapyBenefit']): { color: s
     case 'HIGH': return { color: '#e879f9', glow: 'rgba(232,121,249,0.3)', text: 'text-fuchsia-300', bg: 'bg-fuchsia-400/10', border: 'border-fuchsia-400/25', label: 'WYSOKA' };
     case 'MODERATE': return { color: '#c084fc', glow: 'rgba(192,132,252,0.3)', text: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/25', label: 'UMIARKOWANA' };
     case 'LOW': return { color: '#a78bfa', glow: 'rgba(167,139,250,0.3)', text: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/25', label: 'NISKA' };
+    default: return { color: '#71717a', glow: 'rgba(113,113,122,0.2)', text: 'text-zinc-400', bg: 'bg-purple-950/[0.08]', border: 'border-purple-500/[0.06]', label: String(val ?? 'N/A') };
   }
 }
 

@@ -56,7 +56,7 @@ export default function ExperimentalBadge({ metricKey, meta, className = '' }: E
       </span>
 
       {showTooltip && (
-        <div className="absolute bottom-full left-0 z-50 mb-2 w-64 rounded-lg border border-white/[0.06] bg-[#111] p-3 shadow-xl">
+        <div className="absolute top-full left-0 z-50 mt-2 w-64 rounded-lg border border-white/[0.06] bg-[#111] p-3 shadow-xl">
           <p className="mb-1 text-[11px] font-semibold text-amber-400/90">
             Metryka eksperymentalna
           </p>
