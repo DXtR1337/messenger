@@ -695,9 +695,9 @@ export default function AIModePage() {
     {/* PERF: Contain paint + kill ALL CSS keyframe animations (except loading skeletons) */}
     <style dangerouslySetInnerHTML={{ __html: `
       .ai-perf-kill .analysis-card-accent { contain: layout style paint; }
-      .ai-no-anim *:not(.ai-card-skeleton),
-      .ai-no-anim *:not(.ai-card-skeleton)::before,
-      .ai-no-anim *:not(.ai-card-skeleton)::after {
+      .ai-no-anim *:not(.ai-card-skeleton):not(.animate-spin),
+      .ai-no-anim *:not(.ai-card-skeleton):not(.animate-spin)::before,
+      .ai-no-anim *:not(.ai-card-skeleton):not(.animate-spin)::after {
         animation: none !important;
       }
     ` }} />
