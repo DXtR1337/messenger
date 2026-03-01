@@ -59,6 +59,8 @@ export default function ShareCardShell({
           position: 'relative',
           transform: `scale(${scale})`,
           transformOrigin: 'top center',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
         }}
       >
         {/* Ambient glow blobs — rendered behind content */}
@@ -126,7 +128,7 @@ export default function ShareCardShell({
                 <path d="M 0,0 L 240,0 Q 310,0 310,70 L 310,130 Q 310,200 240,200 L 85,200 L 85,370 L 0,370 Z" fill="url(#cardHeaderP)" />
               </g>
             </svg>
-            <span style={{ background: 'linear-gradient(135deg, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>odTeksT</span>
+            <span style={{ color: '#a78bfa' }}>odTeksT</span>
           </span>
           <span
             style={{

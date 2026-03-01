@@ -61,15 +61,15 @@ function buildAwards(q: QuantitativeAnalysis, c: ParsedConversation): Award[] {
     }
   }
 
-  // Biggest Simp (most reactions given)
-  const biggestSimp = participants.reduce((a, b) =>
+  // Biggest Fan (most reactions given)
+  const biggestFan = participants.reduce((a, b) =>
     (q.perPerson[a]?.reactionsGiven ?? 0) > (q.perPerson[b]?.reactionsGiven ?? 0) ? a : b,
   );
-  if ((q.perPerson[biggestSimp]?.reactionsGiven ?? 0) > 5) {
+  if ((q.perPerson[biggestFan]?.reactionsGiven ?? 0) > 5) {
     awards.push({
-      title: 'Biggest Simp',
-      winner: biggestSimp,
-      stat: `${q.perPerson[biggestSimp]?.reactionsGiven ?? 0} reakcji`,
+      title: 'Biggest Fan',
+      winner: biggestFan,
+      stat: `${q.perPerson[biggestFan]?.reactionsGiven ?? 0} reakcji`,
       emoji: '😍',
       color: AWARD_COLORS[2],
     });

@@ -101,8 +101,8 @@ export function computeVersusCards(
   return [
     {
       emoji: '📱',
-      label: 'Niestrudzony',
-      labelPl: 'Przylepiec',
+      label: 'Energiczny',
+      labelPl: 'Niecierpliwy',
       personAPercent: dblPctA,
       personBPercent: dblPctB,
       personAName: nameA,
@@ -121,8 +121,8 @@ export function computeVersusCards(
     },
     {
       emoji: '🤔',
-      label: 'Overthinker',
-      labelPl: 'Nadmyślacz',
+      label: 'Pisarz',
+      labelPl: 'Pisarz',
       personAPercent: thinkPctA,
       personBPercent: thinkPctB,
       personAName: nameA,
@@ -141,8 +141,8 @@ export function computeVersusCards(
     },
     {
       emoji: '😍',
-      label: 'Simp',
-      labelPl: 'Simp',
+      label: 'Fan',
+      labelPl: 'Entuzjasta',
       personAPercent: simpPctA,
       personBPercent: simpPctB,
       personAName: nameA,

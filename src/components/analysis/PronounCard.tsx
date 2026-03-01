@@ -6,7 +6,7 @@ import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
 
 interface PronounCardProps {
-  analysis: PronounAnalysis;
+  analysis?: PronounAnalysis | null;
   participants: string[];
 }
 
@@ -40,6 +40,12 @@ const BAR_COLORS: Record<string, string> = {
 };
 
 export default function PronounCard({ analysis, participants }: PronounCardProps) {
+  if (!analysis) return (
+    <div className="rounded-xl border border-border bg-card/50 p-6 opacity-50">
+      <p className="text-sm text-muted-foreground text-center">Za mało danych dla tej analizy</p>
+    </div>
+  );
+
   const entries = participants
     .filter((p) => analysis.perPerson[p])
     .map((name, idx) => ({

@@ -148,7 +148,8 @@ export function computeIntimacyProgression(
     label: 'Stabilna relacja',
   };
 
-  if (messages.length === 0 || participantNames.length === 0) {
+  // Minimum 100 messages for meaningful intimacy trend analysis
+  if (messages.length < 100 || participantNames.length === 0) {
     return defaultResult;
   }
 

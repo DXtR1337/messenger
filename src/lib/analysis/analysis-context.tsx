@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   useMemo,
   type ReactNode,
 } from 'react';
@@ -18,6 +19,7 @@ import type { StoredAnalysis, QualitativeAnalysis, RoastResult, MegaRoastResult,
 import type { CPSResult } from './communication-patterns';
 import type { SubtextResult } from './subtext';
 import type { CourtResult } from './court-prompts';
+import type { EksResult } from './eks-prompts';
 import type { DatingProfileResult } from './dating-profile-prompts';
 import type { DelusionQuizResult } from './delusion-quiz';
 import type { MoralFoundationsResult } from './moral-foundations-prompts';
@@ -73,6 +75,7 @@ export interface AnalysisContextValue {
   onEmotionCausesComplete: (emotionCauses: EmotionCausesResult) => void;
   onCapitalizationComplete: (capitalization: CapitalizationResult) => void;
   onArgumentSimulationComplete: (argumentSimulation: ArgumentSimulationResult) => void;
+  onEksComplete: (eksAnalysis: EksResult) => void;
   onPhotoUpload: (name: string, base64: string) => void;
   onPhotoRemove: (name: string) => void;
   onImageSaved: (key: string, dataUrl: string) => void;
@@ -242,6 +245,21 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
     (argumentSimulation: ArgumentSimulationResult) => mergeQualitative({ argumentSimulation }),
     [mergeQualitative],
   );
+  const onEksComplete = useCallback(
+    (eksAnalysis: EksResult) => {
+      // Archive previous result before overwriting
+      setAnalysis((prev) => {
+        const updates: Record<string, unknown> = { eksAnalysisTimestamp: Date.now() };
+        if (prev.qualitative?.eksAnalysis && prev.eksAnalysisTimestamp) {
+          updates.eksResultPrevious = prev.qualitative.eksAnalysis;
+          updates.eksResultPreviousTimestamp = prev.eksAnalysisTimestamp;
+        }
+        return { ...prev, ...updates };
+      });
+      mergeQualitative({ eksAnalysis });
+    },
+    [mergeQualitative, setAnalysis],
+  );
 
   const onPhotoUpload = useCallback(
     (name: string, base64: string) => {
@@ -257,11 +275,11 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
   const onPhotoRemove = useCallback(
     (name: string) => {
       setParticipantPhotos((prev) => {
-        const { [name]: _, ...rest } = prev;
+        const { [name]: _removed, ...rest } = prev; // eslint-disable-line @typescript-eslint/no-unused-vars
         return rest;
       });
       setAnalysis((prev) => {
-        const { [name]: _, ...rest } = prev.participantPhotos ?? {};
+        const { [name]: _removed, ...rest } = prev.participantPhotos ?? {}; // eslint-disable-line @typescript-eslint/no-unused-vars
         return { ...prev, participantPhotos: rest };
       });
     },
@@ -347,6 +365,7 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
       onEmotionCausesComplete,
       onCapitalizationComplete,
       onArgumentSimulationComplete,
+      onEksComplete,
       onPhotoUpload,
       onPhotoRemove,
       onImageSaved,
@@ -387,6 +406,7 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
       onEmotionCausesComplete,
       onCapitalizationComplete,
       onArgumentSimulationComplete,
+      onEksComplete,
       onPhotoUpload,
       onPhotoRemove,
       onImageSaved,
@@ -398,6 +418,18 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
       setAnalysis,
     ],
   );
+
+  // Set data-eks-mode on documentElement when relationship context is 'eks'
+  // so the crimson branding cascades to Navigation and all child components
+  const isEks = analysis.relationshipContext === 'eks';
+  useEffect(() => {
+    if (isEks) {
+      document.documentElement.setAttribute('data-eks-mode', 'true');
+    }
+    return () => {
+      document.documentElement.removeAttribute('data-eks-mode');
+    };
+  }, [isEks]);
 
   return <AnalysisContext.Provider value={value}>{children}</AnalysisContext.Provider>;
 }

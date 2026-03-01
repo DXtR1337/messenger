@@ -8,7 +8,7 @@ import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
 import LowSampleBanner from '@/components/shared/LowSampleBanner';
 
 interface RepairPatternsCardProps {
-  result: RepairPatternsResult;
+  result?: RepairPatternsResult | null;
   participants: string[];
 }
 
@@ -29,6 +29,12 @@ function mutualRepairHex(index: number): string {
 }
 
 export default function RepairPatternsCard({ result, participants }: RepairPatternsCardProps) {
+  if (!result) return (
+    <div className="rounded-xl border border-border bg-card/50 p-6 opacity-50">
+      <p className="text-sm text-muted-foreground text-center">Za mało danych dla tej analizy</p>
+    </div>
+  );
+
   const entries = participants
     .filter((p) => result.perPerson[p])
     .map((name, idx) => ({

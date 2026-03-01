@@ -1,18 +1,20 @@
 /**
  * Percentile benchmarks — step-function thresholds for KPI card display.
  *
+ * // Progi heurystyczne — nie oparte na danych populacyjnych
+ *
  * Maps conversation metrics to approximate percentile values using
  * hardcoded threshold tables. Used for numeric percentile display
- * in KPI cards (not for RankingBadges "TOP X%" display).
+ * in KPI cards (not for RankingBadges badge display).
  *
  * IMPORTANT — Two percentile systems coexist in this codebase:
  * - THIS FILE: Step-function thresholds → KPI card numeric percentile display
  *   Metrics: responseTimeMinutes, messagesPerDay, healthScore, emojiDiversity, conversationLengthMonths
- * - ranking-percentiles.ts: Log-normal CDF → "TOP X%" badge display in RankingBadges.tsx
+ * - ranking-percentiles.ts: Log-normal CDF → badge display in RankingBadges.tsx
  *   Metrics: message_volume, response_time, ghost_frequency, asymmetry
  *
- * Do NOT consolidate without mapping all UI consumers first.
- * These serve different UI purposes and use different output formats.
+ * Both systems use heuristic thresholds, NOT empirical population data.
+ * They serve different UI components and have different output formats.
  */
 
 export interface PercentileResult {

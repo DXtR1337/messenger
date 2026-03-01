@@ -1,6 +1,7 @@
 'use client';
 
 import { P, C, GaugeRing } from './LandingDemoConstants';
+import BrandLogo from '@/components/shared/BrandLogo';
 
 // ═══════════════════════════════════════════════════════════
 // SLIDE 5: RED FLAGS + NAGRODY SPECJALNE
@@ -492,7 +493,7 @@ export function SlideCourtDating() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SLIDE 8: SUBTEXT + SIMULATOR + DELUSION
+// SLIDE 8: SUBTEXT + SIMULATOR + QUIZ
 // ═══════════════════════════════════════════════════════════
 
 export function SlideInteractive() {
@@ -503,7 +504,7 @@ export function SlideInteractive() {
       <div className="flex h-full flex-col rounded-xl border border-border bg-card p-4 sm:p-5">
         <div className="mb-4">
           <span className="font-display text-[15px] font-bold">
-            Translator podtekstów
+            Translator <BrandLogo size="sm" />
           </span>
         </div>
 
@@ -593,10 +594,10 @@ export function SlideInteractive() {
           <GaugeRing value={71} size={100} color={C.orange} thickness={5} />
           <div className="text-center">
             <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-              Delusion Index
+              Asymetria zaangażowania
             </p>
             <p className="font-mono text-sm font-bold text-orange-500">
-              MOCNO ZDELUDED
+              WYRAŹNA ASYMETRIA
             </p>
           </div>
         </div>
@@ -660,7 +661,7 @@ export function SlideInteractive() {
           </div>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-orange-400">DELUSION BREAKDOWN</p>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-orange-400">ASYMETRIA ZAANGAŻOWANIA</p>
           <div className="mt-2 space-y-1.5">
             {[
               { q: 'Kuba mnie kocha', score: 'Dane: 47× vs 312× ok', color: C.red },
@@ -673,7 +674,7 @@ export function SlideInteractive() {
               </div>
             ))}
           </div>
-          <p className="mt-2 text-center font-mono text-[10px] text-orange-400">Delusion Index: 71/100</p>
+          <p className="mt-2 text-center font-mono text-[10px] text-orange-400">Asymetria: 71/100</p>
         </div>
       </div>
 
@@ -682,7 +683,7 @@ export function SlideInteractive() {
         {[
           { label: 'Podteksty', value: '47', sub: 'ukrytych znaczeń', color: C.purple },
           { label: 'Symulacje', value: '89%', sub: 'accuracy', color: C.green },
-          { label: 'Delusion Index', value: '71/100', sub: 'mocno zdeluded', color: C.orange },
+          { label: 'Asymetria', value: '71/100', sub: 'wyraźna asymetria', color: C.orange },
           { label: 'Pytań quiz', value: '15', sub: '5 trafień', color: C.red },
         ].map((s, i) => (
           <div key={i} className="rounded-lg border border-border bg-card px-3 py-2.5 text-center">
@@ -697,7 +698,7 @@ export function SlideInteractive() {
       <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-5 py-3 text-center">
         <p className="text-sm leading-relaxed">
           <span className="font-mono text-xs font-bold uppercase tracking-wider text-purple-400">PRECYZJA AI: </span>
-          Translator podtekstów: 89% accuracy. Symulator odpowiedzi: 73% match z rzeczywistymi odpowiedziami. Delusion Index: korelacja 0.84 z testem klinicznym.
+          Translator podtekstów: 89% accuracy. Symulator odpowiedzi: 73% match z rzeczywistymi odpowiedziami. Asymetria zaangażowania: korelacja 0.84 z testem klinicznym.
         </p>
       </div>
     </div>

@@ -1,18 +1,20 @@
 /**
  * Ranking Percentiles — heuristic percentile system based on statistical distributions.
  *
- * Computes "TOP X%" rankings for key conversation metrics using
+ * // Progi heurystyczne — nie oparte na danych populacyjnych
+ *
+ * Computes approximate percentile rankings for key conversation metrics using
  * log-normal CDF approximations. No global database needed — the
  * medians and sigmas are calibrated from typical conversation statistics.
  *
  * IMPORTANT — Two percentile systems coexist in this codebase:
- * - THIS FILE: Log-normal CDF → "TOP X%" badge display in RankingBadges.tsx
+ * - THIS FILE: Log-normal CDF → badge display in RankingBadges.tsx
  *   Metrics: message_volume, response_time, ghost_frequency, asymmetry
  * - percentiles.ts: Step-function thresholds → KPI card numeric percentile display
  *   Metrics: responseTimeMinutes, messagesPerDay, healthScore, emojiDiversity, conversationLengthMonths
  *
- * Do NOT consolidate without mapping all UI consumers first.
- * These serve different UI purposes and use different output formats.
+ * Both systems use heuristic thresholds, NOT empirical population data.
+ * They serve different UI components and have different output formats.
  */
 
 import type { QuantitativeAnalysis, RankingPercentile, RankingPercentiles } from '../parsers/types';

@@ -5,12 +5,14 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
 import { ArrowLeft, Search, ChevronDown } from 'lucide-react';
+import DiscordSendButton from '@/components/shared/DiscordSendButton';
 
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import { SectionErrorBoundary } from '@/components/shared/SectionErrorBoundary';
 import { useSubtextAnalysis } from '@/hooks/useSubtextAnalysis';
 import SceneParticles from '@/components/shared/SceneParticles';
 import VideoBackground from '@/components/shared/VideoBackground';
+import BrandLogo from '@/components/shared/BrandLogo';
 
 const SubtextDecoder = dynamic(() => import('@/components/analysis/SubtextDecoder'), { ssr: false });
 
@@ -112,7 +114,7 @@ export default function SubtextModePage() {
             <h1 className="subtext-glitch font-[var(--font-syne)] text-3xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
               <span className="bg-gradient-to-r from-[#00ff41] to-[#39ff14] bg-clip-text text-transparent">DECODER</span>
             </h1>
-            <p className="mt-2 font-mono text-sm tracking-wide text-[#00ff41]/50">Translator Podtekstow</p>
+            <p className="mt-2 font-mono text-sm tracking-wide text-[#00ff41]/50">Translator <BrandLogo size="sm" /></p>
             <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.3em] text-[#00ff41]/30">Dekodowanie ukrytych znaczen</p>
           </motion.div>
 
@@ -158,6 +160,16 @@ export default function SubtextModePage() {
             </motion.div>
 
             <div className="mt-12 flex flex-wrap justify-center gap-6">
+              {conversation?.metadata?.discordChannelId && subtextResult && (
+                <DiscordSendButton
+                  channelId={conversation.metadata.discordChannelId}
+                  payload={{
+                    type: 'subtext',
+                    items: subtextResult.items,
+                    summary: subtextResult.summary,
+                  }}
+                />
+              )}
               <Link href={`/analysis/${id}/dating`} className="font-mono text-xs uppercase tracking-widest text-[#ff006e]/50 transition-colors hover:text-[#ff006e]">
                 Dating Profile &rarr;
               </Link>

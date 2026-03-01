@@ -6,6 +6,7 @@ export {
   extractEmojis,
   countWords,
   tokenizeWords,
+  tokenizeAll,
   median,
   percentile,
   stdDev,
@@ -41,5 +42,6 @@ export { computeIntegrativeComplexity } from './integrative-complexity';
 export { computeTemporalFocus } from './temporal-focus';
 export { computeRepairPatterns } from './repair-patterns';
 export { computeConflictFingerprint } from './conflict-fingerprint';
+export { computeResponseTimeAnalysis } from './response-time-engine';
 export { createPersonAccumulator } from './types';
 export type { PersonAccumulator } from './types';

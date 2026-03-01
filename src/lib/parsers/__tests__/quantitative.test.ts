@@ -96,7 +96,8 @@ describe('computeQuantitativeAnalysis', () => {
     const result = computeQuantitativeAnalysis(conversation);
     expect(result.perPerson['Alice']).toBeDefined();
     expect(result.perPerson['Alice'].totalMessages).toBe(3);
-    expect(result.engagement.doubleTexts['Alice']).toBeGreaterThanOrEqual(1);
+    // Messages 60s apart = Enter-as-comma, NOT double texting
+    expect(result.engagement.doubleTexts['Alice']).toBe(0);
   });
   it('computes engagement metrics correctly', () => {
     const baseTime = 1700000000000;
@@ -108,9 +109,25 @@ describe('computeQuantitativeAnalysis', () => {
     ];
     const conversation = makeConversation(messages);
     const result = computeQuantitativeAnalysis(conversation);
-    expect(result.engagement.doubleTexts['Alice']).toBeGreaterThanOrEqual(1);
+    // Messages 30s apart = Enter-as-comma, NOT double texting
+    expect(result.engagement.doubleTexts['Alice']).toBe(0);
     expect(result.engagement.messageRatio['Alice']).toBeCloseTo(0.75, 1);
     expect(result.engagement.messageRatio['Bob']).toBeCloseTo(0.25, 1);
+  });
+  it('counts double texts only when >2min gap between same-sender messages', () => {
+    const baseTime = 1700000000000;
+    const TWO_MIN = 2 * 60 * 1000;
+    const messages: UnifiedMessage[] = [
+      // Alice sends a burst (Enter-as-comma, <2min apart) — NOT a double text
+      makeMessage({ sender: 'Alice', timestamp: baseTime, content: 'Hey' }),
+      makeMessage({ sender: 'Alice', timestamp: baseTime + 10000, content: 'you there?' }),
+      // Alice comes back after 3 minutes — THIS is a double text
+      makeMessage({ sender: 'Alice', timestamp: baseTime + TWO_MIN + 60000, content: 'hello???' }),
+      makeMessage({ sender: 'Bob', timestamp: baseTime + 600000, content: 'Sorry, was busy' }),
+    ];
+    const conversation = makeConversation(messages);
+    const result = computeQuantitativeAnalysis(conversation);
+    expect(result.engagement.doubleTexts['Alice']).toBe(1);
   });
 
   it('computes heatmap data as 7x24 matrix', () => {

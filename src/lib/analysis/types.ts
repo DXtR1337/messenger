@@ -12,6 +12,7 @@ import type { DatingProfileResult } from './dating-profile-prompts';
 import type { CoupleQuizComparison } from './couple-quiz';
 import type { EmotionCausesResult } from './emotion-causes-prompts';
 import type { MoralFoundationsResult } from './moral-foundations-prompts';
+import type { EksResult } from './eks-prompts';
 
 // ============================================================
 // PASS 1: Overview — Tone, Style, Relationship Type
@@ -392,7 +393,7 @@ export interface Pass4Result {
 // Relationship Context
 // ============================================================
 
-export type RelationshipContext = 'romantic' | 'friendship' | 'colleague' | 'professional' | 'family' | 'other';
+export type RelationshipContext = 'romantic' | 'friendship' | 'colleague' | 'professional' | 'family' | 'other' | 'eks';
 
 // ============================================================
 // ROAST MODE
@@ -499,11 +500,12 @@ export interface ArgumentTopic {
   topic: string;
   /** How often this topic appeared in real conflicts */
   frequency: number;
-  /** Person A's typical stance on this topic */
-  stanceA: string;
-  /** Person B's typical stance on this topic */
-  stanceB: string;
+  /** Per-person stances keyed by participant name */
+  stances: Record<string, string>;
   volatility: 'low' | 'medium' | 'high';
+  // Backward compat — kept for saved IndexedDB data
+  stanceA?: string;
+  stanceB?: string;
 }
 
 export interface ArgumentSummary {
@@ -589,6 +591,8 @@ export interface QualitativeAnalysis {
   capitalization?: import('./capitalization-prompts').CapitalizationResult;
   /** Symulacja Kłótni — generated argument simulation (optional) */
   argumentSimulation?: ArgumentSimulationResult;
+  /** Tryb Eks — relationship autopsy (optional) */
+  eksAnalysis?: EksResult;
   completedAt?: number;
 }
 
@@ -607,6 +611,12 @@ export interface StoredAnalysis {
   participantPhotos?: Record<string, string>;
   /** AI-generated images keyed by type (e.g. 'comic', 'roast') — persisted across reloads */
   generatedImages?: Record<string, string>;
+  /** Eks Mode: timestamp of the eks analysis run */
+  eksAnalysisTimestamp?: number;
+  /** Eks Mode: previous eks result for revisit comparison */
+  eksResultPrevious?: EksResult;
+  /** Eks Mode: timestamp of the previous eks analysis */
+  eksResultPreviousTimestamp?: number;
 }
 
 /** Lightweight entry for the dashboard analysis list */

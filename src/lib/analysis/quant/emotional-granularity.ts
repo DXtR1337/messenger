@@ -1,9 +1,15 @@
 /**
- * Emotional Granularity Score.
+ * Emotion Vocabulary Diversity Score.
+ *
+ * NOTE: Despite the filename, this module measures emotion VOCABULARY DIVERSITY
+ * (how many distinct emotion categories a person uses), not emotional granularity
+ * as defined by Barrett & Kashdan (2015), which requires computing covariation
+ * between emotion categories over time (ICC or Spearman method).
+ * See: Vishnubhotla et al. (2024) EMNLP for proper text-based granularity.
  *
  * Measures the diversity of emotion categories a person uses in their messages.
- * High granularity (many distinct emotion categories) correlates with better
- * emotional regulation; low granularity (binary good/bad) correlates with
+ * High diversity (many distinct emotion categories) correlates with better
+ * emotional regulation; low diversity (binary good/bad) correlates with
  * depression and anxiety.
  *
  * References:

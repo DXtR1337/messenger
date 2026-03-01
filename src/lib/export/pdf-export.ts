@@ -693,13 +693,13 @@ function buildViralScoresPage(
     curY += 34;
   });
 
-  // Delusion score
+  // Investment Asymmetry (formerly Delusion score)
   curY += 4;
   drawCard(doc, MARGIN, curY, CONTENT_W, 32);
   setColor(doc, C.textMuted);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(7);
-  doc.text('DELUSION SCORE', MARGIN + 10, curY + 10);
+  doc.text('ASYMETRIA ZAANGAŻOWANIA', MARGIN + 10, curY + 10);
   setColor(doc, C.textPrimary);
   doc.setFont('Inter', 'bold');
   doc.setFontSize(20);
@@ -708,7 +708,7 @@ function buildViralScoresPage(
     setColor(doc, C.textSecondary);
     doc.setFont('Inter', 'normal');
     doc.setFontSize(8);
-    doc.text(`Bardziej: ${pdfSafe(viralScores.delusionHolder)}`, MARGIN + 40, curY + 24);
+    doc.text(`Bardziej zaangażowany/a: ${pdfSafe(viralScores.delusionHolder)}`, MARGIN + 40, curY + 24);
   }
 }
 

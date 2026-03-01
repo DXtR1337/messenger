@@ -7,7 +7,7 @@
 import 'server-only';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
-import { sanitizeJsonString, parseGeminiJSON } from './json-parser';
+import { parseGeminiJSON } from './json-parser';
 
 import type {
     Pass1Result,
@@ -235,6 +235,18 @@ function buildRelationshipPrefix(relationshipContext?: string): string {
 - Humor is often surface-level bonding, not a sign of intimacy.
 - Inconsistent response patterns reflect busy schedules, not relationship instability.
 - Topic range is naturally limited — lack of deep personal topics is expected, not avoidant.`,
+
+        eks: `CALIBRATION FOR EX-PARTNER (POST-BREAKUP) ANALYSIS:
+- This is a COMPLETED relationship. Analyze the full arc: connection → disconnection → silence.
+- Response time degradation is THE key metric — track monthly medians for signs of withdrawal.
+- Look for "the dying pattern": emoji usage decline, message length shortening, initiation asymmetry widening.
+- Identify the "point of no return" — the moment when behavioral data shows irreversible decline.
+- Conflict patterns near the end often shift from active (fighting) to passive (silence) — both are significant.
+- Love bombing → withdrawal cycles are especially common in breakup contexts — flag them specifically.
+- IMPORTANT: Not every activity dip = relationship decay. Consider alternative explanations (exams, travel, job changes, holidays). Only flag as decay when MULTIPLE signals decline simultaneously (sentiment + response time + intimacy).
+- The user seeks CLOSURE, not relationship advice. Frame findings as understanding, not fixing.
+- Attachment style evolution over the relationship arc matters more than the final snapshot.
+- Double-texting and message bombing near the end often signal desperation, not clinginess — calibrate severity accordingly.`,
     };
 
     const safeContext = labels[relationshipContext] ? relationshipContext : 'other';
@@ -731,79 +743,6 @@ function scanForRoastableMaterial(messages: Array<{ sender: string; content: str
     }
 
     sections.push('\nUŻYJ tych znalezionych cytatów i wzorców w swoich roastach! Cytuj je DOSŁOWNIE.');
-    return sections.join('\n');
-}
-
-/**
- * Build a condensed psychological context for Enhanced Roast.
- * Instead of dumping full JSON from all 4 passes (30-80KB),
- * extract only the fields most useful for roasting (~5KB).
- */
-function buildCondensedRoastContext(
-    pass1: Pass1Result,
-    pass2: Pass2Result,
-    pass3: Record<string, PersonProfile>,
-    pass4: Pass4Result,
-    quantitativeContext: string,
-): string {
-    const sections: string[] = [];
-
-    // Pass 1: compact overview
-    sections.push('=== OVERVIEW ===');
-    sections.push(`Relationship: ${pass1.relationship_type}`);
-    for (const [name, tone] of Object.entries(pass1.tone_per_person ?? {})) {
-        const t = tone as { dominant_tone?: string; formality?: string };
-        sections.push(`${name}: tone=${t.dominant_tone ?? '?'}, formality=${t.formality ?? '?'}`);
-    }
-    sections.push(`Dynamic: ${JSON.stringify(pass1.overall_dynamic)}`);
-
-    // Pass 2: dynamics essentials
-    sections.push('\n=== DYNAMICS ===');
-    const pd = pass2.power_dynamics;
-    sections.push(`Power balance: ${pd.balance_score} (adapts more: ${pd.who_adapts_more})`);
-    sections.push(`Evidence: ${pd.evidence.slice(0, 3).join('; ')}`);
-    sections.push(`Conflict style: ${JSON.stringify(pass2.conflict_patterns)}`);
-    const el = pass2.emotional_labor;
-    if (el) sections.push(`Emotional labor: caregiver=${el.primary_caregiver}, balance=${el.balance_score}`);
-    if (pass2.red_flags?.length) sections.push(`Red flags: ${pass2.red_flags.map(f => f.pattern).join(', ')}`);
-    if (pass2.green_flags?.length) sections.push(`Green flags: ${pass2.green_flags.map(f => f.pattern).join(', ')}`);
-
-    // Pass 3: per-person compact profiles
-    sections.push('\n=== PERSONALITY PROFILES ===');
-    for (const [name, profile] of Object.entries(pass3)) {
-        const lines: string[] = [`--- ${name} ---`];
-        if (profile.mbti?.type) lines.push(`MBTI: ${profile.mbti.type}`);
-        const b5 = profile.big_five_approximation;
-        if (b5) {
-            const scores = Object.entries(b5).map(([k, v]) => {
-                const trait = v as { range?: [number, number] };
-                return `${k[0].toUpperCase()}:${trait.range ? trait.range.join('-') : '?'}`;
-            }).join(' ');
-            lines.push(`Big Five: ${scores}`);
-        }
-        const att = profile.attachment_indicators;
-        if (att?.primary_style) lines.push(`Attachment: ${att.primary_style}`);
-        if (profile.love_language?.primary) lines.push(`Love language: ${profile.love_language.primary}`);
-        const comm = profile.communication_profile;
-        if (comm?.style) lines.push(`Communication: style=${comm.style}, assertiveness=${comm.assertiveness}`);
-        const clin = profile.clinical_observations;
-        if (clin?.anxiety_markers?.present) lines.push(`Anxiety markers: ${clin.anxiety_markers.patterns?.slice(0, 2).join(', ')}`);
-        if (clin?.avoidance_markers?.present) lines.push(`Avoidance markers: ${clin.avoidance_markers.patterns?.slice(0, 2).join(', ')}`);
-        sections.push(lines.join('\n'));
-    }
-
-    // Pass 4: health + insights
-    sections.push('\n=== HEALTH SCORE ===');
-    sections.push(JSON.stringify(pass4.health_score));
-    sections.push(`Summary: ${pass4.executive_summary}`);
-    if (pass4.predictions?.length) {
-        sections.push(`Predictions: ${pass4.predictions.slice(0, 3).map(p => p.prediction ?? p).join('; ')}`);
-    }
-
-    // Quantitative context (already compact string)
-    sections.push('\n=== QUANTITATIVE ===');
-    sections.push(quantitativeContext);
-
     return sections.join('\n');
 }
 

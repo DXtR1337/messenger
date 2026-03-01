@@ -42,19 +42,31 @@ import SubtextCard from './SubtextCard';
 import DelusionCard from './DelusionCard';
 import MugshotCard from './MugshotCard';
 import DatingProfileCard from './DatingProfileCard';
-import SimulatorCard from './SimulatorCard';
 import CoupleQuizCard from './CoupleQuizCard';
 import CwelTygodniaCard from './CwelTygodniaCard';
+import NekrologCard from './NekrologCard';
+import AktZgonuCard from './AktZgonuCard';
+import ParagonCzasuCard from './ParagonCzasuCard';
+import AutopsyCard from './AutopsyCard';
+import ForecastCard from './ForecastCard';
+import DecayPhasesCard from './DecayPhasesCard';
+import TombstoneCard from './TombstoneCard';
+import GoldenAgeCard from './GoldenAgeCard';
+import UnsaidCard from './UnsaidCard';
+import DeathCertificateCard from './DeathCertificateCard';
+import DeathLineCard from './DeathLineCard';
 import { buildShareUrl } from '@/lib/share/encode';
 
 /** Detect mobile viewport via matchMedia (SSR-safe) */
 function useIsMobile(breakpoint = 767): boolean {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia(`(max-width: ${breakpoint}px)`).matches
+      : false,
+  );
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
-    setIsMobile(mql.matches);
-
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
@@ -76,6 +88,8 @@ interface CardConfig {
   icon?: string;
   requiresQualitative: boolean;
   size?: string;
+  /** Optional group label — displayed as section header before this card */
+  groupStart?: string;
 }
 
 const CARD_CONFIGS: CardConfig[] = [
@@ -105,6 +119,18 @@ const CARD_CONFIGS: CardConfig[] = [
   { id: 'simulator', title: 'Symulacja', emoji: '\u{1F916}', icon: '/icons/cards/card-simulator.png', requiresQualitative: false },
   { id: 'couple-quiz', title: 'Quiz parowy', emoji: '\u{1F491}', icon: '/icons/cards/card-couple-quiz.png', requiresQualitative: false },
   { id: 'cwel-tygodnia', title: 'Cwel Tygodnia', emoji: '\u{1F480}', requiresQualitative: false },
+  // Tryb Eks — Relationship Autopsy cards
+  { id: 'nekrolog', title: 'Nekrolog', emoji: '\u26B0\uFE0F', requiresQualitative: false, groupStart: 'Tryb Eks' },
+  { id: 'akt-zgonu', title: 'Akt Zgonu', emoji: '\u{1F4DC}', requiresQualitative: false },
+  { id: 'paragon-czasu', title: 'Paragon Czasu', emoji: '\u{1F9FE}', requiresQualitative: false },
+  { id: 'autopsy', title: 'Sekcja', emoji: '\u{1F52C}', requiresQualitative: false },
+  { id: 'forecast', title: 'Prognoza', emoji: '\u{1F52E}', requiresQualitative: false },
+  { id: 'decay-phases', title: 'Fazy Rozpadu', emoji: '\u{1F4C9}', requiresQualitative: false },
+  { id: 'tombstone', title: 'Nagrobek', emoji: '\u{1FAA6}', requiresQualitative: false },
+  { id: 'golden-age', title: 'Złoty Okres', emoji: '\u2728', requiresQualitative: false },
+  { id: 'unsaid', title: 'Niewypowiedziane', emoji: '\u{1F47B}', requiresQualitative: false },
+  { id: 'death-certificate', title: 'Akt Zgonu V2', emoji: '\u{1F4CB}', requiresQualitative: false },
+  { id: 'death-line', title: 'Wykres Śmierci', emoji: '\u{1F4CA}', requiresQualitative: false },
 ];
 
 function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
@@ -296,6 +322,95 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
       case 'cwel-tygodnia':
         if (!qualitative?.cwelTygodnia) return null;
         return <CwelTygodniaCard result={qualitative.cwelTygodnia} />;
+      // Tryb Eks cards
+      case 'nekrolog': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        return <NekrologCard participants={participants} duration={eks.relationshipDuration} deathDate={eks.deathDate} causeOfDeath={eks.causeOfDeath.primary} epitaph={eks.epitaph} />;
+      }
+      case 'akt-zgonu': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        return <AktZgonuCard participants={participants} duration={eks.relationshipDuration} deathDate={eks.deathDate} causeOfDeath={eks.causeOfDeath.primary} contributingFactors={eks.causeOfDeath.contributingFactors} wasItPreventable={eks.causeOfDeath.wasItPreventable} />;
+      }
+      case 'paragon-czasu': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        const totalMsgs = Object.values(quantitative.perPerson).reduce((s, p) => s + p.totalMessages, 0);
+        return <ParagonCzasuCard participants={participants} totalMessages={totalMsgs} duration={eks.relationshipDuration} />;
+      }
+      case 'autopsy': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        return <AutopsyCard causeOfDeath={eks.causeOfDeath.primary} turningPointDate={eks.turningPoint.approximateDate} epitaph={eks.epitaph} wasItPreventable={eks.causeOfDeath.wasItPreventable} healthScore={qualitative?.pass4?.health_score?.overall} />;
+      }
+      case 'forecast': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        return <ForecastCard willTheyComeBack={eks.postBreakupForecast.willTheyComeBack} perPerson={eks.postBreakupForecast.perPerson} />;
+      }
+      case 'decay-phases': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        return <DecayPhasesCard phases={eks.phases} />;
+      }
+      case 'tombstone': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        return <TombstoneCard participants={participants} duration={eks.relationshipDuration} deathDate={eks.deathDate} epitaph={eks.epitaph} />;
+      }
+      case 'golden-age': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        return <GoldenAgeCard periodStart={eks.goldenAge.periodStart} periodEnd={eks.goldenAge.periodEnd} peakIntimacy={eks.goldenAge.peakIntimacy} description={eks.goldenAge.description} bestQuotes={eks.goldenAge.bestQuotes} />;
+      }
+      case 'unsaid': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks?.unsaidThings) return null;
+        return <UnsaidCard perPerson={eks.unsaidThings.perPerson} sharedUnsaid={eks.unsaidThings.sharedUnsaid} />;
+      }
+      case 'death-certificate': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks?.deathCertificate) return null;
+        return <DeathCertificateCard caseNumber={eks.deathCertificate.caseNumber} dateOfBirth={eks.deathCertificate.dateOfBirth} dateOfDeath={eks.deathCertificate.dateOfDeath} placeOfDeath={eks.deathCertificate.placeOfDeath} attendingPhysician={eks.deathCertificate.attendingPhysician} mannerOfDeath={eks.deathCertificate.mannerOfDeath} participants={participants} />;
+      }
+      case 'death-line': {
+        const eks = qualitative?.eksAnalysis;
+        if (!eks) return null;
+        // Build death line data from quantitative trends
+        const intimacyTrend = quantitative?.intimacyProgression?.trend || [];
+        const sentimentTrend = quantitative?.trends?.sentimentTrend || [];
+        const responseTimeTrend = quantitative?.trends?.responseTimeTrend || [];
+        const monthSet = new Set<string>();
+        intimacyTrend.forEach((d: { month: string }) => monthSet.add(d.month));
+        sentimentTrend.forEach((d: { month: string }) => monthSet.add(d.month));
+        responseTimeTrend.forEach((d: { month: string }) => monthSet.add(d.month));
+        const months = Array.from(monthSet).sort();
+        if (months.length === 0) return null;
+        const intimacyMap = new Map(intimacyTrend.map((d: { month: string; score: number }) => [d.month, d.score]));
+        const sentimentMap = new Map<string, number>();
+        for (const entry of sentimentTrend) {
+          const values = Object.values((entry as { perPerson: Record<string, number> }).perPerson);
+          if (values.length > 0) sentimentMap.set(entry.month, (values as number[]).reduce((a: number, b: number) => a + b, 0) / values.length);
+        }
+        const rtMap = new Map<string, number>();
+        for (const entry of responseTimeTrend) {
+          const values = Object.values((entry as { perPerson: Record<string, number> }).perPerson);
+          if (values.length > 0) rtMap.set(entry.month, (values as number[]).reduce((a: number, b: number) => a + b, 0) / values.length);
+        }
+        const rtValues = Array.from(rtMap.values());
+        const maxRt = Math.max(...rtValues, 1);
+        const dlData = months.map((month) => {
+          const intimacy = intimacyMap.get(month) ?? 50;
+          const rawSentiment = sentimentMap.get(month) ?? 0;
+          const sentiment = ((rawSentiment + 1) / 2) * 100;
+          const rawRt = rtMap.get(month) ?? maxRt / 2;
+          const responseTime = Math.max(0, (1 - rawRt / maxRt) * 100);
+          const redZone = intimacy < 30 && sentiment < 30 && responseTime < 30 ? 30 : 0;
+          return { month, intimacy: Math.round(intimacy), sentiment: Math.round(sentiment), responseTime: Math.round(responseTime), redZone };
+        });
+        return <DeathLineCard data={dlData} emotionalTimeline={eks.emotionalTimeline} />;
+      }
       default:
         return null;
     }
@@ -390,28 +505,39 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
         </button>
       </div>
       {/* Card thumbnails */}
-      <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3 sm:overflow-x-auto pb-2 scrollbar-thin">
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3 pb-2 scrollbar-thin">
         {availableCards.map((card) => (
-          <button
-            key={card.id}
-            onClick={() => setActiveCard(activeCard === card.id ? null : card.id)}
-            className="group flex min-w-0 sm:w-[120px] sm:shrink-0 flex-col items-center gap-1.5 sm:gap-2 rounded-xl border border-border bg-card p-3 sm:p-4 min-h-[68px] transition-all hover:border-border-hover hover:bg-card-hover active:scale-[0.97] active:opacity-80"
-            style={{
-              width: undefined,
-              borderColor: activeCard === card.id ? '#3b82f6' : undefined,
-            }}
-          >
-            {card.icon ? (
-              <Image src={card.icon} alt={card.title} width={96} height={96} className="size-8 sm:size-10" unoptimized />
-            ) : (
-              <span className="text-lg sm:text-2xl">{card.emoji}</span>
+          <React.Fragment key={card.id}>
+            {/* Section header when a new group starts */}
+            {card.groupStart && (
+              <div className="col-span-3 sm:w-full flex items-center gap-3 pt-4 pb-1">
+                <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, #991b1b40, transparent)' }} />
+                <span className="font-mono text-[10px] uppercase tracking-[0.15em] whitespace-nowrap" style={{ color: '#991b1b' }}>
+                  {card.groupStart}
+                </span>
+                <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, #991b1b40, transparent)' }} />
+              </div>
             )}
-            <span className="text-xs font-medium text-foreground">{card.title}</span>
-            <span className="hidden sm:flex items-center gap-1 text-[10px] text-text-muted">
-              <Download className="size-3" />
-              {card.size ?? '1080\u00D71920'}
-            </span>
-          </button>
+            <button
+              onClick={() => setActiveCard(activeCard === card.id ? null : card.id)}
+              className="group flex min-w-0 sm:w-[120px] sm:shrink-0 flex-col items-center gap-1.5 sm:gap-2 rounded-xl border border-border bg-card p-3 sm:p-4 min-h-[68px] transition-all hover:border-border-hover hover:bg-card-hover active:scale-[0.97] active:opacity-80"
+              style={{
+                width: undefined,
+                borderColor: activeCard === card.id ? '#3b82f6' : undefined,
+              }}
+            >
+              {card.icon ? (
+                <Image src={card.icon} alt={card.title} width={96} height={96} className="size-8 sm:size-10" unoptimized />
+              ) : (
+                <span className="text-lg sm:text-2xl">{card.emoji}</span>
+              )}
+              <span className="text-xs font-medium text-foreground">{card.title}</span>
+              <span className="hidden sm:flex items-center gap-1 text-[10px] text-text-muted">
+                <Download className="size-3" />
+                {card.size ?? '1080\u00D71920'}
+              </span>
+            </button>
+          </React.Fragment>
         ))}
       </div>
 

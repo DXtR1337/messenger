@@ -16,9 +16,9 @@ interface EmotionalGranularityCardProps {
 const PERSON_COLORS = ['#3b82f6', '#a855f7', '#10b981', '#f59e0b'];
 
 function scoreLabel(score: number): string {
-  if (score >= 70) return 'Wysoka granularność';
-  if (score >= 45) return 'Średnia granularność';
-  return 'Niska granularność';
+  if (score >= 70) return 'Wysoka różnorodność';
+  if (score >= 45) return 'Średnia różnorodność';
+  return 'Niska różnorodność';
 }
 
 function scoreColorClass(score: number): string {
@@ -60,11 +60,11 @@ export default function EmotionalGranularityCard({
           <span className="text-lg">🎭</span>
         </div>
         <div>
-          <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Granularność emocji</h3>
+          <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Różnorodność Słownictwa Emocjonalnego</h3>
           <ExperimentalBadge metricKey="emotionalGranularity" />
           <LowSampleBanner show={entries.some(e => e.data.emotionalWordCount < 15)} className="ml-1" />
           <p className="text-sm text-white/50">
-            Różnorodność kategorii emocji — wskaźnik regulacji emocjonalnej
+            Ile różnych kategorii emocji pojawia się w słownictwie
           </p>
         </div>
       </div>
@@ -151,7 +151,7 @@ export default function EmotionalGranularityCard({
       </div>
 
       <PsychDisclaimer
-        text="Granularność emocji mierzona liczbą odrębnych kategorii emocji w tekście. Wysoka granularność (12 kategorii Plutchika rozszerzonych) koreluje z lepszą regulacją emocji i zdrowiem psychicznym (Vishnubhotla et al., 2024, EMNLP). Leksykon słów emocji jest przybliżeniem — wiele emocji wyrażanych jest kontekstowo, bez jawnych słów emocji."
+        text="Mierzy różnorodność kategorii emocjonalnych w słownictwie (12 kategorii Plutchika rozszerzonych), nie granularność emocjonalną w rozumieniu Barrett & Kashdan (2015), która wymaga pomiaru kowariancji między kategoriami emocji w czasie (metoda ICC). Leksykon słów emocji jest przybliżeniem — wiele emocji wyrażanych jest kontekstowo, bez jawnych słów emocji."
         citation="Vishnubhotla et al., 2024 (EMNLP); Suvak et al., 2011 (J. Traumatic Stress); Kashdan et al., 2015"
         showGenericFooter
       />

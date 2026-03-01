@@ -27,6 +27,8 @@ interface QuantitativeInput {
   patterns: PatternMetrics;
   heatmap: HeatmapData;
   trends: TrendData;
+  /** LSM overall score (0-1), if computed. Ireland & Pennebaker 2010: OR=1.95 for relationship stability. */
+  lsmOverallScore?: number;
 }
 
 // ============================================================
@@ -408,13 +410,37 @@ export function computeViralScores(
   const engagementBalance = engagementBalanceScore(quantitative.engagement, names);
   const lengthMatch = lengthMatchScore(quantitative.perPerson, names);
 
-  const compatibilityScore = clamp(
-    Math.round(
-      (activityOverlap + responseSymmetry + messageBalance + engagementBalance + lengthMatch) / 5,
-    ),
-    0,
-    100,
-  );
+  // LSM (Language Style Matching) is the most empirically validated predictor of
+  // relationship quality among the sub-scores here — Ireland & Pennebaker 2010
+  // found OR=1.95 for relationship stability. When available, LSM gets 20% weight
+  // and the other 5 components split the remaining 80% (16% each).
+  // When LSM is unavailable, fall back to equal-weight average of the 5 original components.
+  const lsm = quantitative.lsmOverallScore;
+  let compatibilityScore: number;
+  if (lsm != null) {
+    const lsmScore = clamp(Math.round(lsm * 100), 0, 100);
+    // LSM: 20%, each other: 16% (sum = 100%)
+    compatibilityScore = clamp(
+      Math.round(
+        activityOverlap * 0.16 +
+        responseSymmetry * 0.16 +
+        messageBalance * 0.16 +
+        engagementBalance * 0.16 +
+        lengthMatch * 0.16 +
+        lsmScore * 0.20
+      ),
+      0,
+      100,
+    );
+  } else {
+    compatibilityScore = clamp(
+      Math.round(
+        (activityOverlap + responseSymmetry + messageBalance + engagementBalance + lengthMatch) / 5,
+      ),
+      0,
+      100,
+    );
+  }
 
   // ── Interest Scores ──────────────────────────────────────
   const interestScores: Record<string, number> = {};
@@ -444,11 +470,16 @@ export function computeViralScores(
     }
   }
 
+  const clampedDelusionScore = clamp(delusionScore, 0, 100);
+
   return {
     compatibilityScore,
     interestScores,
     ghostRisk,
-    delusionScore: clamp(delusionScore, 0, 100),
+    delusionScore: clampedDelusionScore,
     delusionHolder,
+    // New ethical aliases (same data, clearer naming)
+    investmentAsymmetry: clampedDelusionScore,
+    moreInvestedPerson: delusionHolder,
   };
 }

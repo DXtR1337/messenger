@@ -43,6 +43,21 @@ export const SESSION_GAP_MS = 6 * 60 * 60 * 1000; // 6 hours
  */
 export const LATE_NIGHT_HOURS = { start: 22, end: 4 } as const;
 
+/**
+ * Enter-as-comma threshold — consecutive messages from the same sender
+ * separated by LESS than this are considered part of one logical message
+ * (the sender is using Enter as punctuation, not double-texting).
+ *
+ * 2 minutes — aligns with Polish texting culture where Enter replaces commas.
+ * Messages within this window are consolidated for double-text counting,
+ * pursuit-withdrawal detection, and AI context.
+ *
+ * Cross-reference:
+ * - quantitative.ts uses this to count "true" double-text events
+ * - pursuit-withdrawal.ts uses this to consolidate pursuit bursts
+ */
+export const ENTER_AS_COMMA_MS = 2 * 60 * 1000; // 2 minutes
+
 // ============================================================
 // Gemini temperature configuration
 // ============================================================
@@ -97,6 +112,26 @@ export const STOPWORDS = new Set([
   'nad', 'pod', 'przed', 'przez', 'dla', 'ani', 'albo', 'a', 'u', 'ku', 'aż',
   'juz', 'sie', 'ze', 'moze', 'tez', 'wiec', 'czyli', 'ok', 'dobra', 'xd', 'xdd',
 ]);
+
+// ============================================================
+// Argument simulation — per-person color palette
+// ============================================================
+
+/** 20-color palette for argument participants (hex). */
+export const ARGUMENT_PERSON_COLORS = [
+  '#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ef4444',
+  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#8b5cf6',
+  '#14b8a6', '#e11d48', '#0ea5e9', '#d946ef', '#22c55e',
+  '#facc15', '#6366f1', '#fb923c', '#4ade80', '#f43f5e',
+];
+
+/** 20-color palette for argument participants (RGB tuples for jsPDF). */
+export const ARGUMENT_PERSON_COLORS_RGB: [number, number, number][] = [
+  [59, 130, 246], [168, 85, 247], [16, 185, 129], [245, 158, 11], [239, 68, 68],
+  [236, 72, 153], [6, 182, 212], [132, 204, 22], [249, 115, 22], [139, 92, 246],
+  [20, 184, 166], [225, 29, 72], [14, 165, 233], [217, 70, 239], [34, 197, 94],
+  [250, 204, 21], [99, 102, 241], [251, 146, 60], [74, 222, 128], [244, 63, 94],
+];
 
 // ============================================================
 // Shared utility functions

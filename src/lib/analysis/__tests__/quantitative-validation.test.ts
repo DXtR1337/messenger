@@ -119,13 +119,14 @@ describe('Quantitative Analysis — Value bounds', () => {
     }
   });
 
-  it('vocabularyRichness is in [0, 1] range', () => {
+  it('vocabularyRichness (MTLD) is non-negative', () => {
     const conv = makeConversation200();
     const result = computeQuantitativeAnalysis(conv);
     for (const [, person] of Object.entries(result.perPerson)) {
       if (person.vocabularyRichness !== undefined) {
         expect(person.vocabularyRichness).toBeGreaterThanOrEqual(0);
-        expect(person.vocabularyRichness).toBeLessThanOrEqual(1);
+        // MTLD values are typically 20-200 (tokens per factor), not bounded to [0,1]
+        expect(Number.isFinite(person.vocabularyRichness)).toBe(true);
       }
     }
   });
@@ -376,10 +377,10 @@ describe('Quantitative Analysis — Ranking percentiles', () => {
 // ============================================================
 
 describe('Quantitative Analysis — Version and metadata', () => {
-  it('returns _version: 2', () => {
+  it('returns _version: 3', () => {
     const conv = makeConversation200();
     const result = computeQuantitativeAnalysis(conv);
-    expect(result._version).toBe(2);
+    expect(result._version).toBe(3);
   });
 
   it('viralScores is defined for 2-person conversation', () => {

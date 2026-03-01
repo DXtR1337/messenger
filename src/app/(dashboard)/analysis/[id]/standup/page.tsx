@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/purity -- particle animations use Math.random() intentionally */
 'use client';
 
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
@@ -6,6 +7,7 @@ import Link from 'next/link';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { ArrowLeft, ChevronDown, Download, Mic, RefreshCw } from 'lucide-react';
+import DiscordSendButton from '@/components/shared/DiscordSendButton';
 
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import { SectionErrorBoundary } from '@/components/shared/SectionErrorBoundary';
@@ -101,7 +103,7 @@ function AudienceSilhouettes({ visible, laughTrigger }: { visible: boolean; laug
     while (indices.size < count) {
       indices.add(Math.floor(Math.random() * AUDIENCE_HEADS.length));
     }
-    setLaughingIdx(indices);
+    setLaughingIdx(indices); // eslint-disable-line react-hooks/set-state-in-effect -- animation trigger
     const t = setTimeout(() => setLaughingIdx(new Set()), 700);
     return () => clearTimeout(t);
   }, [laughTrigger]);
@@ -183,7 +185,7 @@ function KonfettiBurst({ trigger }: { trigger: number }) {
       h: 3 + Math.random() * 6,
       br: Math.random() > 0.5 ? 50 : 1,
     }));
-    setParticles(newParticles);
+    setParticles(newParticles); // eslint-disable-line react-hooks/set-state-in-effect -- animation trigger
     const t = setTimeout(() => setParticles([]), 4000);
     return () => clearTimeout(t);
   }, [trigger]);
@@ -334,13 +336,12 @@ function ReactionButton({ emoji, label, actNumber, storageKey, onReact }: {
   onReact?: () => void;
 }) {
   const key = `podtekst-standup-reaction-${storageKey}-act${actNumber}-${label}`;
-  const [count, setCount] = useState(0);
-  const [popping, setPopping] = useState(false);
-
-  useEffect(() => {
+  const [count, setCount] = useState(() => {
+    if (typeof window === 'undefined') return 0;
     const saved = localStorage.getItem(key);
-    if (saved) setCount(parseInt(saved, 10));
-  }, [key]);
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [popping, setPopping] = useState(false);
 
   const handleClick = () => {
     const next = count + 1;
@@ -603,6 +604,7 @@ function GeneratingScene({ progress }: { progress: string | null }) {
 export default function StandUpModePage() {
   const {
     analysis,
+    conversation,
     qualitative,
     onStandupComplete,
     startOperation,
@@ -1066,12 +1068,24 @@ export default function StandUpModePage() {
 
                   <div className="my-8 mx-auto h-px w-48 bg-gradient-to-r from-transparent via-[#ff9f0a]/30 to-transparent" />
 
-                  {/* Actions — PDF + Nowy występ */}
+                  {/* Actions — PDF + Discord + Nowy występ */}
                   <div className="flex flex-wrap justify-center gap-4">
                     <div className="flex items-center gap-2 rounded-xl border border-[#ff9f0a]/20 bg-[#ff9f0a]/10 px-6 py-3 font-mono text-xs font-medium uppercase tracking-wider text-[#ff9f0a]">
                       <Download className="size-4" />
                       <StandUpPDFButton analysis={analysis} />
                     </div>
+                    {conversation?.metadata?.discordChannelId && standupResult && (
+                      <DiscordSendButton
+                        channelId={conversation.metadata.discordChannelId}
+                        payload={{
+                          type: 'standup',
+                          showTitle: standupResult.showTitle,
+                          acts: standupResult.acts,
+                          closingLine: standupResult.closingLine,
+                          audienceRating: standupResult.audienceRating,
+                        }}
+                      />
+                    )}
                     <button
                       onClick={handleRegenerate}
                       className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-6 py-3 font-mono text-xs font-medium uppercase tracking-wider text-[#888] transition-all hover:bg-white/[0.06] hover:text-white"

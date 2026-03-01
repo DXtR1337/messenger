@@ -96,9 +96,7 @@ export default function GhostForecastCard({ viralScores, participants }: GhostFo
               fontFamily: syne,
               fontSize: '0.85rem',
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #818cf8, #c084fc)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#a78bfa',
             }}
           >
             PodTeksT

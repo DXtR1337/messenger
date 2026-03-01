@@ -36,6 +36,19 @@ function isValidPayload(data: unknown): data is SharePayload {
   if (obj.roastVerdict !== null && typeof obj.roastVerdict !== 'string') return false;
   if (obj.relationshipType !== null && typeof obj.relationshipType !== 'string') return false;
 
+  // EKS fields — validate structure if present
+  if (obj.eks !== undefined && obj.eks !== null) {
+    if (typeof obj.eks !== 'object') return false;
+    const eks = obj.eks as Record<string, unknown>;
+    if (typeof eks.epitaph !== 'string') return false;
+    if (typeof eks.causeOfDeath !== 'string') return false;
+    if (typeof eks.deathDate !== 'string') return false;
+    if (typeof eks.duration !== 'string') return false;
+    if (typeof eks.willTheyComeBack !== 'number') return false;
+    if (typeof eks.whoLeftFirst !== 'string') return false;
+    if (!Array.isArray(eks.phases)) return false;
+  }
+
   return true;
 }
 

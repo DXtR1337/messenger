@@ -113,6 +113,8 @@ export interface QuantitativeAnalysis {
   repairPatterns?: import('../analysis/quant/repair-patterns').RepairPatternsResult;
   /** Per-person conflict behavior fingerprint — escalation/de-escalation styles, conflict vocabulary */
   conflictFingerprint?: import('../analysis/quant/conflict-fingerprint').ConflictFingerprintResult;
+  /** Professional RT analysis: turn-based, overnight-filtered, with composite indices (Templeton 2022) */
+  responseTimeAnalysis?: import('../analysis/quant/response-time-engine').ResponseTimeAnalysis;
   /** Data format version — used for migrations (e.g. UTC→local date fix) */
   _version?: number;
 }
@@ -406,10 +408,14 @@ export interface ViralScores {
   interestScores: Record<string, number>;
   /** Per-person ghost risk 0-100 — higher = more likely to ghost/be ghosted. null = insufficient data (<3 months) */
   ghostRisk: Record<string, GhostRiskData | null>;
-  /** Delusion score 0-100 — how mismatched interest levels are */
+  /** Delusion score 0-100 — how mismatched interest levels are (kept for IndexedDB backward compat) */
   delusionScore: number;
-  /** Who is more "delusional" (has higher interest while other has lower) */
+  /** Who is more "delusional" (has higher interest while other has lower) (kept for IndexedDB backward compat) */
   delusionHolder?: string;
+  /** Alias for delusionScore — Investment Asymmetry 0-100 */
+  investmentAsymmetry?: number;
+  /** Alias for delusionHolder — more invested person */
+  moreInvestedPerson?: string;
 }
 
 export interface GhostRiskData {

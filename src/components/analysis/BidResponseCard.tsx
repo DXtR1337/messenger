@@ -70,7 +70,7 @@ export default function BidResponseCard({ result, participants }: BidResponseCar
           >
             {overallRate}%
           </div>
-          <div className="text-xs text-white/30">norma: 86%</div>
+          <div className="text-xs text-white/30" title="Benchmark 86% pochodzi z obserwacji twarzą w twarz (Driver & Gottman 2004), obejmującej komunikację niewerbalną. Nie był walidowany dla komunikacji tekstowej.">norma: 86%*</div>
         </div>
       </div>
 
@@ -176,7 +176,7 @@ export default function BidResponseCard({ result, participants }: BidResponseCar
       </div>
 
       <PsychDisclaimer
-        text="'Bid' (próba nawiązania) definiowana heurystycznie: pytania, linki, disclosure starters. 'Turning toward' = odpowiedź w ciągu 4h z treścią nawiązującą do bidu. Norma Gottmana (86%) pochodzi z badań laboratoryjnych par małżeńskich, nie z analizy tekstu. Wyniki zależą od struktury rozmowy — chatboty i asynchroniczne tryby użycia mogą zafałszować wyniki."
+        text="'Bid' (próba nawiązania) definiowana heurystycznie: pytania, linki, disclosure starters. 'Turning toward' = odpowiedź w ciągu 4h z treścią nawiązującą do bidu. *Benchmark 86% pochodzi z obserwacji twarzą w twarz (Driver & Gottman 2004), obejmującej komunikację niewerbalną. Nie był walidowany dla komunikacji tekstowej. Wyniki zależą od struktury rozmowy — chatboty i asynchroniczne tryby użycia mogą zafałszować wyniki."
         citation="Gottman & Silver, 1999; Driver & Gottman, 2004 (Family Process, 43(3))"
         showGenericFooter
       />

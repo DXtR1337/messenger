@@ -107,7 +107,7 @@ function ScrambleCounter({
 
   useEffect(() => {
     if (started.current || value === 0) {
-      setDisplay(displayValue);
+      setDisplay(displayValue); // eslint-disable-line react-hooks/set-state-in-effect -- sync display with latest value
       return;
     }
 
@@ -324,6 +324,16 @@ const MODE_DEFINITIONS: ModeDefinition[] = [
     videoSrc: '/videos/modes/delusion.mp4',
     category: 'entertainment',
   },
+  {
+    id: 'eks',
+    title: 'Tryb Eks',
+    description: 'Sekcja zwłok twojego związku.',
+    accent: '#991b1b',
+    requiresAI: true,
+    hideServerView: true,
+    videoSrc: '/videos/modes/eks.mp4',
+    category: 'entertainment',
+  },
   // ── Narzedzia ──
   {
     id: 'argument',
@@ -373,16 +383,7 @@ function formatDuration(startMs: number, endMs: number): string {
   return `${days}D`;
 }
 
-function getPlatformName(platform: string): string {
-  switch (platform) {
-    case 'messenger': return 'Messenger';
-    case 'whatsapp': return 'WhatsApp';
-    case 'instagram': return 'Instagram';
-    case 'telegram': return 'Telegram';
-    case 'discord': return 'Discord';
-    default: return platform;
-  }
-}
+
 
 // ── Main Component ───────────────────────────────────────
 
@@ -425,12 +426,12 @@ export default function CommandCenterPage() {
     video.play().catch(() => {});
   }, [hubVideoIdx]);
 
-  // Celebration on first visit
+  // Celebration on first visit — reads sessionStorage (external system)
   useEffect(() => {
     const celebrateKey = `podtekst-celebrate-${id}`;
     if (sessionStorage.getItem(celebrateKey)) {
       sessionStorage.removeItem(celebrateKey);
-      setShowConfetti(true);
+      setShowConfetti(true); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [id]);
 
@@ -483,6 +484,7 @@ export default function CommandCenterPage() {
     roast: ['enhanced-roast', 'mega-roast'],
     court: ['court'],
     dating: ['dating'],
+    eks: ['eks'],
   }), []);
 
   // Compute portal card statuses
@@ -511,6 +513,7 @@ export default function CommandCenterPage() {
         case 'capitalization': return qualitative?.capitalization ? 'completed' : 'ready';
         case 'argument': return qualitative?.argumentSimulation ? 'completed' : 'ready';
         case 'delusion': return qualitative?.delusionQuiz ? 'completed' : 'ready';
+        case 'eks': return qualitative?.eksAnalysis ? 'completed' : 'ready';
         default: return 'ready';
       }
     },
@@ -593,6 +596,14 @@ export default function CommandCenterPage() {
           return argSim ? (
             <span className="font-mono text-[10px] text-red-400/70 uppercase tracking-widest">
               {argSim.messages?.length || 0} wiadomości
+            </span>
+          ) : undefined;
+        }
+        case 'eks': {
+          const eksEpitaph = qualitative?.eksAnalysis?.epitaph;
+          return eksEpitaph ? (
+            <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: '#991b1b' }}>
+              {eksEpitaph.slice(0, 40)}{eksEpitaph.length > 40 ? '...' : ''}
             </span>
           ) : undefined;
         }
@@ -726,13 +737,24 @@ export default function CommandCenterPage() {
         </header>
 
         {/* ═══ DISCLAIMER ═══ */}
-        <div className="mb-8 flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
           <span className="mt-0.5 shrink-0 text-amber-500 text-sm leading-none">&#9888;</span>
           <p className="text-xs leading-relaxed text-amber-200/70">
             Ta analiza służy celom informacyjnym i rozrywkowym.{' '}
             <strong className="text-amber-200/90">NIE stanowi oceny klinicznej, psychologicznej ani profesjonalnej.</strong>
           </p>
         </div>
+
+        {/* ═══ LOW MESSAGE COUNT WARNING ═══ */}
+        {totalMessages < 200 && (
+          <div className="mb-8 flex items-start gap-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
+            <span className="mt-0.5 shrink-0 text-yellow-500 text-sm leading-none">&#9888;</span>
+            <p className="text-xs leading-relaxed text-yellow-200/70">
+              Ta rozmowa ma <strong className="text-yellow-200/90">{totalMessages}</strong> wiadomości.
+              Dla najdokładniejszych wyników zalecamy minimum 500.
+            </p>
+          </div>
+        )}
 
         {/* ═══ 2. KPI STRIP — Gemini scramble counters ═══ */}
         <SectionErrorBoundary section="KPI">
@@ -769,7 +791,7 @@ export default function CommandCenterPage() {
               displayValue={`${badgeCount}`}
               accent="#f59e0b"
               premium
-              premiumLabel={badgeCount > 10 ? 'Top 5%' : undefined}
+              premiumLabel={badgeCount > 10 ? 'Kolekcjoner' : undefined}
             />
           </section>
         </SectionErrorBoundary>
@@ -869,11 +891,18 @@ export default function CommandCenterPage() {
                         accent={mode.accent}
                         preview={getModePreview(mode)}
                         videoSrc={mode.videoSrc}
-                        completionBadge={mode.recommended ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-primary">
-                            Rekomendowane
-                          </span>
-                        ) : undefined}
+                        completionBadge={
+                          mode.recommended ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-primary">
+                              Rekomendowane
+                            </span>
+                          ) : mode.id === 'eks' ? (
+                            <div className="flex items-baseline justify-between gap-2 border-t border-[#991b1b]/20 pt-2">
+                              <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#991b1b]/60">Tu leży twój związek</span>
+                              <span className="font-mono text-[9px] tracking-widest text-[#555]">głębokość 5m</span>
+                            </div>
+                          ) : undefined
+                        }
                       />
                     </motion.div>
                   ))}
@@ -882,6 +911,13 @@ export default function CommandCenterPage() {
             );
           })}
         </SectionErrorBoundary>
+
+        {/* General disclaimer footer */}
+        <footer className="mt-16 mb-8 border-t border-border/30 pt-6">
+          <p className="text-center text-[11px] leading-relaxed text-muted-foreground/50">
+            PodTeksT analizuje wzorce tekstowe, nie emocje ani intencje. Wyniki mają charakter rozrywkowy i orientacyjny. Nie zastępują konsultacji specjalisty.
+          </p>
+        </footer>
       </div>
     </div>
   );

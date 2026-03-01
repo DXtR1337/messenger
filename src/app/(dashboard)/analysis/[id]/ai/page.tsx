@@ -110,61 +110,10 @@ function AISectionDots() {
   // Position of the active indicator along the track (0 to 1)
   const activeRatio = active >= 0 ? active / (totalDots - 1) : 0;
 
-  // Ghost trail — spawn fading dots along the path when active changes
+  // Ghost trail disabled — decorative animation removed for cleaner UX
   useEffect(() => {
-    if (prevActive.current === active || active < 0 || !navRef.current) {
-      prevActive.current = active;
-      return;
-    }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.innerWidth < 1280) {
-      prevActive.current = active;
-      return;
-    }
-
-    const nav = navRef.current;
-    const from = prevActive.current;
-    const to = active;
-    const steps = Math.abs(to - from);
-    const dir = to > from ? 1 : -1;
-    const trackHeight = (totalDots - 1) * 40; // 2.5rem = 40px
-
-    // Spawn 3-4 ghost dots between old and new position
-    const ghostCount = Math.min(steps + 1, 4);
-    for (let g = 0; g < ghostCount; g++) {
-      const ratio = from + dir * (g / ghostCount) * steps;
-      const yPct = ratio / (totalDots - 1);
-      const ghost = document.createElement('div');
-      ghost.setAttribute('aria-hidden', 'true');
-      const size = 6 - g * 1; // decreasing size
-      Object.assign(ghost.style, {
-        position: 'absolute',
-        left: '50%',
-        top: `${yPct * trackHeight}px`,
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: '50%',
-        background: 'rgba(192,132,252,0.6)',
-        boxShadow: '0 0 8px rgba(168,85,247,0.5)',
-        transform: 'translate(-50%, -50%)',
-        pointerEvents: 'none',
-        zIndex: '5',
-        opacity: '1',
-        transition: `all ${0.4 + g * 0.1}s cubic-bezier(0.16,1,0.3,1) ${g * 60}ms`,
-      });
-      nav.appendChild(ghost);
-
-      // Animate toward the new active position then fade
-      requestAnimationFrame(() => {
-        const targetY = (to / (totalDots - 1)) * trackHeight;
-        ghost.style.top = `${targetY}px`;
-        ghost.style.opacity = '0';
-        ghost.style.transform = `translate(-50%, -50%) scale(0.3)`;
-        setTimeout(() => ghost.remove(), 600 + g * 100);
-      });
-    }
-
     prevActive.current = active;
-  }, [active, totalDots]);
+  }, [active]);
 
   return (
     <nav
@@ -210,29 +159,9 @@ function AISectionDots() {
           return (
             <button
               key={section}
-              onClick={(e) => {
+              onClick={() => {
                 const el = document.getElementById(`ai-section-${i}`);
                 el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // Flash ripple on clicked dot
-                const btn = e.currentTarget;
-                const ripple = document.createElement('span');
-                ripple.setAttribute('aria-hidden', 'true');
-                Object.assign(ripple.style, {
-                  position: 'absolute', left: '50%', top: '50%',
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  background: 'rgba(233,213,255,0.9)',
-                  boxShadow: '0 0 12px rgba(192,132,252,0.8)',
-                  transform: 'translate(-50%,-50%) scale(1)',
-                  pointerEvents: 'none', zIndex: '10', opacity: '1',
-                });
-                btn.appendChild(ripple);
-                requestAnimationFrame(() => {
-                  ripple.style.transition = 'all 0.5s cubic-bezier(0.16,1,0.3,1)';
-                  ripple.style.width = '28px';
-                  ripple.style.height = '28px';
-                  ripple.style.opacity = '0';
-                  setTimeout(() => ripple.remove(), 550);
-                });
               }}
               className="ai-nav-dot group relative flex items-center"
               title={section}
@@ -248,24 +177,14 @@ function AISectionDots() {
                       : 'h-1.5 w-1.5 bg-purple-500/20 ring-1 ring-purple-500/10 group-hover:bg-purple-400/60 group-hover:shadow-[0_0_12px_rgba(168,85,247,0.4)] group-hover:scale-[1.8]'
                   }`}
               />
-              {/* Active ring pulse — double sonar rings */}
+              {/* Active indicator ring — static (no pulse animation) */}
               {isActive && (
-                <>
-                  <span
-                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 rounded-full pointer-events-none"
-                    style={{
-                      border: '1.5px solid rgba(192,132,252,0.35)',
-                      animation: 'ai-nav-ring-pulse 2.5s ease-out infinite',
-                    }}
-                  />
-                  <span
-                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 rounded-full pointer-events-none"
-                    style={{
-                      border: '1px solid rgba(168,85,247,0.15)',
-                      animation: 'ai-nav-ring-pulse-outer 2.5s ease-out 0.4s infinite',
-                    }}
-                  />
-                </>
+                <span
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 rounded-full pointer-events-none"
+                  style={{
+                    border: '1.5px solid rgba(192,132,252,0.35)',
+                  }}
+                />
               )}
               {/* Label — visible on hover OR when active */}
               <span
@@ -392,114 +311,15 @@ function AIFloatingLabel() {
   );
 }
 
-/* ── Text scramble hook — direct DOM mutation (zero re-renders) ── */
-const SCRAMBLE_CHARS = '▓▒░█▌▐╳╬◆◇⬡⎔⏣⌬⬢⬣☰▤▥▦▧▨▩';
-function useTextScramble(text: string) {
+/* ── Text scramble disabled — show text immediately ── */
+function useTextScramble(_text: string) {
   const elRef = useRef<HTMLHeadingElement>(null);
-  const hasRun = useRef(false);
-
-  useEffect(() => {
-    const el = elRef.current;
-    if (!el || hasRun.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.innerWidth < 768) return; // Skip scramble on mobile — show text immediately
-
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || hasRun.current) return;
-        hasRun.current = true;
-        io.disconnect();
-
-        const chars = text.split('');
-        const total = chars.length;
-        const staggerPerChar = 600 / total;
-        let frame = 0;
-        const resolved = new Array(total).fill(false);
-        let rafId: number;
-
-        const scramble = () => {
-          frame++;
-          const elapsed = frame * 16;
-          for (let i = 0; i < total; i++) {
-            if (!resolved[i] && elapsed > i * staggerPerChar + 100) resolved[i] = true;
-          }
-          // Direct DOM write — no React state, no re-render
-          el.textContent = chars.map((c, i) => c === ' ' ? ' ' : resolved[i] ? c : SCRAMBLE_CHARS[(Math.random() * SCRAMBLE_CHARS.length) | 0]).join('');
-          if (!resolved.every(Boolean)) rafId = requestAnimationFrame(scramble);
-        };
-
-        el.textContent = chars.map(c => c === ' ' ? ' ' : SCRAMBLE_CHARS[(Math.random() * SCRAMBLE_CHARS.length) | 0]).join('');
-        rafId = requestAnimationFrame(scramble);
-        return () => cancelAnimationFrame(rafId);
-      },
-      { threshold: 0.5 },
-    );
-
-    io.observe(el);
-    return () => io.disconnect();
-  }, [text]);
-
   return { elRef };
 }
 
-/* ── Typewriter subtitle — direct DOM mutation (zero re-renders) ── */
+/* ── Subtitle — shown immediately (typewriter animation disabled) ── */
 function AITypewriterSubtitle({ text }: { text: string }) {
-  const elRef = useRef<HTMLSpanElement>(null);
-  const hasRun = useRef(false);
-
-  useEffect(() => {
-    if (hasRun.current) return;
-    const el = elRef.current;
-    if (!el) return;
-    const textNode = el.querySelector<HTMLSpanElement>('[data-tw-text]');
-    const cursorNode = el.querySelector<HTMLSpanElement>('[data-tw-cursor]');
-    if (!textNode) return;
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.innerWidth < 768) {
-      textNode.textContent = text;
-      if (cursorNode) cursorNode.style.display = 'none';
-      hasRun.current = true;
-      return;
-    }
-
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || hasRun.current) return;
-        hasRun.current = true;
-        io.disconnect();
-
-        let i = 0;
-        setTimeout(() => {
-          const interval = setInterval(() => {
-            i++;
-            textNode.textContent = text.slice(0, i);
-            if (i >= text.length) {
-              clearInterval(interval);
-              setTimeout(() => { if (cursorNode) cursorNode.style.display = 'none'; }, 2000);
-            }
-          }, 40);
-        }, 400);
-      },
-      { threshold: 0.5 },
-    );
-
-    io.observe(el);
-    return () => io.disconnect();
-  }, [text]);
-
-  return (
-    <span ref={elRef} className="inline">
-      <span data-tw-text />
-      <span
-        data-tw-cursor
-        className="ml-0.5 inline-block h-[1.1em] w-[2px] align-middle"
-        style={{
-          background: 'linear-gradient(180deg, rgba(192,132,252,0.9), rgba(168,85,247,0.6))',
-          boxShadow: '0 0 6px rgba(168,85,247,0.5)',
-        }}
-      />
-    </span>
-  );
+  return <span>{text}</span>;
 }
 
 /* ── Section header component — watermark number + glowing line ── */
@@ -554,41 +374,9 @@ function AISectionHeader({ label, sectionIndex }: { label: string; sectionIndex:
   );
 }
 
-/* ── Count-up hook for animated numbers ── */
-function useCountUp(end: number, duration = 1200, start = 0, active = true) {
-  const [value, setValue] = useState(start);
-  const [landed, setLanded] = useState(false);
-  const ref = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!active) { setValue(start); setLanded(false); return; }
-    // Skip animation on mobile — show final value immediately
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setValue(end);
-      setLanded(true);
-      return;
-    }
-    setLanded(false);
-    const startTime = performance.now();
-
-    const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // easeOutExpo for dramatic start, slow finish
-      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      setValue(Math.round(start + (end - start) * eased));
-      if (progress < 1) {
-        ref.current = requestAnimationFrame(tick);
-      } else {
-        setLanded(true);
-      }
-    };
-
-    ref.current = requestAnimationFrame(tick);
-    return () => { if (ref.current) cancelAnimationFrame(ref.current); };
-  }, [end, duration, start, active]);
-
-  return { value, landed };
+/* ── Count-up disabled — show final value immediately ── */
+function useCountUp(end: number, _duration = 1200, start = 0, active = true) {
+  return { value: active ? end : start, landed: active };
 }
 
 /* ── Magnetic tilt hook — 3D perspective follow on hover ── */
@@ -638,87 +426,7 @@ function StatCell({ stat, index, visible }: { stat: { value: string | number; la
   const sparkFired = useRef(false);
   useStatTilt(cellRef);
 
-  // Spark shower on countup landing
-  useEffect(() => {
-    if (!stat.landed || sparkFired.current || !cellRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.innerWidth < 640) return;
-    sparkFired.current = true;
-
-    const cell = cellRef.current;
-    const rect = cell.getBoundingClientRect();
-    const cx = rect.width / 2;
-    const cy = rect.height * 0.35; // Origin near the number
-
-    const SPARK_COUNT = 6;
-    for (let i = 0; i < SPARK_COUNT; i++) {
-      const spark = document.createElement('div');
-      spark.className = 'ai-stat-spark';
-      spark.setAttribute('aria-hidden', 'true');
-      // Random angle spread (full circle)
-      const angle = (Math.PI * 2 * i) / SPARK_COUNT + (Math.random() - 0.5) * 0.6;
-      const distance = 25 + Math.random() * 40;
-      const dx = Math.cos(angle) * distance;
-      const dy = Math.sin(angle) * distance;
-      const size = 2 + Math.random() * 2;
-      Object.assign(spark.style, {
-        position: 'absolute',
-        left: `${cx}px`,
-        top: `${cy}px`,
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: '50%',
-        background: i % 3 === 0 ? 'rgba(233,213,255,0.9)' : i % 3 === 1 ? 'rgba(192,132,252,0.8)' : 'rgba(168,85,247,0.7)',
-        boxShadow: `0 0 ${size * 2}px rgba(168,85,247,0.6)`,
-        pointerEvents: 'none',
-        zIndex: '30',
-        opacity: '0',
-      });
-      cell.appendChild(spark);
-
-      // Animate: burst outward, fade, shrink
-      const delay = Math.random() * 80;
-      requestAnimationFrame(() => {
-        spark.style.transition = `all ${0.4 + Math.random() * 0.3}s cubic-bezier(0.16,1,0.3,1) ${delay}ms`;
-        spark.style.opacity = '1';
-        spark.style.transform = `translate(${dx}px, ${dy}px) scale(1)`;
-        setTimeout(() => {
-          spark.style.transition = `all 0.3s ease-in`;
-          spark.style.opacity = '0';
-          spark.style.transform = `translate(${dx * 1.5}px, ${dy * 1.5}px) scale(0)`;
-          setTimeout(() => spark.remove(), 350);
-        }, 300 + delay);
-      });
-    }
-
-    // Shockwave ring
-    const ring = document.createElement('div');
-    ring.setAttribute('aria-hidden', 'true');
-    Object.assign(ring.style, {
-      position: 'absolute',
-      left: `${cx - 4}px`,
-      top: `${cy - 4}px`,
-      width: '8px',
-      height: '8px',
-      borderRadius: '50%',
-      border: '1.5px solid rgba(192,132,252,0.6)',
-      boxShadow: '0 0 12px rgba(168,85,247,0.4)',
-      pointerEvents: 'none',
-      zIndex: '29',
-      opacity: '1',
-    });
-    cell.appendChild(ring);
-    requestAnimationFrame(() => {
-      ring.style.transition = 'all 0.6s cubic-bezier(0.16,1,0.3,1)';
-      ring.style.width = '60px';
-      ring.style.height = '60px';
-      ring.style.left = `${cx - 30}px`;
-      ring.style.top = `${cy - 30}px`;
-      ring.style.opacity = '0';
-      ring.style.borderColor = 'rgba(168,85,247,0.05)';
-      setTimeout(() => ring.remove(), 650);
-    });
-  }, [stat.landed]);
+  // Spark shower disabled — decorative animation removed
 
   return (
     <div
@@ -914,158 +622,10 @@ export default function AIModePage() {
   // Force purple palette on framer-motion inline styles
   // forcePurple DOM sweep removed — clean version uses CSS-only purple theming
 
-  // Cursor glow — ambient purple orb with lerp trailing (desktop only)
-  // RAF auto-stops when glow reaches target (no continuous loop when mouse is still)
+  // Cursor glow disabled — decorative animation removed
   const cursorGlowRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const glow = cursorGlowRef.current;
-    if (!glow) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.innerWidth < 1280) return;
 
-    let visible = false;
-    let targetX = window.innerWidth / 2;
-    let targetY = window.innerHeight / 2;
-    let currentX = targetX;
-    let currentY = targetY;
-    const LERP = 0.07;
-    const HALF = 350;
-    let raf = 0;
-
-    const update = () => {
-      raf = 0;
-      const dx = targetX - currentX;
-      const dy = targetY - currentY;
-      currentX += dx * LERP;
-      currentY += dy * LERP;
-      glow.style.transform = `translate3d(${currentX - HALF}px, ${currentY - HALF}px, 0)`;
-      // Stop RAF when close enough to target (< 0.5px)
-      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-        raf = requestAnimationFrame(update);
-      }
-    };
-
-    const onMove = (e: MouseEvent) => {
-      targetX = e.clientX;
-      targetY = e.clientY;
-      if (!visible) {
-        visible = true;
-        currentX = targetX;
-        currentY = targetY;
-        glow.style.opacity = '1';
-      }
-      if (!raf) raf = requestAnimationFrame(update);
-    };
-
-    const onLeave = () => {
-      visible = false;
-      glow.style.opacity = '0';
-    };
-
-    document.addEventListener('mousemove', onMove, { passive: true });
-    document.addEventListener('mouseleave', onLeave);
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseleave', onLeave);
-    };
-  }, []);
-
-  // Neural network canvas — faint lines between nearby floating particles + cursor node
-  // Only redraws on mousemove (not continuous RAF) to prevent layout thrashing
-  useEffect(() => {
-    const canvas = neuralCanvasRef.current;
-    if (!canvas) return;
-    if (window.innerWidth < 640) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const MAX_DIST = 350;
-    const CURSOR_DIST = 250;
-    const particles = document.querySelectorAll<HTMLElement>('.ai-particle');
-    if (particles.length < 2) return;
-
-    let mouseX = -999;
-    let mouseY = -999;
-    let mouseActive = false;
-    let drawId = 0;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize, { passive: true });
-
-    const draw = () => {
-      drawId = 0;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const positions: { x: number; y: number }[] = [];
-      particles.forEach((p) => {
-        const rect = p.getBoundingClientRect();
-        positions.push({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-      });
-
-      for (let i = 0; i < positions.length; i++) {
-        for (let j = i + 1; j < positions.length; j++) {
-          const dx = positions[j].x - positions[i].x;
-          const dy = positions[j].y - positions[i].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > MAX_DIST) continue;
-          const opacity = (1 - dist / MAX_DIST) * 0.12;
-          ctx.strokeStyle = `rgba(168,85,247,${opacity.toFixed(4)})`;
-          ctx.lineWidth = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(positions[i].x, positions[i].y);
-          ctx.lineTo(positions[j].x, positions[j].y);
-          ctx.stroke();
-        }
-      }
-
-      if (mouseActive) {
-        for (let i = 0; i < positions.length; i++) {
-          const dx = positions[i].x - mouseX;
-          const dy = positions[i].y - mouseY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > CURSOR_DIST) continue;
-          const t = 1 - dist / CURSOR_DIST;
-          ctx.strokeStyle = `rgba(192,132,252,${(t * 0.18).toFixed(4)})`;
-          ctx.lineWidth = 0.6 + t * 0.4;
-          ctx.beginPath();
-          ctx.moveTo(mouseX, mouseY);
-          ctx.lineTo(positions[i].x, positions[i].y);
-          ctx.stroke();
-        }
-      }
-    };
-
-    // Draw once on init, then only on mousemove (not continuous RAF)
-    draw();
-
-    const onMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-      mouseActive = true;
-      if (!drawId) drawId = requestAnimationFrame(draw);
-    };
-    const onLeave = () => {
-      mouseActive = false;
-      if (!drawId) drawId = requestAnimationFrame(draw);
-    };
-
-    document.addEventListener('mousemove', onMove, { passive: true });
-    document.addEventListener('mouseleave', onLeave);
-
-    return () => {
-      if (drawId) cancelAnimationFrame(drawId);
-      window.removeEventListener('resize', resize);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseleave', onLeave);
-    };
-  }, []);
+  // Neural network canvas disabled — decorative animation removed
 
   // DEV: Animation debug panel — press ";" to toggle
   const [devOpen, setDevOpen] = useState(false);
@@ -1129,12 +689,17 @@ export default function AIModePage() {
 
   return (
     <SectionErrorBoundary section="AIInsights">
-    <MotionConfig reducedMotion={isMobileRef.current ? 'always' : 'never'}>
-    <div className="ai-perf-kill">
+    <MotionConfig reducedMotion="never">
+    <div className="ai-perf-kill ai-no-anim">
 
-    {/* PERF: Contain paint within cards to prevent cross-card repaint cascades */}
+    {/* PERF: Contain paint + kill ALL CSS keyframe animations (except loading skeletons) */}
     <style dangerouslySetInnerHTML={{ __html: `
       .ai-perf-kill .analysis-card-accent { contain: layout style paint; }
+      .ai-no-anim *:not(.ai-card-skeleton),
+      .ai-no-anim *:not(.ai-card-skeleton)::before,
+      .ai-no-anim *:not(.ai-card-skeleton)::after {
+        animation: none !important;
+      }
     ` }} />
 
     {/* DEV: Animation debug panel — press ";" to toggle */}

@@ -25,6 +25,30 @@ export interface ShareViralScores {
   ghostRisk: Record<string, { score: number; factors: string[] }>;
 }
 
+/** EKS phase summary for share payload (anonymized, minimal). */
+export interface ShareEksPhase {
+  name: string;
+  period: string;
+}
+
+/** EKS (relationship autopsy) data subset for sharing. */
+export interface ShareEksData {
+  /** Epitaph — one-line poetic summary of the relationship. */
+  epitaph: string;
+  /** Primary cause of death — single sentence. */
+  causeOfDeath: string;
+  /** Date of death (last message date). */
+  deathDate: string;
+  /** Relationship duration (e.g. "1 rok i 3 miesiące"). */
+  duration: string;
+  /** Probability of reunion (0-100). */
+  willTheyComeBack: number;
+  /** Who left first — anonymized ("Osoba A" or "Osoba B"). */
+  whoLeftFirst: string;
+  /** Relationship phases — max 5, anonymized. */
+  phases: ShareEksPhase[];
+}
+
 /** The data payload embedded in the share URL. */
 export interface SharePayload {
   /** Schema version for future compatibility. */
@@ -69,4 +93,6 @@ export interface SharePayload {
     finding: string;
     significance: 'positive' | 'neutral' | 'concerning';
   }>;
+  /** EKS (relationship autopsy) data — present only for EKS share links. */
+  eks?: ShareEksData;
 }

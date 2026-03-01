@@ -127,7 +127,7 @@ export default function ChronotypePair({ result }: ChronotypePairProps) {
               </div>
               {person.socialJetLagHours > 0 && (
                 <div>
-                  Social jet lag:{' '}
+                  Przesunięcie aktywności:{' '}
                   <span className={cn(
                     'font-mono',
                     person.socialJetLagLevel === 'severe' ? 'text-red-400' :
@@ -164,7 +164,7 @@ export default function ChronotypePair({ result }: ChronotypePairProps) {
         ))}
       </div>
 
-      {/* Delta + Social Jet Lag footer */}
+      {/* Delta + Weekday-Weekend Messaging Shift footer */}
       <div className="mt-4 rounded-lg border border-white/[0.04] bg-white/[0.02] px-4 py-2.5 flex items-center justify-between">
         <span className="text-xs text-muted-foreground">Delta chronotypów</span>
         <span className={cn('text-sm font-mono font-bold', scoreColor(matchScore))}>
@@ -173,7 +173,7 @@ export default function ChronotypePair({ result }: ChronotypePairProps) {
       </div>
       {result.avgSocialJetLag !== undefined && result.avgSocialJetLag > 0 && (
         <div className="mt-1.5 rounded-lg border border-white/[0.04] bg-white/[0.02] px-4 py-2 flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Śr. social jet lag</span>
+          <span className="text-xs text-muted-foreground">Śr. przesunięcie aktywności</span>
           <span className={cn(
             'text-xs font-mono font-medium',
             result.avgSocialJetLag >= 4 ? 'text-red-400' :
@@ -186,7 +186,7 @@ export default function ChronotypePair({ result }: ChronotypePairProps) {
       )}
 
       <PsychDisclaimer
-        text="Chronotyp wyznaczony z timestampów wiadomości — analogia do MCTQ midpoint-of-sleep, bez kontroli snu i strefy czasowej. UK Biobank (N=47,420 par): r=0.24 dla synchronizacji rytmów dobowych. Social jet lag = |midpoint_dni_roboczych − midpoint_weekendu| (Roenneberg et al., 2012). Wyniki zależą od nawyków telefonu."
+        text="Chronotyp wyznaczony z timestampów wiadomości — analogia do MCTQ midpoint-of-sleep, bez kontroli snu i strefy czasowej. UK Biobank (N=47,420 par): r=0.24 dla synchronizacji rytmów dobowych. Przesunięcie aktywności = |midpoint_dni_roboczych − midpoint_weekendu| (analogia do social jet lag, Roenneberg et al., 2012 — oryginał mierzy sen, nie wiadomości). Wyniki zależą od nawyków telefonu."
         citation="Aledavood et al., 2018 (EPJ Data Science, N=400); Jarmolowicz et al., 2022; Roenneberg et al., 2012 (Current Biology)"
         showGenericFooter
       />

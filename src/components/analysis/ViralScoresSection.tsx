@@ -240,18 +240,18 @@ function GhostRiskMeter({
   );
 }
 
-// --- Delusion Display ---
-function DelusionDisplay({
+// --- Investment Asymmetry Display (formerly Delusion Display) ---
+function AsymmetryDisplay({
   score,
-  delusionHolder,
+  moreInvestedPerson,
   isInView,
 }: {
   score: number;
-  delusionHolder?: string;
+  moreInvestedPerson?: string;
   isInView: boolean;
 }) {
   const emoji = score < 20 ? '\u{1F9D8}' : score <= 50 ? '\u{1F914}' : '\u{1F921}';
-  const label = score < 20 ? 'Realistyczna para' : score <= 50 ? 'Lekka deluzja' : 'Pełna deluzja';
+  const label = score < 20 ? 'Równomierne zaangażowanie' : score <= 50 ? 'Lekka asymetria' : 'Wyraźna asymetria';
   const color = score < 20 ? '#a78bfa' : score <= 50 ? '#c084fc' : '#e879f9';
   const glow = score < 20 ? 'rgba(167,139,250,0.25)' : score <= 50 ? 'rgba(192,132,252,0.25)' : 'rgba(232,121,249,0.3)';
   const countVal = useCountUp(score, 1000, isInView);
@@ -273,15 +273,15 @@ function DelusionDisplay({
         {countVal}
       </span>
       <span className="text-xs font-semibold" style={{ color }}>{label}</span>
-      {delusionHolder && score >= 20 && (
+      {moreInvestedPerson && score >= 20 && (
         <motion.p
           className="text-[11px] text-muted-foreground/60"
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : { opacity: 0 }}
           transition={{ duration: 0.4, delay: 0.8 }}
         >
-          <span className="font-semibold text-foreground/70">{delusionHolder}</span>
-          {' '}patrzy przez różowe okulary
+          <span className="font-semibold text-foreground/70">{moreInvestedPerson}</span>
+          {' '}jest bardziej zaangażowany/a
         </motion.p>
       )}
     </div>
@@ -354,7 +354,7 @@ export default function ViralScoresSection({
           </StaggerItem>
         </div>
 
-        {/* Row 2: Ghost Risk + Delusion */}
+        {/* Row 2: Ghost Risk + Investment Asymmetry */}
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <StaggerItem index={2} isInView={isInView} className="rounded-xl border border-purple-500/[0.06] bg-purple-950/[0.1] p-4">
             <SubLabel isInView={isInView} delay={0.35}>Ryzyko ghostingu</SubLabel>
@@ -378,15 +378,15 @@ export default function ViralScoresSection({
           </StaggerItem>
 
           <StaggerItem index={3} isInView={isInView} className="rounded-xl border border-purple-500/[0.06] bg-purple-950/[0.1] p-4">
-            <SubLabel isInView={isInView} delay={0.45}>Skala deluzji</SubLabel>
-            <DelusionDisplay score={delusionScore} delusionHolder={delusionHolder} isInView={isInView} />
+            <SubLabel isInView={isInView} delay={0.45}>Asymetria zaangażowania</SubLabel>
+            <AsymmetryDisplay score={delusionScore} moreInvestedPerson={delusionHolder} isInView={isInView} />
           </StaggerItem>
         </div>
       </div>
 
       <div className="px-5 pb-4">
         <PsychDisclaimer
-          text="Wyniki kompatybilności, zainteresowania i deluzji to metryki rozrywkowe oparte na heurystycznych obliczeniach ilościowych. Nie odzwierciedlają głębszych aspektów relacji."
+          text="Wyniki kompatybilności, zainteresowania i asymetrii zaangażowania to metryki rozrywkowe oparte na heurystycznych obliczeniach ilościowych. Nie odzwierciedlają głębszych aspektów relacji."
           showGenericFooter
         />
       </div>

@@ -1277,7 +1277,7 @@ const NEGATION_PARTICLES = new Set([
   'werent', 'hasnt', 'havent', 'doesnt', 'didnt', 'couldnt',
   'wouldnt', 'shouldnt', 'never', 'no',
 ]);
-const NEGATION_WINDOW = 2; // look ahead up to 2 tokens ("nie jestem szczęśliwy", "not really happy")
+const NEGATION_WINDOW = 3; // 3-token lookahead (Cruz et al. 2015: optimal 3-4 tokens for short text)
 
 /**
  * Resolve the sentiment polarity of a single token.
@@ -1300,6 +1300,12 @@ function resolvePolarity(token: string): 'positive' | 'negative' | undefined {
   return lookupInflectedPolish(token, POSITIVE_DICT, NEGATIVE_DICT);
 }
 
+// TODO: Consider using weighted scoring instead of binary +1/-1.
+// The SP_POSITIVE/SP_NEGATIVE words come from AFINN-165 (Nielsen 2011)
+// which has integer weights -5 to +5. Binary scoring loses intensity info
+// (e.g. "bastard" at -5 treated same as "slightly" at -1).
+// Challenge: other dictionaries (plWordNet, NAWL) don't have AFINN weights.
+
 /**
  * Compute sentiment score for a single text string.
  *
@@ -1307,7 +1313,7 @@ function resolvePolarity(token: string): 'positive' | 'negative' | undefined {
  * dictionary matches, returns normalized score.
  *
  * Negation handling: Polish (nie, bez, ani) and English (not, don't, never, etc.)
- * particles followed by a positive word within 2 tokens flip that positive → negative.
+ * particles followed by a positive word within 3 tokens flip that positive → negative.
  *
  * Inflection fallback: tokens that miss the exact-match dictionary are passed
  * through lookupInflectedPolish() which generates candidate base forms by

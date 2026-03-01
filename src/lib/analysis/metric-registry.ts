@@ -91,12 +91,12 @@ export const METRIC_REGISTRY: Record<string, MetricMeta> = {
 
   // ── Experimental (novel/heuristic) ────────────────────────
   integrativeComplexity: {
-    name: 'Złożoność Integracyjna (IC)',
+    name: 'Wskaźnik Złożoności Poznawczej',
     isExperimental: true,
     citation: 'Suedfeld & Tetlock (1977), Conway (2014)',
     minSampleSize: '30 wiadomości na osobę',
-    description: 'AutoIC: detekcja fraz różnicowania i integracji. Normalizowane 0-100.',
-    limitations: 'Uproszczona metoda frazowa — oryginał wymaga ręcznego kodowania. Współczynnik kompresji 6.5 jest heurystyczny.',
+    description: 'Heurystyczny wskaźnik oparty na detekcji fraz dyferencjacji i integracji. Nie jest to walidowana metoda IC Suedfelda & Tetlocka (1977).',
+    limitations: 'Uproszczona metoda frazowa — oryginalna IC wymaga oceny przez przeszkolonych koderów na skali 1-7. AutoIC Conway (2014) używa 3500+ fraz i osiąga r=.82.',
   },
   temporalFocus: {
     name: 'Orientacja Czasowa',
@@ -115,12 +115,12 @@ export const METRIC_REGISTRY: Record<string, MetricMeta> = {
     limitations: 'Oparte na markerach tekstowych — nie rozpoznaje napraw kontekstowych.',
   },
   emotionalGranularity: {
-    name: 'Granularność Emocjonalna',
+    name: 'Różnorodność Słownictwa Emocjonalnego',
     isExperimental: true,
     citation: 'Kashdan (2015), Suvak (2011)',
     minSampleSize: '200 słów na osobę',
-    description: 'Różnorodność i gęstość emocji (12 kategorii Plutchik). Formuła: 70% diversity + 30% coverage.',
-    limitations: 'Leksykon 12 kategorii — uproszczenie vs oryginalne narzędzia samoopisowe.',
+    description: 'Różnorodność kategorii emocji w słownictwie (12 kategorii Plutchik). Formuła: 70% diversity + 30% coverage. Nie jest to granularność emocjonalna w rozumieniu Barrett & Kashdan (2015).',
+    limitations: 'Leksykon 12 kategorii — uproszczenie vs oryginalne narzędzia samoopisowe. Mierzy słownictwo, nie kowariancję emocji.',
   },
   shiftSupport: {
     name: 'Indeks Narcyzmu Konwersacyjnego (CNI)',
@@ -165,11 +165,11 @@ export const METRIC_REGISTRY: Record<string, MetricMeta> = {
     limitations: 'Mediany szacunkowe (3000 msgs, 480s RT, 12h silence, 20 asymmetry) — nie oparte na danych empirycznych.',
   },
   gottmanHorsemen: {
-    name: 'Czterej Jeźdźcy Gottmana',
+    name: 'Wzorce Ryzyka Komunikacyjnego',
     isExperimental: true,
     citation: 'Gottman & Levenson (2000)',
-    description: 'Mapowanie wzorców CPS na 4 Jeźdźców: Krytyka, Pogarda, Defensywność, Stonewalling.',
-    limitations: 'Derywowane z wyników CPS (AI) — oryginał wymaga obserwacji klinicznych.',
+    description: 'Heurystyczna analiza 4 obszarów ryzyka (Krytycyzm, Pogarda, Defensywność, Stonewalling) inspirowana badaniami Gottmana.',
+    limitations: 'Derywowane z wyników CPS (AI) — oryginał wymaga obserwacji klinicznych (SPAFF).',
   },
   cognitiveFunctions: {
     name: 'Clash Funkcji Kognitywnych',

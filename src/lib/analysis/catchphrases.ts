@@ -83,13 +83,17 @@ export function computeCatchphrases(
   const bigramsPerPerson = new Map<string, Map<string, number>>();
   const trigramsPerPerson = new Map<string, Map<string, number>>();
 
+  // Count messages per person for minimum sample size check
+  const msgCountPerPerson = new Map<string, number>();
   for (const name of names) {
     bigramsPerPerson.set(name, new Map());
     trigramsPerPerson.set(name, new Map());
+    msgCountPerPerson.set(name, 0);
   }
 
   for (const msg of conversation.messages) {
     if (!msg.content.trim()) continue;
+    msgCountPerPerson.set(msg.sender, (msgCountPerPerson.get(msg.sender) ?? 0) + 1);
 
     const bigramMap = bigramsPerPerson.get(msg.sender);
     const trigramMap = trigramsPerPerson.get(msg.sender);
@@ -138,6 +142,11 @@ export function computeCatchphrases(
   const result: Record<string, CatchphraseEntry[]> = {};
 
   for (const name of names) {
+    // Minimum 50 messages per person for reliable catchphrase detection
+    if ((msgCountPerPerson.get(name) ?? 0) < 50) {
+      result[name] = [];
+      continue;
+    }
     const candidates: CatchphraseEntry[] = [];
     const bigrams = bigramsPerPerson.get(name);
     const trigrams = trigramsPerPerson.get(name);

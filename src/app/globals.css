@@ -2,7 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "./ai-mode.css";
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -152,6 +151,7 @@ html {
 [data-mode="ai"]        { --mode-accent: #a855f7; --mode-glow: rgba(168,85,247,0.12); --mode-accent-rgb: 168,85,247; }
 [data-mode="share"]     { --mode-accent: #8b5cf6; --mode-glow: rgba(139,92,246,0.12); --mode-accent-rgb: 139,92,246; }
 [data-mode="couple"]    { --mode-accent: #ec4899; --mode-glow: rgba(236,72,153,0.15); --mode-accent-rgb: 236,72,153; }
+[data-mode="eks"]       { --mode-accent: #991b1b; --mode-glow: rgba(153,27,27,0.12); --mode-accent-rgb: 153,27,27; }
 
 /* ═══════════════════════════════════════
    SAFE AREA INSETS — iPhone notch / Dynamic Island
@@ -166,9 +166,9 @@ html {
    REDUCED MOTION — accessibility for vestibular disorders
 ═══════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *:not([data-mode="court"]):not([data-mode="court"] *),
+  *:not([data-mode="court"]):not([data-mode="court"] *)::before,
+  *:not([data-mode="court"]):not([data-mode="court"] *)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -409,9 +409,9 @@ body::after {
 
 /* Accessibility: respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *:not([data-mode="court"]):not([data-mode="court"] *),
+  *:not([data-mode="court"]):not([data-mode="court"] *)::before,
+  *:not([data-mode="court"]):not([data-mode="court"] *)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -477,6 +477,15 @@ body::after {
     color: color(display-p3 1.0 0.2 0.2);
     text-shadow: 0 0 14px color(display-p3 1.0 0.2 0.2 / 0.5);
   }
+}
+
+/* Eks mode — only "eks" letters turn crimson red (no strikethrough)
+   data-mode="eks" = on the eks sub-page itself
+   data-eks-mode = on any analysis page when relationshipContext is 'eks' */
+[data-mode="eks"] .brand-logo .brand-eks,
+[data-eks-mode] .brand-logo .brand-eks {
+  color: #dc2626 !important;
+  text-shadow: 0 0 16px rgba(220, 38, 38, 0.5) !important;
 }
 
 /* ═══════════════════════════════════════
@@ -1075,6 +1084,104 @@ body::after {
   border: 2px solid rgba(139,92,246,0.2);
   box-shadow: inset 0 0 20px rgba(6,182,212,0.2), 0 0 20px rgba(139,92,246,0.2);
   transform: translate(-50%, -50%);
+}
+
+/* Eks: flatline EKG + crimson glow + skull center */
+.card-art-eks {
+  background: radial-gradient(ellipse at 50% 50%, rgba(153,27,27,0.3), #0a0000 55%, #050000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-art-eks::before {
+  content: '☠';
+  position: absolute;
+  font-size: 5rem;
+  color: rgba(153,27,27,0.2);
+  text-shadow: 0 0 40px rgba(220,38,38,0.15), 0 0 80px rgba(153,27,27,0.1);
+  z-index: 1;
+  animation: eks-pulse 3s ease-in-out infinite alternate;
+}
+.card-art-eks::after {
+  content: '';
+  position: absolute;
+  top: 60%;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    #991b1b 15%,
+    #dc2626 20%,
+    #991b1b 22%,
+    #dc2626 35%,
+    #991b1b 38%,
+    #dc2626 40%,
+    #991b1b 42%,
+    transparent 55%,
+    #991b1b80 70%,
+    transparent
+  );
+  box-shadow: 0 0 8px rgba(220,38,38,0.4), 0 0 20px rgba(153,27,27,0.2);
+  animation: eks-flatline 4s ease-in-out infinite;
+  z-index: 2;
+}
+@keyframes eks-pulse {
+  0% { opacity: 0.4; transform: scale(1); }
+  100% { opacity: 0.7; transform: scale(1.05); }
+}
+@keyframes eks-flatline {
+  0%, 100% { opacity: 0.6; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-1px); }
+}
+
+/* Cursor blink for typewriter date */
+@keyframes eks-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Death Line SVG path draw-in animation */
+.eks-death-line-path {
+  animation: eks-line-draw 2.5s ease-out forwards;
+}
+@keyframes eks-line-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Specimen card — frosted glass */
+.eks-specimen-card {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Golden age warm transition */
+.eks-golden-transition {
+  position: relative;
+}
+.eks-golden-transition::before {
+  content: '';
+  position: absolute;
+  inset: -2rem;
+  background: radial-gradient(ellipse at 50% 50%, rgba(212,160,122,0.06) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ghost text pulse for unsaid things */
+.eks-ghost-text {
+  animation: eks-ghost-pulse 3s ease-in-out infinite;
+}
+@keyframes eks-ghost-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* Death certificate sepia tone */
+.eks-death-certificate {
+  background: linear-gradient(170deg, rgba(28,25,23,0.8) 0%, rgba(12,10,9,0.9) 100%);
+  border: 1px solid rgba(168, 162, 158, 0.15);
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.3);
 }
 
 @keyframes card-drift-up {
@@ -2943,7 +3050,6 @@ body::after {
 
 /* ── Accessibility: reduce motion ─────────── */
 @media (prefers-reduced-motion: reduce) {
-  .court-particle, .court-dust,
   .standup-particle, .standup-smoke, .standup-smoke-haze,
   .standup-konfetti, .standup-audience-head, .standup-smoke-burst,
   .roast-spark,
@@ -3366,5 +3472,310 @@ body::after {
 }
 @media (max-width: 1024px) {
   .metrics-content-rails::before { display: none; }
+}
+
+/* ═══════════════════════════════════════
+   TRYB EKS — Sekcja Zwłok Twojego Związku
+   Visual identity: deep crimson, burnt paper, embers
+═══════════════════════════════════════ */
+
+[data-mode="eks"] {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(153,27,27,0.08), transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(120,20,20,0.06), transparent 50%),
+    linear-gradient(180deg, #0a0000 0%, #050000 50%, #030202 100%);
+  min-height: 100vh;
+}
+
+[data-mode="eks"]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  mix-blend-mode: overlay;
+}
+
+[data-mode="eks"] .eks-card {
+  background: #1a0808;
+  border: 1px solid #2a1010;
+  border-radius: 12px;
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+[data-mode="eks"] .eks-card:hover {
+  background: #250d0d;
+  border-color: #3a1515;
+}
+
+@keyframes ember-float {
+  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10% { opacity: 0.8; }
+  50% { transform: translateY(-40vh) translateX(15px) scale(0.6); opacity: 0.5; }
+  100% { transform: translateY(-80vh) translateX(-10px) scale(0.2); opacity: 0; }
+}
+.eks-embers { position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+.eks-ember {
+  position: absolute; bottom: -10px; width: 3px; height: 3px; border-radius: 50%;
+  background: radial-gradient(circle, #ff6b35, #dc2626);
+  box-shadow: 0 0 6px 2px rgba(220,38,38,0.4), 0 0 12px 4px rgba(255,107,53,0.2);
+  animation: ember-float linear infinite;
+}
+.eks-ember:nth-child(1) { left: 8%;  animation-duration: 12s; animation-delay: 0s; }
+.eks-ember:nth-child(2) { left: 22%; animation-duration: 15s; animation-delay: 2s; }
+.eks-ember:nth-child(3) { left: 38%; animation-duration: 11s; animation-delay: 4s; }
+.eks-ember:nth-child(4) { left: 55%; animation-duration: 14s; animation-delay: 1s; }
+.eks-ember:nth-child(5) { left: 70%; animation-duration: 13s; animation-delay: 3s; }
+.eks-ember:nth-child(6) { left: 85%; animation-duration: 16s; animation-delay: 5s; }
+.eks-ember:nth-child(7) { left: 45%; animation-duration: 10s; animation-delay: 7s; }
+
+@keyframes flatline-draw {
+  0% { stroke-dashoffset: 600; }
+  100% { stroke-dashoffset: 0; }
+}
+.eks-flatline { width: 100%; height: 40px; overflow: visible; }
+.eks-flatline path {
+  stroke: #991b1b; stroke-width: 2; fill: none;
+  stroke-dasharray: 600; stroke-dashoffset: 600;
+  filter: drop-shadow(0 0 4px rgba(153,27,27,0.5));
+}
+.eks-flatline.animate path { animation: flatline-draw 3s ease-out forwards; }
+
+.eks-torn-edge {
+  width: 100%; height: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1200 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 24 L0 12 Q30 0 60 8 Q90 16 120 6 Q150 -2 180 10 Q210 18 240 4 Q270 -4 300 12 Q330 20 360 8 Q390 -2 420 14 Q450 22 480 6 Q510 -4 540 10 Q570 18 600 4 Q630 -2 660 12 Q690 20 720 8 Q750 -4 780 14 Q810 22 840 6 Q870 -2 900 10 Q930 18 960 4 Q990 -4 1020 12 Q1050 20 1080 8 Q1110 -2 1140 14 Q1170 22 1200 6 L1200 24 Z' fill='%231a0808'/%3E%3C/svg%3E");
+  background-size: 100% 100%; background-repeat: no-repeat;
+}
+
+[data-mode="eks"] ::-webkit-scrollbar { width: 6px; }
+[data-mode="eks"] ::-webkit-scrollbar-track { background: rgba(153,27,27,0.03); }
+[data-mode="eks"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(153,27,27,0.3), rgba(120,20,20,0.15));
+  border-radius: 3px; box-shadow: 0 0 6px rgba(153,27,27,0.15);
+}
+[data-mode="eks"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(153,27,27,0.5), rgba(120,20,20,0.3));
+}
+
+@keyframes heartbeat-flatline {
+  0% { stroke-dashoffset: 1000; }
+  60% { stroke-dashoffset: 400; }
+  100% { stroke-dashoffset: 0; }
+}
+.eks-heartbeat-line { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
+.eks-heartbeat-line.animate { animation: heartbeat-flatline 4s ease-in-out forwards; }
+
+@keyframes typewriter-cursor {
+  0%, 100% { border-color: #991b1b; }
+  50% { border-color: transparent; }
+}
+.eks-typewriter {
+  display: inline-block; border-right: 2px solid #991b1b;
+  animation: typewriter-cursor 1s step-end infinite; padding-right: 4px;
+}
+
+.eks-scene { position: relative; padding: 3rem 0; }
+.eks-scene + .eks-scene::before {
+  content: ''; display: block; margin: 0 auto 3rem;
+  width: 60%; max-width: 400px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(153,27,27,0.4) 20%, rgba(153,27,27,0.6) 50%, rgba(153,27,27,0.4) 80%, transparent);
+}
+
+.eks-quote {
+  position: relative; background: rgba(26,8,8,0.8); border: 1px solid #2a1010;
+  border-left: 3px solid #991b1b; border-radius: 0 8px 8px 0;
+  padding: 12px 16px; font-style: italic; color: #d4a07a;
+}
+.eks-quote-golden {
+  border-left-color: #8b7355; background: rgba(26,16,8,0.8);
+  border-color: #3a2a10; color: #d4a07a;
+}
+
+.eks-golden-age {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(139,115,85,0.1), transparent 60%),
+    radial-gradient(ellipse 60% 60% at 30% 60%, rgba(212,160,122,0.06), transparent 50%),
+    linear-gradient(180deg, #0a0500 0%, #0a0600 50%, #080503 100%);
+}
+
+.eks-tombstone-text { font-variant: small-caps; letter-spacing: 0.15em; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+.eks-emergency-exit {
+  position: fixed; bottom: 24px; right: 24px; z-index: 50;
+  padding: 8px 16px; font-size: 0.8rem; color: #6b3a3a;
+  background: rgba(10,0,0,0.8); border: 1px solid #2a1010; border-radius: 8px;
+  cursor: pointer; backdrop-filter: blur(8px);
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+.eks-emergency-exit:hover { color: #991b1b; border-color: #3a1515; }
+
+.eks-text-accent    { color: #991b1b; }
+.eks-text-highlight { color: #dc2626; }
+.eks-text-faded     { color: #6b3a3a; }
+.eks-text-warm      { color: #d4a07a; }
+.eks-text-gold      { color: #8b7355; }
+.eks-text-ash       { color: #4a4a4a; }
+.eks-bg-card        { background: #1a0808; }
+.eks-border         { border-color: #2a1010; }
+
+/* ── EKS V4: Scroll-driven animations ─────────────────────── */
+
+/* Scene reveal — fade up with deblur */
+.eks-scene-reveal {
+  opacity: 0;
+  filter: blur(6px);
+  transform: translateY(30px);
+  transition: opacity 0.8s ease-out, filter 0.8s ease-out, transform 0.8s ease-out;
+}
+.eks-scene-reveal.in-view {
+  opacity: 1;
+  filter: blur(0px);
+  transform: translateY(0);
+}
+
+/* Scene theme transition — smooth color changes */
+[data-mode="eks"] {
+  --eks-bg: #0a0404;
+  --eks-accent: #dc2626;
+  --eks-glow: rgba(220,38,38,0.15);
+  --eks-text: #d4a07a;
+  --eks-muted: #6b3a3a;
+  transition: --eks-bg 0.6s ease, --eks-accent 0.6s ease;
+}
+
+/* Scroll-driven path draw — progressive enhancement */
+@supports (animation-timeline: scroll()) {
+  .eks-scroll-draw {
+    stroke-dasharray: 3000;
+    stroke-dashoffset: 3000;
+    animation: eks-scroll-path-draw linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 60%;
+  }
+  @keyframes eks-scroll-path-draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .eks-scroll-fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: eks-scroll-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 30%;
+  }
+  @keyframes eks-scroll-reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .eks-scroll-deblur {
+    filter: blur(8px);
+    opacity: 0.3;
+    animation: eks-scroll-deblur-anim linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 40%;
+  }
+  @keyframes eks-scroll-deblur-anim {
+    to { filter: blur(0); opacity: 1; }
+  }
+
+  .eks-scroll-scale-in {
+    transform: scale(0.85);
+    opacity: 0;
+    animation: eks-scroll-scale linear both;
+    animation-timeline: view();
+    animation-range: entry 10% cover 40%;
+  }
+  @keyframes eks-scroll-scale {
+    to { transform: scale(1); opacity: 1; }
+  }
+}
+
+/* Phase card stagger — works with IntersectionObserver class toggle */
+.eks-phase-stagger > * {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.eks-phase-stagger.in-view > *:nth-child(1) { transition-delay: 0s; }
+.eks-phase-stagger.in-view > *:nth-child(2) { transition-delay: 0.1s; }
+.eks-phase-stagger.in-view > *:nth-child(3) { transition-delay: 0.2s; }
+.eks-phase-stagger.in-view > *:nth-child(4) { transition-delay: 0.3s; }
+.eks-phase-stagger.in-view > *:nth-child(5) { transition-delay: 0.4s; }
+.eks-phase-stagger.in-view > *:nth-child(6) { transition-delay: 0.5s; }
+.eks-phase-stagger.in-view > * {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Golden Age warmth transition — bg tint changes on scroll */
+.eks-golden-warmth {
+  position: relative;
+}
+.eks-golden-warmth::after {
+  content: '';
+  position: absolute;
+  inset: -10% -5%;
+  background: radial-gradient(ellipse at 50% 40%, rgba(212,160,122,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.eks-golden-warmth.in-view::after {
+  opacity: 1;
+}
+
+/* Therapist letter — paper texture */
+.eks-letter-paper {
+  position: relative;
+}
+.eks-letter-paper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(transparent, transparent 27px, rgba(16,185,129,0.03) 27px, rgba(16,185,129,0.03) 28px);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Pain symmetry — subtle purple pulse */
+@keyframes eks-pain-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(168,85,247,0.05); }
+  50% { box-shadow: 0 0 40px rgba(168,85,247,0.12); }
+}
+.eks-pain-card {
+  animation: eks-pain-pulse 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eks-ember, .eks-flatline path, .eks-heartbeat-line, .eks-typewriter { animation: none !important; }
+  .eks-heartbeat-line { stroke-dashoffset: 0; }
+  .eks-flatline path { stroke-dashoffset: 0; }
+  .eks-scene-reveal { opacity: 1; filter: none; transform: none; transition: none; }
+  .eks-pain-card { animation: none; }
+  .eks-phase-stagger > * { opacity: 1; transform: none; transition: none; }
+  .eks-scroll-draw, .eks-scroll-fade-in, .eks-scroll-deblur, .eks-scroll-scale-in {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+@media (max-width: 640px) {
+  .eks-scene { padding: 2rem 0; }
+  .eks-emergency-exit { bottom: 16px; right: 16px; font-size: 0.75rem; padding: 6px 12px; }
+}
+
+/* ── EKS mobile performance optimizations ────────────────── */
+@media (max-width: 767px) {
+  [data-mode="eks"] .eks-specimen-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  [data-mode="eks"] .eks-pain-card {
+    animation: none;
+  }
 }
 

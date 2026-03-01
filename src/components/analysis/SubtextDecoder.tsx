@@ -6,6 +6,7 @@ import { Search, ChevronDown, ChevronUp, AlertCircle, Sparkles } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import type { SubtextResult, SubtextItem, SubtextCategory } from '@/lib/analysis/subtext';
 import { CATEGORY_META } from '@/lib/analysis/subtext';
+import BrandLogo from '@/components/shared/BrandLogo';
 
 interface SubtextDecoderProps {
   subtextResult?: SubtextResult;
@@ -218,7 +219,7 @@ export default function SubtextDecoder({
             <Search className="size-5 text-purple-400" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-foreground">Translator Podtekstow</h3>
+            <h3 className="text-base font-semibold text-foreground">Translator <BrandLogo size="sm" /></h3>
             <p className="text-xs text-text-muted">Co naprawde mieli na mysli? AI dekoduje ukryte znaczenia.</p>
           </div>
         </div>
@@ -292,7 +293,7 @@ export default function SubtextDecoder({
           <Search className="size-5 text-purple-400" />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-foreground">Translator Podtekstów</h3>
+          <h3 className="text-base font-semibold text-foreground">Translator <BrandLogo size="sm" /></h3>
           <p className="text-xs text-text-muted">{items.length} zdekodowanych wiadomości</p>
         </div>
       </div>

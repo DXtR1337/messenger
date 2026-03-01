@@ -6,7 +6,7 @@ import type { CapitalizationResult, ACRType } from '@/lib/analysis/capitalizatio
 import PsychDisclaimer from '@/components/shared/PsychDisclaimer';
 
 interface CapitalizationCardProps {
-  result: CapitalizationResult;
+  result?: CapitalizationResult | null;
 }
 
 const ACR_CONFIG: Record<ACRType, { label: string; emoji: string; color: string; bar: string }> = {
@@ -50,6 +50,12 @@ function scoreColor(score: number): string {
 }
 
 export default function CapitalizationCard({ result }: CapitalizationCardProps) {
+  if (!result) return (
+    <div className="rounded-xl border border-border bg-card/50 p-6 opacity-50">
+      <p className="text-sm text-muted-foreground text-center">Za mało danych dla tej analizy</p>
+    </div>
+  );
+
   const { perPerson, examples, overallScore, interpretation, gottmanComparison } = result;
   const personEntries = Object.entries(perPerson);
 

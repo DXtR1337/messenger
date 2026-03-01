@@ -116,6 +116,13 @@ function createTrendData(): TrendData {
   };
 }
 
+/** Generate filler messages with unique content that won't create catchphrases. */
+function fillerMessages(sender: string, count: number, startIndex = 1000, startTs = 100_000): UnifiedMessage[] {
+  return Array.from({ length: count }, (_, i) =>
+    createMessage(startIndex + i, sender, `xfill${startIndex + i}`, startTs + i * 1000),
+  );
+}
+
 describe('catchphrases', () => {
   describe('computeCatchphrases', () => {
     it('should return empty catchphrases for empty conversation', () => {
@@ -140,6 +147,7 @@ describe('catchphrases', () => {
         createMessage(0, 'Alice', 'hello world hello world', 1000),
         createMessage(1, 'Alice', 'hello world hello world', 2000),
         createMessage(2, 'Alice', 'hello world hello world', 3000),
+        ...fillerMessages('Alice', 47, 100, 10_000),
       ];
       const conv = createParsedConversation('Test', ['Alice', 'Bob'], msgs);
       const result = computeCatchphrases(conv);
@@ -155,6 +163,7 @@ describe('catchphrases', () => {
         createMessage(0, 'Alice', 'i love pizza', 1000),
         createMessage(1, 'Alice', 'i love pizza', 2000),
         createMessage(2, 'Alice', 'i love pizza', 3000),
+        ...fillerMessages('Alice', 47, 200, 10_000),
       ];
       const conv = createParsedConversation('Test', ['Alice', 'Bob'], msgs);
       const result = computeCatchphrases(conv);
@@ -273,11 +282,12 @@ describe('catchphrases', () => {
         createMessage(1, 'Alice', 'hello world', 2000),
         createMessage(2, 'Alice', 'hello world', 3000),
         createMessage(3, 'Alice', 'hello world', 4000),
+        ...fillerMessages('Alice', 47, 300, 10_000),
       ];
       const conv = createParsedConversation('Test', ['Alice', 'Bob'], msgs);
       const result = computeCatchphrases(conv);
 
-      // Should skip empty messages
+      // Should skip empty messages but still detect catchphrases from valid ones
       expect(result.perPerson['Alice'].length).toBeGreaterThan(0);
     });
 
@@ -287,6 +297,7 @@ describe('catchphrases', () => {
         createMessage(1, 'Alice', 'hello world', 2000),
         createMessage(2, 'Alice', 'hello world', 3000),
         createMessage(3, 'Alice', 'hello world', 4000),
+        ...fillerMessages('Alice', 47, 400, 10_000),
       ];
       const conv = createParsedConversation('Test', ['Alice', 'Bob'], msgs);
       const result = computeCatchphrases(conv);
@@ -300,6 +311,7 @@ describe('catchphrases', () => {
         createMessage(0, 'Alice', 'Hello World', 1000),
         createMessage(1, 'Alice', 'hello world', 2000),
         createMessage(2, 'Alice', 'HELLO WORLD', 3000),
+        ...fillerMessages('Alice', 47, 500, 10_000),
       ];
       const conv = createParsedConversation('Test', ['Alice', 'Bob'], msgs);
       const result = computeCatchphrases(conv);
@@ -337,6 +349,7 @@ describe('catchphrases', () => {
         createMessage(5, 'Alice', 'unique rare', 6000),
         createMessage(6, 'Alice', 'unique rare', 7000),
         createMessage(7, 'Alice', 'unique rare', 8000),
+        ...fillerMessages('Alice', 42, 600, 10_000),
       ];
       const conv = createParsedConversation('Test', ['Alice', 'Bob'], msgs);
       const result = computeCatchphrases(conv);

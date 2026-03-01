@@ -166,7 +166,7 @@ const MBTI_DIM_COLORS: Record<string, string> = {
 
 function PersonTab({
     profile,
-    name,
+    name: _name, // eslint-disable-line @typescript-eslint/no-unused-vars -- kept in interface for callers
     colorClass,
 }: {
     profile: PersonProfile;
@@ -307,7 +307,7 @@ function PersonTab({
                     </span>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                    {ai.indicators.slice(0, 3).map((ind, i) => (
+                    {(ai.indicators ?? []).slice(0, 3).map((ind, i) => (
                         <motion.p
                             key={i}
                             className="text-xs text-muted-foreground leading-relaxed"
@@ -333,11 +333,11 @@ function PersonTab({
                         </span>
                     </div>
                     <ScoreBar label="De-eskalacja" score={cr.de_escalation_skills} colorClass={colorClass} animate={isInView} delay={0.4} />
-                    {cr.triggers.length > 0 && (
+                    {(cr.triggers?.length ?? 0) > 0 && (
                         <div className="mt-3">
                             <p className="text-xs font-medium text-text-muted">Triggery:</p>
                             <div className="mt-1 flex flex-wrap gap-1.5">
-                                {cr.triggers.slice(0, 4).map((t, i) => (
+                                {(cr.triggers ?? []).slice(0, 4).map((t, i) => (
                                     <motion.span
                                         key={i}
                                         className="rounded-md bg-purple-950/[0.15] border border-purple-500/[0.08] px-2 py-0.5 text-xs text-muted-foreground"
@@ -390,7 +390,7 @@ function PersonTab({
                 <h4 className="mb-2 font-display text-[13px] font-bold">Wzorce emocjonalne</h4>
                 <ScoreBar label="Zakres emocji" score={ep.emotional_range} colorClass={colorClass} animate={isInView} delay={0.3} />
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                    {ep.dominant_emotions.map((e, i) => (
+                    {(ep.dominant_emotions ?? []).map((e, i) => (
                         <motion.span
                             key={i}
                             className="rounded-md bg-purple-950/[0.15] border border-purple-500/[0.08] px-2.5 py-1 text-xs text-white"
@@ -441,7 +441,7 @@ function PersonTab({
                                 <span className="text-xs font-medium">Lęk</span>
                                 <FrequencyBadge value={co.anxiety_markers.frequency ?? co.anxiety_markers.severity} />
                             </div>
-                            {co.anxiety_markers.patterns.slice(0, 2).map((p, i) => (
+                            {co.anxiety_markers?.patterns?.slice(0, 2).map((p, i) => (
                                 <p key={i} className="text-xs text-muted-foreground">• {p}</p>
                             ))}
                         </motion.div>
@@ -455,9 +455,9 @@ function PersonTab({
                         >
                             <div className="mb-1.5 flex items-center justify-between">
                                 <span className="text-xs font-medium">Unikanie</span>
-                                <FrequencyBadge value={co.avoidance_markers.frequency ?? co.avoidance_markers.severity} />
+                                <FrequencyBadge value={co.avoidance_markers?.frequency ?? co.avoidance_markers?.severity} />
                             </div>
-                            {co.avoidance_markers.patterns.slice(0, 2).map((p, i) => (
+                            {co.avoidance_markers?.patterns?.slice(0, 2).map((p, i) => (
                                 <p key={i} className="text-xs text-muted-foreground">• {p}</p>
                             ))}
                         </motion.div>
@@ -471,9 +471,9 @@ function PersonTab({
                         >
                             <div className="mb-1.5 flex items-center justify-between">
                                 <span className="text-xs font-medium">Wpływ i empatia</span>
-                                <FrequencyBadge value={co.manipulation_patterns.frequency ?? co.manipulation_patterns.severity} />
+                                <FrequencyBadge value={co.manipulation_patterns?.frequency ?? co.manipulation_patterns?.severity} />
                             </div>
-                            {co.manipulation_patterns.types.slice(0, 2).map((t, i) => (
+                            {co.manipulation_patterns?.types?.slice(0, 2).map((t, i) => (
                                 <p key={i} className="text-xs text-muted-foreground">• {t}</p>
                             ))}
                         </motion.div>

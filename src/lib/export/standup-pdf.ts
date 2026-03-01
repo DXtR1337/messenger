@@ -772,7 +772,7 @@ function getActInsight(actNum: number, analysis: StoredAnalysis): string | null 
       const delusion = quant.viralScores?.delusionScore;
       const parts: string[] = [];
       if (health !== undefined) parts.push(`Zdrowie: ${health}/100`);
-      if (delusion !== undefined) parts.push(`Deluzja: ${delusion}/100`);
+      if (delusion !== undefined) parts.push(`Asymetria: ${delusion}/100`);
       return parts.length > 0 ? parts.join(' | ') : null;
     }
     default:
@@ -1535,12 +1535,12 @@ function drawViralScoreboardPage(
   // Bottom row
   const botY = topY + cardH + 8;
 
-  // Delusion card
+  // Investment Asymmetry card (formerly Delusion)
   drawCard(doc, MARGIN, botY, cardW, cardH, [25, 10, 25], [70, 40, 80]);
   toBold(doc);
   doc.setFontSize(9);
   textC(doc, SC.mutedGold);
-  doc.text('POZIOM DELUZJI', MARGIN + cardW / 2, botY + 8, {
+  doc.text('ASYMETRIA', MARGIN + cardW / 2, botY + 8, {
     align: 'center',
   });
   doc.setFontSize(36);
@@ -1556,7 +1556,7 @@ function drawViralScoreboardPage(
     doc.setFontSize(8);
     textC(doc, SC.neonPink);
     doc.text(
-      `Deluzja u: ${pdfSafe(viral.delusionHolder)}`,
+      `Bardziej zaangażowany/a: ${pdfSafe(viral.delusionHolder)}`,
       MARGIN + cardW / 2,
       botY + 58,
       { align: 'center' },

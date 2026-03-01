@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import { useSidebar } from '@/components/shared/SidebarContext';
 import type { ModeId } from './ModePageShell';
+import BrandLogo from '@/components/shared/BrandLogo';
 import {
   LayoutDashboard,
   Flame,
@@ -166,7 +167,7 @@ export default function ModeSwitcherPill() {
                 <Icon className="relative size-5 shrink-0 sm:size-4" />
                 {/* Label — hidden on mobile, shown on desktop */}
                 <span className="relative hidden font-mono text-[10px] font-medium uppercase tracking-widest sm:inline">
-                  {mode.label}
+                  {mode.id === 'subtext' ? <BrandLogo size="sm" className="text-[10px]" /> : mode.label}
                 </span>
               </Link>
             );

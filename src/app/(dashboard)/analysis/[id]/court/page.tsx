@@ -3,10 +3,10 @@
 import { useRef, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { motion, useInView, AnimatePresence } from 'framer-motion';
+import { motion, useInView, AnimatePresence, MotionConfig } from 'framer-motion';
 import { ArrowLeft, ChevronDown, Shield, Scale, Download, Share2 } from 'lucide-react';
+import DiscordSendButton from '@/components/shared/DiscordSendButton';
 
-import Image from 'next/image';
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import { SectionErrorBoundary } from '@/components/shared/SectionErrorBoundary';
 import type { CourtResult, CourtCharge, PersonVerdict } from '@/lib/analysis/court-prompts';
@@ -14,6 +14,7 @@ import SceneParticles, { CourtPaperSVG } from '@/components/shared/SceneParticle
 import VideoBackground from '@/components/shared/VideoBackground';
 
 const ChatCourtButton = dynamic(() => import('@/components/analysis/ChatCourtButton'), { ssr: false });
+const CourtGavelAnimation = dynamic(() => import('@/components/analysis/CourtGavelAnimation'), { ssr: false });
 
 // ── SVG Inline Components ──────────────────────────────────
 
@@ -353,6 +354,7 @@ export default function CourtModePage() {
 
   return (
     <SectionErrorBoundary section="Court">
+    <MotionConfig reducedMotion="never">
     <div data-mode="court" className={`court-bg court-wood-texture relative ${shaking ? 'court-shake' : ''}`}>
       <VideoBackground src="/videos/modes/court.mp4" />
       {/* Floating paper particles */}
@@ -418,17 +420,13 @@ export default function CourtModePage() {
               {participants.join(' vs ')}
             </p>
 
-            {/* Gavel */}
+            {/* Static PT Gavel (holding, no strike) */}
             {gavelStruck && (
-              <motion.div
+              <CourtGavelAnimation
+                active={gavelStruck}
+                strike={false}
                 className="mx-auto mt-8"
-                initial={{ opacity: 0, rotate: -30, y: -10 }}
-                animate={{ opacity: 1, rotate: 0, y: 0 }}
-                transition={{ duration: 0.6, ease: [0.22, 0.61, 0.36, 1] }}
-              >
-                <Image src="/icons/court/gavel.png" alt="" width={120} height={67}
-                  className="h-auto w-28 drop-shadow-[0_0_20px_rgba(212,168,83,0.4)]" aria-hidden="true" />
-              </motion.div>
+              />
             )}
           </motion.div>
 
@@ -656,8 +654,15 @@ export default function CourtModePage() {
                 </p>
 
                 <h2 className="font-[var(--font-syne)] text-2xl font-bold tracking-tight text-white mb-8">
-                  Rozprawazakonczona
+                  Rozprawa zakonczona
                 </h2>
+
+                {/* Striking PT Gavel — 3x hit */}
+                <CourtGavelAnimation
+                  active={verdictRevealed}
+                  strike={true}
+                  className="mx-auto mb-8"
+                />
 
                 <div className="flex flex-wrap justify-center gap-4">
                   <Link
@@ -674,6 +679,21 @@ export default function CourtModePage() {
                     <Download className="size-4" />
                     Pobierz Mugshot
                   </Link>
+                  {conversation?.metadata?.discordChannelId && (
+                    <DiscordSendButton
+                      channelId={conversation.metadata.discordChannelId}
+                      payload={{
+                        type: 'court',
+                        caseNumber: courtResult.caseNumber,
+                        courtName: courtResult.courtName,
+                        charges: courtResult.charges,
+                        prosecution: courtResult.prosecution,
+                        defense: courtResult.defense,
+                        verdict: courtResult.verdict,
+                        perPerson: courtResult.perPerson,
+                      }}
+                    />
+                  )}
                 </div>
 
                 {/* Back to hub */}
@@ -690,6 +710,7 @@ export default function CourtModePage() {
         </>
       )}
     </div>
+    </MotionConfig>
     </SectionErrorBoundary>
   );
 }

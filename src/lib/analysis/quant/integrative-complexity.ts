@@ -1,14 +1,18 @@
 /**
- * Integrative Complexity (IC) — measures structural sophistication of thinking.
+ * Cognitive Complexity Indicator — heuristic measure of thinking sophistication.
  *
- * IC has two components:
- * - Differentiation: recognizing multiple dimensions or perspectives (score 2-3)
- * - Integration: connecting differentiated dimensions into coherent frameworks (score 4-7)
+ * NOTE: This module provides a HEURISTIC cognitive complexity indicator
+ * based on phrase detection. It is NOT a validated implementation of
+ * Integrative Complexity (IC) as defined by Suedfeld & Tetlock (1977).
+ * True IC requires trained human coders scoring paragraphs on a 1-7 scale.
+ * AutoIC (Conway et al., 2014) uses 3500+ probabilistically weighted phrases
+ * and achieves r=.82 with human coders — far more sophisticated than this.
  *
- * Score 1 = black-and-white thinking; Score 7 = maximum complexity.
- * In chat contexts we use a simplified heuristic: phrase detection (AutoIC).
+ * This module detects two types of phrases:
+ * - Differentiation: recognizing multiple dimensions or perspectives
+ * - Integration: connecting differentiated dimensions into coherent frameworks
  *
- * Declining IC during a conversation correlates with conflict escalation
+ * Declining complexity during a conversation correlates with conflict escalation
  * (Suedfeld & Tetlock, 1977; Tetlock, 1981).
  *
  * References:

@@ -39,6 +39,20 @@ export function tokenizeWords(text: string): string[] {
     .filter(w => w.length >= 2 && !STOPWORDS.has(w));
 }
 
+/**
+ * Tokenize text to ALL lowercase words (min 1 char, including stopwords).
+ * Used for MTLD computation which requires the full token stream to calculate
+ * Type-Token Ratio correctly (McCarthy & Jarvis, 2010).
+ */
+export function tokenizeAll(text: string): string[] {
+  return text
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+    .split(/[\s.,!?;:()\[\]{}"'\-\/\<>@#$%^&*+=|~`]+/)
+    .filter(w => w.length >= 1);
+}
+
 // ============================================================
 // Statistical Functions
 // ============================================================

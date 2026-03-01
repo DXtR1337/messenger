@@ -8,7 +8,7 @@ import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
 import LowSampleBanner from '@/components/shared/LowSampleBanner';
 
 interface IntegrativeComplexityCardProps {
-  result: IntegrativeComplexityResult;
+  result?: IntegrativeComplexityResult | null;
   participants: string[];
 }
 
@@ -42,6 +42,12 @@ function trendLabel(trend: number): { text: string; color: string } {
 }
 
 export default function IntegrativeComplexityCard({ result, participants }: IntegrativeComplexityCardProps) {
+  if (!result) return (
+    <div className="rounded-xl border border-border bg-card/50 p-6 opacity-50">
+      <p className="text-sm text-muted-foreground text-center">Za mało danych dla tej analizy</p>
+    </div>
+  );
+
   const entries = participants
     .filter((p) => result.perPerson[p])
     .map((name, idx) => ({
@@ -60,10 +66,10 @@ export default function IntegrativeComplexityCard({ result, participants }: Inte
           <span className="text-lg">🧩</span>
         </div>
         <div>
-          <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Złożoność Integracyjna</h3>
+          <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">Wskaźnik Złożoności Poznawczej</h3>
           <ExperimentalBadge metricKey="integrativeComplexity" />
           <LowSampleBanner show={entries.some(e => e.stats.differentiationCount + e.stats.integrationCount < 5)} className="ml-1" />
-          <p className="text-sm text-white/50">Jak nuansowo myślicie o rzeczach</p>
+          <p className="text-sm text-white/50">Heurystyczny wskaźnik złożoności myślenia</p>
         </div>
       </div>
 
@@ -150,13 +156,13 @@ export default function IntegrativeComplexityCard({ result, participants }: Inte
             >
               {result.higherIC}
             </span>
-            {' '}wykazuje wyższą złożoność integracyjną — częściej używa kontrastu i syntezy perspektyw.
+            {' '}wykazuje wyższą złożoność poznawczą — częściej używa kontrastu i syntezy perspektyw.
           </p>
         </div>
       )}
 
       <PsychDisclaimer
-        text="IC mierzy złożoność myślenia przez frazy dyferencjacji (wiele perspektyw) i integracji (łączenie perspektyw). AutoIC: r=0.30–0.50 test-retest. Malejąca IC koreluje z eskalacją konfliktu (Tetlock, 1981). Wyniki heurystyczne — nie kliniczne."
+        text="Heurystyczny wskaźnik oparty na detekcji fraz dyferencjacji i integracji. Nie jest to walidowana metoda IC Suedfelda & Tetlocka (1977), która wymaga oceny przez przeszkolonych koderów na skali 1-7. AutoIC Conway (2014) używa 3500+ fraz probabilistycznie ważonych i osiąga r=.82 z koderami — znacznie bardziej zaawansowana niż ta implementacja."
         citation={`${PSYCH_CITATIONS.icShort}`}
       />
     </div>

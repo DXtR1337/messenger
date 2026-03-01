@@ -69,13 +69,14 @@ function sanitizeDate(raw: string, dateRange?: { start: number; end: number }): 
   let year = parseInt(m[1], 10);
   let month = parseInt(m[2], 10);
 
-  // Fix obvious Gemini hallucinations: year > 2026 or < 1990
-  if (year > 2026) {
+  // Fix obvious Gemini hallucinations: year in the future or < 1990
+  const currentYear = new Date().getFullYear();
+  if (year > currentYear) {
     const fixed = parseInt(m[1][0] + '0' + m[1].slice(2), 10);
-    if (fixed >= 1990 && fixed <= 2026) year = fixed;
-    else year = 2024;
+    if (fixed >= 1990 && fixed <= currentYear) year = fixed;
+    else year = currentYear;
   }
-  if (year < 1990) year = 2024;
+  if (year < 1990) year = currentYear;
   if (month < 1 || month > 12) return `${year}`;
 
   // Clamp to actual conversation date range
@@ -119,9 +120,9 @@ function buildTimelineEntries(
     for (const ip of pass4.relationship_trajectory.inflection_points) {
       entries.push({
         date: sanitizeDate(ip.approximate_date || '', dateRange),
-        title: ip.description,
-        detail: ip.evidence,
-        significance: classifySignificance(`${ip.description} ${ip.evidence}`),
+        title: ip.description ?? '',
+        detail: ip.evidence ?? '',
+        significance: classifySignificance(`${ip.description ?? ''} ${ip.evidence ?? ''}`),
         source: 'inflection',
       });
     }
@@ -132,8 +133,8 @@ function buildTimelineEntries(
     for (const kf of pass4.key_findings) {
       entries.push({
         date: '',
-        title: kf.finding,
-        detail: kf.detail,
+        title: kf.finding ?? '',
+        detail: kf.detail ?? '',
         significance: kf.significance === 'concerning' ? 'negative' : kf.significance,
         source: 'finding',
       });
@@ -146,7 +147,7 @@ function buildTimelineEntries(
       if (rf.severity === 'moderate' || rf.severity === 'severe') {
         entries.push({
           date: '',
-          title: rf.pattern,
+          title: rf.pattern ?? '',
           detail: rf.context_note || '',
           significance: 'negative',
           source: 'flag',
@@ -160,7 +161,7 @@ function buildTimelineEntries(
     for (const gf of pass2.green_flags) {
       entries.push({
         date: '',
-        title: gf.pattern,
+        title: gf.pattern ?? '',
         detail: '',
         significance: 'positive',
         source: 'flag',
@@ -174,8 +175,8 @@ function buildTimelineEntries(
       if (ins.priority === 'high') {
         entries.push({
           date: '',
-          title: ins.insight,
-          detail: `Dla: ${ins.for}`,
+          title: ins.insight ?? '',
+          detail: ins.for ? `Dla: ${ins.for}` : '',
           significance: 'neutral',
           source: 'insight',
         });
@@ -420,6 +421,7 @@ function TimelineItem({
 export default function TurningPointsTimeline({
   pass2,
   pass4,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   participants,
   dateRange,
 }: TurningPointsTimelineProps) {
@@ -483,7 +485,7 @@ export default function TurningPointsTimeline({
 
         {entries.map((entry, index) => (
           <TimelineItem
-            key={`${entry.source}-${entry.title.slice(0, 30)}-${index}`}
+            key={`${entry.source}-${(entry.title ?? '').slice(0, 30)}-${index}`}
             entry={entry}
             isLast={index === entries.length - 1}
             index={index}

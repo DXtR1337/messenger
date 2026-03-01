@@ -16,6 +16,7 @@ import {
 
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import { useArgumentSimulation } from '@/hooks/useArgumentSimulation';
+import { ARGUMENT_PERSON_COLORS } from '@/lib/analysis/constants';
 import AnalysisCard from '@/components/shared/AnalysisCard';
 
 import type {
@@ -23,6 +24,11 @@ import type {
   ArgumentSimulationMessage,
   ArgumentSimulationResult,
 } from '@/lib/analysis/types';
+
+function getPersonColor(participants: string[], name: string): string {
+  const idx = participants.indexOf(name);
+  return ARGUMENT_PERSON_COLORS[idx >= 0 ? idx % ARGUMENT_PERSON_COLORS.length : 0];
+}
 
 // ── Phase color map ────────────────────────────────────────
 
@@ -61,11 +67,13 @@ function ArgumentTopicPicker({
   onSelect,
   isLoading,
   progressMessage,
+  participants,
 }: {
   topics: ArgumentTopic[];
   onSelect: (topic: string) => void;
   isLoading: boolean;
   progressMessage: string;
+  participants?: string[];
 }) {
   const [customTopic, setCustomTopic] = useState('');
 
@@ -118,12 +126,20 @@ function ArgumentTopicPicker({
                 </span>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-[#888] line-clamp-2">
-                  <span className="text-[#ef4444]/60">A:</span> {t.stanceA}
-                </p>
-                <p className="text-xs text-[#888] line-clamp-2">
-                  <span className="text-[#3b82f6]/60">B:</span> {t.stanceB}
-                </p>
+                {(participants ?? []).map((name, pi) => {
+                  const stance = t.stances?.[name] || (pi === 0 ? t.stanceA : pi === 1 ? t.stanceB : '') || '';
+                  if (!stance) return null;
+                  const color = getPersonColor(participants ?? [], name);
+                  return (
+                    <p key={name} className="text-xs text-[#888] line-clamp-2">
+                      <span
+                        className="mr-1 inline-block size-1.5 rounded-full align-middle"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span style={{ color: `${color}99` }}>{name}:</span> {stance}
+                    </p>
+                  );
+                })}
               </div>
             </motion.button>
           );
@@ -275,73 +291,74 @@ function ArgumentChat({
         />
       </div>
 
-      {/* Chat window */}
-      <div className="max-h-[500px] overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#0a0a0a] p-4 sm:max-h-[600px]">
+      {/* Chat window — Discord-style */}
+      <div className="max-h-[500px] overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#313338] p-4 sm:max-h-[600px]">
         <AnimatePresence mode="popLayout">
           {visibleMessages.map((msg, i) => {
-            const isLeft = msg.sender === participants[0];
+            const senderColor = getPersonColor(participants, msg.sender);
             const phaseColor = PHASE_COLORS[msg.phase] ?? '#6b7280';
+            const prevMsg = i > 0 ? visibleMessages[i - 1] : null;
+            const isGrouped = prevMsg?.sender === msg.sender && prevMsg?.phase === msg.phase;
 
             return (
               <motion.div
                 key={i}
-                className={`mb-3 flex ${isLeft ? 'justify-start' : 'justify-end'}`}
-                initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className={`flex items-start gap-2.5 ${isGrouped ? 'mt-0.5 pl-[34px]' : 'mt-3 first:mt-0'}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 layout
               >
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 sm:max-w-[75%] ${
-                    isLeft
-                      ? 'rounded-tl-md bg-[#1a1a1a] text-[#eee]'
-                      : 'rounded-tr-md bg-[#ef4444]/15 text-[#eee]'
-                  }`}
-                >
-                  {/* Sender label */}
-                  <span
-                    className="mb-0.5 block font-mono text-[10px] font-bold uppercase tracking-widest"
-                    style={{ color: isLeft ? '#3b82f6' : '#ef4444' }}
+                {/* Avatar — only for first in group */}
+                {!isGrouped && (
+                  <div
+                    className="flex size-[26px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                    style={{ backgroundColor: senderColor }}
                   >
-                    {msg.sender}
-                  </span>
-                  <p className="text-sm leading-relaxed">{msg.text}</p>
-                  {/* Phase indicator dot */}
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span
-                      className="inline-block size-1.5 rounded-full"
-                      style={{ backgroundColor: phaseColor }}
-                    />
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-[#555]">
-                      {PHASE_LABELS[msg.phase] ?? msg.phase}
-                    </span>
+                    {msg.sender.charAt(0).toUpperCase()}
                   </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  {!isGrouped && (
+                    <div className="mb-0.5 flex items-center gap-2">
+                      <span className="text-sm font-bold" style={{ color: senderColor }}>
+                        {msg.sender}
+                      </span>
+                      <span
+                        className="rounded-sm px-1 py-px font-mono text-[8px] uppercase tracking-widest"
+                        style={{ color: phaseColor, backgroundColor: `${phaseColor}15` }}
+                      >
+                        {PHASE_LABELS[msg.phase] ?? msg.phase}
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-sm leading-relaxed text-[#dbdee1]">{msg.text}</p>
                 </div>
               </motion.div>
             );
           })}
         </AnimatePresence>
 
-        {/* Typing indicator */}
+        {/* Typing indicator — Discord-style */}
         <AnimatePresence>
           {isTyping && typingSender && (
             <motion.div
-              className={`mb-3 flex ${typingSender === participants[0] ? 'justify-start' : 'justify-end'}`}
+              className="mt-3 flex items-start gap-2.5"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
             >
               <div
-                className={`rounded-2xl px-4 py-3 ${
-                  typingSender === participants[0]
-                    ? 'rounded-tl-md bg-[#1a1a1a]'
-                    : 'rounded-tr-md bg-[#ef4444]/10'
-                }`}
+                className="flex size-[26px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                style={{ backgroundColor: getPersonColor(participants, typingSender) }}
               >
+                {typingSender.charAt(0).toUpperCase()}
+              </div>
+              <div>
                 <span
-                  className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-widest"
-                  style={{ color: typingSender === participants[0] ? '#3b82f6' : '#ef4444' }}
+                  className="mb-0.5 block text-sm font-bold"
+                  style={{ color: getPersonColor(participants, typingSender) }}
                 >
                   {typingSender}
                 </span>
@@ -349,7 +366,7 @@ function ArgumentChat({
                   {[0, 1, 2].map((dot) => (
                     <motion.span
                       key={dot}
-                      className="inline-block size-1.5 rounded-full bg-[#555]"
+                      className="inline-block size-1.5 rounded-full bg-[#5e6572]"
                       animate={{ opacity: [0.3, 0.8, 0.3] }}
                       transition={{ duration: 1, repeat: Infinity, delay: dot * 0.2 }}
                     />
@@ -403,13 +420,15 @@ function ArgumentReviewChat({
         <div className="w-16" />
       </div>
 
-      {/* Static chat window — all messages visible */}
-      <div className="max-h-[600px] overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#0a0a0a] p-4 sm:max-h-[700px]">
+      {/* Static chat window — Discord-style */}
+      <div className="max-h-[600px] overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#313338] p-4 sm:max-h-[700px]">
         {messages.map((msg, i) => {
-          const isLeft = msg.sender === participants[0];
+          const senderColor = getPersonColor(participants, msg.sender);
           const phaseColor = PHASE_COLORS[msg.phase] ?? '#6b7280';
           const showDivider = msg.phase !== lastPhase;
           if (showDivider) lastPhase = msg.phase;
+          const prevMsg = i > 0 ? messages[i - 1] : null;
+          const isGrouped = !showDivider && prevMsg?.sender === msg.sender;
 
           return (
             <div key={i}>
@@ -425,21 +444,30 @@ function ArgumentReviewChat({
                   <div className="h-px flex-1 bg-white/[0.06]" />
                 </div>
               )}
-              <div className={`mb-3 flex ${isLeft ? 'justify-start' : 'justify-end'}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 sm:max-w-[75%] ${
-                    isLeft
-                      ? 'rounded-tl-md bg-[#1a1a1a] text-[#eee]'
-                      : 'rounded-tr-md bg-[#ef4444]/15 text-[#eee]'
-                  }`}
-                >
-                  <span
-                    className="mb-0.5 block font-mono text-[10px] font-bold uppercase tracking-widest"
-                    style={{ color: isLeft ? '#3b82f6' : '#ef4444' }}
+              <div className={`flex items-start gap-2.5 ${isGrouped ? 'mt-0.5 pl-[34px]' : 'mt-3 first:mt-0'}`}>
+                {!isGrouped && (
+                  <div
+                    className="flex size-[26px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                    style={{ backgroundColor: senderColor }}
                   >
-                    {msg.sender}
-                  </span>
-                  <p className="text-sm leading-relaxed">{msg.text}</p>
+                    {msg.sender.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  {!isGrouped && (
+                    <div className="mb-0.5 flex items-center gap-2">
+                      <span className="text-sm font-bold" style={{ color: senderColor }}>
+                        {msg.sender}
+                      </span>
+                      <span
+                        className="rounded-sm px-1 py-px font-mono text-[8px] uppercase tracking-widest"
+                        style={{ color: phaseColor, backgroundColor: `${phaseColor}15` }}
+                      >
+                        {PHASE_LABELS[msg.phase] ?? msg.phase}
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-sm leading-relaxed text-[#dbdee1]">{msg.text}</p>
                 </div>
               </div>
             </div>
@@ -455,75 +483,97 @@ function ArgumentReviewChat({
   );
 }
 
-// ── Participant pair selector (5+ participants) ────────────
+// ── Participant selector (multi-checkbox) ───────────────────
 
-function PairSelector({
+function ParticipantSelector({
   participants,
-  selectedPair,
+  selected,
   onSelect,
 }: {
   participants: string[];
-  selectedPair: [string, string];
-  onSelect: (pair: [string, string]) => void;
+  selected: string[];
+  onSelect: (selected: string[]) => void;
 }) {
-  const [a, setA] = useState(selectedPair[0]);
-  const [b, setB] = useState(selectedPair[1]);
+  const [local, setLocal] = useState<Set<string>>(new Set(selected));
+
+  const toggle = (name: string) => {
+    setLocal(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setLocal(prev =>
+      prev.size === participants.length ? new Set() : new Set(participants),
+    );
+  };
 
   const handleApply = () => {
-    if (a && b && a !== b) onSelect([a, b]);
+    const arr = participants.filter(p => local.has(p));
+    if (arr.length >= 2) onSelect(arr);
   };
 
   return (
     <AnalysisCard>
       <h3 className="mb-4 font-[var(--font-syne)] text-lg font-bold tracking-tight text-white">
-        Wybierz pare uczestnikow
+        Wybierz uczestnikow klotni
       </h3>
       <p className="mb-4 font-mono text-xs text-[#888]">
-        Grupowa rozmowa — wybierz dwie osoby do symulacji klotni.
+        Zaznacz osoby do symulacji (minimum 2).
       </p>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="flex-1">
-          <label className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-[#888]">
-            Osoba A
-          </label>
-          <select
-            value={a}
-            onChange={(e) => setA(e.target.value)}
-            className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 font-mono text-sm text-white outline-none"
-          >
-            {participants.map((p) => (
-              <option key={p} value={p} disabled={p === b}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
-        <span className="hidden text-center font-[var(--font-syne)] text-lg font-bold text-[#ef4444] sm:block">
-          vs
-        </span>
-        <div className="flex-1">
-          <label className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-[#888]">
-            Osoba B
-          </label>
-          <select
-            value={b}
-            onChange={(e) => setB(e.target.value)}
-            className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 font-mono text-sm text-white outline-none"
-          >
-            {participants.map((p) => (
-              <option key={p} value={p} disabled={p === a}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
+
+      {/* Select all toggle */}
+      <button
+        onClick={toggleAll}
+        className="mb-3 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-[#888] transition-colors hover:text-white"
+      >
+        {local.size === participants.length ? 'Odznacz wszystko' : 'Wszyscy'}
+      </button>
+
+      {/* Participant checkboxes */}
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {participants.map((name) => {
+          const color = getPersonColor(participants, name);
+          const checked = local.has(name);
+          return (
+            <button
+              key={name}
+              onClick={() => toggle(name)}
+              className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all ${
+                checked
+                  ? 'border-white/[0.12] bg-white/[0.05]'
+                  : 'border-white/[0.04] bg-white/[0.01] opacity-50'
+              }`}
+            >
+              <span
+                className="inline-block size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              <span className="truncate font-mono text-xs text-white">{name}</span>
+              {checked && (
+                <span className="ml-auto font-mono text-[10px] text-[#10b981]">✓</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex items-center gap-3">
         <button
           onClick={handleApply}
-          disabled={!a || !b || a === b}
+          disabled={local.size < 2}
           className="rounded-lg border border-[#ef4444]/30 bg-[#ef4444]/10 px-4 py-2.5 font-mono text-xs font-medium uppercase tracking-wider text-[#ef4444] transition-all hover:bg-[#ef4444]/20 disabled:cursor-not-allowed disabled:opacity-30"
         >
-          Zatwierdz
+          Zatwierdz ({local.size})
         </button>
+        {local.size < 2 && (
+          <span className="font-mono text-[10px] text-[#ef4444]/60">
+            Wybierz minimum 2 osoby
+          </span>
+        )}
       </div>
     </AnalysisCard>
   );
@@ -549,19 +599,26 @@ export default function ArgumentSimulator() {
     runningOperations,
   } = useAnalysis();
 
-  // For server view: selectable participant pair
-  const [selectedPair, setSelectedPair] = useState<[string, string]>([
-    allParticipants[0] ?? '',
-    allParticipants[1] ?? '',
-  ]);
+  // Selectable participants — multi-person
+  const defaultSelected = useMemo(() => {
+    // For <=5 participants: default all selected
+    if (allParticipants.length <= 5) return allParticipants;
+    // For 6+: default first 5
+    return allParticipants.slice(0, 5);
+  }, [allParticipants]);
 
-  // The pair used for simulation — for server view, narrowed down
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>(defaultSelected);
+
+  // Whether we need the participant selector (server view with many participants)
+  const needsSelector = isServerView && allParticipants.length > 2;
+
+  // The participants used for simulation
   const participants = useMemo(() => {
-    if (isServerView && selectedPair[0] && selectedPair[1]) {
-      return selectedPair;
+    if (needsSelector && selectedParticipants.length >= 2) {
+      return selectedParticipants;
     }
-    return allParticipants.slice(0, 2);
-  }, [isServerView, selectedPair, allParticipants]);
+    return allParticipants;
+  }, [needsSelector, selectedParticipants, allParticipants]);
 
   const handleComplete = useCallback(
     (result: ArgumentSimulationResult) => {
@@ -637,13 +694,13 @@ export default function ArgumentSimulator() {
     );
   }
 
-  // ── Server view pair selector ────────────────────────────
-  if (isServerView && (!selectedPair[0] || !selectedPair[1] || selectedPair[0] === selectedPair[1])) {
+  // ── Server view participant selector ─────────────────────
+  if (needsSelector && selectedParticipants.length < 2) {
     return (
-      <PairSelector
+      <ParticipantSelector
         participants={allParticipants}
-        selectedPair={selectedPair}
-        onSelect={setSelectedPair}
+        selected={selectedParticipants}
+        onSelect={setSelectedParticipants}
       />
     );
   }
@@ -776,6 +833,7 @@ export default function ArgumentSimulator() {
         onSelect={() => {}}
         isLoading
         progressMessage={sim.progressMessage}
+        participants={participants}
       />
     );
   }
@@ -788,6 +846,7 @@ export default function ArgumentSimulator() {
         onSelect={sim.generateArgument}
         isLoading={false}
         progressMessage=""
+        participants={participants}
       />
     );
   }

@@ -11,6 +11,7 @@ import { trackEvent } from '@/lib/analytics/events';
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import SimulatorCard from '@/components/share-cards/SimulatorCard';
 import type { SimulatorExchange } from '@/components/share-cards/SimulatorCard';
+import DiscordSendButton from '@/components/shared/DiscordSendButton';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 import type { QualitativeAnalysis } from '@/lib/analysis/types';
 
@@ -503,6 +504,26 @@ export default function ReplySimulator({
               )}
             </AnimatePresence>
           </div>
+
+          {/* Discord send */}
+          {conversation?.metadata?.discordChannelId && (
+            <DiscordSendButton
+              channelId={conversation.metadata.discordChannelId}
+              payload={{
+                type: 'simulator',
+                simulator: {
+                  targetPerson,
+                  exchanges: messages.map(m => ({
+                    role: m.role,
+                    message: m.message,
+                    confidence: m.confidence,
+                  })),
+                  averageConfidence,
+                  styleNotes: styleNotes || undefined,
+                },
+              }}
+            />
+          )}
 
           {/* Actions */}
           <Button onClick={handleReset} variant="outline" size="sm" className="gap-2 border-border text-xs">

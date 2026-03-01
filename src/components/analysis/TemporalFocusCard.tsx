@@ -7,7 +7,7 @@ import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
 import ExperimentalBadge from '@/components/shared/ExperimentalBadge';
 
 interface TemporalFocusCardProps {
-  result: TemporalFocusResult;
+  result?: TemporalFocusResult | null;
   participants: string[];
 }
 
@@ -26,6 +26,12 @@ const ORIENTATION_COLORS: Record<string, string> = {
 };
 
 export default function TemporalFocusCard({ result, participants }: TemporalFocusCardProps) {
+  if (!result) return (
+    <div className="rounded-xl border border-border bg-card/50 p-6 opacity-50">
+      <p className="text-sm text-muted-foreground text-center">Za mało danych dla tej analizy</p>
+    </div>
+  );
+
   const entries = participants
     .filter((p) => result.perPerson[p])
     .map((name, idx) => ({

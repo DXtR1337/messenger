@@ -207,16 +207,16 @@ describe('computeGottmanHorsemen', () => {
       expect(result.riskLevel).toContain('Niski');
     });
 
-    it('1 horseman active → Umiarkowany', () => {
+    it('1 horseman active → Niskie ryzyko', () => {
       const cps = makeCPS({
         control_perfectionism: { yesCount: 10, total: 10 }, // criticism=60, present
       });
       const result = computeGottmanHorsemen(cps)!;
       expect(result.activeCount).toBe(1);
-      expect(result.riskLevel).toContain('Umiarkowany');
+      expect(result.riskLevel).toContain('Niskie ryzyko');
     });
 
-    it('all 4 active → Krytyczny', () => {
+    it('all 4 active → Podwyższone ryzyko', () => {
       const cps = makeCPS({
         control_perfectionism: { yesCount: 10, total: 10 },
         self_focused: { yesCount: 10, total: 10 },
@@ -229,7 +229,7 @@ describe('computeGottmanHorsemen', () => {
       });
       const result = computeGottmanHorsemen(cps)!;
       expect(result.activeCount).toBe(4);
-      expect(result.riskLevel).toContain('Krytyczny');
+      expect(result.riskLevel).toContain('Podwyższone ryzyko');
     });
   });
 

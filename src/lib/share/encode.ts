@@ -7,7 +7,8 @@
 
 import { compressToEncodedURIComponent } from 'lz-string';
 import type { StoredAnalysis } from '../analysis/types';
-import type { SharePayload, ShareBadge, ShareViralScores } from './types';
+import type { EksResult } from '../analysis/eks-prompts';
+import type { SharePayload, ShareBadge, ShareViralScores, ShareEksData, ShareEksPhase } from './types';
 
 /** Map of real participant names to anonymized labels. */
 function buildNameMap(participants: Array<{ name: string }>): Map<string, string> {
@@ -123,6 +124,68 @@ export function encodeShareData(analysis: StoredAnalysis): string {
 /** Build a full share URL from analysis data. */
 export function buildShareUrl(analysis: StoredAnalysis): string {
   const encoded = encodeShareData(analysis);
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://podtekst.app';
+  return `${origin}/share/${encoded}`;
+}
+
+/**
+ * Encode EKS (relationship autopsy) result into a URL-safe compressed string.
+ *
+ * Privacy: replaces real participant names with "Osoba A" / "Osoba B",
+ * strips all quotes, message content, and evidence arrays — only keeps
+ * aggregated, non-identifying fields.
+ */
+export function encodeEksSharePayload(result: EksResult, participants: string[]): string {
+  const nameMap = buildNameMap(
+    participants.map((name) => ({ name })),
+  );
+
+  // Anonymize phases — keep max 5, strip quotes and evidence
+  const phases: ShareEksPhase[] = (result.phases ?? []).slice(0, 5).map((phase) => ({
+    name: anonymizeString(phase.name, nameMap),
+    period: `${phase.periodStart} — ${phase.periodEnd}`,
+  }));
+
+  // Anonymize whoLeftFirst
+  const whoLeftFirst = result.whoLeftFirst?.name
+    ? nameMap.get(result.whoLeftFirst.name) ?? anonymizeString(result.whoLeftFirst.name, nameMap)
+    : 'Osoba A';
+
+  const eksData: ShareEksData = {
+    epitaph: anonymizeString(result.epitaph ?? '', nameMap),
+    causeOfDeath: anonymizeString(result.causeOfDeath?.primary ?? '', nameMap),
+    deathDate: result.deathDate ?? '',
+    duration: result.relationshipDuration ?? '',
+    willTheyComeBack: Math.min(result.postBreakupForecast?.willTheyComeBack ?? 0, 75),
+    whoLeftFirst,
+    phases,
+  };
+
+  // Build a minimal SharePayload with EKS data only
+  const payload: SharePayload = {
+    v: 1,
+    healthScore: null,
+    healthComponents: null,
+    executiveSummary: null,
+    viralScores: null,
+    badges: [],
+    conversationPersonality: null,
+    participantCount: participants.length,
+    messageCount: 0,
+    dateRange: { start: 0, end: 0 },
+    roastVerdict: null,
+    relationshipType: null,
+    keyFindings: [],
+    eks: eksData,
+  };
+
+  const json = JSON.stringify(payload);
+  return compressToEncodedURIComponent(json);
+}
+
+/** Build a full EKS share URL from result data. */
+export function buildEksShareUrl(result: EksResult, participants: string[]): string {
+  const encoded = encodeEksSharePayload(result, participants);
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://podtekst.app';
   return `${origin}/share/${encoded}`;
 }

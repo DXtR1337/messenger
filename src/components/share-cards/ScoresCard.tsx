@@ -26,16 +26,16 @@ function getScoreColor(score: number): string {
   return '#ef4444';
 }
 
-function getDelusionEmoji(score: number): string {
+function getAsymmetryEmoji(score: number): string {
   if (score >= 70) return '\uD83E\uDD21';
   if (score >= 40) return '\uD83D\uDE0E';
   return '\uD83E\uDDD8';
 }
 
-function getDelusionVerdict(score: number): string {
-  if (score >= 70) return 'MEGA DELUZJA';
-  if (score >= 40) return 'LEKKA MGIEKA';
-  return 'TWARDO NA ZIEMI';
+function getAsymmetryVerdict(score: number): string {
+  if (score >= 70) return 'WYRAŹNA ASYMETRIA';
+  if (score >= 40) return 'LEKKA ASYMETRIA';
+  return 'RÓWNOWAGA';
 }
 
 export default function ScoresCard({ viralScores, participants }: ScoresCardProps) {
@@ -413,7 +413,7 @@ export default function ScoresCard({ viralScores, participants }: ScoresCardProp
             </div>
           </div>
 
-          {/* Zone 3: DELUZJA */}
+          {/* Zone 3: ASYMETRIA */}
           <div
             style={{
               background: 'rgba(0,0,0,0.25)',
@@ -441,10 +441,10 @@ export default function ScoresCard({ viralScores, participants }: ScoresCardProp
                 textAlign: 'center',
               }}
             >
-              DELUZJA
+              ASYMETRIA
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-              <span style={{ fontSize: '2rem' }}>{getDelusionEmoji(delusionScore)}</span>
+              <span style={{ fontSize: '2rem' }}>{getAsymmetryEmoji(delusionScore)}</span>
               <div style={{ textAlign: 'center' }}>
                 <span
                   style={{
@@ -467,7 +467,7 @@ export default function ScoresCard({ viralScores, participants }: ScoresCardProp
                     letterSpacing: '0.08em',
                   }}
                 >
-                  {getDelusionVerdict(delusionScore)}
+                  {getAsymmetryVerdict(delusionScore)}
                 </div>
               </div>
             </div>

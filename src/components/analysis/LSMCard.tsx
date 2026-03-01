@@ -7,7 +7,7 @@ import { PSYCH_CITATIONS } from '@/lib/analysis/citations';
 import { QuantBadge } from '@/components/shared/SourceBadge';
 
 interface LSMCardProps {
-  result: LSMResult;
+  result?: LSMResult | null;
   participants: string[];
 }
 
@@ -47,6 +47,12 @@ function interpretationLabel(score: number): string {
 }
 
 export default function LSMCard({ result, participants }: LSMCardProps) {
+  if (!result) return (
+    <div className="rounded-xl border border-border bg-card/50 p-6 opacity-50">
+      <p className="text-sm text-muted-foreground text-center">Za mało danych dla tej analizy</p>
+    </div>
+  );
+
   const overallPct = Math.round(result.overall * 100);
   const categories = Object.entries(result.perCategory);
 

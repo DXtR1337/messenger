@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { RotateCcw, Swords, ShieldAlert, AlertTriangle, VolumeX, Download, Loader2, MessageSquare } from 'lucide-react';
 import AnalysisCard from '@/components/shared/AnalysisCard';
+import { ARGUMENT_PERSON_COLORS } from '@/lib/analysis/constants';
 
 import type { ArgumentSummary as ArgumentSummaryType, ArgumentSimulationMessage } from '@/lib/analysis/types';
 import type { ConflictFingerprintResult } from '@/lib/analysis/quant/conflict-fingerprint';
@@ -278,11 +279,16 @@ export default function ArgumentSummary({
             </p>
           )}
 
-          {/* Per-person breakdown */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* Per-person breakdown — dynamic grid */}
+          <div className={`grid gap-4 ${
+            participants.length <= 2 ? 'sm:grid-cols-2' :
+            participants.length === 3 ? 'sm:grid-cols-3' :
+            'sm:grid-cols-2 lg:grid-cols-3'
+          }`}>
             {participants.map((name, i) => {
               const breakdown = summary.personBreakdown?.[name];
               if (!breakdown) return null;
+              const color = ARGUMENT_PERSON_COLORS[i % ARGUMENT_PERSON_COLORS.length];
 
               return (
                 <div
@@ -292,16 +298,12 @@ export default function ArgumentSummary({
                   {/* Name header */}
                   <div className="mb-3 flex items-center gap-2">
                     <span
-                      className="inline-flex size-7 items-center justify-center rounded-full font-mono text-[10px] font-bold text-black"
-                      style={{
-                        background: i === 0
-                          ? 'linear-gradient(135deg, #ef4444, #f97316)'
-                          : 'linear-gradient(135deg, #3b82f6, #a855f7)',
-                      }}
+                      className="inline-flex size-7 items-center justify-center rounded-full font-mono text-[10px] font-bold text-white"
+                      style={{ backgroundColor: color }}
                     >
                       {name.charAt(0).toUpperCase()}
                     </span>
-                    <span className="font-[var(--font-syne)] text-sm font-bold text-white">
+                    <span className="font-[var(--font-syne)] text-sm font-bold" style={{ color }}>
                       {name}
                     </span>
                   </div>
@@ -328,7 +330,7 @@ export default function ArgumentSummary({
                       <span className="font-mono text-[10px] uppercase tracking-widest text-[#888]">
                         Dominujaca faza
                       </span>
-                      <span className="font-mono text-xs font-bold text-[#ef4444]">
+                      <span className="font-mono text-xs font-bold" style={{ color }}>
                         {PHASE_LABELS[breakdown.dominantPhase] ?? breakdown.dominantPhase}
                       </span>
                     </div>

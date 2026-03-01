@@ -30,12 +30,13 @@ import { computeViralScores } from './viral-scores';
 import { computeBadges } from './badges';
 import { computeCatchphrases, computeBestTimeToText } from './catchphrases';
 import { computeNetworkMetrics } from './network';
-import { linearRegressionSlope, SESSION_GAP_MS } from './constants';
+import { linearRegressionSlope, SESSION_GAP_MS, ENTER_AS_COMMA_MS } from './constants';
 
 import {
   extractEmojis,
   countWords,
   tokenizeWords,
+  tokenizeAll,
   median,
   percentile,
   stdDev,
@@ -70,6 +71,7 @@ import {
   computeTemporalFocus,
   computeRepairPatterns,
   computeConflictFingerprint,
+  computeResponseTimeAnalysis,
   createPersonAccumulator,
 } from './quant';
 import type { PersonAccumulator } from './quant';
@@ -94,9 +96,14 @@ export function computeQuantitativeAnalysis(
   // Normalized lookup for reaction actors: handles FB encoding quirks where
   // the actor name in reactions may differ from participants by whitespace,
   // NFC/NFD form, or minor encoding inconsistencies (e.g. ł, ą, ę).
+  // Three-tier matching: exact → NFC normalized → ASCII-folded (diacritics stripped)
   const normalizedActorLookup = new Map<string, string>();
+  const asciiFoldedActorLookup = new Map<string, string>();
   for (const name of accumulators.keys()) {
     normalizedActorLookup.set(name.trim().normalize('NFC').toLowerCase(), name);
+    // ASCII fold: strip combining diacritical marks for fuzzy matching
+    const folded = name.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\u0142/g, 'l').replace(/\u0141/g, 'L');
+    asciiFoldedActorLookup.set(folded, name);
   }
 
   // ── Timing / session accumulators ──────────────────────────
@@ -156,8 +163,14 @@ export function computeQuantitativeAnalysis(
   const monthlyInitiations = new Map<string, Record<string, number>>();
 
   // ── Consecutive message tracking ───────────────────────────
+  // Enter-as-comma awareness: consecutive messages from the same sender
+  // within ENTER_AS_COMMA_MS are ONE logical message (Enter used as punctuation).
+  // A "double text" only counts when same-sender runs are separated by >2min gaps.
   let consecutiveCount = 0;
   let consecutiveSender = '';
+  let consecutiveRunStart = 0; // timestamp of current run's first message
+  let lastSameSenderTimestamp = 0; // timestamp of the previous message in current run
+  let doubleTextRuns = 0; // how many >2min gap sub-runs within a consecutive sender block
 
   // ── Burst-aware response time: track first unanswered message per sender ──
   // When A sends multiple messages before B replies, RT should measure from
@@ -244,6 +257,9 @@ export function computeQuantitativeAnalysis(
         const bigram = `${tokens[j]} ${tokens[j + 1]}`;
         acc.phraseFreq.set(bigram, (acc.phraseFreq.get(bigram) ?? 0) + 1);
       }
+      // Full token stream for MTLD (includes stopwords — McCarthy & Jarvis 2010)
+      const allTokens = tokenizeAll(msg.content);
+      for (const t of allTokens) acc.tokensList.push(t);
     }
 
     // ── Media / links / unsent ───────────────────────────────
@@ -259,13 +275,21 @@ export function computeQuantitativeAnalysis(
       acc.reactionsReceived += reactionCount;
 
       // Credit the actor who gave the reaction.
-      // Try exact match first; fall back to normalized lookup to handle FB
-      // encoding quirks where reaction.actor may differ from the participant
-      // name by whitespace, NFC/NFD form, or latin-1 decoding inconsistencies.
-      const resolvedActorName =
-        accumulators.has(reaction.actor)
-          ? reaction.actor
-          : normalizedActorLookup.get(reaction.actor.trim().normalize('NFC').toLowerCase());
+      // Three-tier matching to handle FB encoding quirks where reaction.actor
+      // may differ from participant name by whitespace, NFC/NFD, latin-1, or
+      // diacritical mark encoding inconsistencies (ł → l, ą → a, etc.).
+      let resolvedActorName: string | undefined;
+      if (accumulators.has(reaction.actor)) {
+        resolvedActorName = reaction.actor;
+      } else {
+        const trimmed = reaction.actor.trim();
+        resolvedActorName = normalizedActorLookup.get(trimmed.normalize('NFC').toLowerCase());
+        if (!resolvedActorName) {
+          // ASCII fold: strip combining marks + hardcode ł→l for Polish
+          const folded = trimmed.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\u0142/g, 'l');
+          resolvedActorName = asciiFoldedActorLookup.get(folded);
+        }
+      }
       const actorAcc = resolvedActorName ? accumulators.get(resolvedActorName) : undefined;
       if (actorAcc) {
         actorAcc.reactionsGiven += reactionCount;
@@ -364,12 +388,19 @@ export function computeQuantitativeAnalysis(
     }
 
     // ── Consecutive / double-text tracking ───────────────────
+    // Enter-as-comma: messages from the same sender within 2min = one logical message.
+    // A "double text" = same sender sends messages separated by >2min gaps without reply.
     if (sender === consecutiveSender) {
       consecutiveCount++;
+      // Check if this message is >2min after the previous same-sender message
+      if (msg.timestamp - lastSameSenderTimestamp > ENTER_AS_COMMA_MS) {
+        doubleTextRuns++;
+      }
+      lastSameSenderTimestamp = msg.timestamp;
     } else {
-      // Finalize previous run
-      if (consecutiveSender && consecutiveCount >= 2) {
-        doubleTexts[consecutiveSender]++;
+      // Finalize previous run — only count as double-text if there were >2min gap sub-runs
+      if (consecutiveSender && doubleTextRuns > 0) {
+        doubleTexts[consecutiveSender] += doubleTextRuns;
       }
       if (consecutiveSender) {
         maxConsecutive[consecutiveSender] = Math.max(
@@ -379,6 +410,9 @@ export function computeQuantitativeAnalysis(
       }
       consecutiveSender = sender;
       consecutiveCount = 1;
+      consecutiveRunStart = msg.timestamp;
+      lastSameSenderTimestamp = msg.timestamp;
+      doubleTextRuns = 0;
     }
 
     // ── Heatmap ──────────────────────────────────────────────
@@ -419,8 +453,8 @@ export function computeQuantitativeAnalysis(
 
   // ── Finalize last consecutive run ──────────────────────────
   if (consecutiveSender) {
-    if (consecutiveCount >= 2) {
-      doubleTexts[consecutiveSender]++;
+    if (doubleTextRuns > 0) {
+      doubleTexts[consecutiveSender] += doubleTextRuns;
     }
     maxConsecutive[consecutiveSender] = Math.max(
       maxConsecutive[consecutiveSender] ?? 0,
@@ -482,8 +516,15 @@ export function computeQuantitativeAnalysis(
     participantNames,
   );
 
+  // -- Language Style Matching (Ireland & Pennebaker, 2010) --
+  // Hoisted before viral scores because LSM feeds into compatibility score
+  const lsm = computeLSM(messages, participantNames);
+
   // ── Phase 6A: viral/fun metrics ────────────────────────────
-  const quantitativeBase = { perPerson, timing, engagement, patterns, heatmap, trends };
+  const quantitativeBase = {
+    perPerson, timing, engagement, patterns, heatmap, trends,
+    lsmOverallScore: lsm?.overall,
+  };
   const viralScores = computeViralScores(quantitativeBase, conversation);
   const badges = computeBadges(quantitativeBase, conversation);
   const bestTimeToText = computeBestTimeToText(quantitativeBase, participantNames);
@@ -531,9 +572,6 @@ export function computeQuantitativeAnalysis(
   // -- Pursuit-Withdrawal Detection --
   const pursuitWithdrawal = detectPursuitWithdrawal(messages, participantNames);
 
-  // -- Language Style Matching (Ireland & Pennebaker, 2010) --
-  const lsm = computeLSM(messages, participantNames);
-
   // -- Pronoun Analysis (Pennebaker, 2011) --
   const pronounAnalysis = computePronounAnalysis(messages, participantNames);
 
@@ -543,13 +581,13 @@ export function computeQuantitativeAnalysis(
   // -- Shift-Support Ratio (Derber 1979; Vangelisti 1990) --
   const shiftSupportResult = computeShiftSupportRatio(messages, participantNames);
 
-  // -- Emotional Granularity (Vishnubhotla 2024) --
+  // -- Emotion Vocabulary Diversity (Vishnubhotla 2024) --
   const emotionalGranularity = computeEmotionalGranularity(messages, participantNames);
 
   // -- Bid-Response Ratio (Gottman 1999) --
   const bidResponseResult = computeBidResponseRatio(messages, participantNames);
 
-  // -- Integrative Complexity (Suedfeld & Tetlock 1977, Conway AutoIC 2014) --
+  // -- Cognitive Complexity Indicator (heuristic, inspired by Suedfeld & Tetlock 1977) --
   const integrativeComplexity = computeIntegrativeComplexity(messages, participantNames);
 
   // -- Temporal Focus / Future Orientation (Pennebaker LIWC 2007) --
@@ -557,6 +595,9 @@ export function computeQuantitativeAnalysis(
 
   // -- Conversational Repair Patterns (Schegloff, Jefferson & Sacks 1977) --
   const repairPatterns = computeRepairPatterns(messages, participantNames);
+
+  // -- Professional Response Time Analysis (Templeton 2022, Holtzman 2021) --
+  const responseTimeAnalysis = computeResponseTimeAnalysis(messages, participantNames);
 
   // Build base result for ranking percentiles
   const baseResult: QuantitativeAnalysis = {
@@ -588,6 +629,7 @@ export function computeQuantitativeAnalysis(
     integrativeComplexity,
     temporalFocus,
     repairPatterns,
+    responseTimeAnalysis,
   };
 
   // -- Ranking Percentiles (needs full result) --
@@ -639,13 +681,62 @@ function buildPerPersonMetrics(
       topPhrases: topNPhrases(acc.phraseFreq, 10),
       uniqueWords: acc.wordFreq.size,
       vocabularyRichness: (() => {
-        // Guiraud's R = unique / sqrt(total) — corrects for Heaps' Law.
-        // TTR (unique/total) decreases monotonically with sample size, making
-        // cross-conversation comparison meaningless. Guiraud (1960) showed R
-        // stabilizes much earlier. Typical R: 3-6 casual, 7-10 formal, 10+ literary.
-        let totalTokens = 0;
-        for (const v of acc.wordFreq.values()) totalTokens += v;
-        return totalTokens > 0 ? acc.wordFreq.size / Math.sqrt(totalTokens) : 0;
+        // MTLD (Measure of Textual Lexical Diversity) — McCarthy & Jarvis 2010.
+        // Unlike Guiraud/TTR, MTLD does NOT vary with text length (eta²=0.79 for Guiraud).
+        // Algorithm: sequentially process tokens, count "factors" (points where
+        // TTR drops below 0.72). MTLD = totalTokens / factors.
+        // Typical MTLD: 40-60 casual, 70-100 formal, 100+ literary.
+        const tokens = acc.tokensList;
+        if (!tokens || tokens.length < 50) return 0;
+        const TTR_THRESHOLD = 0.72;
+        let factors = 0;
+        // Forward pass
+        let segStart = 0;
+        const segWords = new Set<string>();
+        for (let i = 0; i < tokens.length; i++) {
+          segWords.add(tokens[i]);
+          const segLen = i - segStart + 1;
+          const ttr = segWords.size / segLen;
+          if (ttr <= TTR_THRESHOLD) {
+            factors++;
+            segStart = i + 1;
+            segWords.clear();
+          }
+        }
+        // Partial factor at end
+        if (segStart < tokens.length) {
+          const remaining = tokens.length - segStart;
+          const segWordsRemaining = segWords.size;
+          const ttr = segWordsRemaining / remaining;
+          if (ttr < 1.0) {
+            factors += (1 - ttr) / (1 - TTR_THRESHOLD);
+          }
+        }
+        // Reverse pass for stability (bidirectional MTLD)
+        let factorsRev = 0;
+        segStart = tokens.length - 1;
+        segWords.clear();
+        for (let i = tokens.length - 1; i >= 0; i--) {
+          segWords.add(tokens[i]);
+          const segLen = segStart - i + 1;
+          const ttr = segWords.size / segLen;
+          if (ttr <= TTR_THRESHOLD) {
+            factorsRev++;
+            segStart = i - 1;
+            segWords.clear();
+          }
+        }
+        if (segStart >= 0) {
+          const remaining = segStart + 1;
+          const segWordsRemaining = segWords.size;
+          const ttr = segWordsRemaining / remaining;
+          if (ttr < 1.0) {
+            factorsRev += (1 - ttr) / (1 - TTR_THRESHOLD);
+          }
+        }
+        const mtldFwd = factors > 0 ? tokens.length / factors : tokens.length;
+        const mtldRev = factorsRev > 0 ? tokens.length / factorsRev : tokens.length;
+        return Math.round(((mtldFwd + mtldRev) / 2) * 100) / 100;
       })(),
       // Per-1000-messages normalized rates — enable cross-conversation comparison
       questionsAskedPer1k: acc.totalMessages > 0 ? Math.round((acc.questionsAsked / acc.totalMessages) * 1000) : 0,

@@ -25,9 +25,13 @@ function getBadgeTier(percentile: number): {
   shadow: string;
   textShadow: string;
 } {
+  // Display "Lepszy niż ~X% rozmów" instead of "TOP X%"
+  // to clearly communicate the heuristic, non-empirical nature
+  const betterThan = percentile;
+
   if (percentile >= 90) {
     return {
-      label: `TOP ${100 - percentile}%`,
+      label: `Lepszy niż ~${betterThan}%`,
       bg: 'bg-yellow-500/10',
       text: 'text-yellow-400',
       ring: 'ring-yellow-500/40',
@@ -37,7 +41,7 @@ function getBadgeTier(percentile: number): {
   }
   if (percentile >= 75) {
     return {
-      label: `TOP ${100 - percentile}%`,
+      label: `Lepszy niż ~${betterThan}%`,
       bg: 'bg-slate-300/10',
       text: 'text-slate-300',
       ring: 'ring-slate-400/40',
@@ -47,7 +51,7 @@ function getBadgeTier(percentile: number): {
   }
   if (percentile >= 50) {
     return {
-      label: `TOP ${100 - percentile}%`,
+      label: `Lepszy niż ~${betterThan}%`,
       bg: 'bg-amber-600/10',
       text: 'text-amber-500',
       ring: 'ring-amber-600/40',
@@ -56,7 +60,7 @@ function getBadgeTier(percentile: number): {
     };
   }
   return {
-    label: `TOP ${100 - percentile}%`,
+    label: `Lepszy niż ~${betterThan}%`,
     bg: 'bg-blue-500/[0.06]',
     text: 'text-blue-400/70',
     ring: 'ring-blue-500/20',
@@ -78,10 +82,10 @@ export default function RankingBadges({ rankings }: RankingBadgesProps) {
         <ExperimentalBadge metricKey="rankingPercentiles" />
       </div>
       <p className="mb-2 text-[11px] text-muted-foreground">
-        Jak wypadacie na tle innych par
+        Jak wypadacie na tle innych par *szacunkowo*
       </p>
       <PsychDisclaimer
-        text="Rankingi percentylowe są szacunkowe — oparte na heurystycznych parametrach, nie empirycznych danych populacyjnych."
+        text="Szacunki heurystyczne — nie oparte na danych populacyjnych."
         className="mb-4 mt-0 px-0"
       />
 
@@ -113,7 +117,7 @@ export default function RankingBadges({ rankings }: RankingBadgesProps) {
               )}
               <span
                 className={cn(
-                  'font-mono text-2xl font-black',
+                  'font-mono text-sm font-black leading-tight text-center sm:text-base',
                   tier.text,
                 )}
                 style={{ textShadow: tier.textShadow }}
@@ -123,11 +127,9 @@ export default function RankingBadges({ rankings }: RankingBadgesProps) {
               <span className="text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">
                 {ranking.label}
               </span>
-              {ranking.isEstimated && (
-                <span className="text-[10px] text-gray-500" title="Percentyl oparty na szacunkowych normach statystycznych, nie na danych empirycznych">
-                  (szacunkowe)
-                </span>
-              )}
+              <span className="text-center text-[9px] text-gray-500">
+                rozmów *szacunkowo*
+              </span>
             </div>
           );
         })}

@@ -9,19 +9,21 @@
 
 | Zadanie | Status | Uwagi |
 |---------|--------|-------|
-| 1.1 Gottman rename | ❌ DO ZROBIENIA | Nagłówek "Czterej jeźdźcy Gottmana" + podtytuł bez "inspirowane" |
-| 1.2 Konsolidacja percentyli | ❌ DO ZROBIENIA | Oba systemy istnieją osobno |
+| 1.1 Gottman rename | ✅ ZROBIONE | "Wzorce Ryzyka Komunikacyjnego" + podtytuł SPAFF + softened riskLevel labels |
+| 1.2 Konsolidacja percentyli | ✅ ZROBIONE | Oba systemy zachowane (różne UI), "TOP X%" → "Lepszy niż ~X%", disclaimers dodane |
 | 1.3 Ghost Risk default 0 | ✅ ZROBIONE | Już zwraca score:0 dla <3 mies. |
 | 1.4 Health Score claim | ✅ ZROBIONE | Komentarz "heuristic, not empirically derived" + cytaty |
-| 1.5 VersusCard labels | ❌ DO ZROBIENIA | "Simp" w story-data, GroupChatAwards, VersusCardV2. "Clingy" w VersusCardV2 |
-| 1.6 Subtext false positives | ⚠️ CZĘŚCIOWO | Delay 30min→2h ✅. Passive markers frequency check ❌ |
-| 1.7 Damage Report decouple | ❌ DO ZROBIENIA | Formuła wciąż (100-healthScore)*0.8 |
-| 2.1 Gemini DRY | ❌ DO ZROBIENIA | 3 pliki duplikują helpers |
-| 2.2 Min sample size | ❌ DO ZROBIENIA | |
-| 2.3 CPS thresholds | ❌ DO ZROBIENIA | |
+| 1.5 VersusCard labels | ✅ ZROBIONE | Simp→Fan, Clingy→Energiczny, Overthinker→Pisarz |
+| 1.6 Subtext false positives | ✅ ZROBIONE | Delay 2h ✅. Passive markers >15% → reduced score. Ellipsis >10% → reduced score. |
+| 1.7 Damage Report decouple | ✅ ZROBIONE | 100% quantitative: sentiment+conflict+reciprocity+RT asymmetry+volume decline |
+| 2.1 Gemini DRY | ✅ ZROBIONE | simulator-prompts.ts deduplicated (court/dating already clean) |
+| 2.2 Min sample size | ✅ ZROBIONE | Intimacy: 100 msg min. Catchphrases: 50/person. Pronouns: 200 words (already). Tests updated. |
+| 2.3 CPS thresholds | ✅ ZROBIONE | CPSFrequencyLevel type + getPatternFrequency() — percentage-based |
 | 2.4 Sentiment expansion | ❌ DO ZROBIENIA | |
-| 3.1-3.5 Disclaimery | ⚠️ CZĘŚCIOWO | Gottman disclaimer istnieje (solidny). Reszta do zrobienia |
-| 3.4 Threat Meters header | ✅ ZROBIONE | Już "Wskaźniki Dynamiki" |
+| 3.1-3.5 Disclaimery | ✅ ZROBIONE | Footer na hub + ModePageShell. ThreatMeters subtitle. DamageReport rename. |
+| 3.4 Threat Meters header | ✅ ZROBIONE | "Wskaźniki Dynamiki" + podtytuł "nie ocena psychologiczna" |
+| 4.1 Low message warning | ✅ ZROBIONE | Banner na hub page dla <200 wiadomości |
+| 4.2 Empty states | ✅ ZROBIONE | 6 components fixed (LSM, Pronoun, IC, TemporalFocus, Repair, Capitalization). 4 already safe. |
 
 ---
 

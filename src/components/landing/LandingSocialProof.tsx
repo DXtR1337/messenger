@@ -60,8 +60,8 @@ export default function LandingSocialProof() {
                 <span className="text-foreground">Language Style Matching</span>,
                 od{' '}
                 <span className="text-foreground">Gottman Four Horsemen</span>{' '}
-                po Pursuit-Withdrawal, od Integrative Complexity po Emotional
-                Granularity. Każda metryka ma opis skąd się bierze i jakie ma
+                po Pursuit-Withdrawal, od Cognitive Complexity po Emotion
+                Vocabulary Diversity. Każda metryka ma opis skąd się bierze i jakie ma
                 ograniczenia. Otwarcie piszemy co jest twarde a co
                 eksperymentalne, zamiast udawać że wszystko jest nieomylne.
               </p>
@@ -74,7 +74,7 @@ export default function LandingSocialProof() {
                   (7 aktów, PDF)
                 </span>
                 , profil randkowy, sąd nad czatem z wyrokiem, translator
-                podtekstów, quiz na deluzję, CPS z 63 pytaniami, fundacje
+                podtekstów, quiz samoświadomości, CPS z 63 pytaniami, fundacje
                 moralne Haidta i przyczyny emocji.{' '}
                 <span className="text-foreground">23 formaty kart</span> do
                 pobrania — od paragonu po nekrolog związku.{' '}

@@ -63,7 +63,7 @@ const TIERS: CompactTier[] = [
     highlights: [
       { text: '3 analizy / miesiąc', included: true },
       { text: 'Pełna analiza ilościowa', included: true },
-      { text: 'AI Pass 1 + Delusion Quiz', included: true },
+      { text: 'AI Pass 1 + Quiz samoświadomości', included: true },
       { text: 'Zaawansowane funkcje AI', included: false },
     ],
     cta: 'Zacznij za darmo',

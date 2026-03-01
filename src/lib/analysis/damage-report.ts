@@ -1,12 +1,21 @@
 /**
- * Damage Report — composite metrics combining quantitative + qualitative data.
+ * Damage Report — composite metrics from purely quantitative data.
  *
  * Produces: Emotional Damage %, Communication Grade (A-F),
- * Repair Potential %, and Therapy Needed verdict.
+ * Repair Potential %, and Therapy Benefit verdict.
+ *
+ * NOTE: Emotional Damage is 100% quantitative — no AI dependency.
+ * The function still accepts pass4/pass2 for Repair Potential and
+ * Therapy Benefit, but emotionalDamage itself never uses AI scores.
  */
 
 import type { QuantitativeAnalysis, DamageReportResult } from '../parsers/types';
 import type { Pass4Result, Pass2Result } from './types';
+
+/** Clamp a number to [min, max]. */
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 export function computeDamageReport(
   quant: QuantitativeAnalysis,
@@ -15,9 +24,19 @@ export function computeDamageReport(
 ): DamageReportResult {
   const healthScore = pass4?.health_score?.overall ?? 50;
 
-  // === Emotional Damage — 4-component formula (80% quant, 20% AI) ===
+  // === Emotional Damage — 5-component purely quantitative formula ===
+  //
+  // Decoupled from AI Health Score to eliminate circular dependency.
+  // All inputs come from client-side quantitative analysis.
+  //
+  // Components (weights sum to 1.0):
+  //   1. Negative sentiment     (0.30) — average sentiment polarity
+  //   2. Conflict density       (0.25) — conflicts per month, scaled
+  //   3. Reciprocity imbalance  (0.20) — deviation from balanced exchange
+  //   4. Response time asymmetry(0.15) — abs difference in avg response times
+  //   5. Volume decline         (0.10) — recent volume vs peak month
 
-  // Component 1: Negative sentiment (quant, not AI)
+  // Component 1: Negative sentiment (0-100)
   const sentimentValues = quant.sentimentAnalysis
     ? Object.values(quant.sentimentAnalysis.perPerson).map(s => s.avgSentiment)
     : [];
@@ -25,28 +44,57 @@ export function computeDamageReport(
     ? sentimentValues.reduce((a, b) => a + b, 0) / sentimentValues.length
     : 0;
   const negativeSentiment = Math.max(0, -avgSentiment); // 0-1 scale
-  const negativeDamage = Math.min(100, Math.round(negativeSentiment * 100));
+  const negativeDamage = clamp(Math.round(negativeSentiment * 100), 0, 100);
 
-  // Component 2: Conflict density (quant)
+  // Component 2: Conflict density (0-100)
+  // conflicts/month * 25 — so 4+ conflicts/month → cap at 100
   const conflicts = quant.conflictAnalysis?.totalConflicts ?? 0;
   const months = Math.max(1, quant.patterns.monthlyVolume?.length ?? 1);
-  const conflictDamage = Math.min(100, Math.round((conflicts / months) * 25));
+  const conflictDamage = clamp(Math.round((conflicts / months) * 25), 0, 100);
 
-  // Component 3: Reciprocity imbalance (quant)
+  // Component 3: Reciprocity imbalance (0-100)
   // reciprocityIndex=50 (perfect balance) → 0 damage; reciprocityIndex=0 → 100 damage
-  const reciprocityImbalance = Math.min(100, Math.round(Math.max(0, 50 - (quant.reciprocityIndex?.overall ?? 50)) * 2));
+  const reciprocityImbalance = clamp(Math.round(Math.max(0, 50 - (quant.reciprocityIndex?.overall ?? 50)) * 2), 0, 100);
 
-  // Component 4: AI health as sanity check (20% only)
-  const aiHealthDamage = 100 - healthScore;
+  // Component 4: Response time asymmetry (0-100)
+  // Measures how lopsided average response times are between participants.
+  // Large asymmetry suggests one person is significantly more invested.
+  const responseTimes = Object.values(quant.timing.perPerson).map(t => t.averageResponseTimeMs);
+  let responseAsymmetry = 0;
+  if (responseTimes.length >= 2) {
+    const maxRT = Math.max(...responseTimes);
+    const minRT = Math.min(...responseTimes);
+    // Ratio-based: if one waits 3x longer, asymmetry = ~67%.
+    // Using (max-min)/max gives 0-1 range, then scale to 0-100.
+    if (maxRT > 0) {
+      responseAsymmetry = clamp(Math.round(((maxRT - minRT) / maxRT) * 100), 0, 100);
+    }
+  }
 
-  // Weights sum to 1.0 (0.35+0.25+0.20+0.20), each component 0-100.
-  // Theoretical max = 100. Math.min guards against floating point drift.
-  const emotionalDamage = Math.min(100, Math.round(
-    negativeDamage       * 0.35 +
+  // Component 5: Volume decline (0-100)
+  // Compares average of last 2 months to peak month.
+  // A conversation that peaked at 500 msgs/month but now has 100 → 80% decline.
+  const monthlyTotals = (quant.patterns.monthlyVolume ?? []).map(m => m.total);
+  let volumeDecline = 0;
+  if (monthlyTotals.length >= 3) {
+    const peakVolume = Math.max(...monthlyTotals);
+    // Average of last 2 months
+    const recentAvg = (monthlyTotals[monthlyTotals.length - 1] + monthlyTotals[monthlyTotals.length - 2]) / 2;
+    if (peakVolume > 0) {
+      const declineRatio = Math.max(0, (peakVolume - recentAvg) / peakVolume);
+      volumeDecline = clamp(Math.round(declineRatio * 100), 0, 100);
+    }
+  }
+
+  // Weighted sum — each component 0-100, weights sum to 1.0.
+  // Theoretical max = 100. clamp guards against floating point drift.
+  const emotionalDamage = clamp(Math.round(
+    negativeDamage       * 0.30 +
     conflictDamage       * 0.25 +
     reciprocityImbalance * 0.20 +
-    aiHealthDamage       * 0.20
-  ));
+    responseAsymmetry    * 0.15 +
+    volumeDecline        * 0.10
+  ), 0, 100);
 
   // Communication Grade
   const reciprocity = quant.reciprocityIndex?.overall ?? 50;

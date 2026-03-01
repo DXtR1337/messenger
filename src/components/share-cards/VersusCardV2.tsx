@@ -26,12 +26,12 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
 
   const cats: VersusCategory[] = [];
 
-  // Clingy (double texts + message ratio)
+  // Energiczny (double texts + message ratio)
   const dtA = q.engagement?.doubleTexts?.[a] ?? 0;
   const dtB = q.engagement?.doubleTexts?.[b] ?? 0;
   if (dtA + dtB > 5) {
     cats.push({
-      question: 'KTO JEST BARDZIEJ NATRĘTNY?',
+      question: 'KTO JEST BARDZIEJ ENERGICZNY?',
       valuesA: dtA + pa.totalMessages,
       valuesB: dtB + pb.totalMessages,
       evidence: `${dtA > dtB ? a.split(' ')[0] : b.split(' ')[0]} wysłał(a) ${Math.max(dtA, dtB)} double tekstów`,
@@ -76,10 +76,10 @@ function buildCategories(q: QuantitativeAnalysis, names: string[]): VersusCatego
     });
   }
 
-  // Overthinker (questions asked)
+  // Pisarz (questions asked)
   if (pa.questionsAsked + pb.questionsAsked > 20) {
     cats.push({
-      question: 'KTO BARDZIEJ OVERTHINKUJE?',
+      question: 'KTO ZADAJE WIĘCEJ PYTAŃ?',
       valuesA: pa.questionsAsked,
       valuesB: pb.questionsAsked,
       evidence: `${pa.questionsAsked > pb.questionsAsked ? a.split(' ')[0] : b.split(' ')[0]}: ${Math.max(pa.questionsAsked, pb.questionsAsked)} pytań`,
@@ -196,9 +196,7 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
               fontSize: '1.7rem',
               fontWeight: 900,
               letterSpacing: '0.15em',
-              background: 'linear-gradient(135deg, #6d9fff, #b38cff)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#9096ff',
               lineHeight: 1,
               textShadow: '0 0 40px rgba(109,159,255,0.3), 0 0 80px rgba(179,140,255,0.2)',
               filter: 'drop-shadow(0 0 20px rgba(109,159,255,0.25))',
@@ -285,9 +283,7 @@ export default function VersusCardV2({ quantitative, participants }: VersusCardV
                 fontFamily: syne,
                 fontSize: '1rem',
                 fontWeight: 900,
-                background: 'linear-gradient(135deg, #6d9fff, #b38cff)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                color: '#9096ff',
               }}
             >
               VS

@@ -1,6 +1,6 @@
 'use client';
 
-import { lazy, Suspense, type ReactNode, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, type ReactNode, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -12,7 +12,7 @@ export type ModeId =
   | 'hub' | 'roast' | 'court' | 'standup' | 'subtext'
   | 'dating' | 'simulator' | 'delusion' | 'cps'
   | 'moral' | 'emotions' | 'capitalization' | 'metrics' | 'ai' | 'share'
-  | 'argument';
+  | 'argument' | 'eks';
 
 interface ModePageShellProps {
   /** Mode identifier — sets data-mode attribute for theming */
@@ -51,18 +51,19 @@ export default function ModePageShell({
   const params = useParams();
   const id = params.id as string;
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [webglSupported, setWebglSupported] = useState(true);
-
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 640);
+  const [isMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false,
+  );
+  const [webglSupported] = useState(() => {
+    if (typeof window === 'undefined') return true;
     try {
       const canvas = document.createElement('canvas');
       const gl = canvas.getContext('webgl2');
-      if (!gl) { setWebglSupported(false); return; }
+      if (!gl) return false;
       gl.getExtension('WEBGL_lose_context')?.loseContext();
-    } catch { setWebglSupported(false); }
-  }, []);
+      return true;
+    } catch { return false; }
+  });
 
   return (
     <div data-mode={mode} className="relative min-h-screen">
@@ -143,6 +144,13 @@ export default function ModePageShell({
           <main className="mode-enter mode-enter-delay-3">
             {children}
           </main>
+
+          {/* General disclaimer footer */}
+          <footer className="mt-16 mb-8 border-t border-border/30 pt-6">
+            <p className="text-center text-[11px] leading-relaxed text-muted-foreground/50">
+              PodTeksT analizuje wzorce tekstowe, nie emocje ani intencje. Wyniki mają charakter rozrywkowy i orientacyjny. Nie zastępują konsultacji specjalisty.
+            </p>
+          </footer>
         </div>
       </div>
     </div>

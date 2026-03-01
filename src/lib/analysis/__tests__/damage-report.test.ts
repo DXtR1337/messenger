@@ -240,7 +240,7 @@ function createMockPass2(overrides?: Partial<Pass2Result>): Pass2Result {
 
 describe('computeDamageReport', () => {
   describe('emotional damage computation', () => {
-    it('should compute emotional damage from all 4 components', () => {
+    it('should compute emotional damage from all 5 quantitative components', () => {
       const quant = createMockQuantitative({
         sentimentAnalysis: {
           perPerson: {
@@ -272,36 +272,98 @@ describe('computeDamageReport', () => {
           reactionBalance: 30,
         },
       });
-      const pass4 = createMockPass4({ health_score: { ...createMockPass4().health_score, overall: 40 } });
 
-      const result = computeDamageReport(quant, pass4);
+      const result = computeDamageReport(quant);
 
-      // negativeSentiment = max(0, -0.3) = 0
-      // negativeDamage = 0%
-      // conflictDamage = min(100, (3/2)*25) = min(100, 37.5) = 37
-      // reciprocityImbalance = min(100, (50-30)*2) = 40
-      // aiHealthDamage = 100-40 = 60
-      // emotionalDamage = 0*0.35 + 37*0.25 + 40*0.20 + 60*0.20 = 0 + 9.25 + 8 + 12 = 29.25 ≈ 29
+      // negativeSentiment = max(0, -0.3) = 0 → negativeDamage = 0
+      // conflictDamage = clamp((3/2)*25, 0, 100) = 38
+      // reciprocityImbalance = clamp((50-30)*2, 0, 100) = 40
+      // responseAsymmetry = 0 (equal response times in mock)
+      // volumeDecline = 0 (only 2 months in mock, needs >=3)
+      // emotionalDamage = 0*0.30 + 38*0.25 + 40*0.20 + 0*0.15 + 0*0.10 = 17.5 ≈ 18
       expect(result.emotionalDamage).toBeGreaterThanOrEqual(0);
       expect(result.emotionalDamage).toBeLessThanOrEqual(100);
     });
 
-    it('should use pass4 health score if available', () => {
+    it('should NOT use pass4 health score for emotional damage', () => {
       const quant = createMockQuantitative();
-      const pass4 = createMockPass4({ health_score: { ...createMockPass4().health_score, overall: 20 } });
 
-      const result = computeDamageReport(quant, pass4);
+      const resultNoAI = computeDamageReport(quant);
+      const resultLowAI = computeDamageReport(quant, createMockPass4({
+        health_score: { ...createMockPass4().health_score, overall: 10 },
+      }));
+      const resultHighAI = computeDamageReport(quant, createMockPass4({
+        health_score: { ...createMockPass4().health_score, overall: 90 },
+      }));
 
-      // health score of 20 should increase emotional damage
-      expect(result.emotionalDamage).toBeGreaterThan(10);
+      // Emotional damage should be identical regardless of AI health score
+      expect(resultNoAI.emotionalDamage).toBe(resultLowAI.emotionalDamage);
+      expect(resultNoAI.emotionalDamage).toBe(resultHighAI.emotionalDamage);
     });
 
-    it('should default to health score 50 if pass4 not provided', () => {
+    it('should increase damage with response time asymmetry', () => {
+      const quantSymmetric = createMockQuantitative();
+      const quantAsymmetric = createMockQuantitative({
+        timing: {
+          ...createMockQuantitative().timing,
+          perPerson: {
+            'Alice': {
+              averageResponseTimeMs: 60000, // 1 min
+              medianResponseTimeMs: 60000,
+              fastestResponseMs: 10000,
+              slowestResponseMs: 300000,
+              responseTimeTrend: 0,
+            },
+            'Bob': {
+              averageResponseTimeMs: 3600000, // 60 min — 60x slower
+              medianResponseTimeMs: 3600000,
+              fastestResponseMs: 60000,
+              slowestResponseMs: 86400000,
+              responseTimeTrend: 0,
+            },
+          },
+        },
+      });
+
+      const symmetric = computeDamageReport(quantSymmetric);
+      const asymmetric = computeDamageReport(quantAsymmetric);
+
+      expect(asymmetric.emotionalDamage).toBeGreaterThan(symmetric.emotionalDamage);
+    });
+
+    it('should increase damage with volume decline', () => {
+      const quantStable = createMockQuantitative({
+        patterns: {
+          ...createMockQuantitative().patterns,
+          monthlyVolume: [
+            { month: '2024-01', perPerson: { 'Alice': 100, 'Bob': 100 }, total: 200 },
+            { month: '2024-02', perPerson: { 'Alice': 100, 'Bob': 100 }, total: 200 },
+            { month: '2024-03', perPerson: { 'Alice': 100, 'Bob': 100 }, total: 200 },
+          ],
+        },
+      });
+      const quantDeclining = createMockQuantitative({
+        patterns: {
+          ...createMockQuantitative().patterns,
+          monthlyVolume: [
+            { month: '2024-01', perPerson: { 'Alice': 200, 'Bob': 200 }, total: 400 },
+            { month: '2024-02', perPerson: { 'Alice': 25, 'Bob': 25 }, total: 50 },
+            { month: '2024-03', perPerson: { 'Alice': 25, 'Bob': 25 }, total: 50 },
+          ],
+        },
+      });
+
+      const stable = computeDamageReport(quantStable);
+      const declining = computeDamageReport(quantDeclining);
+
+      expect(declining.emotionalDamage).toBeGreaterThan(stable.emotionalDamage);
+    });
+
+    it('should compute without AI data (purely quantitative)', () => {
       const quant = createMockQuantitative();
 
       const result = computeDamageReport(quant);
 
-      // should compute without AI data
       expect(Number.isFinite(result.emotionalDamage)).toBeTruthy();
     });
 
@@ -670,7 +732,8 @@ describe('computeDamageReport', () => {
       const result = computeDamageReport(quant);
 
       expect(result.communicationGrade).toBe('F');
-      expect(result.emotionalDamage).toBeGreaterThan(20);
+      // Zero reciprocity → reciprocityImbalance = 100, contributes 100*0.20 = 20 points
+      expect(result.emotionalDamage).toBeGreaterThanOrEqual(20);
     });
 
     it('should handle perfect reciprocity', () => {

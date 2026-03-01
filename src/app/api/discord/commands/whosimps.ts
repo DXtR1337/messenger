@@ -13,7 +13,7 @@ export function handleWhoSimps(
     .slice(0, 10);
 
   if (ranked.length === 0) {
-    return immediateResponse('Nikt tu nie simpuje. Podejrzane...');
+    return immediateResponse('Nikt tu nie double-textuje. Podejrzane...');
   }
 
   const labels = ['DESPERACJA KRYTYCZNA', 'bez nadziei', 'poważny przypadek', 'jeszcze jest nadzieja', 'lekkie objawy', 'zdrowy', 'normalny', 'spoko', 'ok', 'bezpieczny'];
@@ -26,6 +26,6 @@ export function handleWhoSimps(
   });
 
   return immediateResponse(undefined, [
-    rankingEmbed('Ranking Simpów', lines.join('\n')),
+    rankingEmbed('Ranking Entuzjastów', lines.join('\n')),
   ]);
 }

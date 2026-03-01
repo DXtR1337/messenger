@@ -20,6 +20,7 @@ const datingProfileRequestSchema = z.object({
     }),
   ),
   deepScanMaterial: z.optional(z.string()),
+  targetPerson: z.optional(z.string().min(1)),
 });
 
 function formatZodError(error: z.ZodError): string {
@@ -63,7 +64,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const { participants, quantitativeContext, existingAnalysis, deepScanMaterial } = parsed.data;
+  const { participants, quantitativeContext, existingAnalysis, deepScanMaterial, targetPerson } = parsed.data;
   const samples = parsed.data.samples as unknown as AnalysisSamples;
 
   const { signal } = request;
@@ -96,13 +97,14 @@ export async function POST(request: Request): Promise<Response> {
       try {
         if (signal.aborted) { safeClose(); return; }
 
-        send({ type: 'progress', status: 'Tworzę szczere profile randkowe...' });
+        send({ type: 'progress', status: targetPerson ? `Budowanie profilu ${targetPerson}...` : 'Tworzę szczere profile randkowe...' });
         const result = await runDatingProfile(
           samples,
           participants,
           quantitativeContext,
           existingAnalysis as { pass1?: Record<string, unknown>; pass3?: Record<string, unknown> } | undefined,
           deepScanMaterial ?? undefined,
+          targetPerson ?? undefined,
         );
 
         if (signal.aborted) { safeClose(); return; }

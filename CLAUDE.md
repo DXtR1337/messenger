@@ -66,6 +66,7 @@ Discord uses direct API import via bot token (no file upload).
 | `/api/analyze/simulate` | POST | Reply Simulator — predicts responses (SSE) | 5/10min |
 | `/api/analyze/cwel` | POST | Cwel Tygodnia — AI ceremony roast (SSE) | 5/10min |
 | `/api/analyze/capitalization` | POST | Capitalization/ACR analysis (Gable 2004) — SSE | 5/10min |
+| `/api/analyze/eks` | POST | Tryb Eks — 3-pass relationship autopsy: recon/autopsy modes (SSE) | 5/10min |
 | `/api/analyze/image` | POST | Gemini image generation | 10/10min |
 | `/api/discord/fetch-messages` | POST | Discord Bot message fetcher (SSE) | 3/10min |
 | `/api/discord/send-roast` | POST | Send mega roast/cwel to Discord channel | 10/10min |
@@ -97,7 +98,8 @@ src/
 │   │   └── analysis/
 │   │       ├── new/page.tsx          # Upload + parse + quantitative
 │   │       ├── [id]/page.tsx         # Full analysis results view
-│   │       └── compare/page.tsx      # Multi-conversation comparison
+│   │       ├── compare/page.tsx      # Multi-relationship Comparison Hub (9-tab, N conversations)
+│   │       └── [id]/eks/page.tsx    # Tryb Eks — 11-scene cinematic relationship autopsy
 │   ├── auth/
 │   │   ├── login/page.tsx            # Login (email/password + Google OAuth)
 │   │   ├── signup/page.tsx           # Sign up
@@ -148,6 +150,27 @@ src/
 │   │   ├── DatingProfileResult.tsx   # Dating Profile result display
 │   │   ├── ReplySimulator.tsx        # Reply Simulator interactive UI
 │   │   ├── DelusionQuiz.tsx          # Delusion Quiz (self-awareness test)
+│   │   ├── EksButton.tsx            # Tryb Eks analysis trigger
+│   │   ├── EksPdfButton.tsx        # Eks PDF export trigger (Akt Zgonu)
+│   │   ├── EksEntryGate.tsx         # Eks emotional readiness gate
+│   │   ├── EksEmergencyExit.tsx     # Eks "Chcę przerwać" floating button + warm exit
+│   │   ├── eks/                     # EKS V4 scrollytelling infrastructure
+│   │   │   ├── shared.tsx           # Scene, SceneManagerProvider, EKGDivider, Embers, NoiseOverlay
+│   │   │   ├── scene-themes.ts      # 16 SCENE_THEMES with per-scene CSS custom properties
+│   │   │   ├── SceneIndicator.tsx   # Desktop dots + mobile bottom bar navigation
+│   │   │   ├── ParticleCanvas.tsx   # Canvas2D particle system (embers/ash/dust)
+│   │   │   ├── ScrollReveal.tsx     # IntersectionObserver progressive deblur component
+│   │   │   ├── ScrollVideo.tsx      # Scroll-linked video background
+│   │   │   ├── AudioToggle.tsx      # Floating audio control with volume slider
+│   │   │   ├── EksCardGallery.tsx   # 11 share cards with download + Web Share API
+│   │   │   ├── EksShareButton.tsx   # Anonymized share link generator
+│   │   │   └── scenes/             # 16 scene components (dynamically imported)
+│   │   │       ├── IntroScene.tsx, DeathLineScene.tsx, PhasesScene.tsx
+│   │   │       ├── TurningPointScene.tsx, WhoLeftScene.tsx, LastWordsScene.tsx
+│   │   │       ├── UnsaidScene.tsx, AutopsyScene.tsx, DeathCertificateScene.tsx
+│   │   │       ├── LossProfileScene.tsx, PainSymmetryScene.tsx, PatternsScene.tsx
+│   │   │       ├── TherapistLetterScene.tsx, GoldenAgeScene.tsx
+│   │   │       └── ForecastScene.tsx, EpitaphScene.tsx
 │   │   ├── SectionNavigator.tsx      # Sticky section nav
 │   │   ├── HeatmapChart.tsx
 │   │   ├── TimelineChart.tsx
@@ -196,7 +219,30 @@ src/
 │   │   ├── DatingProfileCard.tsx     # Dating Profile share card
 │   │   ├── DelusionCard.tsx          # Delusion Quiz share card
 │   │   ├── MugshotCard.tsx           # Court Trial mugshot card
-│   │   └── SimulatorCard.tsx         # Reply Simulator share card
+│   │   ├── SimulatorCard.tsx         # Reply Simulator share card
+│   │   ├── NekrologCard.tsx         # Eks: Relationship obituary
+│   │   ├── AktZgonuCard.tsx         # Eks: Death certificate
+│   │   ├── ParagonCzasuCard.tsx     # Eks: Wasted time receipt
+│   │   ├── AutopsyCard.tsx          # Eks: Autopsy report
+│   │   ├── ForecastCard.tsx         # Eks: Return forecast
+│   │   ├── DecayPhasesCard.tsx      # Eks: Decay phases timeline
+│   │   ├── TombstoneCard.tsx        # Eks: Tombstone
+│   │   ├── GoldenAgeCard.tsx        # Eks: Golden age memories
+│   │   ├── UnsaidCard.tsx           # Eks: "Niewypowiedziane" unsaid things
+│   │   └── DeathCertificateCard.tsx # Eks: Formal death certificate V2
+│   ├── compare/                      # Multi-relationship Comparison Hub
+│   │   ├── CompareHeader.tsx         # Multi-select analysis picker + user detection display
+│   │   ├── CompareTabs.tsx           # 9-tab sticky controller with framer-motion underline
+│   │   ├── QuantCompareTab.tsx       # ALL 80+ quant metrics in 8 collapsible sections
+│   │   ├── MetricCompareRow.tsx      # Shared: horizontal bars per relationship for one metric
+│   │   ├── RankingTab.tsx            # Sortable ranking table (compatibility, health, LSM, etc.)
+│   │   ├── RadarProfilesTab.tsx      # Per-relationship radar charts + overlay mode
+│   │   ├── TimelineCompareTab.tsx    # Multi-series temporal trend overlays (6 trend types)
+│   │   ├── InsightsTab.tsx           # 20+ auto-generated insight cards (quant + AI)
+│   │   ├── HealthTab.tsx             # Per-relationship health dashboard with score rings
+│   │   ├── DynamicsTab.tsx           # AI trait sliders (12 dimensions) per relationship
+│   │   ├── VariationsTab.tsx         # Self-trait variance cards (σ, CV%, stability)
+│   │   └── UserProfileTab.tsx        # Aggregate user profile (quant + AI Big Five/MBTI/attach.)
 │   ├── wrapped/                      # Spotify Wrapped-style story scenes
 │   ├── story/
 │   │   ├── StoryIntro.tsx
@@ -217,6 +263,12 @@ src/
 │       ├── ConditionalAnalytics.tsx
 │       └── CookieConsent.tsx
 ├── lib/
+│   ├── compare/
+│   │   ├── index.ts                  # Barrel export
+│   │   ├── types.ts                  # ComparisonRecord, PersonQuantData, PersonAIData, trait dimensions
+│   │   ├── extract.ts                # extractComparisonRecord() — StoredAnalysis → ComparisonRecord
+│   │   ├── user-detection.ts         # detectCommonUser(), getPartnerName(), filterOneOnOne()
+│   │   └── statistics.ts             # mean, stddev, cv, pearsonCorrelation, normalize, argMax/Min
 │   ├── parsers/
 │   │   ├── messenger.ts
 │   │   ├── whatsapp.ts
@@ -263,6 +315,7 @@ src/
 │   │   ├── wrapped-data.ts           # Data aggregation for Wrapped mode
 │   │   ├── subtext.ts               # Subtext types + exchange window extraction
 │   │   ├── court-prompts.ts          # Court Trial AI prompts
+│   │   ├── eks-prompts.ts            # Tryb Eks (relationship autopsy) AI prompts + types
 │   │   ├── dating-profile-prompts.ts # Dating Profile AI prompts
 │   │   ├── simulator-prompts.ts      # Reply Simulator AI prompts
 │   │   └── delusion-quiz.ts          # Delusion Quiz questions + scoring
@@ -270,7 +323,13 @@ src/
 │   │   ├── pdf-export.ts             # Standard analysis PDF
 │   │   ├── standup-pdf.ts            # Stand-Up Comedy PDF
 │   │   ├── pdf-fonts.ts              # Embedded font data for jsPDF
+│   │   ├── eks-pdf.ts                # Eks 6-page crimson A4 PDF (Akt Zgonu)
 │   │   └── pdf-images.ts             # Embedded image data for PDFs
+│   ├── share/
+│   │   ├── encode.ts                 # Anonymized EKS share URL builder (LZ compression)
+│   │   ├── decode.ts                 # Share URL decoder
+│   │   ├── types.ts                  # Share payload types
+│   │   └── index.ts                  # Barrel export
 │   ├── analytics/
 │   │   └── events.ts                 # Typed GA4 event tracking
 │   ├── supabase/
@@ -283,7 +342,11 @@ src/
 ├── hooks/
 │   ├── useShareCard.ts               # Web Share API + PNG download
 │   ├── useCPSAnalysis.ts
-│   └── useSubtextAnalysis.ts         # Subtext Decoder SSE hook
+│   ├── useSubtextAnalysis.ts         # Subtext Decoder SSE hook
+│   ├── useEksAnalysis.ts            # Tryb Eks SSE hook
+│   ├── useSceneManager.ts           # IntersectionObserver scene tracker (rAF throttled)
+│   ├── useSceneAudio.ts             # Web Audio API ambient playback per scene mood
+│   └── useReducedMotion.ts          # prefers-reduced-motion hook
 └── types/
 middleware.ts                          # Root middleware — Supabase session refresh (conditional)
 ```
@@ -330,6 +393,7 @@ Apply to EVERY string field: `sender_name`, `content`, `participants[].name`, `r
 - **Dating Profile:** Brutally honest dating profile based on actual texting behavior
 - **Reply Simulator:** Simulates how the other person would reply based on their communication patterns
 - **Delusion Quiz:** Self-awareness test — guesses vs actual data, produces Delusion Index
+- **Tryb Eks:** Relationship autopsy — 11-scene cinematic analysis of a ended relationship (phases, turning point, who left first, last words, cause of death, golden age, forecast, epitaph). 8 share cards. Emotional safety: entry gate, emergency exit, crisis hotline. Revisit comparison on re-run.
 
 ### Sampling Strategy
 200-500 messages per pass. Weight recent 3 months at 60%. Select: representative exchanges, inflection points, longest messages, messages with reactions.
@@ -357,6 +421,7 @@ Apply to EVERY string field: `sender_name`, `content`, `participants[].name`, `r
 - Dating Profile Generator — honest dating profile from texting patterns
 - Reply Simulator — predict responses in the other person's voice
 - Delusion Quiz — self-awareness test with Delusion Index score
+- Tryb Eks — cinematic relationship autopsy (11 scenes, 8 share cards, emotional safety system, revisit comparison)
 - Compatibility Score, Interest Score, Delusion Score
 - Best Time to Text calculator
 - Threat Meters (Codependency, Manipulation, Trust, Ghost Risk gauges)
@@ -432,7 +497,8 @@ Danger:      #ef4444
 
 ### Faza 16-17 — Viral Features ✅
 - Share cards (15+ types), badges, viral scores
-- Story/Wrapped mode, comparison view
+- Story/Wrapped mode
+- **Multi-Relationship Comparison Hub** — 9-tab system comparing 1 user across N relationships: Dynamika (AI traits), Statystyki (80+ metrics), Wariancje (self-variance), Odkrycia (20+ auto-insights), Ranking (sortable table), Radar (overlay charts), Profil (aggregate portrait), Zdrowie (health dashboard), Trendy (temporal overlays). Auto-detects common user, batch-loads analyses, graceful AI fallbacks.
 - PDF export, image generation
 
 ### Faza 18 — Multi-Platform + Rebranding ✅
@@ -533,6 +599,46 @@ Danger:      #ef4444
 - **Emotion Cause Extraction (AI pass):** SemEval-2024 Task 3 format. Identifies emotion-cause pairs (who felt what, triggered by whom). triggerMap + emotionalResponsibility per person. New files: `emotion-causes-prompts.ts`, `/api/analyze/emotion-causes/route.ts`, `useEmotionCausesAnalysis.ts`, `EmotionCausesButton.tsx`, `EmotionCausesCard.tsx`. Citations: Poria et al. 2021.
 - **New API endpoints:** `/api/analyze/moral-foundations` (SSE, 5/10min), `/api/analyze/emotion-causes` (SSE, 5/10min).
 - **New citations in citations.ts:** Suedfeld & Tetlock 1977, Conway 2014 (IC), Pennebaker 2007 LIWC, Schegloff et al. 1977, Roenneberg 2012 (social jet lag), Haidt & Graham 2007, Rathje 2024 (PNAS), Poria 2021, SemEval-2024.
+
+### Faza 32 — Tryb Eks (Relationship Autopsy) ✅
+- **Tryb Eks:** Full cinematic "relationship autopsy" mode for analyzing ended relationships
+- **AI Pass:** `eks-prompts.ts` — "Patolog Relacji" role, clinical precision, evidence-based analysis with dosłowne quotes
+- **11 Cinematic Scenes:** Intro + Death Line chart + Decay Phases + Turning Point + Who Left First + Last Words + Autopsy Report + Loss Profiles + Golden Age + Post-Breakup Forecast + Epitaph
+- **8 Share Cards:** NekrologCard, AktZgonuCard, ParagonCzasuCard, AutopsyCard, ForecastCard, DecayPhasesCard, TombstoneCard, GoldenAgeCard
+- **Emotional Safety (3-layer):** Entry Gate ("Czy minęło >2 tygodnie?"), Emergency Exit (floating "Chcę przerwać" button from Scene 3), Crisis hotline (116 123) in intro + closing + emergency exit
+- **Retention:** Revisit comparison — archives previous result on re-run, shows side-by-side epitaph/cause/forecast delta
+- **Upload integration:** 'eks' in `RelationshipContext`, relationship prefix for all AI passes, conditional hub card
+- **Visual theme:** Crimson (#991b1b) accent, dark backgrounds, ember particles, flatline EKG animations, warm gold shift for Golden Age scene
+- **BrandLogo:** `eksMode` prop — crimson + line-through on "TeksT"
+- **New files:** `eks-prompts.ts`, `/api/analyze/eks/route.ts`, `useEksAnalysis.ts`, `EksButton.tsx`, `EksEntryGate.tsx`, `EksEmergencyExit.tsx`, `eks/page.tsx`, 8 share card files
+- **Modified files:** `types.ts`, `analysis-context.tsx`, `gemini.ts`, `schemas.ts`, `globals.css`, `ModePageShell.tsx`, `BrandLogo.tsx`, `ShareCardGallery.tsx`, `events.ts`, hub page, upload page
+
+### Tryb Eks V2 — Ultra-Brutal Redesign + Multi-Pass AI ✅
+- **Multi-pass AI**: 3 phases — Recon (temp 0.3, 4096 tokens) → Deep Autopsy (temp 0.4, 12288 tokens) → Verdict (temp 0.6, 8192 tokens). Pass 3 failure is non-fatal.
+- **Two-phase SSE fetch**: Hook sends 500 initial samples for recon, receives flagged date ranges, does client-side targeted extraction, sends second request with targeted samples for autopsy+verdict.
+- **New EksResult V2 fields**: `unsaidThings` (per-person + shared), `repeatingPatterns`, `emotionalTimeline`, `deathCertificate`, `passesCompleted` — all optional for backward compat.
+- **3 new scenes on eks page**: "Rzeczy których nigdy nie powiedzieliście" (Unsaid Things), "Wzorce które powtórzysz" (Repeating Patterns), "Formalny Akt Zgonu" (Death Certificate).
+- **Visual enhancements**: 15 embers (up from 7, varied colors/trajectories), SVG noise overlay, EKG flatline dividers between scenes, video background via ModePageShell.
+- **Inline card gallery**: Share card strip at bottom of Epitaph scene linking to /share page.
+- **4 premium card redesigns**: TombstoneCard (silver obsidian stone), AktZgonuCard (FormRow + premium stamp), GoldenAgeCard (golden warmth + arch frame), ForecastCard (holographic crystal ball + neon bars).
+- **2 new share cards**: UnsaidCard (ghost-text aesthetic), DeathCertificateCard (formal sepia document + official stamp).
+- **Polish character fixes**: All 8 eks share cards + ShareCardGallery — `\uXXXX` escape codes replaced with actual Unicode characters.
+- **API route redesign**: Single endpoint with `phase: 'recon' | 'autopsy'`, 10 SSE progress messages, maxDuration 180s.
+- **New files**: `UnsaidCard.tsx`, `DeathCertificateCard.tsx`, `public/videos/modes/eks.mp4`
+- **Modified files**: `eks-prompts.ts` (complete rewrite — 3 prompts, 3 runners), `route.ts` (two-mode), `useEksAnalysis.ts` (two-phase fetch), `schemas.ts`, `EksButton.tsx`, `eks/page.tsx` (3 new scenes + visual upgrade), `ShareCardGallery.tsx` (+2 cards), all 8 eks share cards (Polish chars + 4 redesigns), `ForecastCard.tsx` (premium redesign)
+
+### Tryb Eks V4 — Cinematic Scrollytelling + Audio + PDF + Sharing ✅
+- **Scene architecture**: 16 scene components in `src/components/analysis/eks/scenes/`, each self-registers with `SceneManagerProvider` via React Context. Page.tsx refactored from ~2582 to ~392 lines using `next/dynamic` code-splitting.
+- **Scene management**: `useSceneManager` hook — IntersectionObserver with rAF-throttled state updates, `lastActiveIdRef` dedup, 7 threshold levels. Per-scene CSS custom properties via `SCENE_THEMES` (16 themes, all `eks-` prefixed).
+- **Scene indicator**: Desktop right-sidebar dots with hover tooltips + mobile compact bottom progress bar with pill dots and counter.
+- **Scroll animations**: `ScrollReveal.tsx` — IntersectionObserver-based progressive deblur/fade/slide. `GoldenAgeScene` scroll-driven warmth transition (sepia+saturation). CSS scroll-linked animations (`eks-scroll-fade-in`, `eks-scroll-deblur`).
+- **Canvas2D particles**: `ParticleCanvas.tsx` — noise-based drift (pseudo-simplex 2D), 3 variants (embers/ash/dust), OffscreenCanvas support, visibility pause, `prefers-reduced-motion` respect.
+- **Audio system**: `useSceneAudio` hook — Web Audio API file-based playback with 9 mood groups (heartbeat, static, spotlight-hum, wind, whisper, paper-rustle, rain, warmth, silence). Crossfade between scenes. `AudioToggle.tsx` with volume slider. 9 synthesized WAV files generated via `scripts/generate-eks-audio.mjs`.
+- **PDF export**: `eks-pdf.ts` — 6-page crimson dark-mode A4 PDF (Cover, Phases, Autopsy, Profiles+Pain, Patterns+Forecast, Letter+Golden Age). `EksPdfButton.tsx` trigger in EpitaphScene.
+- **Social sharing**: Web Share API in `EksCardGallery` (share + download buttons). `EksShareButton` with anonymized share links via `src/lib/share/encode.ts`. `eks/layout.tsx` with OpenGraph + Twitter metadata.
+- **Performance**: `prefers-reduced-motion` support in Scene component. `scroll-snap-align: start` on scenes. rAF throttling in scene manager. Dynamic imports for all scenes.
+- **New files**: `scenes/*.tsx` (16 files), `SceneIndicator.tsx`, `ParticleCanvas.tsx`, `ScrollReveal.tsx`, `AudioToggle.tsx`, `EksCardGallery.tsx`, `EksShareButton.tsx`, `scene-themes.ts`, `useSceneManager.ts`, `useSceneAudio.ts`, `eks-pdf.ts`, `EksPdfButton.tsx`, `eks/layout.tsx`, `scripts/generate-eks-audio.mjs`, `public/audio/eks/*.wav` (9 files), `src/lib/share/` (encode, decode, types, index)
+- **Modified files**: `shared.tsx` (SceneManagerProvider, reduced-motion), `page.tsx` (full rewrite to scene orchestrator), `globals.css` (scroll-linked animations, reduced-motion overrides)
 
 ### Future (not started)
 - Supabase PostgreSQL (`profiles` table + RLS policies + trigger)

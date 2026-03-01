@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
 import { ArrowLeft, Heart, ChevronDown, Lock } from 'lucide-react';
+import DiscordSendButton from '@/components/shared/DiscordSendButton';
 
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import { SectionErrorBoundary } from '@/components/shared/SectionErrorBoundary';
@@ -124,6 +125,15 @@ export default function DatingModePage() {
               <button onClick={handleRegenerate} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#ff006e]/40 transition-colors hover:text-[#ff006e]">
                 <RefreshCw className="size-3" /> Generuj ponownie
               </button>
+              {conversation?.metadata?.discordChannelId && qualitative?.datingProfile && (
+                <DiscordSendButton
+                  channelId={conversation.metadata.discordChannelId}
+                  payload={{
+                    type: 'datingProfile',
+                    profiles: qualitative.datingProfile.profiles,
+                  }}
+                />
+              )}
               <Link href={`/analysis/${id}/simulator`} className="font-mono text-xs uppercase tracking-widest text-[#0084ff]/50 transition-colors hover:text-[#0084ff]">Reply Simulator &rarr;</Link>
               <Link href={`/analysis/${id}`} className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#ff006e]/40 transition-colors hover:text-[#ff006e]"><ArrowLeft className="size-3" /> Centrum Dowodzenia</Link>
             </div>

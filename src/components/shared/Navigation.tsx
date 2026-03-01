@@ -86,8 +86,15 @@ export function CinematicNav() {
   const modeSlug = extractModeSlug(pathname);
   const isOnAnalysis = !!analysisId;
   const isOnMode = isOnAnalysis && !!modeSlug;
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(() =>
+    typeof window !== 'undefined' ? window.scrollY > 20 : false,
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isEksMode, setIsEksMode] = useState(() =>
+    typeof document !== 'undefined'
+      ? document.documentElement.hasAttribute('data-eks-mode')
+      : false,
+  );
   const navRef = useRef<HTMLElement>(null);
 
   const conversationTitle = breadcrumb.length > 1 ? breadcrumb[1] : null;
@@ -96,12 +103,22 @@ export function CinematicNav() {
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Watch for data-eks-mode attribute set by AnalysisProvider
   useEffect(() => {
-    setMobileMenuOpen(false);
+    const el = document.documentElement;
+    const observer = new MutationObserver(() => {
+      setIsEksMode(el.hasAttribute('data-eks-mode'));
+    });
+    observer.observe(el, { attributes: true, attributeFilter: ['data-eks-mode'] });
+    return () => observer.disconnect();
+  }, []);
+
+  // Close mobile menu on route change — legitimate UI sync
+  useEffect(() => {
+    setMobileMenuOpen(false); // eslint-disable-line react-hooks/set-state-in-effect
   }, [pathname]);
 
   /* ── Desktop center content ── */
@@ -252,7 +269,15 @@ export function CinematicNav() {
           >
             <PTLogo size={32} className="shrink-0" />
             <span className="brand-logo font-display text-[17px] font-bold tracking-tight flex items-center">
-              <BrandP height="0.9em" /><span className="text-[#3b82f6]">od</span><span className="text-[#a855f7]">T</span><span className="brand-eks text-[#a855f7]">eks</span><span className="text-[#a855f7]">T</span>
+              <BrandP height="0.9em" />
+              <span className="text-[#3b82f6]">od</span>
+              <span className="text-[#a855f7]">T</span>
+              {isEksMode ? (
+                <span className="brand-eks" style={{ color: '#dc2626', textShadow: '0 0 16px rgba(220,38,38,0.5)' }}>eks</span>
+              ) : (
+                <span className="brand-eks text-[#a855f7]">eks</span>
+              )}
+              <span className="text-[#a855f7]">T</span>
             </span>
           </Link>
 

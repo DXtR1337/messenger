@@ -46,6 +46,7 @@ const RELATIONSHIP_OPTIONS: { value: RelationshipContext; emoji: string; label: 
   { value: 'colleague', emoji: '\u{1F4BC}', label: 'Kolega' },
   { value: 'professional', emoji: '\u{1F3E2}', label: 'Praca' },
   { value: 'family', emoji: '\u{1F468}\u200D\u{1F469}\u200D\u{1F466}', label: 'Rodzina' },
+  { value: 'eks', emoji: '\u{1F494}', label: 'Ex-Partner' },
   { value: 'other', emoji: '\u2753', label: 'Inne' },
 ];
 

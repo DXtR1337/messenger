@@ -51,14 +51,14 @@ export const PSYCH_CITATIONS = {
   park2015Short: 'Park et al., 2015',
 
   // Chronotype Compatibility
-  aledavood2018: 'Aledavood, T. et al. (2018). Quantifying circadian rhythm disruption as measured by accelerometry. EPJ Data Science, 7, 38. DOI: 10.1140/epjds/s13688-018-0166-3. N=400. Behavioral chronotype inferred from smartphone timestamp data.',
-  aledavood2018Short: 'Aledavood et al., 2018 (EPJ Data Science)',
+  aledavood2015: 'Aledavood, T., Lehmann, S., & Saramäki, J. (2015). Digital daily cycles of individuals. Frontiers in Physics, 3, 73. DOI: 10.3389/fphy.2015.00073. Distinctive, persistent daily rhythms in digital activity.',
+  aledavood2015Short: 'Aledavood et al., 2015',
 
-  jarmolowicz2022: 'Jarmolowicz, D. P. et al. (2022). Chronotype concordance and relationship satisfaction. Chronobiology International, 39(2), 240-248. DOI: 10.1080/07420528.2021.1973455. F(1,58)=19.57, p<.001 for relationship satisfaction in matched chronotype pairs.',
-  jarmolowicz2022Short: 'Jarmolowicz et al., 2022',
+  roy2021: 'Roy, A. et al. (2021). Morningness–eveningness assessment from mobile phone communication analysis. Scientific Reports, 11, 13971. DOI: 10.1038/s41598-021-93799-0. Behavioral chronotype inferred from mobile communication timestamps.',
+  roy2021Short: 'Roy et al., 2021',
 
-  alikhan2023: 'Alikhan, M. et al. (2023). Chronotype match moderates recovery from occupational stress in couples. Journal of Occupational and Organizational Psychology, 96(3), 541-562. N=79 couples, 1,052 diary days.',
-  alikhan2023Short: 'Alikhan et al., 2023',
+  aledavoodEPJ2018: 'Aledavood, T. et al. (2018). Social network differences of chronotypes identified from mobile phone data. EPJ Data Science, 7, 46. DOI: 10.1140/epjds/s13688-018-0174-4. N=700+ students, chronotype from digital activity.',
+  aledavoodEPJ2018Short: 'Aledavood et al., 2018',
 
   // Conversational Narcissism / Shift-Support
   derber1979: 'Derber, C. (1979). The Pursuit of Attention: Power and Individualism in Everyday Life. Oxford University Press. Introduces shift-response vs support-response distinction.',
@@ -74,7 +74,7 @@ export const PSYCH_CITATIONS = {
   peters2018: 'Peters, B. J., Reis, H. T., & Gable, S. L. (2018). Making the good even better: A review and theoretical model of interpersonal capitalization. Social and Personality Psychology Compass, 12(7), e12407. DOI: 10.1111/spc3.12407. Full InterCAP model review.',
   peters2018Short: 'Peters, Reis & Gable, 2018',
 
-  // Emotional Granularity
+  // Emotion Vocabulary Diversity (formerly "Emotional Granularity")
   vishnubhotla2024: 'Vishnubhotla, K. et al. (2024). Emotional granularity in text: Capturing fine-grained emotion categories. Proceedings of EMNLP 2024, pp. 19168-19185. DOI: 10.18653/v1/2024.emnlp-main.1063. Fine-grained emotion diversity correlates with mental health outcomes.',
   vishnubhotla2024Short: 'Vishnubhotla et al., 2024 (EMNLP)',
 
@@ -88,13 +88,13 @@ export const PSYCH_CITATIONS = {
   gottmanDriver2004: 'Driver, J. L. & Gottman, J. M. (2004). Daily marital interactions and positive affect during marital conflict among newlywed couples. Family Process, 43(3), 301-314. DOI: 10.1111/j.1545-5300.2004.00023.x. Bids and turning toward in everyday interaction.',
   gottmanDriver2004Short: 'Driver & Gottman, 2004',
 
-  // Integrative Complexity (AutoIC)
+  // Cognitive Complexity Indicator (formerly "Integrative Complexity")
   ic: 'Suedfeld, P. & Tetlock, P. E. (1977). Integrative complexity of communications in international crises. Journal of Conflict Resolution, 21(1), 169-184. Conway, L. G. et al. (2014). Automated Integrative Complexity. Political Psychology, 35(1), 65-88. DOI: 10.1111/pops.12021.',
   icShort: 'Suedfeld & Tetlock, 1977; Conway et al., 2014',
 
   // Temporal Focus / Future Orientation
-  temporalFocus: 'Pennebaker, J. W., Booth, R. J., & Francis, M. E. (2007). Linguistic Inquiry and Word Count (LIWC 2007). Temporal tense categories. Vanderbilt, K., Brinberg, M., & Lu, A. S. (2025). Attachment and texting behavior in couples. Journal of Language and Social Psychology. DOI: 10.1177/0261927X251344949.',
-  temporalFocusShort: 'Pennebaker et al., 2007 (LIWC); Vanderbilt et al., 2025',
+  temporalFocus: 'Pennebaker, J. W., Booth, R. J., & Francis, M. E. (2007). Linguistic Inquiry and Word Count (LIWC 2007). Temporal tense categories. Park, G. et al. (2017). Living in the Past, Present, and Future. Journal of Personality, 85(2), 270-280. DOI: 10.1111/jopy.12239. Temporal orientation from 1.3M social media messages, accuracy .72.',
+  temporalFocusShort: 'Pennebaker et al., 2007 (LIWC); Park et al., 2017',
 
   // Conversational Repair Patterns
   repair: 'Schegloff, E. A., Jefferson, G., & Sacks, H. (1977). The preference for self-correction in the organization of repair in conversation. Language, 53(2), 361-382. Norrick, N. R. (1991). On the organization of corrective exchanges in conversation. Journal of Pragmatics, 16(1), 59-83.',
@@ -111,6 +111,36 @@ export const PSYCH_CITATIONS = {
   // Emotion Cause Extraction
   poria2021: 'Poria, S. et al. (2021). Recognizing Emotion Cause in Conversations. Cognitive Computation, 13, 1317-1332. DOI: 10.1007/s12559-021-09860-5. SemEval-2024 Task 3: Multimodal Emotion Cause Analysis in Conversations.',
   poria2021Short: 'Poria et al., 2021; SemEval-2024 Task 3',
+  // Lexical Diversity (MTLD — replaces Guiraud's R)
+  mtld: 'McCarthy, P. M. & Jarvis, S. (2010). MTLD, vocd-D, and HD-D: A validation study of sophisticated approaches to lexical diversity assessment. Behavior Research Methods, 42(2), 381-392. DOI: 10.3758/BRM.42.2.381. MTLD is the only index not found to vary as a function of text length.',
+  mtldShort: 'McCarthy & Jarvis, 2010',
+
+  // Pronoun we-talk meta-analysis
+  karanWeTalk: 'Karan, A., Rosenthal, R., & Robbins, M. L. (2019). Meta-analytic evidence that we-talk predicts relationship and personal functioning in romantic couples. JSPR, 36(9), 2624-2651. DOI: 10.1177/0265407518795336. 30 studies, N≈5300.',
+  karanWeTalkShort: 'Karan et al., 2019',
+
+  // Gottman replication failure (for disclaimer)
+  kimReplication: 'Kim, H. K., Capaldi, D. M., & Crosby, L. (2007). Generalizability of Gottman and colleagues\' affective process models of couples\' relationship outcomes. Journal of Marriage and Family, 69(1), 55-72. DOI: 10.1111/j.1741-3737.2006.00343.x. Major findings of Gottman et al. failed to replicate.',
+  kimReplicationShort: 'Kim, Capaldi & Crosby, 2007',
+
+  // Investment asymmetry (replaces "Delusion Score" framing)
+  stanleyAsymmetry: 'Stanley, S. M. et al. (2017). Asymmetry in transitional processes in romantic relationships. Journal of Family Psychology, 31(6), 694-703. DOI: 10.1037/fam0000327. 35.2% of couples had asymmetrical commitment.',
+  stanleyAsymmetryShort: 'Stanley et al., 2017',
+
+  // Ghosting (for Ghost Risk context)
+  jahrami2023: 'Jahrami, H. et al. (2023). Development and validation of the GHOST questionnaire. Heliyon, 9(6), e17066. DOI: 10.1016/j.heliyon.2023.e17066. 8-item scale, alpha=.74.',
+  jahrami2023Short: 'Jahrami et al., 2023',
+
+  // Power imbalance validated instrument
+  neilands2018: 'Neilands, T. B. et al. (2018). Development and validation of a Power Imbalance in Couples Scale. Archives of Sexual Behavior, 48, 763-779. DOI: 10.1007/s10508-018-1190-y. CFA: CFI=.96, RMSEA=.03.',
+  neilands2018Short: 'Neilands et al., 2018',
+
+  // Response Time Analysis
+  templeton2022: 'Templeton, E. M. et al. (2022). Fast response times signal social connection in conversation. PNAS, 119(4), e2116915119. DOI: 10.1073/pnas.2116915119. N=1600+, faster RT → perceived social connection.',
+  templeton2022Short: 'Templeton et al., 2022 (PNAS)',
+
+  holtzman2021: 'Holtzman, S. et al. (2021). Long-distance texting: Text messaging is linked with higher relationship satisfaction in long-distance relationships. Journal of Social and Personal Relationships, 38(12), 3543-3565. DOI: 10.1177/02654075211043296.',
+  holtzman2021Short: 'Holtzman et al., 2021 (JSPR)',
 } as const;
 
 /**

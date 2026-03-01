@@ -230,21 +230,21 @@ export default function DamageReport({ report }: DamageReportProps) {
         </motion.span>
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-display text-[15px] font-bold">Raport Szkód</h3>
+            <h3 className="font-display text-[15px] font-bold">Napięcie w Relacji</h3>
             <QuantBadge />
           </div>
           <ExperimentalBadge metricKey="damageReport" />
-          <p className="text-xs text-text-muted mt-0.5">Bilans emocjonalnych zniszczeń w konwersacji</p>
+          <p className="text-xs text-text-muted mt-0.5">Wskaźniki napięcia i dynamiki komunikacji</p>
         </div>
       </div>
 
       {/* Gauges grid */}
       <div className="px-5 py-5 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        {/* 1. Emotional Damage — circular gauge */}
-        <MetricCard label="Emotional Damage" index={0} isInView={isInView}>
+        {/* 1. Communication Strain (formerly Emotional Damage) — circular gauge */}
+        <MetricCard label="Obciążenie komunikacyjne" index={0} isInView={isInView}>
           <GlowGauge
             value={report.emotionalDamage}
-            label="Emotional Damage"
+            label="Obciążenie komunikacyjne"
             colors={damageColors}
             index={0}
             isInView={isInView}
@@ -252,7 +252,7 @@ export default function DamageReport({ report }: DamageReportProps) {
         </MetricCard>
 
         {/* 2. Communication Grade — letter badge */}
-        <MetricCard label="Komunikacja" index={1} isInView={isInView}>
+        <MetricCard label="Ocena wzajemności" index={1} isInView={isInView}>
           <div className="relative h-28 w-28 sm:h-32 sm:w-32 flex items-center justify-center">
             <motion.div
               className={cn(
@@ -325,7 +325,7 @@ export default function DamageReport({ report }: DamageReportProps) {
       {/* Disclaimer */}
       <div className="px-5 pb-4">
         <PsychDisclaimer
-          text="Raport Szkód to metryka rozrywkowa oparta na ilościowych danych komunikacji i Health Score AI. Nie odzwierciedla rzeczywistego stanu emocjonalnego uczestników."
+          text="Obciążenie komunikacyjne to złożony wskaźnik heurystyczny oparty na ilościowych danych komunikacji (asymetria, częstotliwość, wzorce odpowiedzi). Jest to wskaźnik kompozytowy, nie miara kliniczna. Nie odzwierciedla rzeczywistego stanu emocjonalnego uczestników."
           showGenericFooter
         />
       </div>

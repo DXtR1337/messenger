@@ -28,6 +28,26 @@ const megaRoastSchema = z.object({
   }),
 });
 
+const datingProfilePersonSchema = z.object({
+  name: z.string(),
+  age_vibe: z.string(),
+  bio: z.string(),
+  stats: z.array(z.object({ label: z.string(), value: z.string(), emoji: z.string() })),
+  prompts: z.array(z.object({ prompt: z.string(), answer: z.string() })),
+  red_flags: z.array(z.string()),
+  green_flags: z.array(z.string()),
+  match_prediction: z.string(),
+  dealbreaker: z.string(),
+  overall_rating: z.string(),
+});
+
+const datingProfileSchema = z.object({
+  channelId: z.string().min(1),
+  pin: z.optional(z.string()),
+  type: z.literal('datingProfile'),
+  profiles: z.record(z.string(), datingProfilePersonSchema),
+});
+
 const cwelSchema = z.object({
   channelId: z.string().min(1),
   pin: z.optional(z.string()),
@@ -60,7 +80,7 @@ const cwelSchema = z.object({
   }),
 });
 
-const requestSchema = z.union([megaRoastSchema, cwelSchema]);
+const requestSchema = z.union([megaRoastSchema, cwelSchema, datingProfileSchema]);
 
 const COLOR_ORANGE = 0xf97316;
 const COLOR_RED = 0xef4444;
@@ -69,6 +89,8 @@ const COLOR_PURPLE = 0xa855f7;
 const COLOR_BLUE = 0x3b82f6;
 const FOOTER_MEGA = { text: 'PodTeksT Mega Roast \u2022 podtekst.app' };
 const FOOTER_CWEL = { text: 'PodTeksT Cwel Tygodnia \u2022 podtekst.app' };
+const FOOTER_DATING = { text: 'PodTeksT Dating Profile \u2022 podtekst.app' };
+const COLOR_PINK = 0xff006e;
 
 function trimToEmbed(text: string, max = 4000): string {
   return text.length > max ? text.slice(0, max - 3) + '...' : text;
@@ -109,11 +131,65 @@ export async function POST(request: Request): Promise<Response> {
   if (pinError) return pinError;
 
   const { channelId } = parsed.data;
-  const payloadType = ('type' in parsed.data && parsed.data.type === 'cwelTygodnia') ? 'cwelTygodnia' : 'megaRoast';
+  const payloadType = ('type' in parsed.data && parsed.data.type) || 'megaRoast';
 
   const embeds: Array<Record<string, unknown>> = [];
 
-  if (payloadType === 'cwelTygodnia' && 'cwelTygodnia' in parsed.data) {
+  if (payloadType === 'datingProfile' && 'profiles' in parsed.data) {
+    const profiles = parsed.data.profiles;
+    for (const [, profile] of Object.entries(profiles)) {
+      // Main embed: bio + stats
+      const statsText = profile.stats.map(s => `${s.emoji} **${s.label}:** ${s.value}`).join('\n');
+      const mainLines = [
+        `*${profile.age_vibe}*`,
+        '',
+        profile.bio,
+        '',
+        '\u2500'.repeat(30),
+        '',
+        statsText,
+      ].join('\n');
+
+      embeds.push({
+        title: `\u{1F48C} ${profile.name}`,
+        description: trimToEmbed(mainLines),
+        color: COLOR_PINK,
+        footer: FOOTER_DATING,
+      });
+
+      // Prompts embed
+      if (profile.prompts.length > 0) {
+        const promptText = profile.prompts.map(p => `**${p.prompt}**\n${p.answer}`).join('\n\n');
+        embeds.push({
+          title: `\u{1F4AC} Prompty \u2014 ${profile.name}`,
+          description: trimToEmbed(promptText),
+          color: COLOR_PURPLE,
+        });
+      }
+
+      // Flags + dealbreaker + rating embed
+      const redFlags = profile.red_flags.map(f => `\u{1F6A9} ${f}`).join('\n');
+      const greenFlags = profile.green_flags.map(f => `\u{1F49A} ${f}`).join('\n');
+      const flagLines = [
+        redFlags,
+        '',
+        greenFlags,
+        '',
+        '\u2500'.repeat(30),
+        '',
+        `\u{1F52E} **Prognoza:** ${profile.match_prediction}`,
+        `\u{1F6AB} **Dealbreaker:** ${profile.dealbreaker}`,
+        '',
+        `\u{2B50} **Overall:** ${profile.overall_rating}`,
+      ].join('\n');
+
+      embeds.push({
+        title: `\u{1F6A9} Flagi \u2014 ${profile.name}`,
+        description: trimToEmbed(flagLines),
+        color: COLOR_RED,
+      });
+    }
+  } else if (payloadType === 'cwelTygodnia' && 'cwelTygodnia' in parsed.data) {
     const cwel = parsed.data.cwelTygodnia;
 
     // Embed 1: Winner + intro + verdict

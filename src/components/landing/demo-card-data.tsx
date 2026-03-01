@@ -8,6 +8,7 @@ import type {
   QualitativeAnalysis,
 } from '@/lib/analysis/types';
 import type { CPSResult, CPSPatternResult, CPSAnswer } from '@/lib/analysis/communication-patterns';
+import { getPatternFrequency } from '@/lib/analysis/communication-patterns';
 import type { SubtextResult } from '@/lib/analysis/subtext';
 import type { DelusionQuizResult } from '@/lib/analysis/delusion-quiz';
 import type { CourtResult } from '@/lib/analysis/court-prompts';
@@ -372,7 +373,9 @@ function makeCPSAnswer(yes: boolean, conf: number): CPSAnswer {
 function makeCPSPattern(yesCount: number, total: number, threshold: number): CPSPatternResult {
   const answers: Record<number, CPSAnswer> = {};
   for (let i = 0; i < total; i++) answers[i] = makeCPSAnswer(i < yesCount, 65);
-  return { yesCount, total, threshold, meetsThreshold: yesCount >= threshold, percentage: Math.round((yesCount / total) * 100), confidence: 68, answers };
+  const percentage = Math.round((yesCount / total) * 100);
+  const frequency = getPatternFrequency(percentage);
+  return { yesCount, total, threshold, meetsThreshold: frequency === 'recurring' || frequency === 'pervasive', percentage, frequency, confidence: 68, answers };
 }
 
 const DEMO_CPS: CPSResult = {

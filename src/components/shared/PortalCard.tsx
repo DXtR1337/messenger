@@ -39,6 +39,7 @@ const CARD_ART_CLASS: Partial<Record<ModeId, string>> = {
   ai: 'card-art-ai',
   metrics: 'card-art-metrics',
   share: 'card-art-share',
+  eks: 'card-art-eks',
 };
 
 export default function PortalCard({

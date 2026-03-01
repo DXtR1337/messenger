@@ -30,7 +30,7 @@ const SLIDES: DemoSlide[] = [
   { id: 5, category: 'RED FLAGS + NAGRODY', accent: C.red, render: SlideRedFlags },
   { id: 6, category: 'ROAST', accent: C.orange, render: SlideRoast },
   { id: 7, category: 'SĄD + PROFILE RANDKOWE', accent: C.pink, render: SlideCourtDating },
-  { id: 8, category: 'PODTEKSTY + SYMULACJA + DELUZJA', accent: C.purple, render: SlideInteractive },
+  { id: 8, category: 'PODTEKSTY + SYMULACJA + QUIZ', accent: C.purple, render: SlideInteractive },
   { id: 9, category: 'STAND-UP + ODZNAKI + CPS', accent: C.amber, render: SlideStandUpBadges },
   { id: 10, category: 'HEATMAPA + FRAZY + CZAS', accent: C.blue, render: SlideHeatmapOuter },
   { id: 11, category: 'WRAPPED + QUIZ + EMOCJE', accent: C.purple, render: SlideWrappedOuter },

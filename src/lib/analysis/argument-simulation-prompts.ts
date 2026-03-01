@@ -133,7 +133,7 @@ ${dynamicsBlock}
 
 INSTRUCTIONS:
 - Extract 5-8 topics that cause or would cause arguments between these people
-- For each topic, determine each person's typical STANCE (position/attitude)
+- For each topic, determine each person's typical STANCE (position/attitude) — output in "stances" object keyed by person name
 - Rate topic volatility: low (mild disagreement), medium (heated discussion), high (explosive)
 - For each person, identify:
   - Sarcasm patterns (how they deploy sarcasm when angry)
@@ -144,29 +144,25 @@ INSTRUCTIONS:
 - All text output in Polish (pl-PL). JSON keys in English.
 - Be specific and behavioral — not generic.
 
-${participants.length === 2
-    ? `Use "${participants[0]}" and "${participants[1]}" as the person names in stanceA and stanceB respectively.`
-    : `Use the first two participants for stanceA and stanceB.`}
-
 OUTPUT: Valid JSON only, no markdown:
 {
   "topics": [
     {
       "topic": "string — topic name in Polish",
       "frequency": number — estimated frequency (1-10 scale),
-      "stanceA": "string — ${participants[0]}'s position in Polish",
-      "stanceB": "string — ${participants[1] ?? 'Person B'}'s position in Polish",
+      "stances": {
+${participants.map(n => `        "${n}": "string — ${n}'s position in Polish"`).join(',\n')}
+      },
       "volatility": "low" | "medium" | "high"
     }
   ],
   "perPerson": {
-    "${participants[0]}": {
+${participants.map(n => `    "${n}": {
       "sarcasmPatterns": ["string — specific sarcasm pattern in Polish"],
       "emotionalTriggers": ["string — what triggers them"],
       "deepEscalationStyle": "string — detailed description of how they escalate",
       "deepDeescalationStyle": "string — how they de-escalate"
-    },
-    "${participants[1] ?? 'Person B'}": { ... same structure }
+    }`).join(',\n')}
   }
 }`;
 }
@@ -233,9 +229,12 @@ ${enriched ? `- Emotional triggers: ${enriched.emotionalTriggers.join('; ')}` : 
 ${enriched ? `- Deep escalation: ${enriched.deepEscalationStyle}` : ''}
 ${enriched ? `- Deep de-escalation: ${enriched.deepDeescalationStyle}` : ''}
 
-TOPIC STANCE: ${enrichedFingerprint.topics.find(t => t.topic === topic)
-      ? `${enrichedFingerprint.topics.find(t => t.topic === topic)![participants.indexOf(name) === 0 ? 'stanceA' : 'stanceB']}`
-      : 'No specific stance data — infer from personality'}
+TOPIC STANCE: ${(() => {
+      const t = enrichedFingerprint.topics.find(t => t.topic === topic);
+      if (!t) return 'No specific stance data — infer from personality';
+      const stance = t.stances?.[name] ?? (participants.indexOf(name) === 0 ? t.stanceA : participants.indexOf(name) === 1 ? t.stanceB : '');
+      return stance || 'No specific stance data — infer from personality';
+    })()}
 `);
   }
 
@@ -243,10 +242,12 @@ TOPIC STANCE: ${enrichedFingerprint.topics.find(t => t.topic === topic)
     ? `Based on real data: avg conflict lasts ${conflictFingerprint.avgConflictDurationMs > 0 ? Math.round(conflictFingerprint.avgConflictDurationMs / 60000) + ' minutes' : 'unknown duration'} and involves ${conflictFingerprint.totalConflictWindows} detected conflict windows.`
     : 'Limited conflict data — create a realistic but not extreme argument.';
 
-  return `You are a conversation simulation engine. Generate a realistic argument between two people on a specific topic. The argument must feel REAL — like reading actual chat messages.
+  const messageCount = Math.min(70, 30 + participants.length * 8);
+
+  return `You are a conversation simulation engine. Generate a realistic argument between ${participants.length} people in a group chat on a specific topic. The argument must feel REAL — like reading actual chat messages.
 
 TOPIC OF ARGUMENT: "${topic}"
-PARTICIPANTS: ${participants.join(' vs ')}
+PARTICIPANTS: ${participants.join(', ')} (${participants.length} people)
 ${conflictArcDesc}
 
 ${voiceBlocks.join('\n')}
@@ -260,7 +261,7 @@ The "phase" field is a METADATA TAG for the UI, NOT a structural separator in th
 Phases should blend into each other organically. There is no visible boundary between them.
 A message can have escalation vibes while still being a direct reply to the previous message.
 
-1. CONVERSATION FLOW — Generate 50-60 messages as ONE unbroken chat thread:
+1. CONVERSATION FLOW — Generate ${messageCount - 10}-${messageCount} messages as ONE unbroken chat thread:
    - Start with a normal message that happens to touch the topic — no dramatic "setup"
    - Tension builds GRADUALLY over multiple exchanges — not all at once
    - The conversation drifts naturally: small talk → topic appears → mild disagreement →
@@ -300,10 +301,17 @@ A message can have escalation vibes while still being a direct reply to the prev
 
 5. BURST PATTERNS:
    - Match each person's real burst length from their conflict fingerprint
-   - ${participants[0]}: ${conflictFingerprint?.perPerson[participants[0]]?.avgBurstLengthInConflict ?? 2} msgs per burst typically
-   - ${participants[1] ?? 'Person B'}: ${conflictFingerprint?.perPerson[participants[1] ?? '']?.avgBurstLengthInConflict ?? 2} msgs per burst typically
-   - Include interruptions where one person breaks into the other's burst
+${participants.map(n => `   - ${n}: ${conflictFingerprint?.perPerson[n]?.avgBurstLengthInConflict ?? 2} msgs per burst typically`).join('\n')}
+   - Include interruptions where one person breaks into another's burst
    - Include realistic micro-behaviors: "???", "no co", "halo", single emoji reactions
+${participants.length > 2 ? `
+6B. MULTI-PERSON DYNAMICS:
+   - Alliances form and shift — two people may temporarily gang up on a third
+   - Pile-on moments where multiple people attack the same person
+   - Side conversations where two people argue while others react
+   - Not everyone needs to be equally involved — some may try to stay neutral
+   - People can switch sides mid-argument
+   - Someone might try to mediate between others` : ''}
 
 6. RESOLUTION — Must match real patterns:
    - Do NOT force a happy ending
@@ -405,13 +413,26 @@ function parseEnrichmentJSON(raw: string): EnrichmentResult {
   try {
     const parsed = JSON.parse(cleanJSON(raw)) as Record<string, unknown>;
 
-    const topics = Array.isArray(parsed.topics) ? parsed.topics.map((t: Record<string, unknown>) => ({
-      topic: String(t.topic ?? ''),
-      frequency: typeof t.frequency === 'number' ? t.frequency : 5,
-      stanceA: String(t.stanceA ?? ''),
-      stanceB: String(t.stanceB ?? ''),
-      volatility: (['low', 'medium', 'high'].includes(String(t.volatility)) ? String(t.volatility) : 'medium') as 'low' | 'medium' | 'high',
-    })) : [];
+    const topics = Array.isArray(parsed.topics) ? parsed.topics.map((t: Record<string, unknown>) => {
+      // Read stances as primary, fallback to stanceA/stanceB for backward compat
+      let stances: Record<string, string> = {};
+      if (t.stances && typeof t.stances === 'object') {
+        for (const [k, v] of Object.entries(t.stances as Record<string, unknown>)) {
+          stances[k] = String(v ?? '');
+        }
+      }
+      const stanceA = String(t.stanceA ?? '');
+      const stanceB = String(t.stanceB ?? '');
+      return {
+        topic: String(t.topic ?? ''),
+        frequency: typeof t.frequency === 'number' ? t.frequency : 5,
+        stances,
+        volatility: (['low', 'medium', 'high'].includes(String(t.volatility)) ? String(t.volatility) : 'medium') as 'low' | 'medium' | 'high',
+        // Keep legacy fields for backward compat
+        ...(stanceA ? { stanceA } : {}),
+        ...(stanceB ? { stanceB } : {}),
+      };
+    }) : [];
 
     const perPerson: EnrichmentResult['perPerson'] = {};
     if (parsed.perPerson && typeof parsed.perPerson === 'object') {
@@ -438,7 +459,7 @@ function parseGenerationJSON(raw: string, participants: string[]): GenerationRes
     const validPhases = ['trigger', 'escalation', 'peak', 'deescalation', 'aftermath'] as const;
     const messages: ArgumentSimulationMessage[] = Array.isArray(parsed.messages)
       ? (parsed.messages as Array<Record<string, unknown>>)
-        .slice(0, 70) // Cap at 70 messages — allow full continuous conversations
+        .slice(0, 80) // Cap at 80 messages — allow full multi-person conversations
         .map(m => ({
           sender: String(m.sender ?? participants[0]),
           text: String(m.text ?? ''),

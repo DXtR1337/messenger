@@ -119,14 +119,71 @@ const PASSIVE_MARKERS = new Set([
   '😊', '🙂', '👍', '😐', '🙃',
 ]);
 
+// ============================================================
+// Per-person writing style frequencies (for false-positive reduction)
+// ============================================================
+
+/** Frequency stats per person, pre-computed from the full message list */
+interface PersonStyleFrequencies {
+  /** Fraction of messages that exactly match a passive marker (0-1) */
+  passiveMarkerRate: number;
+  /** Fraction of messages ending with "..." or ".." (0-1) */
+  ellipsisRate: number;
+}
+
+/**
+ * Pre-compute per-person style frequencies across the full conversation.
+ * Used to detect habitual writing patterns vs meaningful subtext signals.
+ */
+function computeStyleFrequencies(messages: SimplifiedMsg[]): Record<string, PersonStyleFrequencies> {
+  const counts: Record<string, { total: number; passiveHits: number; ellipsisHits: number }> = {};
+
+  for (const msg of messages) {
+    const sender = msg.sender;
+    if (!counts[sender]) {
+      counts[sender] = { total: 0, passiveHits: 0, ellipsisHits: 0 };
+    }
+    counts[sender].total++;
+
+    const text = msg.content.trim().toLowerCase();
+
+    if (PASSIVE_MARKERS.has(text)) {
+      counts[sender].passiveHits++;
+    }
+
+    if (text.endsWith('...') || text.endsWith('..') || text.endsWith('\u2026')) {
+      counts[sender].ellipsisHits++;
+    }
+  }
+
+  const result: Record<string, PersonStyleFrequencies> = {};
+  for (const [sender, c] of Object.entries(counts)) {
+    result[sender] = {
+      passiveMarkerRate: c.total > 0 ? c.passiveHits / c.total : 0,
+      ellipsisRate: c.total > 0 ? c.ellipsisHits / c.total : 0,
+    };
+  }
+  return result;
+}
+
 /** Detect if a message has high subtext potential */
-function subtextScore(msg: SimplifiedMsg, prev: SimplifiedMsg | undefined, next: SimplifiedMsg | undefined): number {
+function subtextScore(
+  msg: SimplifiedMsg,
+  prev: SimplifiedMsg | undefined,
+  next: SimplifiedMsg | undefined,
+  styleFreqs?: Record<string, PersonStyleFrequencies>,
+): number {
   let score = 0;
   const text = msg.content.trim().toLowerCase();
   const wordCount = msg.content.split(/\s+/).length;
 
-  // Passive markers
-  if (PASSIVE_MARKERS.has(text)) score += 5;
+  const senderFreqs = styleFreqs?.[msg.sender];
+
+  // Passive markers — reduced if this person habitually uses them (>15% of messages)
+  if (PASSIVE_MARKERS.has(text)) {
+    const isHabitualStyle = senderFreqs && senderFreqs.passiveMarkerRate > 0.15;
+    score += isHabitualStyle ? 2 : 5;
+  }
 
   // Very short reply to a long message
   if (prev && prev.sender !== msg.sender) {
@@ -149,8 +206,11 @@ function subtextScore(msg: SimplifiedMsg, prev: SimplifiedMsg | undefined, next:
     if (gapMs > 24 * 60 * 60 * 1000) score += 4;
   }
 
-  // Ends with "..."
-  if (text.endsWith('...') || text.endsWith('..')) score += 2;
+  // Ends with "..." — reduced if this person habitually trails with ellipsis (>10% of messages)
+  if (text.endsWith('...') || text.endsWith('..')) {
+    const isHabitualEllipsis = senderFreqs && senderFreqs.ellipsisRate > 0.10;
+    score += isHabitualEllipsis ? 1 : 2;
+  }
 
   // Contains question marks after statements
   if (text.includes('?') && !text.startsWith('co') && !text.startsWith('jak') && !text.startsWith('kiedy')) score += 1;
@@ -179,12 +239,16 @@ export function extractExchangeWindows(
 ): ExchangeWindow[] {
   if (messages.length < 30) return [];
 
+  // Pre-compute per-person writing style frequencies to reduce false positives
+  // for people who habitually use "ok"/"spoko" or trailing "..."
+  const styleFreqs = computeStyleFrequencies(messages);
+
   // Score every message for subtext potential
   const scored: Array<{ index: number; score: number }> = [];
   for (let i = 0; i < messages.length; i++) {
     const prev = i > 0 ? messages[i - 1] : undefined;
     const next = i < messages.length - 1 ? messages[i + 1] : undefined;
-    const score = subtextScore(messages[i], prev, next);
+    const score = subtextScore(messages[i], prev, next, styleFreqs);
     if (score >= 3) {
       scored.push({ index: i, score });
     }
@@ -248,7 +312,7 @@ export function extractExchangeWindows(
     for (let j = start; j <= end; j++) {
       const prev = j > 0 ? messages[j - 1] : undefined;
       const next = j < messages.length - 1 ? messages[j + 1] : undefined;
-      if (subtextScore(messages[j], prev, next) >= 3) {
+      if (subtextScore(messages[j], prev, next, styleFreqs) >= 3) {
         targets.push(j - start); // relative index within window
       }
     }

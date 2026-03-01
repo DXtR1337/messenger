@@ -59,7 +59,7 @@ const COMMANDS: CommandDefinition[] = [
   },
   {
     name: 'whosimps',
-    description: 'Ranking simpów — kto double-textuje najbardziej',
+    description: 'Ranking entuzjastów — kto double-textuje najbardziej',
     options: [MESSAGES_OPTION],
   },
   {
@@ -135,6 +135,46 @@ const COMMANDS: CommandDefinition[] = [
     options: [MESSAGES_OPTION],
   },
   {
+    name: 'tinder',
+    description: 'Profil randkowy na podstawie wiadomości — brutalna prawda',
+    options: [
+      { name: 'user', description: 'Użytkownik (domyślnie: wszyscy)', type: CommandOptionType.USER, required: false },
+      MESSAGES_OPTION,
+    ],
+  },
+  {
+    name: 'court',
+    description: 'Sąd Chatowy — rozprawa za komunikacyjne zbrodnie',
+    options: [MESSAGES_OPTION],
+  },
+  {
+    name: 'subtext',
+    description: 'Dekoder podtekstów — co NAPRAWDĘ mieli na myśli',
+    options: [MESSAGES_OPTION],
+  },
+  {
+    name: 'simulate',
+    description: 'Symuluj odpowiedź użytkownika na wiadomość',
+    options: [
+      { name: 'user', description: 'Kogo symulować', type: CommandOptionType.USER, required: true },
+      { name: 'message', description: 'Wiadomość do odpowiedzi', type: CommandOptionType.STRING, required: true },
+      MESSAGES_OPTION,
+    ],
+  },
+  {
+    name: 'standup',
+    description: 'Stand-Up Comedy — 7-aktowy występ o kanale',
+    options: [MESSAGES_OPTION],
+  },
+  {
+    name: 'deeproast',
+    description: 'Deep roast — psychologiczny roast z mechanizmami obronnymi',
+    options: [
+      { name: 'user', description: 'Użytkownik (domyślnie: najaktywniejszy)', type: CommandOptionType.USER, required: false },
+      MESSAGES_OPTION,
+    ],
+  },
+  {
     name: 'analyze',
     description: 'Otwórz pełną analizę tego kanału na stronie PodTeksT',
   },
@@ -147,18 +187,8 @@ const COMMANDS: CommandDefinition[] = [
   },
 ];
 
-async function registerCommands() {
-  const appId = process.env.DISCORD_APP_ID;
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-
-  if (!appId || !botToken) {
-    console.error('Missing DISCORD_APP_ID or DISCORD_BOT_TOKEN in environment');
-    process.exit(1);
-  }
-
-  const url = `https://discord.com/api/v10/applications/${appId}/commands`;
-
-  logger.log(`Registering ${COMMANDS.length} commands...`);
+async function registerToUrl(label: string, url: string, botToken: string) {
+  logger.log(`[${label}] Registering ${COMMANDS.length} commands...`);
 
   const res = await fetch(url, {
     method: 'PUT',
@@ -171,12 +201,42 @@ async function registerCommands() {
 
   if (!res.ok) {
     const text = await res.text();
-    console.error(`Failed to register commands: ${res.status} ${text}`);
-    process.exit(1);
+    console.error(`[${label}] Failed: ${res.status} ${text}`);
+    return false;
   }
 
   const result = await res.json();
-  logger.log(`Successfully registered ${(result as unknown[]).length} commands.`);
+  logger.log(`[${label}] Successfully registered ${(result as unknown[]).length} commands.`);
+  return true;
+}
+
+async function registerCommands() {
+  const appId = process.env.DISCORD_APP_ID;
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+
+  if (!appId || !botToken) {
+    console.error('Missing DISCORD_APP_ID or DISCORD_BOT_TOKEN in environment');
+    process.exit(1);
+  }
+
+  // Guild ID from env or CLI arg (guild commands appear instantly)
+  const guildId = process.argv[2] || process.env.DISCORD_GUILD_ID;
+
+  const globalUrl = `https://discord.com/api/v10/applications/${appId}/commands`;
+
+  // Register global commands (propagate in ~1h)
+  const globalOk = await registerToUrl('Global', globalUrl, botToken);
+
+  // Register guild commands (instant) if guild ID provided
+  if (guildId) {
+    const guildUrl = `https://discord.com/api/v10/applications/${appId}/guilds/${guildId}/commands`;
+    await registerToUrl(`Guild ${guildId}`, guildUrl, botToken);
+  } else {
+    logger.log('No DISCORD_GUILD_ID set — skipping instant guild registration.');
+    logger.log('Pass guild ID as argument: npx tsx register-commands.ts <GUILD_ID>');
+  }
+
+  if (!globalOk) process.exit(1);
 }
 
 registerCommands();

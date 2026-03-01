@@ -49,7 +49,7 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
       </div>
       <p className="max-w-sm text-sm text-text-secondary">
         15 pytań. Twoje odpowiedzi vs twarde dane z analizy.
-        Na końcu: Delusion Index 0-100.
+        Na końcu: Indeks Samoświadomości 0-100.
       </p>
       <button
         onClick={onStart}
@@ -233,7 +233,7 @@ function ResultsScreen({
     >
       <div className="text-center">
         <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-text-tertiary">
-          DELUSION INDEX
+          INDEKS SAMOŚWIADOMOŚCI
         </h2>
       </div>
 
@@ -294,7 +294,7 @@ function ResultsScreen({
       </p>
 
       <PsychDisclaimer
-        text="Delusion Index to metryka rozrywkowa porównująca subiektywną samoocenę z danymi ilościowymi. Różnice w postrzeganiu są naturalne i nie świadczą o zaburzeniach."
+        text="Indeks Samoświadomości to metryka rozrywkowa porównująca subiektywną samoocenę z danymi ilościowymi. Różnice w postrzeganiu są naturalne i nie świadczą o zaburzeniach."
         showGenericFooter
       />
 

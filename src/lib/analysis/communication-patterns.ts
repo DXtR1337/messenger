@@ -37,12 +37,15 @@ export interface CPSAnswer {
   evidence: string[];
 }
 
+export type CPSFrequencyLevel = 'not_observed' | 'occasional' | 'recurring' | 'pervasive';
+
 export interface CPSPatternResult {
   yesCount: number;
   total: number;
   threshold: number;
   meetsThreshold: boolean;
   percentage: number;
+  frequency: CPSFrequencyLevel;
   confidence: number;
   answers: Record<number, CPSAnswer>;
 }
@@ -612,6 +615,18 @@ export function isQuestionAssessable(): boolean {
   return true;
 }
 
+/**
+ * Derives a frequency level from the per-pattern percentage.
+ * Percentage is (yesCount / totalAnswerable) * 100, so the scale
+ * is normalized regardless of how many questions each pattern has.
+ */
+export function getPatternFrequency(percentage: number): CPSFrequencyLevel {
+  if (percentage <= 0) return 'not_observed';
+  if (percentage <= 25) return 'occasional';
+  if (percentage <= 60) return 'recurring';
+  return 'pervasive';
+}
+
 export function calculatePatternResults(
   answers: Record<number, CPSAnswer>,
 ): Record<string, CPSPatternResult> {
@@ -640,13 +655,15 @@ export function calculatePatternResults(
     const avgConfidence = answerCount > 0 ? Math.round(totalConfidence / answerCount) : 0;
     const percentage =
       totalAnswerable > 0 ? Math.round((yesCount / totalAnswerable) * 100) : 0;
+    const frequency = getPatternFrequency(percentage);
 
     results[pattern.key] = {
       yesCount,
       total: totalAnswerable,
       threshold: pattern.threshold,
-      meetsThreshold: yesCount >= pattern.threshold,
+      meetsThreshold: frequency === 'recurring' || frequency === 'pervasive',
       percentage,
+      frequency,
       confidence: avgConfidence,
       answers: patternAnswers,
     };

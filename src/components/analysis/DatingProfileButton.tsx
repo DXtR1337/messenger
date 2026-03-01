@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Heart, Loader2, X } from 'lucide-react';
+import { Heart, Loader2, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sampleMessages, buildQuantitativeContext } from '@/lib/analysis/qualitative';
 import { runDeepScan } from '@/lib/analysis/deep-scanner';
@@ -21,8 +21,11 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
+
+  const participants = analysis.conversation.participants.map((p) => p.name);
 
   // Do NOT abort SSE on unmount — let it finish in the background
   useEffect(() => {
@@ -37,13 +40,13 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
     setStatus(null);
   }, []);
 
-  const handleRun = useCallback(async () => {
+  const handleRun = useCallback(async (targetPerson: string) => {
     const { conversation, quantitative, qualitative } = analysis;
 
     setRunning(true);
     setError(null);
-    setStatus('Skanowanie wzorców komunikacji...');
-    startOperation('dating', 'Dating Profile', 'Skanowanie wzorców komunikacji...');
+    setStatus(`Przeszukuję dane ${targetPerson}...`);
+    startOperation('dating', 'Dating Profile', `Przeszukuję dane ${targetPerson}...`);
 
     controllerRef.current?.abort();
     const controller = new AbortController();
@@ -54,23 +57,84 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     try {
       const samples = sampleMessages(conversation, quantitative);
-      const participants = conversation.participants.map((p) => p.name);
+      const allParticipants = conversation.participants.map((p) => p.name);
       const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
 
       // Deep scan — extract confessions, contradictions, obsessions, pet names
-      if (mountedRef.current) setStatus('Szukam najciekawszych wątków...');
-      updateOperation('dating', { status: 'Szukam najciekawszych wątków...', progress: 15 });
+      if (mountedRef.current) setStatus(`Kopiemy w brudach ${targetPerson}...`);
+      updateOperation('dating', { status: `Kopiemy w brudach ${targetPerson}...`, progress: 15 });
       const deepScan = runDeepScan(conversation, quantitative);
       logger.log('[DatingProfile] Deep scan material:', (deepScan.formattedForPrompt.length / 1024).toFixed(1), 'KB');
 
-      if (mountedRef.current) setStatus('Tworzę szczere profile randkowe...');
-      updateOperation('dating', { status: 'Tworzę szczere profile randkowe...', progress: 25 });
+      // For targeted mode — build expanded dossier focused on target person
+      let deepScanMaterial = deepScan.formattedForPrompt;
+      const targetDossier = deepScan.perPerson[targetPerson];
+      if (targetDossier) {
+        const sections: string[] = [`=== PEŁNE DOSSIER: ${targetPerson} ===`];
+
+        if (targetDossier.confessions.length > 0) {
+          sections.push('\nWYZNANIA (najdłuższe wiadomości — pełny materiał):');
+          for (const c of targetDossier.confessions.slice(0, 10)) {
+            sections.push(`  [${new Date(c.timestamp).toLocaleString('pl-PL')}] "${c.content}" (${c.wordCount} słów, ${c.reason})`);
+          }
+        }
+        if (targetDossier.embarrassingQuotes.length > 0) {
+          sections.push('\nŻENUJĄCE CYTATY (pełny materiał):');
+          for (const q of targetDossier.embarrassingQuotes.slice(0, 15)) {
+            sections.push(`  [${new Date(q.timestamp).toLocaleString('pl-PL')}] "${q.content}" — ${q.reason}`);
+          }
+        }
+        if (targetDossier.contradictions.length > 0) {
+          sections.push('\nSPRZECZNOŚCI (powiedziane vs zrobione):');
+          for (const c of targetDossier.contradictions) {
+            sections.push(`  ${c.label}: "${c.assertion}" ${c.counterEvidence}`);
+          }
+        }
+        if (targetDossier.topicObsessions.length > 0) {
+          sections.push('\nOBSESJE TEMATYCZNE:');
+          for (const t of targetDossier.topicObsessions) {
+            sections.push(`  "${t.topic}" — ${t.count}x, przykłady: ${t.examples.map(e => `"${e}"`).join(', ')}`);
+          }
+        }
+        if (targetDossier.petNames.length > 0) {
+          sections.push(`\nKSYWKI UŻYWANE PRZEZ ${targetPerson}: ${targetDossier.petNames.join(', ')}`);
+        }
+        const pm = targetDossier.powerMoves;
+        if (pm.leftOnReadCount > 0 || pm.apologizesFirstCount > 0 || pm.doubleTextChains > 0) {
+          sections.push('\nPOWER MOVES:');
+          if (pm.leftOnReadCount > 0) sections.push(`  Left-on-read: ${pm.leftOnReadCount}x${pm.leftOnReadWorst ? ` (rekord: ${pm.leftOnReadWorst.gapHours}h, potem: "${pm.leftOnReadWorst.followUp}")` : ''}`);
+          if (pm.apologizesFirstCount > 0) sections.push(`  Przeprasza pierwszy/a: ${pm.apologizesFirstCount}x`);
+          if (pm.doubleTextChains > 0) sections.push(`  Double-text chains (3+): ${pm.doubleTextChains}x${pm.worstDoubleText ? ` (rekord: ${pm.worstDoubleText.count} z rzędu, ostatni: "${pm.worstDoubleText.snippet}")` : ''}`);
+        }
+
+        // Add threads featuring the target
+        if (deepScan.interestingThreads.length > 0) {
+          const targetThreads = deepScan.interestingThreads.filter(t => t.messages.some(m => m.sender === targetPerson));
+          if (targetThreads.length > 0) {
+            sections.push('\nCIEKAWE WĄTKI Z UDZIAŁEM CELU:');
+            for (const thread of targetThreads.slice(0, 4)) {
+              sections.push(`  [Wątek: "${thread.topic}"]`);
+              for (const m of thread.messages.slice(0, 8)) {
+                const time = new Date(m.timestamp).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                sections.push(`    [${time}] ${m.sender}: "${m.content}"`);
+              }
+            }
+          }
+        }
+
+        deepScanMaterial = sections.join('\n');
+        logger.log('[DatingProfile] Targeted dossier:', (deepScanMaterial.length / 1024).toFixed(1), 'KB');
+      }
+
+      if (mountedRef.current) setStatus(`Budowanie profilu ${targetPerson}...`);
+      updateOperation('dating', { status: `Budowanie profilu ${targetPerson}...`, progress: 25 });
 
       const body: Record<string, unknown> = {
         samples,
-        participants,
+        participants: allParticipants,
         quantitativeContext,
-        deepScanMaterial: deepScan.formattedForPrompt,
+        deepScanMaterial,
+        targetPerson,
       };
 
       if (qualitative?.pass1 || qualitative?.pass3) {
@@ -160,7 +224,7 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
           <Button
             variant="outline"
             size="sm"
-            onClick={handleRun}
+            onClick={() => selectedPerson && handleRun(selectedPerson)}
             className="gap-2 border-red-500/30 text-red-400 hover:bg-red-500/10"
           >
             <Heart className="size-4" />
@@ -183,15 +247,39 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
         Szczery Profil Randkowy
       </h3>
       <p className="mb-4 text-xs text-[#555555]">
-        Twój profil Tinder na podstawie danych. Nie tego, co myślisz o sobie.
+        Wybierz osobę i zobacz jej profil Tinder na podstawie danych. Nie tego, co myśli o sobie.
       </p>
+
+      {/* Person selector */}
+      {!running && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {participants.map((name) => (
+            <button
+              key={name}
+              onClick={() => setSelectedPerson(name)}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-xs font-medium tracking-wide transition-all ${
+                selectedPerson === name
+                  ? 'bg-[#A855F7]/15 text-[#A855F7] border border-[#A855F7]/40'
+                  : 'bg-white/[0.03] text-zinc-400 border border-white/[0.06] hover:text-[#999] hover:bg-white/[0.06]'
+              }`}
+            >
+              <User className="size-3" />
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <Button
         variant="outline"
         size="sm"
-        onClick={running ? handleCancel : handleRun}
+        onClick={running ? handleCancel : () => selectedPerson && handleRun(selectedPerson)}
+        disabled={!running && !selectedPerson}
         className={running
           ? 'gap-2 border-[#A855F7]/30 text-[#A855F7] hover:bg-[#A855F7]/10'
-          : 'gap-2 border-[#A855F7]/30 text-[#A855F7] hover:bg-[#A855F7]/10 hover:text-[#A855F7]'
+          : selectedPerson
+            ? 'gap-2 border-[#A855F7]/30 text-[#A855F7] hover:bg-[#A855F7]/10 hover:text-[#A855F7]'
+            : 'gap-2 border-white/10 text-zinc-600 cursor-not-allowed'
         }
       >
         {running ? (
@@ -203,7 +291,7 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
         ) : (
           <>
             <Heart className="size-4" />
-            Generuj profil
+            {selectedPerson ? `Generuj profil: ${selectedPerson}` : 'Wybierz osobę'}
           </>
         )}
       </Button>

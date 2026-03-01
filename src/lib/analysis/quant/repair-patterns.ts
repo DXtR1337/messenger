@@ -77,6 +77,15 @@ const OTHER_REPAIR_EN = new Set([
 // Detection helpers
 // ============================================================
 
+/**
+ * Asterisk repair: the most common text-specific repair mechanism not present in
+ * Schegloff et al.'s (1977) original taxonomy (which focused on spoken conversation).
+ * In text-based communication, users correct themselves by typing *correction —
+ * e.g., "*poprawka", "*meant", "miałem *miałam". Matches both message-initial
+ * asterisk corrections and mid-message corrections preceded by whitespace.
+ */
+const ASTERISK_REPAIR_RE = /(?:^|\s)\*[a-zA-ZąćęłńóśżźĄĆĘŁŃÓŚŻŹ]/;
+
 function messageContainsRepair(content: string, markers: Set<string>): boolean {
   const lower = content.toLowerCase().trim();
   for (const marker of markers) {
@@ -90,7 +99,11 @@ function messageContainsRepair(content: string, markers: Set<string>): boolean {
 }
 
 function detectRepairType(content: string): { isSelf: boolean; isOther: boolean } {
-  const isSelf = messageContainsRepair(content, SELF_REPAIR_PL) ||
+  // Asterisk repair counts as self-repair: sender is correcting their own previous utterance
+  const hasAsteriskRepair = ASTERISK_REPAIR_RE.test(content);
+
+  const isSelf = hasAsteriskRepair ||
+    messageContainsRepair(content, SELF_REPAIR_PL) ||
     messageContainsRepair(content, SELF_REPAIR_EN);
   const isOther = messageContainsRepair(content, OTHER_REPAIR_PL) ||
     messageContainsRepair(content, OTHER_REPAIR_EN);

@@ -314,7 +314,7 @@ export default function ThreatMeters({ meters }: ThreatMetersProps) {
             <QuantBadge />
           </div>
           <ExperimentalBadge metricKey="threatMeters" />
-          <p className="text-xs text-text-muted mt-0.5">Ilościowe wskaźniki wzorców komunikacyjnych</p>
+          <p className="text-xs text-text-muted mt-0.5">Ilościowe wskaźniki dynamiki rozmowy — nie ocena psychologiczna</p>
         </div>
       </div>
 

@@ -40,13 +40,13 @@ export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
         <div>
           <div className="flex items-center gap-2">
             <h3 className="font-display text-[15px] font-bold">
-              Czterej jeźdźcy Gottmana
+              Wzorce Ryzyka Komunikacyjnego
             </h3>
             <AIBadge />
           </div>
           <ExperimentalBadge metricKey="gottmanHorsemen" />
           <p className="text-xs text-muted-foreground mt-0.5">
-            4 predyktory rozpadu relacji wg Johna Gottmana
+            Heurystyczna analiza inspirowana badaniami Gottmana — nie zastępuje metody obserwacyjnej SPAFF
           </p>
         </div>
         <span
@@ -129,8 +129,8 @@ export default function GottmanHorsemen({ result }: GottmanHorsemenProps) {
           {result.riskLevel}
         </p>
         <PsychDisclaimer
-          text="Model Czterech Jeźdźców Gottmana pochodzi z badań laboratoryjnych opartych na mowie, mimice i fizjologii — NIGDY nie był empirycznie walidowany dla analizy tekstu. Badania Al-Mosaiwi & Johnstone (2018, N>6400) potwierdzają związek języka absolutystycznego (zawsze/nigdy) z dystresem (d>3.14), ale nie dla pełnego modelu Czterech Jeźdźców. Wyniki mają charakter eksploracyjny, nie diagnostyczny."
-          citation={`${PSYCH_CITATIONS.gottmanShort}; Al-Mosaiwi & Johnstone, 2018`}
+          text="Model inspirowany Gottmanem pochodzi z badań laboratoryjnych opartych na mowie, mimice i fizjologii — nie był empirycznie walidowany dla analizy tekstu. Oryginalny SPAFF wymaga analizy video. Badania Kim, Capaldi & Crosby (2007) nie potwierdziły replikowalności głównych ustaleń Gottmana. Badania Al-Mosaiwi & Johnstone (2018, N>6400) potwierdzają związek języka absolutystycznego (zawsze/nigdy) z dystresem (d>3.14), ale nie dla pełnego modelu 4 wzorców ryzyka. Wyniki mają charakter eksploracyjny, nie diagnostyczny."
+          citation={`${PSYCH_CITATIONS.gottmanShort}; Kim, Capaldi & Crosby, 2007; Al-Mosaiwi & Johnstone, 2018`}
           showGenericFooter
         />
       </div>

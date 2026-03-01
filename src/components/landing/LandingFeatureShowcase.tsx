@@ -43,7 +43,7 @@ const FEATURES: FeatureCard[] = [
   {
     emoji: '🏆',
     title: 'Viral Scores',
-    description: 'Ick Score, Rizz Level, Delulu Index — 8 viralowych metryk do udostępnienia.',
+    description: 'Ick Score, Rizz Level, Asymetria Zaangażowania — 8 viralowych metryk do udostępnienia.',
     accent: '#f59e0b',
   },
   {

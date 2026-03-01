@@ -380,6 +380,8 @@ ANTI-HALLUCINATION:
 - Never present a single observation as a confirmed pattern — require 3+ instances.
 - Predictions must be grounded in specific behavioral trends, not general intuition.
 - When evidence is insufficient, say "Niewystarczające dane" rather than speculating.
+- ZAKAZ FABRICACJI ZEWNĘTRZNYCH WYDARZEŃ: NIE wymyślaj traum, diagnoz psychologicznych, wydarzeń rodzinnych, ani żadnych faktów spoza dostarczonych danych. Opisuj WYŁĄCZNIE wzorce widoczne w komunikacji.
+- PRZERWY W ROZMOWIE: Przerwa >7 dni z POWROTEM ciepłego tonu = ZERWANIE I POWRÓT, nie "cisza". Jeśli po przerwie nastąpił powrót — relacja żyła dalej.
 
 RULES:
 - Resolve contradictions between passes. If Pass 1 says "balanced" but Pass 2 shows clear dominance, address it.
@@ -391,7 +393,8 @@ RULES:
   * emotional_safety (20%): Can both participants express negative emotions without punishment? Are repair attempts (apologies, clarifications) accepted or ignored/punished? Look for stonewalling, dismissal, or escalation after vulnerability.
   * growth_trajectory (15%): Is communication deepening over time? More self-disclosure, more complex topics, more emotional range? Or stagnating/withdrawing? Compare early vs recent messages.
   Compute overall = balance*0.25 + reciprocity*0.20 + response_pattern*0.20 + emotional_safety*0.20 + growth_trajectory*0.15. Round to nearest integer.
-- Insights must be ACTIONABLE and SPECIFIC. Not "communicate more." More like "Person A's double-texting pattern (avg 3.2 unanswered messages) may create pressure. Waiting for responses before sending follow-ups could reduce anxiety on both sides."
+- Insights must be ACTIONABLE and SPECIFIC. Not "communicate more." More like "Person A's pattern of returning after silence to send follow-up messages (avg 3.2 unanswered messages with >2min gaps) may create pressure. Waiting for responses before sending follow-ups could reduce anxiety on both sides."
+- ENTER-AS-COMMA CULTURE: In Polish texting, people routinely use Enter as punctuation — sending 5 messages in 30 seconds is ONE thought split across messages, NOT "double texting" or neediness. The double-text counts in the data already account for this (only counting >2min gap same-sender messages). Do NOT interpret high raw message counts from one person as obsessive behavior if they simply type in short bursts.
 
 OUTPUT FORMAT: Valid JSON only.
 
@@ -526,7 +529,7 @@ RULES:
 - Write ALL roasts in Polish. Be creative, sarcastic, self-aware.
 - Generate 10-12 roasts per person (more than standard — you have MORE ammo from full psych analysis).
 - Organizuj roasty w 3 RUNDY: "Rozgrzewka" (3-4 delikatniejsze), "Main Event" (4-5 brutalnych), "Finish Him" (3 NOKAUTUJĄCE). W JSON nie dziel na rundy — po prostu zapewnij crescendo intensywności od pierwszego roasta do ostatniego.
-- KAŻDY roast MUSI zawierać KONKRETNĄ liczbę z danych ilościowych (response time, % inicjacji, liczba double-texts, ghost duration, średnia długość wiadomości, itp.). Zero roastów bez danych liczbowych.
+- KAŻDY roast MUSI zawierać KONKRETNĄ liczbę z danych ilościowych (response time, % inicjacji, liczba double-texts, ghost duration, średnia długość wiadomości, itp.). Zero roastów bez danych liczbowych. UWAGA: Double-text counts już uwzględniają Enter-as-comma (tylko >2min gap). Nie roastuj za "wysyłanie 10 wiadomości pod rząd" jeśli to normalne polskie pisanie Enterem jako przecinkiem.
 - Generuj minimum 6 superlatives, każdy z inną kategorią psychologiczną (attachment, Big Five, power dynamics, emotional labor, conflict style, love language, itp.).
 - Superlatives should reference psychological traits, not just stats.
 - The verdict should combine data + psychology into one devastating sentence.

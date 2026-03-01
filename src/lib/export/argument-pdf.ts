@@ -1,8 +1,8 @@
 /**
- * Messenger-style PDF export for Argument Simulation transcripts.
+ * Discord-style PDF export for Argument Simulation transcripts.
  *
- * Dark-themed A4 pages with chat bubbles (left/right aligned),
- * phase dividers, cover page, and post-simulation summary.
+ * Dark-themed A4 pages with left-aligned messages, colored usernames,
+ * message grouping, phase dividers, cover page, and N-person summary.
  */
 
 import jsPDF from 'jspdf';
@@ -10,22 +10,20 @@ import type {
   ArgumentSimulationMessage,
   ArgumentSimulationResult,
 } from '@/lib/analysis/types';
+import { ARGUMENT_PERSON_COLORS_RGB } from '@/lib/analysis/constants';
 import { registerFonts, pdfSafe } from './pdf-fonts';
 
-// ── Color palette ────────────────────────────────────────────
+// ── Color palette — Discord-inspired ────────────────────────
 type RGB = [number, number, number];
 
 const C = {
-  bg: [5, 5, 5] as RGB,
-  cardBg: [15, 15, 15] as RGB,
-  bubbleLeft: [26, 26, 26] as RGB,
-  bubbleRight: [35, 14, 14] as RGB,
-  textPrimary: [238, 238, 238] as RGB,
-  textSecondary: [136, 136, 136] as RGB,
-  textMuted: [85, 85, 85] as RGB,
-  senderA: [59, 130, 246] as RGB,
-  senderB: [239, 68, 68] as RGB,
-  border: [30, 30, 30] as RGB,
+  bg: [30, 31, 34] as RGB,           // Discord dark bg (#1e1f22)
+  chatBg: [49, 51, 56] as RGB,       // Discord chat area (#313338)
+  cardBg: [43, 45, 49] as RGB,       // Discord sidebar (#2b2d31)
+  textPrimary: [219, 222, 225] as RGB, // Discord text (#dbdee1)
+  textSecondary: [148, 155, 164] as RGB,
+  textMuted: [94, 103, 114] as RGB,
+  border: [60, 63, 68] as RGB,
   white: [255, 255, 255] as RGB,
 
   phase: {
@@ -52,11 +50,12 @@ const A4_W = 210;
 const A4_H = 297;
 const MARGIN = 16;
 const CONTENT_W = A4_W - MARGIN * 2;
-const BUBBLE_MAX_W = 120;
-const BUBBLE_PAD_X = 5;
-const BUBBLE_PAD_Y = 3.5;
-const BUBBLE_RADIUS = 4;
-const MSG_GAP = 4;
+const AVATAR_R = 3;        // Avatar circle radius
+const AVATAR_D = AVATAR_R * 2;
+const MSG_LEFT = MARGIN + AVATAR_D + 4; // Left edge of message text
+const MSG_MAX_W = CONTENT_W - AVATAR_D - 6;
+const MSG_GAP = 1.5;       // Gap between grouped messages
+const MSG_GROUP_GAP = 4;   // Gap between different senders
 const CHAT_TOP = 28;
 const CHAT_BOTTOM = A4_H - 16;
 
@@ -65,13 +64,13 @@ const PHASE_LABELS: Record<string, string> = {
   escalation: 'ESKALACJA',
   peak: 'SZCZYT',
   deescalation: 'DEESKALACJA',
-  aftermath: 'NASTĘPSTWA',
+  aftermath: 'NAST\u0118PSTWA',
 };
 
 const HORSEMAN_LABELS: Record<string, string> = {
   criticism: 'Krytycyzm',
   contempt: 'Pogarda',
-  defensiveness: 'Defensywność',
+  defensiveness: 'Defensywno\u015B\u0107',
   stonewalling: 'Wycofanie',
 };
 
@@ -97,9 +96,19 @@ function blendColors(c1: RGB, c2: RGB, t: number): RGB {
   ];
 }
 
+function getPersonColor(participants: string[], name: string): RGB {
+  const idx = participants.indexOf(name);
+  return ARGUMENT_PERSON_COLORS_RGB[idx >= 0 ? idx % ARGUMENT_PERSON_COLORS_RGB.length : 0];
+}
+
 function drawPageBg(doc: jsPDF) {
   setFill(doc, C.bg);
   doc.rect(0, 0, A4_W, A4_H, 'F');
+}
+
+function drawChatBg(doc: jsPDF) {
+  setFill(doc, C.chatBg);
+  doc.rect(MARGIN - 2, CHAT_TOP - 4, CONTENT_W + 4, CHAT_BOTTOM - CHAT_TOP + 4, 'F');
 }
 
 function drawFooter(doc: jsPDF, pageNum: number, totalPages: number) {
@@ -172,51 +181,53 @@ function buildCoverPage(
     titleY += 10;
   }
 
-  // Participants — VS layout
-  const vsY = 110;
+  // Participants — roster grid
+  const rosterY = 110;
   setFill(doc, C.cardBg);
   setDraw(doc, C.border);
-  doc.roundedRect(MARGIN, vsY, CONTENT_W, 50, 4, 4, 'FD');
+  const avatarSize = 6;
+  const avatarGap = 4;
+  const nameGap = 3;
+  const colW = 55;
+  const cols = Math.min(participants.length, 3);
+  const rows = Math.ceil(participants.length / cols);
+  const rosterH = 16 + rows * 14;
+  doc.roundedRect(MARGIN, rosterY, CONTENT_W, rosterH, 4, 4, 'FD');
 
-  // Person A (left)
-  setFill(doc, C.senderA);
-  doc.circle(MARGIN + 16, vsY + 25, 8, 'F');
-  setColor(doc, C.white);
-  doc.setFont('Inter', 'bold');
-  doc.setFontSize(16);
-  doc.text(pdfSafe(participants[0]?.charAt(0)?.toUpperCase() ?? 'A'), MARGIN + 16, vsY + 28, {
-    align: 'center',
+  // Participant count header
+  setColor(doc, C.textMuted);
+  doc.setFont('Inter', 'normal');
+  doc.setFontSize(7);
+  doc.text(`${participants.length} UCZESTNIK\u00D3W`, MARGIN + 8, rosterY + 10);
+
+  participants.forEach((name, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const px = MARGIN + 8 + col * colW;
+    const py = rosterY + 18 + row * 14;
+    const personColor = getPersonColor(participants, name);
+
+    // Avatar circle
+    setFill(doc, personColor);
+    doc.circle(px + avatarSize / 2, py, avatarSize / 2, 'F');
+    setColor(doc, C.white);
+    doc.setFont('Inter', 'bold');
+    doc.setFontSize(6);
+    doc.text(pdfSafe(name.charAt(0).toUpperCase()), px + avatarSize / 2, py + 1.5, { align: 'center' });
+
+    // Name
+    setColor(doc, personColor);
+    doc.setFont('Inter', 'bold');
+    doc.setFontSize(8);
+    doc.text(pdfSafe(name), px + avatarSize + nameGap, py + 2);
   });
-  setColor(doc, C.textPrimary);
-  doc.setFontSize(12);
-  doc.text(pdfSafe(participants[0] ?? 'Osoba A'), MARGIN + 30, vsY + 28);
-
-  // VS
-  setColor(doc, C.gradientStart);
-  doc.setFont('Inter', 'bold');
-  doc.setFontSize(18);
-  doc.text('vs', A4_W / 2, vsY + 28, { align: 'center' });
-
-  // Person B (right side)
-  const bNameX = A4_W - MARGIN - 16;
-  setFill(doc, C.senderB);
-  doc.circle(bNameX, vsY + 25, 8, 'F');
-  setColor(doc, C.white);
-  doc.setFontSize(16);
-  doc.text(pdfSafe(participants[1]?.charAt(0)?.toUpperCase() ?? 'B'), bNameX, vsY + 28, {
-    align: 'center',
-  });
-  setColor(doc, C.textPrimary);
-  doc.setFont('Inter', 'bold');
-  doc.setFontSize(12);
-  doc.text(pdfSafe(participants[1] ?? 'Osoba B'), bNameX - 14, vsY + 28, { align: 'right' });
 
   // Stats
-  const statsY = 180;
+  const statsY = rosterY + rosterH + 16;
   const statItems = [
-    { label: 'WIADOMOŚCI', value: String(result.messages.length) },
+    { label: 'WIADOMO\u015ACI', value: String(result.messages.length) },
     { label: 'ESKALATOR', value: pdfSafe(result.summary.escalator) },
-    { label: 'DOMINUJĄCY JEŹDZIEC', value: HORSEMAN_LABELS[result.summary.dominantHorseman] ?? result.summary.dominantHorseman },
+    { label: 'DOMINUJ\u0104CY JE\u0179DZIEC', value: HORSEMAN_LABELS[result.summary.dominantHorseman] ?? result.summary.dominantHorseman },
   ];
 
   const statW = CONTENT_W / statItems.length;
@@ -233,13 +244,12 @@ function buildCoverPage(
   });
 
   // Phase overview
-  const phaseY = 210;
+  const phaseY = statsY + 28;
   setColor(doc, C.textMuted);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(7);
   doc.text('PRZEBIEG KONFLIKTU', MARGIN, phaseY);
 
-  // Phase bar
   const phases = ['trigger', 'escalation', 'peak', 'deescalation', 'aftermath'];
   const phaseCounts: Record<string, number> = {};
   for (const msg of result.messages) {
@@ -286,7 +296,7 @@ function buildCoverPage(
   doc.text(`Wygenerowano: ${dateStr}`, MARGIN, A4_H - 20);
 }
 
-// ── Chat pages — Messenger-style bubbles ─────────────────────
+// ── Chat pages — Discord-style message list ──────────────────
 
 function buildChatPages(
   doc: jsPDF,
@@ -298,23 +308,26 @@ function buildChatPages(
   let curY = CHAT_TOP;
   let pageNum = startPage;
   let lastPhase = '';
+  let lastSender = '';
 
   const newPage = () => {
     doc.addPage();
     drawPageBg(doc);
+    drawChatBg(doc);
 
-    // Subtle header line
-    setDraw(doc, C.border);
-    doc.setLineWidth(0.3);
-    doc.line(MARGIN, 18, A4_W - MARGIN, 18);
-
+    // Subtle header
     setColor(doc, C.textMuted);
     doc.setFont('Inter', 'normal');
     doc.setFontSize(7);
     doc.text('TRANSKRYPT ROZMOWY', MARGIN, 14);
     doc.text(`${pageNum} / ${totalPages}`, A4_W - MARGIN, 14, { align: 'right' });
 
+    setDraw(doc, C.border);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, 18, A4_W - MARGIN, 18);
+
     curY = CHAT_TOP;
+    lastSender = ''; // Reset grouping on new page
     pageNum++;
   };
 
@@ -323,109 +336,100 @@ function buildChatPages(
 
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
-    const isLeft = msg.sender === participants[0];
-    const senderColor = isLeft ? C.senderA : C.senderB;
-    const bubbleBg = isLeft ? C.bubbleLeft : C.bubbleRight;
+    const senderColor = getPersonColor(participants, msg.sender);
+    const isGrouped = msg.sender === lastSender && msg.phase === lastPhase;
 
     // Phase divider
     if (msg.phase !== lastPhase) {
-      const dividerH = 12;
-      if (curY + dividerH > CHAT_BOTTOM) newPage();
+      const dividerH = 10;
+      if (curY + dividerH > CHAT_BOTTOM) {
+        drawFooter(doc, pageNum - 1, totalPages);
+        newPage();
+      }
 
       const phaseColor = C.phase[msg.phase] ?? C.textMuted;
       const phaseLabel = PHASE_LABELS[msg.phase] ?? msg.phase;
 
-      // Divider line + label
-      curY += 4;
+      // Discord-style date separator
+      curY += 3;
       setDraw(doc, C.border);
       doc.setLineWidth(0.2);
-      const labelW = 35;
+      const labelW = doc.getTextWidth(phaseLabel) + 10;
       const lineY = curY + 3;
-      doc.line(MARGIN, lineY, A4_W / 2 - labelW / 2 - 2, lineY);
-      doc.line(A4_W / 2 + labelW / 2 + 2, lineY, A4_W - MARGIN, lineY);
+      doc.line(MARGIN, lineY, A4_W / 2 - labelW / 2, lineY);
+      doc.line(A4_W / 2 + labelW / 2, lineY, A4_W - MARGIN, lineY);
 
       setColor(doc, phaseColor);
       doc.setFont('Inter', 'bold');
       doc.setFontSize(6);
       doc.text(phaseLabel, A4_W / 2, curY + 4.5, { align: 'center' });
 
-      // Phase dot
-      setFill(doc, phaseColor);
-      doc.circle(A4_W / 2 - doc.getTextWidth(phaseLabel) / 2 - 4, curY + 3, 1.5, 'F');
-
       curY += dividerH;
       lastPhase = msg.phase;
+      lastSender = ''; // Force showing avatar after phase change
     }
 
-    // Calculate bubble dimensions
+    // Calculate message height
     doc.setFont('Inter', 'normal');
     doc.setFontSize(8.5);
-    const maxTextW = BUBBLE_MAX_W - BUBBLE_PAD_X * 2;
-    const textLines = wrapText(doc, msg.text, maxTextW);
-
-    const senderH = 4;        // sender label height
-    const lineH = 4;          // text line height
-    const gapAfterSender = 1;
-    const bubbleH =
-      BUBBLE_PAD_Y +
-      senderH +
-      gapAfterSender +
-      textLines.length * lineH +
-      BUBBLE_PAD_Y;
+    const textLines = wrapText(doc, msg.text, MSG_MAX_W);
+    const lineH = 4;
+    const senderH = isGrouped ? 0 : 5; // No sender line for grouped messages
+    const msgH = senderH + textLines.length * lineH;
 
     // Page break check
-    if (curY + bubbleH + MSG_GAP > CHAT_BOTTOM) {
+    const gapBefore = isGrouped ? MSG_GAP : MSG_GROUP_GAP;
+    if (curY + msgH + gapBefore > CHAT_BOTTOM) {
       drawFooter(doc, pageNum - 1, totalPages);
       newPage();
     }
 
-    // Calculate bubble width (fit to text, but with min/max)
-    doc.setFont('Inter', 'bold');
-    doc.setFontSize(6);
-    const senderW = doc.getTextWidth(pdfSafe(msg.sender).toUpperCase());
-    doc.setFont('Inter', 'normal');
-    doc.setFontSize(8.5);
-    const maxLineW = Math.max(
-      senderW + 4,
-      ...textLines.map((l) => doc.getTextWidth(l)),
-    );
-    const bubbleW = Math.min(BUBBLE_MAX_W, Math.max(35, maxLineW + BUBBLE_PAD_X * 2));
+    curY += gapBefore;
 
-    // Position
-    const bubbleX = isLeft ? MARGIN : A4_W - MARGIN - bubbleW;
+    if (!isGrouped) {
+      // Draw avatar circle
+      setFill(doc, senderColor);
+      doc.circle(MARGIN + AVATAR_R, curY + AVATAR_R, AVATAR_R, 'F');
+      setColor(doc, C.white);
+      doc.setFont('Inter', 'bold');
+      doc.setFontSize(5.5);
+      doc.text(
+        pdfSafe(msg.sender.charAt(0).toUpperCase()),
+        MARGIN + AVATAR_R,
+        curY + AVATAR_R + 1.5,
+        { align: 'center' },
+      );
 
-    // Draw bubble background
-    setFill(doc, bubbleBg);
-    setDraw(doc, C.border);
-    doc.setLineWidth(0.15);
+      // Sender name (colored)
+      setColor(doc, senderColor);
+      doc.setFont('Inter', 'bold');
+      doc.setFontSize(7.5);
+      doc.text(pdfSafe(msg.sender), MSG_LEFT, curY + 4);
 
-    // Rounded rect with one corner less rounded (like Messenger)
-    const tl = isLeft ? 1.5 : BUBBLE_RADIUS;
-    const tr = isLeft ? BUBBLE_RADIUS : 1.5;
-    doc.roundedRect(bubbleX, curY, bubbleW, bubbleH, tl, tr, 'FD');
+      // Phase badge (small, right of name)
+      const nameW = doc.getTextWidth(pdfSafe(msg.sender));
+      setColor(doc, C.phase[msg.phase] ?? C.textMuted);
+      doc.setFont('Inter', 'normal');
+      doc.setFontSize(5);
+      doc.text(
+        PHASE_LABELS[msg.phase] ?? msg.phase,
+        MSG_LEFT + nameW + 3,
+        curY + 4,
+      );
 
-    // Sender name
-    let textY = curY + BUBBLE_PAD_Y + 3;
-    setColor(doc, senderColor);
-    doc.setFont('Inter', 'bold');
-    doc.setFontSize(6);
-    doc.text(
-      pdfSafe(msg.sender).toUpperCase(),
-      bubbleX + BUBBLE_PAD_X,
-      textY,
-    );
+      curY += senderH;
+    }
 
     // Message text
-    textY += senderH + gapAfterSender;
     setColor(doc, C.textPrimary);
     doc.setFont('Inter', 'normal');
     doc.setFontSize(8.5);
     for (const line of textLines) {
-      doc.text(line, bubbleX + BUBBLE_PAD_X, textY);
-      textY += lineH;
+      doc.text(line, MSG_LEFT, curY + 3);
+      curY += lineH;
     }
 
-    curY += bubbleH + MSG_GAP;
+    lastSender = msg.sender;
   }
 
   // Footer on last chat page
@@ -445,7 +449,7 @@ function buildSummaryPage(
   doc.addPage();
   drawPageBg(doc);
 
-  // Header
+  // Header gradient bar
   const steps = 20;
   const h = 3;
   const stepW = A4_W / steps;
@@ -480,7 +484,7 @@ function buildSummaryPage(
   doc.text('DYNAMIKA KONFLIKTU', MARGIN + 8, curY + 10);
 
   // Escalator
-  setColor(doc, C.senderB);
+  setColor(doc, C.gradientStart);
   doc.setFont('Inter', 'bold');
   doc.setFontSize(8);
   doc.text('Eskalator:', MARGIN + 8, curY + 20);
@@ -497,7 +501,7 @@ function buildSummaryPage(
   setColor(doc, [245, 158, 11]);
   doc.text('Eskalacja:', MARGIN + 8, curY + 36);
   setColor(doc, C.textPrimary);
-  doc.text(`${summary.escalationMessageCount} wiadomości`, MARGIN + 35, curY + 36);
+  doc.text(`${summary.escalationMessageCount} wiadomo\u015Bci`, MARGIN + 35, curY + 36);
 
   // Pattern description (right side)
   if (summary.patternDescription) {
@@ -520,43 +524,38 @@ function buildSummaryPage(
   setColor(doc, C.textMuted);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(7);
-  doc.text('CZTEREJ JEŹDŹCY APOKALIPSY (GOTTMAN)', MARGIN + 8, curY + 10);
+  doc.text('CZTEREJ JE\u0179D\u0179CY APOKALIPSY (GOTTMAN)', MARGIN + 8, curY + 10);
 
   const horsemen = ['criticism', 'contempt', 'defensiveness', 'stonewalling'] as const;
-  horsemen.forEach((h, i) => {
+  horsemen.forEach((hm, i) => {
     const hy = curY + 20 + i * 10;
-    const score = summary.horsemanScores[h] ?? 0;
-    const color = C.horseman[h] ?? C.textMuted;
-    const isDominant = summary.dominantHorseman === h;
+    const score = summary.horsemanScores[hm] ?? 0;
+    const color = C.horseman[hm] ?? C.textMuted;
+    const isDominant = summary.dominantHorseman === hm;
 
-    // Label
     setColor(doc, C.textSecondary);
     doc.setFont('Inter', 'normal');
     doc.setFontSize(7);
-    doc.text(HORSEMAN_LABELS[h] ?? h, MARGIN + 8, hy);
+    doc.text(HORSEMAN_LABELS[hm] ?? hm, MARGIN + 8, hy);
 
-    // Dominant badge
     if (isDominant) {
       setColor(doc, color);
       doc.setFont('Inter', 'bold');
       doc.setFontSize(5);
-      doc.text('DOMINUJĄCY', MARGIN + 42, hy);
+      doc.text('DOMINUJ\u0104CY', MARGIN + 42, hy);
     }
 
-    // Bar background
-    const barX = MARGIN + 60;
+    const barStartX = MARGIN + 60;
     const barW = CONTENT_W - 80;
     setFill(doc, C.border);
-    doc.roundedRect(barX, hy - 2.5, barW, 3, 1.5, 1.5, 'F');
+    doc.roundedRect(barStartX, hy - 2.5, barW, 3, 1.5, 1.5, 'F');
 
-    // Bar fill
     if (score > 0) {
       setFill(doc, color);
       const fillW = Math.max(3, barW * (score / 100));
-      doc.roundedRect(barX, hy - 2.5, fillW, 3, 1.5, 1.5, 'F');
+      doc.roundedRect(barStartX, hy - 2.5, fillW, 3, 1.5, 1.5, 'F');
     }
 
-    // Score
     setColor(doc, color);
     doc.setFont('Inter', 'bold');
     doc.setFontSize(8);
@@ -565,47 +564,63 @@ function buildSummaryPage(
 
   curY += 68;
 
-  // ── Per-person breakdown ──
+  // ── Per-person breakdown — dynamic N-person grid ──
+  const cols = Math.min(participants.length, 3);
+  const rowsNeeded = Math.ceil(participants.length / cols);
+  const personCardH = 38;
+  const breakdownH = 14 + rowsNeeded * (personCardH + 4);
+
+  // Check if we need a new page
+  if (curY + breakdownH > CHAT_BOTTOM) {
+    drawFooter(doc, pageNum, totalPages);
+    doc.addPage();
+    drawPageBg(doc);
+    curY = 30;
+    pageNum++;
+  }
+
   setFill(doc, C.cardBg);
   setDraw(doc, C.border);
-  const breakdownH = 50;
   doc.roundedRect(MARGIN, curY, CONTENT_W, breakdownH, 3, 3, 'FD');
 
   setColor(doc, C.textMuted);
   doc.setFont('Inter', 'normal');
   doc.setFontSize(7);
-  doc.text('PROFIL UCZESTNIKÓW', MARGIN + 8, curY + 10);
+  doc.text('PROFIL UCZESTNIK\u00D3W', MARGIN + 8, curY + 10);
 
-  const halfW = (CONTENT_W - 16) / 2;
+  const colW = (CONTENT_W - 16) / cols;
   participants.forEach((name, idx) => {
     const breakdown = summary.personBreakdown?.[name];
     if (!breakdown) return;
 
-    const px = MARGIN + 8 + idx * (halfW + 6);
-    const color = idx === 0 ? C.senderA : C.senderB;
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const px = MARGIN + 8 + col * colW;
+    const py = curY + 16 + row * (personCardH + 4);
+    const personColor = getPersonColor(participants, name);
 
     // Avatar circle
-    setFill(doc, color);
-    doc.circle(px + 4, curY + 20, 4, 'F');
+    setFill(doc, personColor);
+    doc.circle(px + 4, py + 4, 4, 'F');
     setColor(doc, C.white);
     doc.setFont('Inter', 'bold');
     doc.setFontSize(8);
-    doc.text(pdfSafe(name.charAt(0).toUpperCase()), px + 4, curY + 22, { align: 'center' });
+    doc.text(pdfSafe(name.charAt(0).toUpperCase()), px + 4, py + 6, { align: 'center' });
 
-    // Name
-    setColor(doc, C.textPrimary);
+    // Name (colored)
+    setColor(doc, personColor);
     doc.setFontSize(9);
-    doc.text(pdfSafe(name), px + 12, curY + 22);
+    doc.text(pdfSafe(name), px + 12, py + 6);
 
     // Stats
     const stats = [
-      { label: 'Wiadomości', value: String(breakdown.messagesCount) },
-      { label: 'Śr. długość', value: `${Math.round(breakdown.avgLength)} słów` },
+      { label: 'Wiadomo\u015Bci', value: String(breakdown.messagesCount) },
+      { label: '\u015Ar. d\u0142ugo\u015B\u0107', value: `${Math.round(breakdown.avgLength)} s\u0142\u00F3w` },
       { label: 'Eskalacja', value: `${breakdown.escalationContribution}%` },
     ];
 
     stats.forEach((st, si) => {
-      const sy = curY + 30 + si * 6;
+      const sy = py + 14 + si * 6;
       setColor(doc, C.textMuted);
       doc.setFont('Inter', 'normal');
       doc.setFontSize(6);
@@ -621,9 +636,6 @@ function buildSummaryPage(
 
   // ── Comparison with reality ──
   if (summary.comparisonWithReal) {
-    setFill(doc, C.cardBg);
-    setDraw(doc, C.border);
-
     setColor(doc, C.textSecondary);
     doc.setFont('Inter', 'normal');
     doc.setFontSize(8);
@@ -631,17 +643,19 @@ function buildSummaryPage(
     const compH = 14 + compLines.length * 4;
 
     if (curY + compH < CHAT_BOTTOM) {
+      setFill(doc, C.cardBg);
+      setDraw(doc, C.border);
       doc.roundedRect(MARGIN, curY, CONTENT_W, compH, 3, 3, 'FD');
 
       setColor(doc, C.textMuted);
       doc.setFont('Inter', 'normal');
       doc.setFontSize(7);
-      doc.text('PORÓWNANIE Z RZECZYWISTOŚCIĄ', MARGIN + 8, curY + 10);
+      doc.text('POR\u00D3WNANIE Z RZECZYWISTO\u015ACI\u0104', MARGIN + 8, curY + 10);
 
       setColor(doc, C.textPrimary);
       doc.setFontSize(8);
-      compLines.forEach((line, i) => {
-        doc.text(line, MARGIN + 8, curY + 18 + i * 4);
+      compLines.forEach((line, li) => {
+        doc.text(line, MARGIN + 8, curY + 18 + li * 4);
       });
     }
   }
@@ -668,9 +682,8 @@ export async function generateArgumentPdf(
 ): Promise<void> {
   const { messages } = result;
 
-  // Calculate total pages: 1 cover + N chat pages + 1 summary
-  // Estimate chat pages by rough message count (~8 messages/page)
-  const estimatedChatPages = Math.max(1, Math.ceil(messages.length / 8));
+  // Estimate: Discord-style messages are more compact (~12/page with grouping)
+  const estimatedChatPages = Math.max(1, Math.ceil(messages.length / 12));
   const totalPages = 1 + estimatedChatPages + 1;
 
   const doc = new jsPDF({

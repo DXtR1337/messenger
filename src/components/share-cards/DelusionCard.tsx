@@ -373,7 +373,7 @@ export default function DelusionCard({ result, participants }: DelusionCardProps
                 marginBottom: 2,
               }}
             >
-              INDEKS DELUZJI
+              INDEKS SAMOŚWIADOMOŚCI
             </div>
             <div
               style={{

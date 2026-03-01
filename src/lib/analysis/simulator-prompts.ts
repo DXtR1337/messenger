@@ -6,6 +6,7 @@
 
 import 'server-only';
 import { callGeminiWithRetry } from './gemini';
+import { parseGeminiJSON } from './json-parser';
 
 import type { PersonProfile, Pass1Result, Pass2Result } from './types';
 
@@ -259,40 +260,17 @@ export async function runReplySimulation(params: SimulationParams): Promise<Simu
   const userContent = buildUserContent(params);
 
   const rawText = await callGeminiWithRetry(systemPrompt, userContent, 3, 1024, 0.5);
-  return parseSimulationJSON(rawText);
-}
+  const parsed = parseGeminiJSON<Record<string, unknown>>(rawText);
 
-// ============================================================
-// Private: JSON parser
-// ============================================================
+  const reply = typeof parsed.reply === 'string' ? parsed.reply : '';
+  const confidence = typeof parsed.confidence === 'number'
+    ? Math.max(0, Math.min(100, parsed.confidence))
+    : 50;
+  const styleNotes = typeof parsed.styleNotes === 'string' ? parsed.styleNotes : '';
 
-function parseSimulationJSON(raw: string): SimulationResponse {
-  let cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-
-  if (!cleaned.startsWith('{')) {
-    const jsonStart = cleaned.indexOf('{');
-    if (jsonStart >= 0) cleaned = cleaned.slice(jsonStart);
-  }
-  if (cleaned.startsWith('{')) {
-    const lastClose = cleaned.lastIndexOf('}');
-    if (lastClose >= 0) cleaned = cleaned.slice(0, lastClose + 1);
+  if (!reply) {
+    throw new Error('Pusta odpowiedz z AI');
   }
 
-  try {
-    const parsed = JSON.parse(cleaned) as Record<string, unknown>;
-
-    const reply = typeof parsed.reply === 'string' ? parsed.reply : '';
-    const confidence = typeof parsed.confidence === 'number'
-      ? Math.max(0, Math.min(100, parsed.confidence))
-      : 50;
-    const styleNotes = typeof parsed.styleNotes === 'string' ? parsed.styleNotes : '';
-
-    if (!reply) {
-      throw new Error('Pusta odpowiedz z AI');
-    }
-
-    return { reply, confidence, styleNotes };
-  } catch {
-    throw new Error('Blad parsowania odpowiedzi symulacji');
-  }
+  return { reply, confidence, styleNotes };
 }

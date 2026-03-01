@@ -12,7 +12,7 @@ type PodTeksTEvent =
   | { name: 'share_card_share'; params: { cardType: string; method: 'native' | 'clipboard' } }
   | { name: 'wrapped_start'; params: { slideCount: number } }
   | { name: 'wrapped_complete'; params: { slideCount: number } }
-  | { name: 'pdf_download'; params: { type: 'standard' | 'standup' } }
+  | { name: 'pdf_download'; params: { type: 'standard' | 'standup' | 'eks' } }
   | { name: 'story_view'; params: { scene: string } }
   | { name: 'cps_start'; params: { participant: string } }
   | { name: 'cps_complete'; params: { participant: string } }
@@ -20,7 +20,11 @@ type PodTeksTEvent =
   | { name: 'share_link_opened'; params: { source?: string } }
   | { name: 'referral_conversion'; params: { referredBy?: string } }
   | { name: 'court_trial_start'; params?: undefined }
-  | { name: 'court_trial_complete'; params?: undefined };
+  | { name: 'court_trial_complete'; params?: undefined }
+  | { name: 'eks_analysis_start'; params?: undefined }
+  | { name: 'eks_analysis_complete'; params?: undefined }
+  | { name: 'eks_share_card_download'; params: { cardType: string } }
+  | { name: 'eks_share_link_created'; params: { method: 'native' | 'clipboard' } };
 
 declare global {
   interface Window {

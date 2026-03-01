@@ -10,6 +10,7 @@ import type {
   UnifiedMessage,
   Participant,
 } from '../parsers/types';
+import { formatDuration } from './quant/response-time-engine';
 
 // ============================================================
 // Public types
@@ -298,12 +299,21 @@ export function buildQuantitativeContext(
   const lines: string[] = ['QUANTITATIVE METRICS SUMMARY:', ''];
   const names = participants.map(p => p.name);
 
+  // Current date — temporal anchor for AI reasoning about recency and time gaps
+  const now = new Date();
+  lines.push(`CURRENT DATE: ${now.toISOString().split('T')[0]} (${now.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })})`);
+
   // Date range — derived from monthly volume, critical for AI to generate correct dates
   const monthlyVolume = quantitative.patterns.monthlyVolume;
   if (monthlyVolume.length > 0) {
     const firstMonth = monthlyVolume[0].month;
     const lastMonth = monthlyVolume[monthlyVolume.length - 1].month;
     lines.push(`CONVERSATION DATE RANGE: ${firstMonth} to ${lastMonth}`);
+    const lastDate = new Date(lastMonth + '-01');
+    const monthsSinceEnd = Math.max(0, Math.round((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
+    if (monthsSinceEnd > 0) {
+      lines.push(`TIME SINCE LAST MESSAGE: ~${monthsSinceEnd} months ago`);
+    }
     lines.push('IMPORTANT: All inflection_points approximate_date values MUST fall within this date range. Do NOT generate dates outside this range.');
     lines.push('');
   }
@@ -354,6 +364,51 @@ export function buildQuantitativeContext(
     }
   }
 
+  // Professional RT Engine context (turn-based, overnight-filtered)
+  const rta = quantitative.responseTimeAnalysis;
+  if (rta) {
+    lines.push('');
+    lines.push('RESPONSE TIME ENGINE (turn-based, overnight-filtered):');
+    lines.push(`  Adaptive session gap: ${formatDuration(rta.adaptiveSessionGapMs)}`);
+    for (const name of names) {
+      const b = rta.perPerson[name];
+      if (b) {
+        lines.push(`  ${name}: baseline median ${formatDuration(b.median)}, RTI=${rta.rti[name]?.toFixed(1) ?? '?'}, GI=${((rta.ghostingIndex[name] ?? 0) * 100).toFixed(1)}%, IR=${((rta.initiativeRatio[name] ?? 0) * 100).toFixed(1)}%`);
+      }
+    }
+    lines.push(`  Response Asymmetry: ${rta.responseAsymmetry.toFixed(2)} — trend: ${rta.responseAsymmetryTrend}`);
+
+    // Monthly RTI trend
+    const firstPersonWithMonthly = names.find(n => rta.monthlyRti[n]?.length > 0);
+    if (firstPersonWithMonthly) {
+      lines.push('  MONTHLY RTI TREND:');
+      const allMonths = new Set<string>();
+      for (const name of names) {
+        for (const entry of rta.monthlyRti[name] ?? []) {
+          allMonths.add(entry.month);
+        }
+      }
+      const sortedMonths = [...allMonths].sort();
+      for (const month of sortedMonths) {
+        const parts = names.map(name => {
+          const entry = rta.monthlyRti[name]?.find(e => e.month === month);
+          return entry ? `${name}=${entry.rti.toFixed(1)}` : null;
+        }).filter(Boolean);
+        if (parts.length > 0) {
+          lines.push(`    ${month}: ${parts.join(', ')}`);
+        }
+      }
+    }
+
+    // Anomalies
+    if (rta.anomalies.length > 0) {
+      lines.push('  ANOMALIES:');
+      for (const a of rta.anomalies) {
+        lines.push(`    - ${a.type} (${a.person ?? 'global'}): ${a.description}`);
+      }
+    }
+  }
+
   // Initiations
   lines.push('');
   lines.push('CONVERSATION INITIATIONS:');
@@ -366,7 +421,8 @@ export function buildQuantitativeContext(
 
   // Double texting
   lines.push('');
-  lines.push('DOUBLE TEXTING (2+ messages without reply):');
+  lines.push('DOUBLE TEXTING (messages without reply, >2min gap between same-sender messages):');
+  lines.push('NOTE: In Polish texting culture, people use Enter as a comma — sending 5 messages in 30 seconds is ONE thought, not double-texting. These counts already filter out Enter-as-comma patterns (<2min gaps). Only count genuine "came back after silence to send more" events.');
   for (const name of names) {
     const count = quantitative.engagement.doubleTexts[name];
     if (count !== undefined) {

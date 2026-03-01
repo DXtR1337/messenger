@@ -24,6 +24,12 @@ import { handleMegaroast } from '../commands/megaroast';
 import { handlePersonality } from '../commands/personality';
 import { handleCwel } from '../commands/cwel';
 import { handleSearchDeferred } from '../commands/search';
+import { handleTinder } from '../commands/tinder';
+import { handleCourt } from '../commands/court';
+import { handleSubtext } from '../commands/subtext';
+import { handleSimulate } from '../commands/simulate';
+import { handleStandup } from '../commands/standup';
+import { handleDeepRoast } from '../commands/deeproast';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -85,7 +91,7 @@ export async function POST(request: Request): Promise<Response> {
     ]);
 
     // AI commands — always defer
-    const aiCommands = new Set(['roast', 'megaroast', 'personality', 'cwel']);
+    const aiCommands = new Set(['roast', 'megaroast', 'personality', 'cwel', 'tinder', 'court', 'subtext', 'simulate', 'standup', 'deeproast']);
 
     // Search command — deferred but no AI needed
     const searchCommands = new Set(['search']);
@@ -223,6 +229,24 @@ export async function POST(request: Request): Promise<Response> {
                 case 'cwel':
                   await handleCwel(interaction, data);
                   break;
+                case 'tinder':
+                  await handleTinder(interaction, data);
+                  break;
+                case 'court':
+                  await handleCourt(interaction, data);
+                  break;
+                case 'subtext':
+                  await handleSubtext(interaction, data);
+                  break;
+                case 'simulate':
+                  await handleSimulate(interaction, data);
+                  break;
+                case 'standup':
+                  await handleStandup(interaction, data);
+                  break;
+                case 'deeproast':
+                  await handleDeepRoast(interaction, data);
+                  break;
               }
               // Send website link button as follow-up after AI response
               await sendFollowUp(interaction.token, undefined, undefined, linkComponents);
@@ -258,7 +282,7 @@ export async function POST(request: Request): Promise<Response> {
       return deferredResponse();
     }
 
-    return immediateResponse('Nieznana komenda. Użyj /stats, /roast, /megaroast, /cwel, /personality, /versus, /whosimps, /ghostcheck, /besttime, /catchphrase, /emoji, /nightowl, /ranking, /search lub /analyze.');
+    return immediateResponse('Nieznana komenda. Użyj /stats, /roast, /megaroast, /cwel, /personality, /tinder, /court, /subtext, /simulate, /standup, /deeproast, /versus, /whosimps, /ghostcheck, /besttime, /catchphrase, /emoji, /nightowl, /ranking, /search lub /analyze.');
   }
 
   return new Response('Unknown interaction type', { status: 400 });

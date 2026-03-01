@@ -1,3 +1,5 @@
+// Heurystyczna analiza wzorców komunikacyjnych inspirowana badaniami Gottmana. Nie zastępuje metody obserwacyjnej SPAFF.
+
 /**
  * Gottman Four Horsemen — client-side derivation from CPS patterns.
  *
@@ -144,15 +146,17 @@ export function computeGottmanHorsemen(
   const activeCount = horsemen.filter(h => h.present).length;
 
   let riskLevel: string;
-  if (activeCount >= 4) riskLevel = 'Krytyczny — wszystkie 4 jeźdźce aktywne';
-  else if (activeCount >= 3) riskLevel = 'Wysoki — 3 z 4 jeźdźców aktywne';
-  else if (activeCount >= 2) riskLevel = 'Podwyższony — 2 jeźdźce aktywne';
-  else if (activeCount >= 1) riskLevel = 'Umiarkowany — 1 jeździec aktywny';
-  else riskLevel = 'Niski — brak aktywnych jeźdźców';
+  if (activeCount >= 4) riskLevel = 'Podwyższone ryzyko we wszystkich 4 obszarach';
+  else if (activeCount >= 3) riskLevel = 'Podwyższone ryzyko w 3 z 4 obszarów';
+  else if (activeCount >= 2) riskLevel = 'Umiarkowane ryzyko — 2 obszary podwyższone';
+  else if (activeCount >= 1) riskLevel = 'Niskie ryzyko — 1 obszar podwyższony';
+  else riskLevel = 'Niskie ryzyko — brak podwyższonych obszarów';
 
   return { horsemen, activeCount, riskLevel };
 }
 
 export const GOTTMAN_DISCLAIMER =
-  'Ta analiza mapuje wzorce komunikacyjne na koncepty Gottmana w sposób heurystyczny, ' +
-  'nie metodą obserwacyjną (SPAFF). Wyniki mają charakter orientacyjny, nie diagnostyczny.';
+  'Ta analiza mapuje wzorce komunikacyjne na koncepty inspirowane badaniami Gottmana w sposób heurystyczny, ' +
+  'nie metodą obserwacyjną (SPAFF). Oryginalny SPAFF wymaga analizy video. ' +
+  'Badania Kim, Capaldi & Crosby (2007) nie potwierdziły replikowalności głównych ustaleń Gottmana. ' +
+  'Wyniki mają charakter orientacyjny, nie diagnostyczny.';

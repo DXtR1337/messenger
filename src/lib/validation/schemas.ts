@@ -18,7 +18,7 @@ const participantsSchema = z.array(z.string().min(1)).min(1, 'participants must 
 export const analyzeRequestSchema = z.object({
   samples: samplesSchema,
   participants: participantsSchema,
-  relationshipContext: z.optional(z.enum(['romantic', 'friendship', 'colleague', 'professional', 'family', 'other'])),
+  relationshipContext: z.optional(z.enum(['romantic', 'friendship', 'colleague', 'professional', 'family', 'other', 'eks'])),
   mode: z.optional(z.enum(['standard', 'roast'])),
   quantitativeContext: z.optional(z.string()),
 });
@@ -128,6 +128,30 @@ export const courtRequestSchema = z.object({
   })),
 });
 export type CourtRequestParsed = z.infer<typeof courtRequestSchema>;
+
+export const eksRequestSchema = z.object({
+  samples: samplesSchema,
+  participants: participantsSchema,
+  quantitativeContext: z.string(),
+  phase: z.optional(z.enum(['recon', 'autopsy', 'psychogram'])).default('autopsy'),
+  // Pass 4 input: completed EksResult from Pass 2+3
+  eksResult: z.optional(z.object({}).passthrough()),
+  cpsContext: z.optional(z.object({}).passthrough()),
+  recon: z.optional(z.unknown()),
+  targetedSamples: z.optional(z.object({}).passthrough()),
+  finalMessages: z.optional(z.array(z.object({
+    sender: z.string(),
+    content: z.string(),
+    timestamp: z.number(),
+    index: z.number(),
+  }))),
+  existingAnalysis: z.optional(z.object({
+    pass1: z.optional(z.unknown()),
+    pass2: z.optional(z.unknown()),
+    pass4: z.optional(z.unknown()),
+  })),
+});
+export type EksRequestParsed = z.infer<typeof eksRequestSchema>;
 
 export const discordFetchRequestSchema = z.object({
   channelId: z.string().regex(/^\d{17,20}$/, 'Invalid channel ID (must be Discord snowflake)'),

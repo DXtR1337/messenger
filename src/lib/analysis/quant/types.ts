@@ -48,6 +48,8 @@ export interface PersonAccumulator {
   repliesReceived: number;
   /** Messages edited after sending (Discord) */
   editedMessages: number;
+  /** All lowercase tokens for MTLD computation (McCarthy & Jarvis 2010) */
+  tokensList: string[];
 }
 
 /** Create a fresh PersonAccumulator with default values. */
@@ -79,5 +81,6 @@ export function createPersonAccumulator(): PersonAccumulator {
     repliesSent: 0,
     repliesReceived: 0,
     editedMessages: 0,
+    tokensList: [],
   };
 }
