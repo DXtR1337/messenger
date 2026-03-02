@@ -1268,16 +1268,32 @@ function tokenize(text: string): string[] {
 // Core Scoring
 // ============================================================
 
-// Negation particles — 2-token lookahead flips positive → negative
-const NEGATION_PARTICLES = new Set([
-  // Polish
-  'nie', 'bez', 'ani',
-  // English (tokenizer normalizes "don't"→"dont", "can't"→"cant", etc.)
+// Negation particles — split by language so we apply only the right set per message
+const NEGATION_PL = new Set(['nie', 'bez', 'ani']);
+const NEGATION_EN = new Set([
+  // tokenizer normalizes "don't"→"dont", "can't"→"cant", etc.
   'not', 'dont', 'cant', 'wont', 'isnt', 'arent', 'wasnt',
   'werent', 'hasnt', 'havent', 'doesnt', 'didnt', 'couldnt',
-  'wouldnt', 'shouldnt', 'never', 'no',
+  'wouldnt', 'shouldnt', 'never',
+  // 'no' excluded — in Polish "no" is a confirmation filler ("no tak", "no dobra", "no elo")
 ]);
 const NEGATION_WINDOW = 3; // 3-token lookahead (Cruz et al. 2015: optimal 3-4 tokens for short text)
+
+// English sentence markers — words that reliably signal the message is in English.
+// Chosen to be absent/rare in Polish chat (even without diacritics).
+const EN_SENTENCE_RE = /\b(the|this|that|with|from|they|them|their|you're|i'm|i'll|i've|we're|it's|that's|what's|there's|here's|she's|he's)\b/i;
+
+// Pre-built combined set (cached, avoids allocation per message)
+const NEGATION_BOTH = new Set([...NEGATION_PL, ...NEGATION_EN]);
+
+/**
+ * Pick the right negation set for a message.
+ * Default: Polish-only (app is PL-first, most chats are Polish — even without diacritics).
+ * English negation particles added only when clear English markers detected.
+ */
+function getNegationSet(text: string): Set<string> {
+  return EN_SENTENCE_RE.test(text) ? NEGATION_BOTH : NEGATION_PL;
+}
 
 /**
  * Resolve the sentiment polarity of a single token.
@@ -1291,12 +1307,36 @@ const NEGATION_WINDOW = 3; // 3-token lookahead (Cruz et al. 2015: optimal 3-4 t
  *
  * Returns 'positive', 'negative', or undefined (no match).
  */
+/**
+ * Collapse repeated letters — common in chat emphasis: "suuuper"→"super",
+ * "kuuurwa"→"kurwa", "niiice"→"nice", "kochaaaam"→"kocham".
+ * Tries collapsing to 2 then 1 repeated char.
+ */
+function dedupeLetters(token: string): string {
+  return token.replace(/(.)\1{2,}/g, '$1$1');  // 3+ same char → 2
+}
+function dedupeLettersSingle(token: string): string {
+  return token.replace(/(.)\1+/g, '$1');         // 2+ same char → 1
+}
+
 function resolvePolarity(token: string): 'positive' | 'negative' | undefined {
   // 1. Exact match (fast path)
   if (POSITIVE_DICT.has(token)) return 'positive';
   if (NEGATIVE_DICT.has(token)) return 'negative';
 
-  // 2. Inflection fallback — generates candidate base forms from the inflected token
+  // 2. Chat emphasis dedup: "suuuper"→"super", "kochaaaam"→"kocham"
+  const deduped2 = dedupeLetters(token);
+  if (deduped2 !== token) {
+    if (POSITIVE_DICT.has(deduped2)) return 'positive';
+    if (NEGATIVE_DICT.has(deduped2)) return 'negative';
+  }
+  const deduped1 = dedupeLettersSingle(token);
+  if (deduped1 !== token && deduped1 !== deduped2) {
+    if (POSITIVE_DICT.has(deduped1)) return 'positive';
+    if (NEGATIVE_DICT.has(deduped1)) return 'negative';
+  }
+
+  // 3. Inflection fallback — generates candidate base forms from the inflected token
   return lookupInflectedPolish(token, POSITIVE_DICT, NEGATIVE_DICT);
 }
 
@@ -1322,6 +1362,7 @@ function resolvePolarity(token: string): 'positive' | 'negative' | undefined {
  */
 export function computeSentimentScore(text: string): SentimentScore {
   const tokens = tokenize(text);
+  const negationSet = getNegationSet(text);
   let positive = 0;
   let negative = 0;
 
@@ -1331,7 +1372,7 @@ export function computeSentimentScore(text: string): SentimentScore {
   const consumedNegations = new Set<number>();
 
   for (let i = 0; i < tokens.length; i++) {
-    if (!NEGATION_PARTICLES.has(tokens[i])) continue;
+    if (!negationSet.has(tokens[i])) continue;
 
     // Look ahead up to NEGATION_WINDOW tokens for a sentiment word to flip
     for (let j = 1; j <= NEGATION_WINDOW && i + j < tokens.length; j++) {
