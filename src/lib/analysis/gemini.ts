@@ -1174,7 +1174,32 @@ export async function generateAnalysisImage(
                 ? 'tense, distant, awkward'
                 : 'cold, conflicted, disconnected';
 
-    const prompt = `Create a colorful cartoon/comic strip illustration depicting this conversation between ${participants.join(' and ')}. The image should show 3-4 panels arranged like a comic book page, each panel showing a scene from the dialogue below.
+    const isDuo = participants.length === 2;
+
+    const prompt = isDuo
+        ? `Create a cinematic graphic novel page depicting the STORY of this relationship between ${participants[0]} and ${participants[1]}. This should feel like a movie poster meets comic book — emotional, dramatic, visually stunning.
+
+THEIR CONVERSATION:
+${dialogueLines}
+
+RELATIONSHIP SUMMARY: ${executiveSummary}
+
+STYLE — CINEMATIC RELATIONSHIP PORTRAIT:
+- 4 panels arranged as a visual NARRATIVE — like stills from a movie about their relationship
+- Panel 1: How they talk — the everyday dynamic (one typing fast, the other cool; one leaning in, the other leaning back)
+- Panel 2: A charged moment from the dialogue — the most emotional/funny/tense exchange visualized
+- Panel 3: What they DON'T say — body language, phone screens, unread messages, the space between them
+- Panel 4: The relationship in one image — their dynamic captured in a single cinematic frame
+- Character A (${participants[0]}): blue tones (#3b82f6), their personality expressed through posture and style
+- Character B (${participants[1]}): purple tones (#a855f7), contrasting energy
+- Speech bubbles with actual dialogue snippets (5-8 words, paraphrase if needed)
+- The overall mood should feel: ${mood}
+- DARK cinematic background (#0a0a1a) with dramatic lighting — as if from a film noir or intimate drama
+- Style: premium graphic novel / cinematic illustration — NOT cute, NOT anime. Think Saga, Monstress, or high-end webtoon
+- Emotional storytelling through composition, lighting, and character interaction
+- Aspect ratio: 16:9, landscape, widescreen cinematic framing`
+
+        : `Create a colorful cartoon/comic strip illustration depicting this conversation between ${participants.join(' and ')}. The image should show 3-4 panels arranged like a comic book page, each panel showing a scene from the dialogue below.
 
 CONVERSATION:
 ${dialogueLines}
@@ -1371,7 +1396,36 @@ export async function generateRoastImage(
     const snippetsFormatted = roastSnippets.map(s => `- ${s}`).join('\n');
     const awardsFormatted = superlativeTitles.map(t => `- ${t}`).join('\n');
 
-    const prompt = `Create a FUNNY, SATIRICAL cartoon/caricature comic strip that ROASTS the conversation between ${participants.join(' and ')}.
+    const isDuo = participants.length === 2;
+
+    const prompt = isDuo
+        ? `Create a DEVASTATING satirical comic strip — a VISUAL ROAST of the relationship between ${participants[0]} and ${participants[1]}. This should feel like a brutal editorial cartoon from a tabloid gossip column.
+
+ROAST VERDICT: "${roastVerdict}"
+
+BEST ROAST LINES (visualize these as SCENES):
+${snippetsFormatted}
+
+AWARDS:
+${awardsFormatted}
+
+ACTUAL CONVERSATION (use for atmosphere):
+${dialogueLines}
+
+STYLE — CINEMATIC ROAST COMIC:
+- 4 panels telling a STORY ARC: setup → escalation → climax → punchline
+- Panel 1: An intimate/normal scene that sets up the dynamic
+- Panel 2-3: The roast material visualized — show the behavioral patterns as EXAGGERATED physical comedy (double-texter = surrounded by 50 phones, ghoster = literally fading away mid-sentence, clingy = octopus arms)
+- Panel 4: The devastating punchline — the award/verdict visualized as a ceremony, courtroom, or dramatic reveal
+- Character A (${participants[0]}): blue accent (#3b82f6), expressive, dynamic
+- Character B (${participants[1]}): purple accent (#a855f7), contrasting energy
+- Speech bubbles with SHORT devastating quotes from the roasts (5-8 words max, Polish text OK)
+- DARK moody background (#0a0a1a) with dramatic lighting — spotlight on the cringe moments
+- Style: premium editorial illustration meets graphic novel — NOT cute, NOT anime. Think satirical newspaper cartoon with modern polish
+- Show the POWER DYNAMIC between them through body language and positioning
+- Aspect ratio: 16:9, landscape, cinematic framing`
+
+        : `Create a FUNNY, SATIRICAL cartoon/caricature comic strip that ROASTS the conversation between ${participants.join(' and ')}.
 
 ROAST CONTEXT:
 - Verdict: "${roastVerdict}"

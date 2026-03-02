@@ -61,6 +61,8 @@ const MegaRoastButton = dynamic(() => import('@/components/analysis/MegaRoastBut
 const MegaRoastSection = dynamic(() => import('@/components/analysis/MegaRoastSection'), { ssr: false });
 const PrzegrywTygodniaButton = dynamic(() => import('@/components/analysis/PrzegrywTygodniaButton'), { ssr: false });
 const PrzegrywTygodniaSection = dynamic(() => import('@/components/analysis/PrzegrywTygodniaSection'), { ssr: false });
+const RoastImageCard = dynamic(() => import('@/components/analysis/RoastImageCard'), { ssr: false });
+const AnalysisImageCard = dynamic(() => import('@/components/analysis/AnalysisImageCard'), { ssr: false });
 
 // ── SVG Components ──────────────────────────────────────────
 
@@ -230,6 +232,7 @@ export default function RoastModePage() {
     onEnhancedRoastComplete,
     onMegaRoastComplete,
     onPrzegrywComplete,
+    onImageSaved,
   } = useAnalysis();
 
   const [megaRoastTarget, setMegaRoastTarget] = useState('');
@@ -581,6 +584,17 @@ export default function RoastModePage() {
                   Share Card
                 </Link>
               </div>
+
+              {/* Roast Comic */}
+              <div className="mt-8">
+                <RoastImageCard
+                  roast={qualitative.roast!}
+                  participants={participants}
+                  messages={conversation.messages}
+                  savedImage={analysis.generatedImages?.['roast-comic']}
+                  onImageSaved={(dataUrl) => onImageSaved('roast-comic', dataUrl)}
+                />
+              </div>
             </RoastAnimatedSection>
           </div>
         </section>
@@ -731,6 +745,19 @@ export default function RoastModePage() {
                       onComplete={onEnhancedRoastComplete}
                     />
                   </div>
+
+                  {/* Conversation Comic */}
+                  {qualitative?.pass4 && (
+                    <div className="mt-8">
+                      <AnalysisImageCard
+                        pass4={qualitative.pass4}
+                        participants={participants}
+                        messages={conversation.messages}
+                        savedImage={analysis.generatedImages?.['analysis-comic']}
+                        onImageSaved={(dataUrl) => onImageSaved('analysis-comic', dataUrl)}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </RoastAnimatedSection>
