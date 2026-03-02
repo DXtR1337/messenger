@@ -1319,6 +1319,97 @@ function dedupeLettersSingle(token: string): string {
   return token.replace(/(.)\1+/g, '$1');         // 2+ same char → 1
 }
 
+// ============================================================
+// Typo Tolerance — QWERTY keyboard-aware edit distance 1
+// ============================================================
+// ~80% of misspellings are single-char errors (Damerau 1964).
+// We generate edit-distance-1 candidates and check Set.has().
+// Only keyboard-adjacent substitutions are considered to minimize
+// false positives. Min word length: 5 chars.
+
+/** QWERTY keyboard adjacency — each key maps to its physically adjacent keys. */
+const QWERTY_NEIGHBORS: Record<string, string> = {
+  'q': 'wa', 'w': 'qeasd', 'e': 'wrdsf', 'r': 'etfgd',
+  't': 'rygfh', 'y': 'tuhgj', 'u': 'yijhk', 'i': 'uojkl',
+  'o': 'ipkl', 'p': 'ol',
+  'a': 'qwsxz', 's': 'awedxzc', 'd': 'serfcxv', 'f': 'drtgcvb',
+  'g': 'ftyhvbn', 'h': 'gyujbnm', 'j': 'huiknm', 'k': 'jiolm',
+  'l': 'kop',
+  'z': 'asx', 'x': 'zsdc', 'c': 'xdfv', 'v': 'cfgb',
+  'b': 'vghn', 'n': 'bhjm', 'm': 'njk',
+};
+
+const TYPO_MIN_LENGTH = 5;
+
+/**
+ * Generate edit-distance-1 candidates for typo correction.
+ * Returns empty array for tokens shorter than TYPO_MIN_LENGTH.
+ *
+ * Covers: transpositions (~5-8%), deletions (~22%), keyboard-adjacent substitutions (~66%).
+ * Insertions covered implicitly — if user inserted an extra char, the deletion candidate
+ * removes it to recover the dictionary form.
+ */
+function generateTypoCandidates(token: string): string[] {
+  if (token.length < TYPO_MIN_LENGTH) return [];
+
+  const candidates: string[] = [];
+
+  // 1. Transpositions — swap adjacent chars ("kocahm" → "kocham")
+  for (let i = 0; i < token.length - 1; i++) {
+    if (token[i] !== token[i + 1]) {
+      candidates.push(token.slice(0, i) + token[i + 1] + token[i] + token.slice(i + 2));
+    }
+  }
+
+  // 2. Deletions — remove one char ("kochham" → "kocham")
+  for (let i = 0; i < token.length; i++) {
+    candidates.push(token.slice(0, i) + token.slice(i + 1));
+  }
+
+  // 3. Keyboard-adjacent substitutions only ("kochsm" → "kocham", a→s adjacent)
+  for (let i = 0; i < token.length; i++) {
+    const neighbors = QWERTY_NEIGHBORS[token[i]];
+    if (!neighbors) continue;
+    for (const neighbor of neighbors) {
+      candidates.push(token.slice(0, i) + neighbor + token.slice(i + 1));
+    }
+  }
+
+  return candidates;
+}
+
+/** LRU cache for typo lookups to avoid recomputation on repeated tokens. */
+const TYPO_CACHE = new Map<string, 'positive' | 'negative' | 'none'>();
+const TYPO_CACHE_MAX = 2000;
+
+function typoCacheLookup(token: string): 'positive' | 'negative' | undefined {
+  const cached = TYPO_CACHE.get(token);
+  if (cached !== undefined) return cached === 'none' ? undefined : cached;
+
+  const candidates = generateTypoCandidates(token);
+  let posHit = false;
+  let negHit = false;
+  for (const c of candidates) {
+    if (POSITIVE_DICT.has(c)) posHit = true;
+    if (NEGATIVE_DICT.has(c)) negHit = true;
+    if (posHit && negHit) break; // ambiguous — stop early
+  }
+
+  let result: 'positive' | 'negative' | 'none' = 'none';
+  if (posHit && !negHit) result = 'positive';
+  else if (negHit && !posHit) result = 'negative';
+  // If both → ambiguous → 'none' (no match)
+
+  // Evict oldest entries when cache is full
+  if (TYPO_CACHE.size >= TYPO_CACHE_MAX) {
+    const firstKey = TYPO_CACHE.keys().next().value;
+    if (firstKey !== undefined) TYPO_CACHE.delete(firstKey);
+  }
+  TYPO_CACHE.set(token, result);
+
+  return result === 'none' ? undefined : result;
+}
+
 function resolvePolarity(token: string): 'positive' | 'negative' | undefined {
   // 1. Exact match (fast path)
   if (POSITIVE_DICT.has(token)) return 'positive';
@@ -1336,7 +1427,11 @@ function resolvePolarity(token: string): 'positive' | 'negative' | undefined {
     if (NEGATIVE_DICT.has(deduped1)) return 'negative';
   }
 
-  // 3. Inflection fallback — generates candidate base forms from the inflected token
+  // 3. Typo tolerance — keyboard-aware edit distance 1 (Damerau 1964)
+  const typoResult = typoCacheLookup(token);
+  if (typoResult) return typoResult;
+
+  // 4. Inflection fallback — generates candidate base forms from the inflected token
   return lookupInflectedPolish(token, POSITIVE_DICT, NEGATIVE_DICT);
 }
 
