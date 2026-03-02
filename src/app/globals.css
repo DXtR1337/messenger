@@ -162,20 +162,6 @@ html {
   padding-bottom: max(env(safe-area-inset-bottom), 0px);
 }
 
-/* ═══════════════════════════════════════
-   REDUCED MOTION — accessibility for vestibular disorders
-═══════════════════════════════════════ */
-@media (prefers-reduced-motion: reduce) {
-  *:not([data-mode="court"]):not([data-mode="court"] *),
-  *:not([data-mode="court"]):not([data-mode="court"] *)::before,
-  *:not([data-mode="court"]):not([data-mode="court"] *)::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
 /* Create stacking context so position:fixed children (video bg, particles)
    render above the body background, not behind it */
 [data-mode] {
@@ -236,7 +222,7 @@ html {
     @apply border-border outline-ring/50;
   }
   :focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
   html {
@@ -407,11 +393,25 @@ body::after {
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
+/* ── Card showcase marquee ── */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  animation: marquee-scroll 40s linear infinite;
+}
+
+.marquee-track.paused {
+  animation-play-state: paused;
+}
+
 /* Accessibility: respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
-  *:not([data-mode="court"]):not([data-mode="court"] *),
-  *:not([data-mode="court"]):not([data-mode="court"] *)::before,
-  *:not([data-mode="court"]):not([data-mode="court"] *)::after {
+  *:not([data-mode="court"]):not([data-mode="court"] *):not([data-mode="standup"]):not([data-mode="standup"] *),
+  *:not([data-mode="court"]):not([data-mode="court"] *):not([data-mode="standup"]):not([data-mode="standup"] *)::before,
+  *:not([data-mode="court"]):not([data-mode="court"] *):not([data-mode="standup"]):not([data-mode="standup"] *)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -543,7 +543,6 @@ body::after {
   /* Crop Veo watermark + blurry figure at edges */
   transform: scale(1.4) translateZ(0);
   transform-origin: center 40%;
-  will-change: transform;
   backface-visibility: hidden;
 }
 /* Mobile: lower opacity for battery */
@@ -567,7 +566,6 @@ body::after {
   mix-blend-mode: screen;
   transform: scale(1.4) translateZ(0);
   transform-origin: center 40%;
-  will-change: transform;
   backface-visibility: hidden;
 }
 
@@ -818,10 +816,6 @@ body::after {
 @keyframes grid-glow-pulse {
   0% { opacity: 0.8; transform: translate(-50%, -50%) scale(0.5); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(2.5); }
-}
-
-/* Grid layout — clean 2D (removed preserve-3d that caused nested Z-stacking conflicts) */
-.portal-grid-3d {
 }
 
 /* Card art zone — Gemini 1:1 aspect ratio + parallax */
@@ -2703,13 +2697,7 @@ body::after {
 }
 
 
-/* ── Reduced motion: disable standup flash + shake ── */
-@media (prefers-reduced-motion: reduce) {
-  .standup-punchline-flash,
-  .standup-punchline-hit {
-    animation: none !important;
-  }
-}
+/* Stand-up flash + shake — always enabled (theatrical experience) */
 
 /* ── Mobile: floating reactions ── */
 @media (max-width: 768px) {
@@ -3048,10 +3036,8 @@ body::after {
 .emotions-particle-5 { top: 55%; left: 50%; background: radial-gradient(circle, rgba(236,72,153,0.15), transparent 70%); animation-delay: 3s; width: 45px; height: 45px; }
 .emotions-particle-6 { top: 80%; left: 70%; background: radial-gradient(circle, rgba(16,185,129,0.15), transparent 70%); animation-delay: 5s; }
 
-/* ── Accessibility: reduce motion ─────────── */
+/* ── Accessibility: reduce motion (standup exempt — theatrical experience) ── */
 @media (prefers-reduced-motion: reduce) {
-  .standup-particle, .standup-smoke, .standup-smoke-haze,
-  .standup-konfetti, .standup-audience-head, .standup-smoke-burst,
   .roast-spark,
   .dating-particle, .dating-bokeh,
   .simulator-particle,
@@ -3777,5 +3763,15 @@ body::after {
   [data-mode="eks"] .eks-pain-card {
     animation: none;
   }
+}
+
+/* Court/standup: disable motion-sickness-inducing animations even in exempt modes */
+@media (prefers-reduced-motion: reduce) {
+  .court-shake,
+  [data-mode="court"] .court-shake { animation: none !important; }
+  .court-gavel-animate { animation: none !important; transform: rotate(0deg); }
+  .standup-screen-shake { animation: none !important; }
+  .audience-bob,
+  .audience-laugh { animation: none !important; }
 }
 

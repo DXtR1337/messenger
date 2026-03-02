@@ -581,7 +581,7 @@ function StatsIntroBanner({
                 background: 'rgba(192,132,252,0.7)',
                 boxShadow: '0 0 8px rgba(168,85,247,0.6), 0 0 16px rgba(168,85,247,0.3)',
                 opacity: visible ? 1 : 0,
-                animation: visible ? 'ai-stat-circuit-travel 4s ease-in-out infinite 1.5s' : 'none',
+                /* animation removed — decorative */
               }}
             />
           </div>
@@ -690,16 +690,11 @@ export default function AIModePage() {
   return (
     <SectionErrorBoundary section="AIInsights">
     <MotionConfig reducedMotion="never">
-    <div className="ai-perf-kill ai-no-anim">
+    <div className="ai-perf-kill">
 
-    {/* PERF: Contain paint + kill ALL CSS keyframe animations (except loading skeletons) */}
+    {/* PERF: Contain paint on card accents */}
     <style dangerouslySetInnerHTML={{ __html: `
       .ai-perf-kill .analysis-card-accent { contain: layout style paint; }
-      .ai-no-anim *:not(.ai-card-skeleton):not(.animate-spin),
-      .ai-no-anim *:not(.ai-card-skeleton):not(.animate-spin)::before,
-      .ai-no-anim *:not(.ai-card-skeleton):not(.animate-spin)::after {
-        animation: none !important;
-      }
     ` }} />
 
     {/* DEV: Animation debug panel — press ";" to toggle */}
@@ -913,18 +908,18 @@ export default function AIModePage() {
               {/* Inner sharp glow ring */}
               <div
                 className="absolute -inset-px rounded-2xl opacity-60"
-                style={{ background: 'conic-gradient(from 180deg, rgba(168,85,247,0.4), transparent 25%, rgba(124,58,237,0.3) 50%, transparent 75%, rgba(168,85,247,0.4))', animation: 'ai-border-spin 8s linear infinite' }}
+                style={{ background: 'conic-gradient(from 180deg, rgba(168,85,247,0.4), transparent 25%, rgba(124,58,237,0.3) 50%, transparent 75%, rgba(168,85,247,0.4))' }}
                 aria-hidden="true"
               />
               {/* Breathing magnetic field rings */}
               <div
                 className="pointer-events-none absolute -inset-6 rounded-[1.5rem]"
-                style={{ border: '1px solid rgba(168,85,247,0.12)', animation: 'ai-cta-field-breathe 4s ease-in-out infinite' }}
+                style={{ border: '1px solid rgba(168,85,247,0.12)' }}
                 aria-hidden="true"
               />
               <div
                 className="pointer-events-none absolute -inset-10 rounded-[2rem]"
-                style={{ border: '1px solid rgba(168,85,247,0.06)', animation: 'ai-cta-field-breathe 4s ease-in-out 1s infinite' }}
+                style={{ border: '1px solid rgba(168,85,247,0.06)' }}
                 aria-hidden="true"
               />
               <AnalysisCard glass shadow accent className="relative">
@@ -1012,7 +1007,7 @@ export default function AIModePage() {
                   borderRadius: '50%',
                   background: 'rgba(233,213,255,0.8)',
                   boxShadow: '0 0 8px rgba(192,132,252,0.8), 0 0 20px rgba(168,85,247,0.4)',
-                  animation: 'ai-stats-sep-travel 6s ease-in-out infinite',
+                  /* animation removed — decorative */
                 }}
               />
             </div>
