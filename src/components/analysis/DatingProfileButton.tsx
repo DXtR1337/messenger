@@ -40,13 +40,16 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
     setStatus(null);
   }, []);
 
-  const handleRun = useCallback(async (targetPerson: string) => {
+  const isGroup = participants.length > 2;
+
+  const handleRun = useCallback(async (targetPerson?: string) => {
     const { conversation, quantitative, qualitative } = analysis;
+    const label = targetPerson ?? participants.join(' & ');
 
     setRunning(true);
     setError(null);
-    setStatus(`Przeszukuję dane ${targetPerson}...`);
-    startOperation('dating', 'Dating Profile', `Przeszukuję dane ${targetPerson}...`);
+    setStatus(`Przeszukuję dane ${label}...`);
+    startOperation('dating', 'Dating Profile', `Przeszukuję dane ${label}...`);
 
     controllerRef.current?.abort();
     const controller = new AbortController();
@@ -61,15 +64,15 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
       const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
 
       // Deep scan — extract confessions, contradictions, obsessions, pet names
-      if (mountedRef.current) setStatus(`Kopiemy w brudach ${targetPerson}...`);
-      updateOperation('dating', { status: `Kopiemy w brudach ${targetPerson}...`, progress: 15 });
+      if (mountedRef.current) setStatus(`Kopiemy w brudach ${label}...`);
+      updateOperation('dating', { status: `Kopiemy w brudach ${label}...`, progress: 15 });
       const deepScan = runDeepScan(conversation, quantitative);
       logger.log('[DatingProfile] Deep scan material:', (deepScan.formattedForPrompt.length / 1024).toFixed(1), 'KB');
 
       // For targeted mode — build expanded dossier focused on target person
       let deepScanMaterial = deepScan.formattedForPrompt;
-      const targetDossier = deepScan.perPerson[targetPerson];
-      if (targetDossier) {
+      const targetDossier = targetPerson ? deepScan.perPerson[targetPerson] : null;
+      if (targetPerson && targetDossier) {
         const sections: string[] = [`=== PEŁNE DOSSIER: ${targetPerson} ===`];
 
         if (targetDossier.confessions.length > 0) {
@@ -126,15 +129,15 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
         logger.log('[DatingProfile] Targeted dossier:', (deepScanMaterial.length / 1024).toFixed(1), 'KB');
       }
 
-      if (mountedRef.current) setStatus(`Budowanie profilu ${targetPerson}...`);
-      updateOperation('dating', { status: `Budowanie profilu ${targetPerson}...`, progress: 25 });
+      if (mountedRef.current) setStatus(`Budowanie profilu ${label}...`);
+      updateOperation('dating', { status: `Budowanie profilu ${label}...`, progress: 25 });
 
       const body: Record<string, unknown> = {
         samples,
         participants: allParticipants,
         quantitativeContext,
         deepScanMaterial,
-        targetPerson,
+        ...(targetPerson ? { targetPerson } : {}),
       };
 
       if (qualitative?.pass1 || qualitative?.pass3) {
@@ -215,7 +218,7 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
       if (mountedRef.current) setRunning(false);
       controllerRef.current = null;
     }
-  }, [analysis, onComplete, startOperation, updateOperation, stopOperation]);
+  }, [analysis, participants, onComplete, startOperation, updateOperation, stopOperation]);
 
   if (error) {
     return (
@@ -224,7 +227,7 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
           <Button
             variant="outline"
             size="sm"
-            onClick={() => selectedPerson && handleRun(selectedPerson)}
+            onClick={() => isGroup ? (selectedPerson && handleRun(selectedPerson)) : handleRun()}
             className="gap-2 border-red-500/30 text-red-400 hover:bg-red-500/10"
           >
             <Heart className="size-4" />
@@ -247,11 +250,13 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
         Szczery Profil Randkowy
       </h3>
       <p className="mb-4 text-xs text-[#555555]">
-        Wybierz osobę i zobacz jej profil Tinder na podstawie danych. Nie tego, co myśli o sobie.
+        {isGroup
+          ? 'Wybierz osobę i zobacz jej profil Tinder na podstawie danych. Nie tego, co myśli o sobie.'
+          : 'Profile Tinder obu osób na podstawie danych. Nie tego, co myślą o sobie.'}
       </p>
 
-      {/* Person selector */}
-      {!running && (
+      {/* Person selector — only for groups (3+ people) */}
+      {isGroup && !running && (
         <div className="mb-3 flex flex-wrap gap-2">
           {participants.map((name) => (
             <button
@@ -273,11 +278,11 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
       <Button
         variant="outline"
         size="sm"
-        onClick={running ? handleCancel : () => selectedPerson && handleRun(selectedPerson)}
-        disabled={!running && !selectedPerson}
+        onClick={running ? handleCancel : () => isGroup ? (selectedPerson && handleRun(selectedPerson)) : handleRun()}
+        disabled={!running && isGroup && !selectedPerson}
         className={running
           ? 'gap-2 border-[#A855F7]/30 text-[#A855F7] hover:bg-[#A855F7]/10'
-          : selectedPerson
+          : (!isGroup || selectedPerson)
             ? 'gap-2 border-[#A855F7]/30 text-[#A855F7] hover:bg-[#A855F7]/10 hover:text-[#A855F7]'
             : 'gap-2 border-white/10 text-zinc-600 cursor-not-allowed'
         }
@@ -291,7 +296,9 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
         ) : (
           <>
             <Heart className="size-4" />
-            {selectedPerson ? `Generuj profil: ${selectedPerson}` : 'Wybierz osobę'}
+            {isGroup
+              ? (selectedPerson ? `Generuj profil: ${selectedPerson}` : 'Wybierz osobę')
+              : 'Generuj profile'}
           </>
         )}
       </Button>
