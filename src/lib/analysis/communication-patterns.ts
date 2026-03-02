@@ -604,17 +604,6 @@ export function getQuestionById(id: number): CPSQuestion | undefined {
   return CPS_QUESTIONS.find((q) => q.id === id);
 }
 
-export function getQuestionsForPattern(patternKey: string): CPSQuestion[] {
-  const pattern = getPatternByKey(patternKey);
-  if (!pattern) return [];
-  return CPS_QUESTIONS.filter((q) => pattern.questions.includes(q.id));
-}
-
-export function isQuestionAssessable(): boolean {
-  // All CPS questions are designed to be assessable from text messages
-  return true;
-}
-
 /**
  * Derives a frequency level from the per-pattern percentage.
  * Percentage is (yesCount / totalAnswerable) * 100, so the scale
@@ -670,34 +659,6 @@ export function calculatePatternResults(
   }
 
   return results;
-}
-
-export function meetsCPSRequirements(
-  messageCount: number,
-  timespanMs: number,
-  completedPasses: number[],
-): { meets: boolean; reasons: string[] } {
-  const reasons: string[] = [];
-
-  if (messageCount < CPS_REQUIREMENTS.minMessages) {
-    reasons.push(`Za mało wiadomości (${messageCount}/${CPS_REQUIREMENTS.minMessages})`);
-  }
-
-  const timespanMonths = timespanMs / (1000 * 60 * 60 * 24 * 30);
-  if (timespanMonths < CPS_REQUIREMENTS.minTimespanMonths) {
-    reasons.push(
-      `Zbyt krótki okres czasu (${Math.round(timespanMonths)}/${CPS_REQUIREMENTS.minTimespanMonths} miesięcy)`,
-    );
-  }
-
-  const missingPasses = CPS_REQUIREMENTS.requiresCompletedPasses.filter(
-    (p) => !completedPasses.includes(p),
-  );
-  if (missingPasses.length > 0) {
-    reasons.push(`Wymagane są ukończone analizy AI: ${missingPasses.join(', ')}`);
-  }
-
-  return { meets: reasons.length === 0, reasons };
 }
 
 export function getTopPatterns(

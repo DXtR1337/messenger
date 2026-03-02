@@ -196,6 +196,7 @@ interface ModeDefinition {
   requiresAI?: boolean;
   uploadOnly?: boolean;
   hideServerView?: boolean;
+  requiresEks?: boolean;
   videoSrc?: string;
   category: ModeCategory;
   recommended?: boolean;
@@ -331,6 +332,7 @@ const MODE_DEFINITIONS: ModeDefinition[] = [
     accent: '#991b1b',
     requiresAI: true,
     hideServerView: true,
+    requiresEks: true,
     videoSrc: '/videos/modes/eks.mp4',
     category: 'entertainment',
   },
@@ -391,6 +393,7 @@ export default function CommandCenterPage() {
   const params = useParams();
   const id = params.id as string;
   const {
+    analysis,
     quantitative,
     qualitative,
     conversation,
@@ -525,9 +528,14 @@ export default function CommandCenterPage() {
     [getPortalStatus],
   );
 
+  const isEks = analysis.relationshipContext === 'eks';
   const visibleModes = useMemo(
-    () => MODE_DEFINITIONS.filter((m) => !(m.hideServerView && isServerView)),
-    [isServerView],
+    () => MODE_DEFINITIONS.filter((m) => {
+      if (m.hideServerView && isServerView) return false;
+      if (m.requiresEks && !isEks) return false;
+      return true;
+    }),
+    [isServerView, isEks],
   );
 
   const lastCompletedIdx = useMemo(() => {

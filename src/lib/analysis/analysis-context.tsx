@@ -15,7 +15,7 @@ import { computeDamageReport } from './damage-report';
 import { computeCognitiveFunctions } from './cognitive-functions';
 import { computeGottmanHorsemen } from './gottman-horsemen';
 
-import type { StoredAnalysis, QualitativeAnalysis, RoastResult, MegaRoastResult, CwelTygodniaResult, StandUpRoastResult, ArgumentSimulationResult } from './types';
+import type { StoredAnalysis, QualitativeAnalysis, RoastResult, MegaRoastResult, PrzegrywTygodniaResult, StandUpRoastResult, ArgumentSimulationResult } from './types';
 import type { CPSResult } from './communication-patterns';
 import type { SubtextResult } from './subtext';
 import type { CourtResult } from './court-prompts';
@@ -67,7 +67,7 @@ export interface AnalysisContextValue {
   onSubtextComplete: (subtext: SubtextResult) => void;
   onCourtComplete: (court: CourtResult) => void;
   onMegaRoastComplete: (megaRoast: MegaRoastResult) => void;
-  onCwelComplete: (cwel: CwelTygodniaResult) => void;
+  onPrzegrywComplete: (przegryw: PrzegrywTygodniaResult) => void;
   onDatingProfileComplete: (profile: DatingProfileResult) => void;
   onDelusionComplete: (result: DelusionQuizResult) => void;
   onStandupComplete: (standupRoast: StandUpRoastResult) => void;
@@ -101,8 +101,24 @@ interface AnalysisProviderProps {
   children: ReactNode;
 }
 
+// Migrate legacy single MegaRoastResult to per-target Record format
+function migrateMegaRoast(a: StoredAnalysis): StoredAnalysis {
+  const mr = a.qualitative?.megaRoast;
+  if (mr && typeof (mr as unknown as MegaRoastResult).targetName === 'string') {
+    const legacy = mr as unknown as MegaRoastResult;
+    return {
+      ...a,
+      qualitative: {
+        ...a.qualitative!,
+        megaRoast: { [legacy.targetName]: legacy },
+      },
+    };
+  }
+  return a;
+}
+
 export function AnalysisProvider({ initialAnalysis, children }: AnalysisProviderProps) {
-  const [analysis, setAnalysisState] = useState<StoredAnalysis>(initialAnalysis);
+  const [analysis, setAnalysisState] = useState<StoredAnalysis>(() => migrateMegaRoast(initialAnalysis));
   const [participantPhotos, setParticipantPhotos] = useState<Record<string, string>>(
     initialAnalysis.participantPhotos ?? {},
   );
@@ -165,7 +181,10 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
     (updater: (prev: StoredAnalysis) => StoredAnalysis) => {
       setAnalysisState((prev) => {
         const updated = updater(prev);
-        saveAnalysis(updated).catch(console.error);
+        saveAnalysis(updated).catch((err) => {
+          console.error('[saveAnalysis]', err);
+          // The error will be a user-friendly message if it's QuotaExceededError
+        });
         return updated;
       });
     },
@@ -210,11 +229,20 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
     [mergeQualitative],
   );
   const onMegaRoastComplete = useCallback(
-    (megaRoast: MegaRoastResult) => mergeQualitative({ megaRoast }),
-    [mergeQualitative],
+    (result: MegaRoastResult) => {
+      setAnalysis((prev) => {
+        const existing = prev.qualitative?.megaRoast ?? {};
+        const merged: QualitativeAnalysis = {
+          ...(prev.qualitative ?? { status: 'pending' as const }),
+          megaRoast: { ...existing, [result.targetName]: result },
+        };
+        return { ...prev, qualitative: merged };
+      });
+    },
+    [setAnalysis],
   );
-  const onCwelComplete = useCallback(
-    (cwelTygodnia: CwelTygodniaResult) => mergeQualitative({ cwelTygodnia }),
+  const onPrzegrywComplete = useCallback(
+    (przegrywTygodnia: PrzegrywTygodniaResult) => mergeQualitative({ przegrywTygodnia }),
     [mergeQualitative],
   );
   const onDatingProfileComplete = useCallback(
@@ -357,7 +385,7 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
       onSubtextComplete,
       onCourtComplete,
       onMegaRoastComplete,
-      onCwelComplete,
+      onPrzegrywComplete,
       onDatingProfileComplete,
       onDelusionComplete,
       onStandupComplete,
@@ -398,7 +426,7 @@ export function AnalysisProvider({ initialAnalysis, children }: AnalysisProvider
       onSubtextComplete,
       onCourtComplete,
       onMegaRoastComplete,
-      onCwelComplete,
+      onPrzegrywComplete,
       onDatingProfileComplete,
       onDelusionComplete,
       onStandupComplete,

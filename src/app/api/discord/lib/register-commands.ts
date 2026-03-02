@@ -130,8 +130,8 @@ const COMMANDS: CommandDefinition[] = [
     ],
   },
   {
-    name: 'cwel',
-    description: 'Cwel Tygodnia — AI wybiera kto zasłużył na tytuł',
+    name: 'przegryw',
+    description: 'Przegryw Tygodnia — AI wybiera kto zasłużył na tytuł',
     options: [MESSAGES_OPTION],
   },
   {

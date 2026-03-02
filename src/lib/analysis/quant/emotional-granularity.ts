@@ -15,8 +15,8 @@
  * References:
  * - Vishnubhotla, K. et al. (2024). Emotion Granularity from Text: An
  *   Aggregate-Level Indicator of Mental Health. EMNLP 2024, pp. 19168-19185.
- * - Suvak, M. K. et al. (2011). Emotional granularity: Associations with trauma,
- *   PTSD, and PTG. Journal of Traumatic Stress, 24(3), 256-265.
+ * - Suvak, M. K. et al. (2011). Emotional Granularity and Borderline Personality
+ *   Disorder. Journal of Abnormal Psychology, 120(2), 414-426. DOI: 10.1037/a0021808.
  * - Kashdan, T. B. et al. (2015). How are you feeling? Psychological Science, 26(12).
  */
 

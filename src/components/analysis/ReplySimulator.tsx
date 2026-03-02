@@ -192,12 +192,15 @@ export default function ReplySimulator({
       const personMetrics = quantitative.perPerson[targetPerson];
       const personTiming = quantitative.timing.perPerson[targetPerson];
 
+      let quantCtx = samples.quantitativeContext ?? '';
+      if (qualitative?.reconBriefing) quantCtx += '\n\n' + qualitative.reconBriefing;
+
       const body = {
         userMessage: trimmed,
         targetPerson,
         participants,
         samples,
-        quantitativeContext: samples.quantitativeContext,
+        quantitativeContext: quantCtx,
         topWords: personMetrics?.topWords ?? [],
         topPhrases: personMetrics?.topPhrases ?? [],
         avgMessageLengthWords: personMetrics?.averageMessageLength ?? 8,

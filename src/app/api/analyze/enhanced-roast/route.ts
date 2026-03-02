@@ -1,4 +1,4 @@
-import { runEnhancedRoastPass } from '@/lib/analysis/gemini';
+import { runEnhancedRoastPass, runRoastResearch } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import type { Pass1Result, Pass2Result, PersonProfile, Pass4Result, RoastResult } from '@/lib/analysis/types';
 import { rateLimit } from '@/lib/rate-limit';
@@ -105,8 +105,24 @@ export async function POST(request: Request): Promise<Response> {
       try {
         if (signal.aborted) { safeClose(); return; }
 
-        send({ type: 'progress', status: 'Generuję brutalną prawdę...' });
-        logger.log('[EnhancedRoast API] Calling Gemini...');
+        // Phase 1: AI Research — investigator pre-pass
+        send({ type: 'progress', status: 'Prowadzę śledztwo w wiadomościach...' });
+        logger.log('[EnhancedRoast API] Running research pass...');
+        const researchStartMs = Date.now();
+        let researchBrief: string | undefined;
+        try {
+          const researchResult = await runRoastResearch(samples, participants, quantitativeContext);
+          researchBrief = JSON.stringify(researchResult, null, 2);
+          logger.log('[EnhancedRoast API] Research pass done in', ((Date.now() - researchStartMs) / 1000).toFixed(1), 's,', (researchBrief.length / 1024).toFixed(1), 'KB');
+        } catch (researchErr) {
+          logger.log('[EnhancedRoast API] Research pass failed (non-fatal):', researchErr);
+        }
+
+        if (signal.aborted) { safeClose(); return; }
+
+        // Phase 2: Enhanced Roast — storytelling roast with all context
+        send({ type: 'progress', status: 'Piszę niszczycielski roast...' });
+        logger.log('[EnhancedRoast API] Calling Gemini for roast...');
         const startMs = Date.now();
         const result: RoastResult = await runEnhancedRoastPass(
           samples,
@@ -114,6 +130,7 @@ export async function POST(request: Request): Promise<Response> {
           quantitativeContext,
           qualitative,
           deepScanMaterial ?? undefined,
+          researchBrief,
         );
         logger.log('[EnhancedRoast API] Gemini responded in', ((Date.now() - startMs) / 1000).toFixed(1), 's');
 
@@ -123,11 +140,10 @@ export async function POST(request: Request): Promise<Response> {
         logger.log('[EnhancedRoast API] Sent roast_complete');
       } catch (error) {
         if (!signal.aborted && !closed) {
-          const errMsg = error instanceof Error ? error.message : String(error);
           console.error('[EnhancedRoast]', error);
           send({
             type: 'error',
-            error: errMsg,
+            error: error instanceof Error ? error.message : 'Błąd generowania roastu — spróbuj ponownie',
           });
         }
       } finally {

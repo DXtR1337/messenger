@@ -470,6 +470,281 @@ export function buildQuantitativeContext(
     `LONGEST SILENCE: ${silenceDays} days (last message by ${silence.lastSender}, broken by ${silence.nextSender})`,
   );
 
+  // Communication gaps (>7 days) — critical for Tryb Eks breakup detection
+  const gaps = quantitative.communicationGaps;
+  if (gaps && gaps.length > 0) {
+    lines.push('');
+    lines.push('COMMUNICATION GAPS (breaks >7 days):');
+    for (let i = 0; i < gaps.length; i++) {
+      const gap = gaps[i];
+      const startDate = new Date(gap.startTimestamp).toISOString().split('T')[0];
+      const endDate = new Date(gap.endTimestamp).toISOString().split('T')[0];
+      const label = gap.classification === 'extended_separation' ? 'EXTENDED SEPARATION'
+        : gap.classification === 'potential_breakup' ? 'POTENTIAL BREAKUP'
+        : 'COOLING OFF';
+      lines.push(
+        `  [${i + 1}] ${startDate} to ${endDate} (${gap.durationDays} days) — last msg: ${gap.lastSender}, resumed: ${gap.nextSender} — vol before: ${gap.volumeBefore}/mo, vol after: ${gap.volumeAfter}/mo — ${label}`,
+      );
+    }
+    lines.push('IMPORTANT: Each gap above is a POTENTIAL BREAKUP/REUNION event. Identify and label EACH in analysis. Cross-reference with monthly volume drops.');
+  }
+
   return lines.join('\n');
+}
+
+// ============================================================
+// Public: Recon Sampling (client-side)
+// ============================================================
+
+/**
+ * Build a recon sample for the AI scout pass.
+ * Returns 500 messages combining stratified + inflection samples,
+ * plus all eligible messages for later targeted extraction.
+ */
+export function sampleForRecon(
+  conversation: ParsedConversation,
+  quantitative: QuantitativeAnalysis,
+): { reconSample: SimplifiedMessage[]; allEligible: SimplifiedMessage[] } {
+  const allEligible = conversation.messages.filter(isEligible).map(toSimplified);
+
+  if (allEligible.length < 10) {
+    throw new Error('Za mało wiadomości do analizy AI — potrzeba minimum 10 wiadomości z treścią.');
+  }
+
+  // For small conversations, send everything as recon
+  if (allEligible.length <= 500) {
+    return { reconSample: [...allEligible], allEligible };
+  }
+
+  // Stratified base: 300 messages
+  const stratified = stratifiedSample(allEligible, 300);
+
+  // Inflection points: 150 messages
+  const inflection = inflectionSample(allEligible, conversation.messages, quantitative, 150);
+
+  // Head (first 25) + tail (last 25) for start/end coverage
+  const head = allEligible.slice(0, 25);
+  const tail = allEligible.slice(-25);
+
+  // Merge and deduplicate
+  const seenIndices = new Set<number>();
+  const merged: SimplifiedMessage[] = [];
+
+  for (const msg of [...head, ...stratified, ...inflection, ...tail]) {
+    if (!seenIndices.has(msg.index)) {
+      seenIndices.add(msg.index);
+      merged.push(msg);
+    }
+  }
+
+  // Cap at 500, sort chronologically
+  const capped = merged.length > 500 ? merged.slice(0, 500) : merged;
+  capped.sort((a, b) => a.timestamp - b.timestamp);
+
+  return { reconSample: capped, allEligible };
+}
+
+// ============================================================
+// Public: Targeted Extraction (client-side, after Recon)
+// ============================================================
+
+import type { ReconResult, DeepReconResult } from './types';
+
+/**
+ * Extract messages matching recon-identified date ranges, topics, and keywords.
+ * Called client-side after receiving ReconResult from the AI.
+ */
+export function extractTargetedSamples(
+  allEligible: SimplifiedMessage[],
+  reconResult: ReconResult,
+  existingIndices: Set<number>,
+  maxTotal = 600,
+): SimplifiedMessage[] {
+  const targeted: SimplifiedMessage[] = [];
+  const seen = new Set(existingIndices);
+
+  const addMsg = (msg: SimplifiedMessage) => {
+    if (!seen.has(msg.index)) {
+      seen.add(msg.index);
+      targeted.push(msg);
+    }
+  };
+
+  const addWithContext = (msgIdx: number, contextSize: number) => {
+    for (let j = Math.max(0, msgIdx - contextSize); j <= Math.min(allEligible.length - 1, msgIdx + contextSize); j++) {
+      addMsg(allEligible[j]);
+    }
+  };
+
+  // 1. Date range extraction (priority-scaled limits)
+  const RANGE_LIMITS: Record<number, number> = { 1: 80, 2: 50, 3: 30 };
+  for (const range of (reconResult.flaggedDateRanges ?? []).slice(0, 8)) {
+    const limit = RANGE_LIMITS[range.priority] ?? 50;
+    const startTs = new Date(range.start.length <= 7 ? `${range.start}-01` : range.start).getTime();
+    const endDate = new Date(range.end.length <= 7 ? `${range.end}-28` : range.end);
+    if (range.end.length <= 7) endDate.setMonth(endDate.getMonth() + 1);
+    const endTs = endDate.getTime();
+
+    const matching = allEligible.filter(m => m.timestamp >= startTs && m.timestamp <= endTs && !seen.has(m.index));
+    // Even sampling from the range
+    if (matching.length <= limit) {
+      matching.forEach(addMsg);
+    } else {
+      const step = Math.floor(matching.length / limit);
+      for (let i = 0; i < matching.length && targeted.length < maxTotal; i += step) {
+        addMsg(matching[i]);
+      }
+    }
+    if (targeted.length >= maxTotal) break;
+  }
+
+  // 2. Topic/keyword extraction
+  for (const topic of (reconResult.topicsToInvestigate ?? []).slice(0, 10)) {
+    if (targeted.length >= maxTotal) break;
+    const keywords = (topic.searchKeywords ?? []).map(k => k.toLowerCase());
+    if (keywords.length === 0) continue;
+
+    let topicCount = 0;
+    const topicLimit = topic.priority === 1 ? 40 : topic.priority === 2 ? 25 : 15;
+
+    for (let i = 0; i < allEligible.length && topicCount < topicLimit; i++) {
+      const msg = allEligible[i];
+      if (seen.has(msg.index)) continue;
+      const lower = msg.content.toLowerCase();
+      if (keywords.some(kw => lower.includes(kw))) {
+        addWithContext(i, 2);
+        topicCount++;
+      }
+    }
+    if (targeted.length >= maxTotal) break;
+  }
+
+  // 3. Emotional keyword extraction
+  const EMOTIONAL_KEYWORDS = [
+    // Polish
+    'zrywam', 'zerwij', 'zerwać', 'rozstanie', 'koniec', 'odchodzę', 'odejdź',
+    'zostawiam', 'zostaw mnie', 'nie chcę cię', 'nie kocham', 'kocham cię', 'tęsknię',
+    'płaczę', 'załamanie', 'zdrada', 'zdradziłeś', 'zdradziłaś',
+    'przepraszam', 'wybacz', 'żałuję', 'boli mnie', 'cierpię',
+    'depresja', 'terapeuta', 'terapia', 'psycholog',
+    'blokuję', 'zablokuj', 'wypad z mojego życia',
+    // English
+    'breakup', 'break up', "it's over", 'leaving you',
+    'crying', 'breakdown', 'cheating', 'cheated', 'affair',
+    'sorry', 'forgive', 'regret', 'depression', 'therapy',
+    'blocking you', 'i love you', 'miss you', 'come back',
+    'hurting', 'pain', 'suffering', 'broken',
+  ];
+
+  if (targeted.length < maxTotal) {
+    let emotionalCount = 0;
+    for (let i = 0; i < allEligible.length && emotionalCount < 60 && targeted.length < maxTotal; i++) {
+      const msg = allEligible[i];
+      if (seen.has(msg.index)) continue;
+      const lower = msg.content.toLowerCase();
+      if (EMOTIONAL_KEYWORDS.some(kw => lower.includes(kw))) {
+        addWithContext(i, 2);
+        emotionalCount++;
+      }
+    }
+  }
+
+  // 4. Late-night messages (23:00-05:00)
+  if (targeted.length < maxTotal) {
+    let lateCount = 0;
+    for (const msg of allEligible) {
+      if (lateCount >= 40 || targeted.length >= maxTotal) break;
+      if (seen.has(msg.index)) continue;
+      const h = new Date(msg.timestamp).getHours();
+      if (h >= 23 || h < 5) {
+        addMsg(msg);
+        lateCount++;
+      }
+    }
+  }
+
+  // Cap and sort
+  const result = targeted.slice(0, maxTotal);
+  result.sort((a, b) => a.timestamp - b.timestamp);
+  return result;
+}
+
+// ============================================================
+// Public: Deep Targeted Extraction (client-side, after Deep Recon)
+// ============================================================
+
+/**
+ * Second round of extraction based on Deep Recon (Pass 0.5) results.
+ * Uses refined date ranges and new topics discovered by the deep recon AI.
+ * Merges with existing targeted samples, deduplicating by index.
+ */
+export function extractDeepTargetedSamples(
+  allEligible: SimplifiedMessage[],
+  deepRecon: DeepReconResult,
+  existingIndices: Set<number>,
+  maxTotal = 400,
+): SimplifiedMessage[] {
+  const targeted: SimplifiedMessage[] = [];
+  const seen = new Set(existingIndices);
+
+  const addMsg = (msg: SimplifiedMessage) => {
+    if (!seen.has(msg.index)) {
+      seen.add(msg.index);
+      targeted.push(msg);
+    }
+  };
+
+  const addWithContext = (msgIdx: number, contextSize: number) => {
+    for (let j = Math.max(0, msgIdx - contextSize); j <= Math.min(allEligible.length - 1, msgIdx + contextSize); j++) {
+      addMsg(allEligible[j]);
+    }
+  };
+
+  // 1. Refined date range extraction (from deep recon)
+  const RANGE_LIMITS: Record<number, number> = { 1: 60, 2: 40, 3: 20 };
+  for (const range of (deepRecon.refinedDateRanges ?? []).slice(0, 6)) {
+    const limit = RANGE_LIMITS[range.priority] ?? 40;
+    const startTs = new Date(range.start.length <= 7 ? `${range.start}-01` : range.start).getTime();
+    const endDate = new Date(range.end.length <= 7 ? `${range.end}-28` : range.end);
+    if (range.end.length <= 7) endDate.setMonth(endDate.getMonth() + 1);
+    const endTs = endDate.getTime();
+
+    const matching = allEligible.filter(m => m.timestamp >= startTs && m.timestamp <= endTs && !seen.has(m.index));
+    if (matching.length <= limit) {
+      matching.forEach(addMsg);
+    } else {
+      const step = Math.floor(matching.length / limit);
+      for (let i = 0; i < matching.length && targeted.length < maxTotal; i += step) {
+        addMsg(matching[i]);
+      }
+    }
+    if (targeted.length >= maxTotal) break;
+  }
+
+  // 2. Refined topic/keyword extraction (new topics from deep recon)
+  for (const topic of (deepRecon.refinedTopics ?? []).slice(0, 8)) {
+    if (targeted.length >= maxTotal) break;
+    const keywords = (topic.searchKeywords ?? []).map(k => k.toLowerCase());
+    if (keywords.length === 0) continue;
+
+    let topicCount = 0;
+    const topicLimit = topic.priority === 1 ? 30 : topic.priority === 2 ? 20 : 10;
+
+    for (let i = 0; i < allEligible.length && topicCount < topicLimit; i++) {
+      const msg = allEligible[i];
+      if (seen.has(msg.index)) continue;
+      const lower = msg.content.toLowerCase();
+      if (keywords.some(kw => lower.includes(kw))) {
+        addWithContext(i, 2);
+        topicCount++;
+      }
+    }
+    if (targeted.length >= maxTotal) break;
+  }
+
+  // Cap and sort
+  const result = targeted.slice(0, maxTotal);
+  result.sort((a, b) => a.timestamp - b.timestamp);
+  return result;
 }
 

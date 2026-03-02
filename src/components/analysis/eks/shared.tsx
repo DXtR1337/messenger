@@ -46,12 +46,6 @@ export function Scene({
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, amount: 0.2 });
   const registerScene = useContext(SceneManagerCtx);
-  const [reducedMotion] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      : false,
-  );
-
   // Self-register with scene manager for theme tracking
   useEffect(() => {
     if (id && registerScene && ref.current) {
@@ -66,9 +60,9 @@ export function Scene({
       id={id}
       className={`min-h-[80vh] md:min-h-[60vh] flex flex-col justify-center py-16 md:py-24 scroll-mt-4 ${isInView ? 'in-view' : ''} ${className}`}
       style={{ scrollSnapAlign: 'start', willChange: 'transform, opacity' }}
-      initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+      initial={{ opacity: 0, y: 40 }}
       animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={reducedMotion ? { duration: 0 } : { duration: 0.8, ease: 'easeOut' }}
+      transition={{ duration: 0.8, ease: 'easeOut' }}
     >
       {children}
     </motion.div>

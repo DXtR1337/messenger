@@ -8,11 +8,12 @@ import CapitalizationCard from './CapitalizationCard';
 
 interface CapitalizationButtonProps {
   conversation: ParsedConversation;
+  reconBriefing?: string;
   onComplete?: (result: import('@/lib/analysis/capitalization-prompts').CapitalizationResult) => void;
 }
 
-export default function CapitalizationButton({ conversation, onComplete }: CapitalizationButtonProps) {
-  const { runAnalysis, isLoading, progress, result, error, reset } = useCapitalizationAnalysis({ conversation, onComplete });
+export default function CapitalizationButton({ conversation, reconBriefing, onComplete }: CapitalizationButtonProps) {
+  const { runAnalysis, isLoading, progress, result, error, reset } = useCapitalizationAnalysis({ conversation, reconBriefing, onComplete });
 
   if (result) {
     return (

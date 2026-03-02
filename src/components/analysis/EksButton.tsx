@@ -560,6 +560,7 @@ export default function EksButton({ onComplete, onQuizComplete }: EksButtonProps
     quantitative,
     qualitative,
     ops: { startOperation, updateOperation, stopOperation },
+    onComplete,
   });
 
   const participants = conversation.participants.map(p => p.name);
@@ -571,15 +572,6 @@ export default function EksButton({ onComplete, onQuizComplete }: EksButtonProps
   const handleQuizComplete = useCallback((answers: EksQuizAnswer[], questions: EksQuizQuestion[]) => {
     onQuizComplete?.(answers, questions);
   }, [onQuizComplete]);
-
-  // Notify parent when result arrives (via effect to avoid render-loop)
-  const notifiedRef = useRef(false);
-  useEffect(() => {
-    if (result && !notifiedRef.current) {
-      notifiedRef.current = true;
-      onComplete(result);
-    }
-  }, [result, onComplete]);
 
   return (
     <div className="flex flex-col items-center gap-4">

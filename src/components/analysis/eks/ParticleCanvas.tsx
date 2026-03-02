@@ -195,7 +195,6 @@ export default function ParticleCanvas({
   const rafRef = useRef<number>(0);
   const particlesRef = useRef<Particle[]>([]);
   const timeRef = useRef(0);
-  const reducedMotionRef = useRef(false);
   const isMobileRef = useRef(false);
   const sizeRef = useRef({ w: 0, h: 0 });
 
@@ -253,17 +252,6 @@ export default function ParticleCanvas({
     isMobileRef.current = window.innerWidth < 768;
     if (isMobileRef.current) return;
 
-    // Check reduced motion preference
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-    reducedMotionRef.current = mql.matches;
-
-    const onMotionChange = (e: MediaQueryListEvent) => {
-      reducedMotionRef.current = e.matches;
-      // Re-init particles when preference changes
-      initParticles();
-    };
-    mql.addEventListener('change', onMotionChange);
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -284,13 +272,10 @@ export default function ParticleCanvas({
     const logicalH = h;
 
     function initParticles() {
-      const reduced = reducedMotionRef.current;
       const curConfig = configRef.current;
       const curPalette = paletteRef.current;
       const clampedIntensity = Math.max(0, Math.min(1, intensityRef.current));
-      const count = reduced
-        ? Math.max(5, Math.round(10 * clampedIntensity))
-        : Math.max(10, Math.round(curConfig.count * clampedIntensity));
+      const count = Math.max(10, Math.round(curConfig.count * clampedIntensity));
 
       particlesRef.current = Array.from({ length: count }, () =>
         createParticle(curConfig, curPalette, logicalW, logicalH, true),
@@ -345,8 +330,7 @@ export default function ParticleCanvas({
       const curVariant = variantRef.current;
       const curConfig = configRef.current;
       const curPalette = paletteRef.current;
-      const reduced = reducedMotionRef.current;
-      const speedMultiplier = reduced ? 0.3 : 1;
+      const speedMultiplier = 1;
       const noiseScale = 0.003;
       const timeScale = 0.0008;
 
@@ -418,7 +402,6 @@ export default function ParticleCanvas({
     return () => {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', handleResize);
-      mql.removeEventListener('change', onMotionChange);
       particlesRef.current = [];
     };
   }, [handleResize]);

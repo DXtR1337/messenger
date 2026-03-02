@@ -49,9 +49,10 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Missing required fields: messages, participants.' }, { status: 400 });
   }
 
-  const { messages, participants } = body as {
+  const { messages, participants, reconBriefing } = body as {
     messages: Array<{ sender: string; content: string; index: number }>;
     participants: string[];
+    reconBriefing?: string;
   };
 
   if (!Array.isArray(messages) || !Array.isArray(participants) || participants.length < 2) {
@@ -107,7 +108,8 @@ export async function POST(request: Request): Promise<Response> {
 
         send({ type: 'progress', status: 'Identyfikuję przyczyny emocji...' });
 
-        const prompt = buildEmotionCausesPrompt(sample, participants);
+        let prompt = buildEmotionCausesPrompt(sample, participants);
+        if (reconBriefing) prompt = reconBriefing + '\n\n' + prompt;
         const raw = await callGeminiWithRetry(EMOTION_CAUSES_SYSTEM, prompt, 3, 4096, 0.3);
 
         if (signal.aborted) { safeClose(); return; }

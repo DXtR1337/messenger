@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
 import type {
   ArgumentSimulationMessage,
   ArgumentSummary,
@@ -11,6 +11,7 @@ import type {
 } from '@/lib/analysis/types';
 import { sampleMessages, buildQuantitativeContext } from '@/lib/analysis/qualitative';
 import { useAnalysis } from '@/lib/analysis/analysis-context';
+import { getBackgroundOp, setBackgroundOp, clearBackgroundOp, subscribeBackgroundOps, getSnapshotFactory } from '@/lib/analysis/background-ops';
 
 // ============================================================
 // Public interface
@@ -119,6 +120,11 @@ export function useArgumentSimulation(
   // Operation tracking from context (persists across page navigation)
   const { startOperation, updateOperation, stopOperation } = useAnalysis();
 
+  // Background state — survives unmount/remount cycles
+  const OP_KEY = 'argument';
+  const bgOp = useSyncExternalStore(subscribeBackgroundOps, getSnapshotFactory(OP_KEY), () => undefined);
+  const isRunningInBackground = !!bgOp && !bgOp.isComplete && !bgOp.error;
+
   // Keep scriptRef in sync
   useEffect(() => {
     scriptRef.current = script;
@@ -224,18 +230,26 @@ export function useArgumentSimulation(
   // ============================================================
 
   const startEnrichment = useCallback(async () => {
+    if (isRunningInBackground) return;
     if (enrichmentState === 'loading') return;
+
+    // Abort previous run if any
+    abortRef.current?.abort();
 
     setEnrichmentState('loading');
     setProgressMessage('Przygotowuję fingerprint konwersacji...');
     setError(null);
+    setBackgroundOp(OP_KEY, { progress: 0, phaseName: 'Analiza fingerprint', isComplete: false, error: null });
     startOperation('argument', 'Symulacja Kłótni', 'Analiza fingerprint...');
 
     try {
       const { conversation, quantitative } = analysis;
       const participants = conversation.participants.map((p) => p.name);
       const samples = sampleMessages(conversation, quantitative);
-      const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      let quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      if (analysis.qualitative?.reconBriefing) {
+        quantitativeContext += '\n\n' + analysis.qualitative.reconBriefing;
+      }
 
       type EnrichmentResult = { topics?: ArgumentTopic[]; enrichedFingerprint?: EnrichedFingerprintData };
       let enrichmentResult: EnrichmentResult | null = null;
@@ -263,6 +277,7 @@ export function useArgumentSimulation(
 
       // Enrichment requires user interaction (topic picker) — stop tracking
       stopOperation('argument');
+      clearBackgroundOp(OP_KEY);
 
       if (!mountedRef.current) return;
 
@@ -278,24 +293,30 @@ export function useArgumentSimulation(
       setProgressMessage('');
     } catch (err) {
       stopOperation('argument');
+      clearBackgroundOp(OP_KEY);
       if (abortRef.current?.signal.aborted) return;
       if (!mountedRef.current) return;
       setEnrichmentState('error');
       setError(err instanceof Error ? err.message : String(err));
       setProgressMessage('');
     }
-  }, [analysis, enrichmentState, runSSE, startOperation, updateOperation, stopOperation]);
+  }, [analysis, enrichmentState, isRunningInBackground, runSSE, startOperation, updateOperation, stopOperation]);
 
   // ============================================================
   // Phase 2: Generation
   // ============================================================
 
   const generateArgument = useCallback(async (topic: string) => {
+    if (isRunningInBackground) return;
     if (generationState === 'loading' || !enrichedFingerprint) return;
+
+    // Abort previous run if any
+    abortRef.current?.abort();
 
     setGenerationState('loading');
     setProgressMessage('Generuję symulację kłótni...');
     setError(null);
+    setBackgroundOp(OP_KEY, { progress: 0, phaseName: 'Generowanie kłótni', isComplete: false, error: null });
     startOperation('argument', 'Symulacja Kłótni', 'Generuję kłótnię...');
     // Reset playback when generating a new script
     setPlaybackState('idle');
@@ -308,7 +329,10 @@ export function useArgumentSimulation(
       const { conversation, quantitative } = analysis;
       const participants = conversation.participants.map((p) => p.name);
       const samples = sampleMessages(conversation, quantitative);
-      const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      let quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      if (analysis.qualitative?.reconBriefing) {
+        quantitativeContext += '\n\n' + analysis.qualitative.reconBriefing;
+      }
 
       interface GenerationResult {
         messages: ArgumentSimulationMessage[];
@@ -357,6 +381,8 @@ export function useArgumentSimulation(
         });
       }
 
+      clearBackgroundOp(OP_KEY);
+
       // Only update local state if still mounted
       if (mountedRef.current) {
         setScript(gResult.messages);
@@ -365,6 +391,7 @@ export function useArgumentSimulation(
         setProgressMessage('');
       }
     } catch (err) {
+      clearBackgroundOp(OP_KEY);
       if (abortRef.current?.signal.aborted) return;
       if (mountedRef.current) {
         setGenerationState('error');
@@ -374,7 +401,7 @@ export function useArgumentSimulation(
     } finally {
       stopOperation('argument');
     }
-  }, [analysis, enrichedFingerprint, generationState, onComplete, runSSE, startOperation, updateOperation, stopOperation]);
+  }, [analysis, enrichedFingerprint, generationState, isRunningInBackground, onComplete, runSSE, startOperation, updateOperation, stopOperation]);
 
   // ============================================================
   // Phase 3: Playback engine (RAF-based)
@@ -591,12 +618,12 @@ export function useArgumentSimulation(
 
   return {
     // Enrichment
-    enrichmentState,
+    enrichmentState: isRunningInBackground && enrichmentState === 'idle' ? 'loading' : enrichmentState,
     topics,
     enrichedFingerprint,
 
     // Generation
-    generationState,
+    generationState: isRunningInBackground && generationState === 'idle' ? 'loading' : generationState,
     script,
     summary,
 
@@ -619,9 +646,7 @@ export function useArgumentSimulation(
     reset,
 
     // Progress & errors
-    progressMessage,
+    progressMessage: isRunningInBackground ? (bgOp?.phaseName ?? 'Przetwarzanie...') : progressMessage,
     error,
   };
 }
-
-export default useArgumentSimulation;

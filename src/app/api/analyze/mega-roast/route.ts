@@ -1,6 +1,6 @@
-import { runMegaRoast } from '@/lib/analysis/gemini';
+import { runMegaRoast, runMegaRoastDuo, runRoastResearch } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
-import type { MegaRoastResult } from '@/lib/analysis/types';
+import type { MegaRoastResult, Pass1Result, Pass2Result, PersonProfile, Pass4Result } from '@/lib/analysis/types';
 import { rateLimit } from '@/lib/rate-limit';
 import { megaRoastRequestSchema, formatZodError } from '@/lib/validation/schemas';
 import { SSE_HEARTBEAT_MS } from '@/lib/analysis/constants';
@@ -8,7 +8,7 @@ import { SSE_HEARTBEAT_MS } from '@/lib/analysis/constants';
 const checkLimit = rateLimit(5, 10 * 60 * 1000);
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(request: Request): Promise<Response> {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -43,8 +43,16 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const { targetPerson, participants, quantitativeContext } = parsed.data;
-  // Zod validates samples is a non-null object; cast through unknown for the deeply-typed AnalysisSamples
   const samples = parsed.data.samples as unknown as AnalysisSamples;
+  const isDuo = parsed.data.mode === 'duo';
+
+  // Duo mode requires qualitative data
+  if (isDuo && !parsed.data.qualitative) {
+    return Response.json(
+      { error: 'Duo mode requires qualitative analysis data (pass 1-4).' },
+      { status: 400 },
+    );
+  }
 
   const { signal } = request;
   const encoder = new TextEncoder();
@@ -76,13 +84,51 @@ export async function POST(request: Request): Promise<Response> {
       try {
         if (signal.aborted) { safeClose(); return; }
 
-        send({ type: 'progress', status: `Przygotowuję mega roast na ${targetPerson}...` });
-        const result: MegaRoastResult = await runMegaRoast(
-          samples,
-          targetPerson,
-          participants,
-          quantitativeContext,
-        );
+        // Phase 1: AI Research — investigator pre-pass (both modes)
+        send({ type: 'progress', status: `Prowadzę śledztwo w wiadomościach na ${targetPerson}...` });
+        let researchBrief: string | undefined;
+        try {
+          const researchResult = await runRoastResearch(samples, participants, quantitativeContext);
+          researchBrief = JSON.stringify(researchResult, null, 2);
+        } catch (researchErr) {
+          console.error('[MegaRoast] Research pass failed (non-fatal):', researchErr);
+        }
+
+        if (signal.aborted) { safeClose(); return; }
+
+        // Phase 2: Mega Roast generation
+        let result: MegaRoastResult;
+
+        if (isDuo) {
+          send({ type: 'progress', status: `Uruchamiam kombajn roastowy na ${targetPerson}...` });
+
+          const unwrap = (v: unknown): unknown => (Array.isArray(v) && v.length === 1 ? v[0] : v);
+          const qualitative = {
+            pass1: unwrap(parsed.data.qualitative!.pass1) as Pass1Result,
+            pass2: unwrap(parsed.data.qualitative!.pass2) as Pass2Result,
+            pass3: unwrap(parsed.data.qualitative!.pass3) as Record<string, PersonProfile>,
+            pass4: unwrap(parsed.data.qualitative!.pass4) as Pass4Result,
+          };
+
+          result = await runMegaRoastDuo(
+            samples,
+            targetPerson,
+            participants,
+            quantitativeContext,
+            qualitative,
+            parsed.data.deepScanMaterial ?? undefined,
+            researchBrief,
+          );
+        } else {
+          send({ type: 'progress', status: `Przygotowuję mega roast na ${targetPerson}...` });
+          result = await runMegaRoast(
+            samples,
+            targetPerson,
+            participants,
+            quantitativeContext,
+            researchBrief,
+          );
+        }
 
         if (signal.aborted) { safeClose(); return; }
 

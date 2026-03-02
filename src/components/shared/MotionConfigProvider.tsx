@@ -8,7 +8,7 @@ interface MotionConfigProviderProps {
 
 export default function MotionConfigProvider({ children }: MotionConfigProviderProps) {
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion="never">
       {children}
     </MotionConfig>
   );

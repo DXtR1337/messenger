@@ -888,5 +888,3 @@ export function useSceneAudio({
     masterVolume,
   };
 }
-
-export default useSceneAudio;

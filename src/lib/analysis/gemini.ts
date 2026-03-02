@@ -18,9 +18,14 @@ import type {
     RoastResult,
     StandUpRoastResult,
     MegaRoastResult,
-    CwelTygodniaResult,
+    RoastResearchResult,
+    PrzegrywTygodniaResult,
+    ReconResult,
+    DeepReconResult,
 } from './types';
 import {
+    RECON_SYSTEM,
+    DEEP_RECON_SYSTEM,
     PASS_1_SYSTEM,
     PASS_2_SYSTEM,
     PASS_3A_SYSTEM,
@@ -31,7 +36,10 @@ import {
     ENHANCED_ROAST_SYSTEM,
     STANDUP_ROAST_SYSTEM,
     MEGA_ROAST_SYSTEM,
-    CWEL_TYGODNIA_SYSTEM,
+    MEGA_ROAST_DUO_SYSTEM,
+    ROAST_RESEARCH_SYSTEM,
+    PRZEGRYW_TYGODNIA_SYSTEM,
+    PRZEGRYW_DUO_SYSTEM,
     formatMessagesForAnalysis,
     SUBTEXT_SYSTEM,
     formatWindowsForSubtext,
@@ -320,18 +328,167 @@ function clampConfidenceValues<T>(obj: T, maxConfidence: number): T {
 }
 
 // ============================================================
+// Public: Recon Pass (Pass 0) — Intelligent Sampling Scout
+// ============================================================
+
+/**
+ * Run the Recon pass: AI scouts the conversation sample and identifies
+ * critical date ranges, topics, and emotional peaks for targeted extraction.
+ */
+export async function runReconPass(
+    reconMessages: Array<{ sender: string; content: string; timestamp: number; index: number }>,
+    participants: string[],
+    quantitativeContext: string,
+    relationshipContext?: string,
+): Promise<ReconResult> {
+    const relationshipPrefix = buildRelationshipPrefix(relationshipContext);
+    const input = `PARTICIPANTS: ${participants.join(', ')}
+
+${quantitativeContext}
+
+${relationshipPrefix}
+
+MESSAGE SAMPLE (${reconMessages.length} messages):
+${formatMessagesForAnalysis(reconMessages)}`;
+
+    const raw = await callGeminiWithRetry(RECON_SYSTEM, input, 3, 4096, TEMPERATURES.ANALYTICAL, 30_000);
+    const parsed = parseGeminiJSON<ReconResult>(raw);
+
+    // Validate and sanitize
+    return {
+        flaggedDateRanges: Array.isArray(parsed.flaggedDateRanges)
+            ? parsed.flaggedDateRanges.slice(0, 8).map(r => ({
+                start: String(r.start ?? ''),
+                end: String(r.end ?? ''),
+                reason: String(r.reason ?? ''),
+                priority: ([1, 2, 3].includes(r.priority) ? r.priority : 2) as 1 | 2 | 3,
+            }))
+            : [],
+        topicsToInvestigate: Array.isArray(parsed.topicsToInvestigate)
+            ? parsed.topicsToInvestigate.slice(0, 10).map(t => ({
+                topic: String(t.topic ?? ''),
+                searchKeywords: Array.isArray(t.searchKeywords)
+                    ? t.searchKeywords.filter((k): k is string => typeof k === 'string').slice(0, 8)
+                    : [],
+                reason: String(t.reason ?? ''),
+                priority: ([1, 2, 3].includes(t.priority) ? t.priority : 2) as 1 | 2 | 3,
+            }))
+            : [],
+        emotionalPeaks: Array.isArray(parsed.emotionalPeaks)
+            ? parsed.emotionalPeaks.slice(0, 6).map(p => ({
+                approximateDate: String(p.approximateDate ?? ''),
+                emotion: String(p.emotion ?? ''),
+                description: String(p.description ?? ''),
+            }))
+            : [],
+        observedThemes: Array.isArray(parsed.observedThemes)
+            ? parsed.observedThemes.filter((t): t is string => typeof t === 'string').slice(0, 8)
+            : [],
+        openQuestions: Array.isArray(parsed.openQuestions)
+            ? parsed.openQuestions.filter((q): q is string => typeof q === 'string').slice(0, 5)
+            : [],
+    };
+}
+
+// ============================================================
+// Public: Deep Recon Pass (Pass 0.5) — Refined targeting
+// ============================================================
+
+/**
+ * Run the deep recon pass (Pass 0.5). Receives the original recon briefing
+ * plus targeted messages extracted based on Pass 0, and returns refined
+ * date ranges, new topics, confirmed peaks, and a narrative summary.
+ */
+export async function runDeepReconPass(
+    targetedMessages: Array<{ sender: string; content: string; timestamp: number; index: number }>,
+    participants: string[],
+    quantitativeContext: string,
+    recon: ReconResult,
+    relationshipContext?: string,
+): Promise<DeepReconResult> {
+    const relationshipPrefix = buildRelationshipPrefix(relationshipContext);
+    const reconBriefingForDeep = buildReconBriefingInternal(recon);
+
+    const input = `PARTICIPANTS: ${participants.join(', ')}
+
+${quantitativeContext}
+
+${relationshipPrefix}
+
+=== ORIGINAL RECON FINDINGS (from Pass 0) ===
+${reconBriefingForDeep}
+===
+
+TARGETED MESSAGE SAMPLE (${targetedMessages.length} messages, extracted based on recon findings):
+${formatMessagesForAnalysis(targetedMessages)}`;
+
+    const raw = await callGeminiWithRetry(DEEP_RECON_SYSTEM, input, 3, 4096, TEMPERATURES.ANALYTICAL, 30_000);
+    const parsed = parseGeminiJSON<DeepReconResult>(raw);
+
+    // Validate and sanitize
+    return {
+        refinedDateRanges: Array.isArray(parsed.refinedDateRanges)
+            ? parsed.refinedDateRanges.slice(0, 6).map(r => ({
+                start: String(r.start ?? ''),
+                end: String(r.end ?? ''),
+                reason: String(r.reason ?? ''),
+                priority: ([1, 2, 3].includes(r.priority) ? r.priority : 2) as 1 | 2 | 3,
+            }))
+            : [],
+        refinedTopics: Array.isArray(parsed.refinedTopics)
+            ? parsed.refinedTopics.slice(0, 8).map(t => ({
+                topic: String(t.topic ?? ''),
+                searchKeywords: Array.isArray(t.searchKeywords)
+                    ? t.searchKeywords.filter((k): k is string => typeof k === 'string').slice(0, 8)
+                    : [],
+                reason: String(t.reason ?? ''),
+                priority: ([1, 2, 3].includes(t.priority) ? t.priority : 2) as 1 | 2 | 3,
+            }))
+            : [],
+        confirmedPeaks: Array.isArray(parsed.confirmedPeaks)
+            ? parsed.confirmedPeaks.slice(0, 5).map(p => ({
+                approximateDate: String(p.approximateDate ?? ''),
+                emotion: String(p.emotion ?? ''),
+                description: String(p.description ?? ''),
+            }))
+            : [],
+        confirmedThemes: Array.isArray(parsed.confirmedThemes)
+            ? parsed.confirmedThemes.filter((t): t is string => typeof t === 'string').slice(0, 6)
+            : [],
+        narrativeSummary: typeof parsed.narrativeSummary === 'string'
+            ? parsed.narrativeSummary.slice(0, 1000)
+            : '',
+        newQuestions: Array.isArray(parsed.newQuestions)
+            ? parsed.newQuestions.filter((q): q is string => typeof q === 'string').slice(0, 4)
+            : [],
+    };
+}
+
+// ============================================================
+// Private: Recon briefing (delegates to shared client-safe utility)
+// ============================================================
+
+import { buildReconBriefingText as buildReconBriefing, formatReconInternal as buildReconBriefingInternal } from './recon-briefing';
+
+// ============================================================
 // Public: Run analysis passes (server-side only)
 // ============================================================
 
 /**
  * Run all 4 analysis passes sequentially using the Gemini API.
  * Must be called server-side (API route) since it requires GEMINI_API_KEY.
+ *
+ * When recon data is provided, passes 1, 2, and 4 receive an intelligence
+ * briefing and Pass 2 receives enhanced targeted samples.
  */
 export async function runAnalysisPasses(
     samples: AnalysisSamples,
     participants: string[],
     onProgress: (pass: number, status: string) => void,
     relationshipContext?: string,
+    recon?: ReconResult,
+    deepRecon?: DeepReconResult,
+    targetedMessages?: Array<{ sender: string; content: string; timestamp: number; index: number }>,
 ): Promise<QualitativeAnalysis> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -347,9 +504,14 @@ export async function runAnalysisPasses(
     };
 
     try {
+        // Build recon briefing if available (prepended to Pass 1, 2, 4)
+        const reconBriefing = recon ? buildReconBriefing(recon, deepRecon) : '';
+
         // Pass 1: Overview — tone, style, relationship type
         onProgress(1, 'Analyzing overall tone and relationship type...');
-        const pass1Input = buildRelationshipPrefix(relationshipContext) + formatMessagesForAnalysis(samples.overview);
+        const pass1Input = buildRelationshipPrefix(relationshipContext)
+            + (reconBriefing ? reconBriefing + '\n\n' : '')
+            + formatMessagesForAnalysis(samples.overview);
         const pass1Raw = await callGeminiWithRetry(PASS_1_SYSTEM, pass1Input, 3, 8192, TEMPERATURES.ANALYTICAL);
         const pass1MaxIdx = samples.overview.length - 1;
         const pass1 = validateEvidenceIndices(parseGeminiJSON<Pass1Result>(pass1Raw), pass1MaxIdx);
@@ -357,13 +519,18 @@ export async function runAnalysisPasses(
         result.currentPass = 2;
 
         // Pass 2: Dynamics — power, conflict, intimacy
+        // When targeted messages are available, merge them with the inflection sample
         onProgress(2, 'Analyzing relationship dynamics...');
-        const pass2Input = buildRelationshipPrefix(relationshipContext) + formatMessagesForAnalysis(
-            samples.dynamics,
-            samples.quantitativeContext,
-        );
-        const pass2Raw = await callGeminiWithRetry(PASS_2_SYSTEM, pass2Input, 3, 8192, TEMPERATURES.ANALYTICAL);
-        const pass2MaxIdx = samples.dynamics.length - 1;
+        const dynamicsMessages = targetedMessages && targetedMessages.length > 0
+            ? [...samples.dynamics, ...targetedMessages].sort((a, b) => a.timestamp - b.timestamp)
+            : samples.dynamics;
+        const pass2Input = buildRelationshipPrefix(relationshipContext)
+            + (reconBriefing ? reconBriefing + '\n\n' : '')
+            + formatMessagesForAnalysis(dynamicsMessages, samples.quantitativeContext);
+        // Increase token limit when we have targeted samples (larger input)
+        const pass2Tokens = targetedMessages && targetedMessages.length > 0 ? 12288 : 8192;
+        const pass2Raw = await callGeminiWithRetry(PASS_2_SYSTEM, pass2Input, 3, pass2Tokens, TEMPERATURES.ANALYTICAL);
+        const pass2MaxIdx = dynamicsMessages.length - 1;
         const pass2 = validateEvidenceIndices(parseGeminiJSON<Pass2Result>(pass2Raw), pass2MaxIdx);
         result.pass2 = pass2;
         result.currentPass = 3;
@@ -539,7 +706,9 @@ export async function runAnalysisPasses(
 
         // Pass 4: Synthesis — final report
         onProgress(4, 'Synthesizing final report...');
-        const synthesisInput = buildRelationshipPrefix(relationshipContext) + buildSynthesisInputFromPasses(pass1, pass2, pass3, samples.quantitativeContext);
+        const synthesisInput = buildRelationshipPrefix(relationshipContext)
+            + (reconBriefing ? reconBriefing + '\n\n' : '')
+            + buildSynthesisInputFromPasses(pass1, pass2, pass3, samples.quantitativeContext);
         const pass4Raw = await callGeminiWithRetry(PASS_4_SYSTEM, synthesisInput, 3, 8192, TEMPERATURES.SYNTHESIS);
         let pass4 = parseGeminiJSON<Pass4Result>(pass4Raw);
         // Cap prediction confidence — inherent uncertainty in forecasting
@@ -746,6 +915,36 @@ function scanForRoastableMaterial(messages: Array<{ sender: string; content: str
     return sections.join('\n');
 }
 
+// ============================================================
+// Public: Roast Research — AI investigator pre-pass
+// ============================================================
+
+export async function runRoastResearch(
+    samples: AnalysisSamples,
+    participants: string[],
+    quantitativeContext: string,
+): Promise<RoastResearchResult> {
+    const perPersonSections = participants.map(name => {
+        const msgs = samples.perPerson[name] ?? [];
+        return msgs.length > 0
+            ? `\n=== WIADOMOŚCI: ${name} (${msgs.length} próbek) ===\n${formatMessagesForAnalysis(msgs)}`
+            : '';
+    }).filter(Boolean).join('\n');
+
+    const input = `PARTICIPANTS: ${participants.join(', ')}
+
+QUANTITATIVE CONTEXT:
+${quantitativeContext}
+
+=== OVERVIEW MESSAGES ===
+${formatMessagesForAnalysis(samples.overview)}
+${perPersonSections}`;
+
+    logger.log('[Roast Research] Input size:', (input.length / 1024).toFixed(1), 'KB');
+    const raw = await callGeminiWithRetry(ROAST_RESEARCH_SYSTEM, input, 3, 8192, 0.3, 120_000);
+    return parseGeminiJSON<RoastResearchResult>(raw);
+}
+
 export async function runEnhancedRoastPass(
     samples: AnalysisSamples,
     participants: string[],
@@ -757,6 +956,7 @@ export async function runEnhancedRoastPass(
         pass4: Pass4Result;
     },
     deepScanMaterial?: string,
+    researchBrief?: string,
 ): Promise<RoastResult> {
     // Full psychological context from all 4 passes
     const psychContext = buildSynthesisInputFromPasses(
@@ -772,6 +972,7 @@ export async function runEnhancedRoastPass(
 
     const input = `PARTICIPANTS: ${participants.join(', ')}
 ${deepScanMaterial ? `\n${deepScanMaterial}\n` : ''}
+${researchBrief ? `\n=== AI RESEARCH BRIEF (dossier od śledczego — WYKORZYSTAJ jako fundament roastów) ===\n${researchBrief}\n` : ''}
 === FULL PSYCHOLOGICAL ANALYSIS ===
 ${psychContext}
 
@@ -796,12 +997,13 @@ export async function runMegaRoast(
     targetPerson: string,
     allParticipants: string[],
     quantitativeContext: string,
+    researchBrief?: string,
 ): Promise<MegaRoastResult> {
     const targetMessages = samples.perPerson[targetPerson] ?? [];
 
     const input = `TARGET: ${targetPerson}
 ALL PARTICIPANTS: ${allParticipants.join(', ')}
-
+${researchBrief ? `\n=== AI RESEARCH BRIEF (dossier od śledczego — WYKORZYSTAJ jako fundament roastów) ===\n${researchBrief}\n` : ''}
 QUANTITATIVE DATA:
 ${quantitativeContext}
 
@@ -811,19 +1013,76 @@ ${formatMessagesForAnalysis(targetMessages)}
 === FULL GROUP MESSAGES (context — what others say about/to target) ===
 ${formatMessagesForAnalysis(samples.overview)}`;
 
-    const raw = await callGeminiWithRetry(MEGA_ROAST_SYSTEM, input, 3, 8192, 0.5);
+    logger.log('[MegaRoast] Input size:', (input.length / 1024).toFixed(1), 'KB');
+    const raw = await callGeminiWithRetry(MEGA_ROAST_SYSTEM, input, 3, 8192, 0.5, 120_000);
     return parseGeminiJSON<MegaRoastResult>(raw);
 }
 
 // ============================================================
-// Public: Cwel Tygodnia — AI-first group chat award ceremony
+// Public: Mega Roast Duo — "Kombajn roastowy" for 2-person chats
+// Combines Standard + Enhanced + Court + Stand-Up formats
 // ============================================================
 
-export async function runCwelTygodnia(
+export async function runMegaRoastDuo(
+    samples: AnalysisSamples,
+    targetPerson: string,
+    allParticipants: string[],
+    quantitativeContext: string,
+    qualitative: {
+        pass1: Pass1Result;
+        pass2: Pass2Result;
+        pass3: Record<string, PersonProfile>;
+        pass4: Pass4Result;
+    },
+    deepScanMaterial?: string,
+    researchBrief?: string,
+): Promise<MegaRoastResult> {
+    const psychContext = buildSynthesisInputFromPasses(
+        qualitative.pass1, qualitative.pass2, qualitative.pass3, quantitativeContext,
+    );
+
+    const allMessages = [
+        ...samples.overview,
+        ...Object.values(samples.perPerson).flat(),
+    ];
+    const roastableMaterial = scanForRoastableMaterial(allMessages);
+
+    const targetMessages = samples.perPerson[targetPerson] ?? [];
+
+    const input = `TARGET: ${targetPerson}
+ALL PARTICIPANTS: ${allParticipants.join(', ')}
+${deepScanMaterial ? `\n${deepScanMaterial}\n` : ''}
+${researchBrief ? `\n=== AI RESEARCH BRIEF (dossier od śledczego — WYKORZYSTAJ jako fundament roastów) ===\n${researchBrief}\n` : ''}
+=== FULL PSYCHOLOGICAL ANALYSIS ===
+${psychContext}
+
+=== PASS 4: SYNTHESIS (Health Score, Red/Green Flags, Turning Points, Predictions) ===
+${JSON.stringify(qualitative.pass4, null, 2)}
+${roastableMaterial ? `\n${roastableMaterial}` : ''}
+
+=== QUANTITATIVE DATA ===
+${quantitativeContext}
+
+=== MESSAGES FROM TARGET (${targetPerson}) ===
+${formatMessagesForAnalysis(targetMessages)}
+
+=== FULL CONVERSATION (context — what the other person says about/to target) ===
+${formatMessagesForAnalysis(samples.overview)}`;
+
+    logger.log('[MegaRoastDuo] Input size:', (input.length / 1024).toFixed(1), 'KB');
+    const raw = await callGeminiWithRetry(MEGA_ROAST_DUO_SYSTEM, input, 3, 12288, 0.5, 240_000);
+    return parseGeminiJSON<MegaRoastResult>(raw);
+}
+
+// ============================================================
+// Public: Przegryw Tygodnia — AI-first group chat award ceremony
+// ============================================================
+
+export async function runPrzegrywTygodnia(
     samples: AnalysisSamples,
     participants: string[],
     quantitativeContext: string,
-): Promise<CwelTygodniaResult> {
+): Promise<PrzegrywTygodniaResult> {
     const perPersonSections = participants.map(name => {
         const msgs = samples.perPerson[name] ?? [];
         if (msgs.length === 0) return '';
@@ -839,8 +1098,36 @@ ${perPersonSections}
 === DANE ILOŚCIOWE (kontekst wspierający) ===
 ${quantitativeContext}`;
 
-    const raw = await callGeminiWithRetry(CWEL_TYGODNIA_SYSTEM, input, 3, 8192, 0.5);
-    return parseGeminiJSON<CwelTygodniaResult>(raw);
+    const raw = await callGeminiWithRetry(PRZEGRYW_TYGODNIA_SYSTEM, input, 3, 8192, 0.5);
+    return parseGeminiJSON<PrzegrywTygodniaResult>(raw);
+}
+
+// ============================================================
+// Public: Przegryw Tygodnia Duo — 1v1 duel for 2-person chats
+// ============================================================
+
+export async function runPrzegrywDuo(
+    samples: AnalysisSamples,
+    participants: string[],
+    quantitativeContext: string,
+): Promise<PrzegrywTygodniaResult> {
+    const perPersonSections = participants.map(name => {
+        const msgs = samples.perPerson[name] ?? [];
+        if (msgs.length === 0) return '';
+        return `\n=== WIADOMOŚCI: ${name} (${msgs.length} próbek) ===\n${formatMessagesForAnalysis(msgs)}`;
+    }).filter(Boolean).join('\n');
+
+    const input = `ZAWODNICY POJEDYNKU: ${participants.join(' vs ')}
+
+=== WIADOMOŚCI (czytaj uważnie — z tego oceniasz kto jest większym przegrywem) ===
+${formatMessagesForAnalysis(samples.overview)}
+${perPersonSections}
+
+=== DANE ILOŚCIOWE (kontekst wspierający) ===
+${quantitativeContext}`;
+
+    const raw = await callGeminiWithRetry(PRZEGRYW_DUO_SYSTEM, input, 3, 8192, 0.5);
+    return parseGeminiJSON<PrzegrywTygodniaResult>(raw);
 }
 
 // ============================================================

@@ -57,12 +57,19 @@ export async function saveAnalysis(analysis: StoredAnalysis): Promise<void> {
   const db = await openDB();
 
   // Save the full analysis
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_ANALYSES, 'readwrite');
-    tx.objectStore(STORE_ANALYSES).put(analysis);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_ANALYSES, 'readwrite');
+      tx.objectStore(STORE_ANALYSES).put(analysis);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+      throw new Error('Brak miejsca w przeglądarce. Wyczyść stare analizy w Ustawieniach.');
+    }
+    throw err;
+  }
 
   // Update the lightweight index
   const entry: AnalysisIndexEntry = {
@@ -77,12 +84,19 @@ export async function saveAnalysis(analysis: StoredAnalysis): Promise<void> {
     platform: analysis.conversation.platform,
   };
 
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_INDEX, 'readwrite');
-    tx.objectStore(STORE_INDEX).put(entry);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_INDEX, 'readwrite');
+      tx.objectStore(STORE_INDEX).put(entry);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+      throw new Error('Brak miejsca w przeglądarce. Wyczyść stare analizy w Ustawieniach.');
+    }
+    throw err;
+  }
 }
 
 /**
@@ -156,6 +170,91 @@ export async function deleteAnalysis(id: string): Promise<void> {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+}
+
+// ============================================================
+// Legacy DB migration (chatscope → podtekst)
+// ============================================================
+
+export async function migrateLegacyDB(): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  if (localStorage.getItem('podtekst-legacy-migrated') === 'true') return;
+
+  try {
+    const databases = await indexedDB.databases();
+    const legacyExists = databases.some(db => db.name === LEGACY_DB_NAME);
+    if (!legacyExists) {
+      localStorage.setItem('podtekst-legacy-migrated', 'true');
+      return;
+    }
+
+    const legacyDB = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(LEGACY_DB_NAME, 1);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    const storeNames = Array.from(legacyDB.objectStoreNames);
+    if (storeNames.length === 0) {
+      legacyDB.close();
+      localStorage.setItem('podtekst-legacy-migrated', 'true');
+      return;
+    }
+
+    const newDB = await openDB();
+
+    // Copy analyses
+    if (storeNames.includes('analyses')) {
+      const legacyTx = legacyDB.transaction('analyses', 'readonly');
+      const legacyStore = legacyTx.objectStore('analyses');
+      const allAnalyses = await new Promise<unknown[]>((resolve, reject) => {
+        const req = legacyStore.getAll();
+        req.onsuccess = () => resolve(req.result as unknown[]);
+        req.onerror = () => reject(req.error);
+      });
+
+      if (allAnalyses.length > 0) {
+        const newTx = newDB.transaction(STORE_ANALYSES, 'readwrite');
+        const newStore = newTx.objectStore(STORE_ANALYSES);
+        for (const analysis of allAnalyses) {
+          newStore.put(analysis);
+        }
+        await new Promise<void>((resolve, reject) => {
+          newTx.oncomplete = () => resolve();
+          newTx.onerror = () => reject(newTx.error);
+        });
+      }
+    }
+
+    // Copy index
+    if (storeNames.includes('index')) {
+      const legacyTx = legacyDB.transaction('index', 'readonly');
+      const legacyStore = legacyTx.objectStore('index');
+      const allIndex = await new Promise<unknown[]>((resolve, reject) => {
+        const req = legacyStore.getAll();
+        req.onsuccess = () => resolve(req.result as unknown[]);
+        req.onerror = () => reject(req.error);
+      });
+
+      if (allIndex.length > 0) {
+        const newTx = newDB.transaction(STORE_INDEX, 'readwrite');
+        const newStore = newTx.objectStore(STORE_INDEX);
+        for (const entry of allIndex) {
+          newStore.put(entry);
+        }
+        await new Promise<void>((resolve, reject) => {
+          newTx.oncomplete = () => resolve();
+          newTx.onerror = () => reject(newTx.error);
+        });
+      }
+    }
+
+    legacyDB.close();
+    localStorage.setItem('podtekst-legacy-migrated', 'true');
+  } catch (err) {
+    console.error('[migrateLegacyDB]', err);
+    // Don't block app startup on migration failure
+  }
 }
 
 // ============================================================

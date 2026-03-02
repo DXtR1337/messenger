@@ -28,7 +28,6 @@ interface UseScrollVideoReturn {
  * Features:
  *   - requestAnimationFrame-throttled scroll handler (~60fps)
  *   - IntersectionObserver gating: only updates when container is visible
- *   - prefers-reduced-motion: freezes at first frame (poster equivalent)
  *   - Graceful degradation: missing video, unknown duration, mobile
  *   - Full cleanup on unmount
  */
@@ -43,7 +42,6 @@ export function useScrollVideo({
   // Mutable refs for rAF loop state (avoids re-renders)
   const rafIdRef = useRef<number>(0);
   const isVisibleRef = useRef(false);
-  const reducedMotionRef = useRef(false);
 
   // Calculate scroll progress within the container
   const computeProgress = useCallback((): number => {
@@ -65,7 +63,7 @@ export function useScrollVideo({
 
   // rAF-based scroll sync
   const updateVideoTime = useCallback(() => {
-    if (!isVisibleRef.current || reducedMotionRef.current) return;
+    if (!isVisibleRef.current) return;
 
     const video = videoRef.current;
     if (!video || !video.duration || Number.isNaN(video.duration)) return;
@@ -98,20 +96,6 @@ export function useScrollVideo({
     const container = containerRef.current;
     if (!video || !container) return;
 
-    // ---- Reduced motion check ----
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    reducedMotionRef.current = motionQuery.matches;
-
-    const handleMotionChange = (e: MediaQueryListEvent) => {
-      reducedMotionRef.current = e.matches;
-      if (e.matches && video.readyState >= 1) {
-        // Freeze at first frame
-        video.currentTime = 0;
-        video.pause();
-      }
-    };
-    motionQuery.addEventListener('change', handleMotionChange);
-
     // ---- Pause video immediately (scroll drives playback) ----
     video.pause();
 
@@ -119,13 +103,8 @@ export function useScrollVideo({
     const onLoadedMetadata = () => {
       setIsReady(true);
       video.pause();
-
-      if (reducedMotionRef.current) {
-        video.currentTime = 0;
-      } else {
-        // Sync to current scroll position immediately
-        updateVideoTime();
-      }
+      // Sync to current scroll position immediately
+      updateVideoTime();
     };
 
     // If metadata already loaded (e.g. from cache)
@@ -179,7 +158,6 @@ export function useScrollVideo({
     return () => {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('visibilitychange', handleVisibility);
-      motionQuery.removeEventListener('change', handleMotionChange);
       video.removeEventListener('loadedmetadata', onLoadedMetadata);
       video.removeEventListener('error', onError);
       observer?.disconnect();

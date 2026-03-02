@@ -152,7 +152,7 @@ export default function EmotionalGranularityCard({
 
       <PsychDisclaimer
         text="Mierzy różnorodność kategorii emocjonalnych w słownictwie (12 kategorii Plutchika rozszerzonych), nie granularność emocjonalną w rozumieniu Barrett & Kashdan (2015), która wymaga pomiaru kowariancji między kategoriami emocji w czasie (metoda ICC). Leksykon słów emocji jest przybliżeniem — wiele emocji wyrażanych jest kontekstowo, bez jawnych słów emocji."
-        citation="Vishnubhotla et al., 2024 (EMNLP); Suvak et al., 2011 (J. Traumatic Stress); Kashdan et al., 2015"
+        citation="Vishnubhotla et al., 2024 (EMNLP); Suvak et al., 2011 (J. Abnormal Psychology); Kashdan et al., 2015"
         showGenericFooter
       />
     </div>

@@ -4,7 +4,6 @@ import ConditionalAnalytics from "@/components/shared/ConditionalAnalytics";
 import CookieConsent from "@/components/shared/CookieConsent";
 import ReferralCapture from "@/components/shared/ReferralCapture";
 import { TierProvider } from "@/lib/tiers/tier-context";
-import MotionConfigProvider from "@/components/shared/MotionConfigProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -120,11 +119,9 @@ export default function RootLayout({
         >
           Przejdź do treści
         </a>
-        <MotionConfigProvider>
-          <TierProvider>
-            <div id="main-content">{children}</div>
-          </TierProvider>
-        </MotionConfigProvider>
+        <TierProvider>
+          <div id="main-content">{children}</div>
+        </TierProvider>
         {process.env.NEXT_PUBLIC_GA_ID && (
           <ConditionalAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}

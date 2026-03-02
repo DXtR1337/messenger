@@ -110,7 +110,7 @@ export default function MoralModePage() {
             <motion.div className="mt-10" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
               <div className="moral-card px-4 py-4 text-center sm:px-8 sm:py-6">
                 <Compass className="mx-auto mb-3 size-8 text-[#f97316]/40" />
-                <MoralFoundationsButton conversation={conversation} onComplete={onMoralFoundationsComplete} />
+                <MoralFoundationsButton conversation={conversation} reconBriefing={qualitative?.reconBriefing} onComplete={onMoralFoundationsComplete} />
               </div>
             </motion.div>
           )}

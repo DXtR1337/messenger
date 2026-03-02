@@ -72,6 +72,7 @@ import {
   computeRepairPatterns,
   computeConflictFingerprint,
   computeResponseTimeAnalysis,
+  detectCommunicationGaps,
   createPersonAccumulator,
 } from './quant';
 import type { PersonAccumulator } from './quant';
@@ -123,6 +124,16 @@ export function computeQuantitativeAnalysis(
     lastSender: '',
     nextSender: '',
   };
+
+  // Significant silences: all gaps >3 days, sorted desc, top 15
+  const THREE_DAYS_MS = 3 * 86_400_000;
+  const significantSilencesRaw: Array<{
+    startTimestamp: number;
+    endTimestamp: number;
+    durationMs: number;
+    lastSender: string;
+    nextSender: string;
+  }> = [];
 
   let totalSessions = 0;
 
@@ -353,6 +364,17 @@ export function computeQuantitativeAnalysis(
       };
     }
 
+    // ── Significant silences (>3 days) ───────────────────────
+    if (prevMsg && gap >= THREE_DAYS_MS) {
+      significantSilencesRaw.push({
+        durationMs: gap,
+        startTimestamp: prevMsg.timestamp,
+        endTimestamp: msg.timestamp,
+        lastSender: prevMsg.sender,
+        nextSender: sender,
+      });
+    }
+
     // ── Response time (burst-aware) ──────────────────────────
     // Track the first unanswered message in a burst. When A sends 5 messages
     // then B replies, RT = time from A's FIRST message to B's reply (actual
@@ -473,6 +495,10 @@ export function computeQuantitativeAnalysis(
   // POST-PROCESSING: derive final metrics from accumulators
   // ============================================================
 
+  // ── Significant silences: sort desc, cap at 15 ──────────
+  significantSilencesRaw.sort((a, b) => b.durationMs - a.durationMs);
+  const significantSilences = significantSilencesRaw.slice(0, 15);
+
   const perPerson = buildPerPersonMetrics(accumulators);
   const timingPerPerson = buildTimingPerPerson(accumulators);
 
@@ -482,6 +508,7 @@ export function computeQuantitativeAnalysis(
     conversationEndings,
     longestSilence,
     lateNightMessages,
+    significantSilences,
   };
 
   const totalMessages = messages.length;
@@ -575,7 +602,7 @@ export function computeQuantitativeAnalysis(
   // -- Pronoun Analysis (Pennebaker, 2011) --
   const pronounAnalysis = computePronounAnalysis(messages, participantNames);
 
-  // -- Chronotype Compatibility (Aledavood 2018; Jarmolowicz 2022) --
+  // -- Chronotype Compatibility (Aledavood 2018; Randler 2017) --
   const chronotypeCompatibility = computeChronotypeCompatibility(messages, participantNames);
 
   // -- Shift-Support Ratio (Derber 1979; Vangelisti 1990) --
@@ -598,6 +625,9 @@ export function computeQuantitativeAnalysis(
 
   // -- Professional Response Time Analysis (Templeton 2022, Holtzman 2021) --
   const responseTimeAnalysis = computeResponseTimeAnalysis(messages, participantNames);
+
+  // -- Communication Gaps (>7 days) for Tryb Eks breakup detection --
+  const communicationGaps = detectCommunicationGaps(messages, patterns.monthlyVolume);
 
   // Build base result for ranking percentiles
   const baseResult: QuantitativeAnalysis = {
@@ -630,6 +660,7 @@ export function computeQuantitativeAnalysis(
     temporalFocus,
     repairPatterns,
     responseTimeAnalysis,
+    communicationGaps,
   };
 
   // -- Ranking Percentiles (needs full result) --

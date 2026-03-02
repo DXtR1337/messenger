@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Subtle inline banner indicating a metric was computed from a small sample.
  * Shows "(mała próbka)" with a dashed outline — signals low confidence without blocking display.

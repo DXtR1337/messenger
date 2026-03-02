@@ -49,9 +49,10 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Missing required fields: messages, participants.' }, { status: 400 });
   }
 
-  const { messages, participants } = body as {
+  const { messages, participants, reconBriefing } = body as {
     messages: Array<{ sender: string; content: string }>;
     participants: string[];
+    reconBriefing?: string;
   };
 
   if (!Array.isArray(messages) || !Array.isArray(participants) || participants.length < 2) {
@@ -106,7 +107,8 @@ export async function POST(request: Request): Promise<Response> {
 
         send({ type: 'progress', status: 'Analizuję fundamenty moralne...' });
 
-        const prompt = buildMoralFoundationsPrompt(sample, participants);
+        let prompt = buildMoralFoundationsPrompt(sample, participants);
+        if (reconBriefing) prompt = reconBriefing + '\n\n' + prompt;
         const raw = await callGeminiWithRetry(MORAL_FOUNDATIONS_SYSTEM, prompt, 3, 4096, 0.3);
 
         if (signal.aborted) { safeClose(); return; }

@@ -59,8 +59,8 @@ const EnhancedRoastButton = dynamic(() => import('@/components/analysis/Enhanced
 const StandardRoastButton = dynamic(() => import('@/components/analysis/StandardRoastButton'), { ssr: false });
 const MegaRoastButton = dynamic(() => import('@/components/analysis/MegaRoastButton'), { ssr: false });
 const MegaRoastSection = dynamic(() => import('@/components/analysis/MegaRoastSection'), { ssr: false });
-const CwelTygodniaButton = dynamic(() => import('@/components/analysis/CwelTygodniaButton'), { ssr: false });
-const CwelTygodniaSection = dynamic(() => import('@/components/analysis/CwelTygodniaSection'), { ssr: false });
+const PrzegrywTygodniaButton = dynamic(() => import('@/components/analysis/PrzegrywTygodniaButton'), { ssr: false });
+const PrzegrywTygodniaSection = dynamic(() => import('@/components/analysis/PrzegrywTygodniaSection'), { ssr: false });
 
 // ── SVG Components ──────────────────────────────────────────
 
@@ -229,7 +229,7 @@ export default function RoastModePage() {
     onRoastComplete,
     onEnhancedRoastComplete,
     onMegaRoastComplete,
-    onCwelComplete,
+    onPrzegrywComplete,
   } = useAnalysis();
 
   const [megaRoastTarget, setMegaRoastTarget] = useState('');
@@ -738,8 +738,8 @@ export default function RoastModePage() {
         </section>
       )}
 
-      {/* ═══ SCENE 5: MEGA ROAST (Server View) ═══ */}
-      {isServerView && (
+      {/* ═══ SCENE 5: MEGA ROAST ═══ */}
+      {(isServerView || hasQualitative) && (
         <section className="roast-scene pb-16">
           <div className="mx-auto w-full max-w-3xl">
             <RoastAnimatedSection>
@@ -749,44 +749,57 @@ export default function RoastModePage() {
                   Mega Roast
                 </h2>
                 <span className="rounded-full bg-[#ff6347]/10 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest text-[#ff6347]">
-                  Cel ataku
+                  {isServerView ? 'Cel ataku' : 'Kombajn'}
                 </span>
               </div>
 
               <div className="roast-metal-card p-6">
+                {!isServerView && (
+                  <p className="mb-4 text-sm text-[#888]">
+                    Kombajn roastowy — łączy statystyki, psychologię, zarzuty i komedię w jeden niszczycielski pakiet.
+                  </p>
+                )}
+
                 <p className="mb-4 font-mono text-xs uppercase tracking-widest text-[#ff4500]/40">
                   Wybierz ofiare
                 </p>
 
                 {/* Target selector — arena style */}
                 <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {sortedParticipants.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setMegaRoastTarget(p)}
-                      className={`rounded-xl border px-4 py-3 font-mono text-xs font-medium transition-all ${
-                        megaRoastTarget === p
-                          ? 'border-[#ff4500]/40 bg-[#ff4500]/15 text-[#ff4500]'
-                          : 'border-white/[0.06] bg-white/[0.03] text-[#888] hover:border-[#ff4500]/20 hover:text-white'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
+                  {sortedParticipants.map((p) => {
+                    const done = !!qualitative?.megaRoast?.[p];
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setMegaRoastTarget(p)}
+                        className={`rounded-xl border px-4 py-3 font-mono text-xs font-medium transition-all ${
+                          megaRoastTarget === p
+                            ? 'border-[#ff4500]/40 bg-[#ff4500]/15 text-[#ff4500]'
+                            : done
+                              ? 'border-green-500/30 bg-green-500/10 text-green-400 hover:border-green-500/40'
+                              : 'border-white/[0.06] bg-white/[0.03] text-[#888] hover:border-[#ff4500]/20 hover:text-white'
+                        }`}
+                      >
+                        {done && <span className="mr-1">✓</span>}{p}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {megaRoastTarget && !qualitative?.megaRoast && (
+                {megaRoastTarget && !qualitative?.megaRoast?.[megaRoastTarget] && (
                   <MegaRoastButton
                     analysis={analysis}
                     targetPerson={megaRoastTarget}
                     onComplete={onMegaRoastComplete}
+                    mode={isServerView ? 'group' : 'duo'}
                   />
                 )}
 
-                {qualitative?.megaRoast && (
+                {megaRoastTarget && qualitative?.megaRoast?.[megaRoastTarget] && (
                   <MegaRoastSection
-                    result={qualitative.megaRoast}
+                    result={qualitative.megaRoast[megaRoastTarget]}
                     discordChannelId={conversation.metadata.discordChannelId}
+                    isDuo={!isServerView}
                   />
                 )}
               </div>
@@ -795,35 +808,35 @@ export default function RoastModePage() {
         </section>
       )}
 
-      {/* ═══ SCENE 6: CWEL TYGODNIA (Server View) ═══ */}
-      {isServerView && (
-        <section className="roast-scene pb-16">
-          <div className="mx-auto w-full max-w-3xl">
-            <RoastAnimatedSection>
-              <div className="mb-6 flex items-center gap-3">
-                <Crown className="size-5 text-[#ffd700]" />
-                <h2 className="roast-section-header text-xl sm:text-2xl">
-                  Cwel Tygodnia
-                </h2>
-              </div>
+      {/* ═══ SCENE 6: PRZEGRYW TYGODNIA ═══ */}
+      <section className="roast-scene pb-16">
+        <div className="mx-auto w-full max-w-3xl">
+          <RoastAnimatedSection>
+            <div className="mb-6 flex items-center gap-3">
+              <Crown className="size-5 text-[#ffd700]" />
+              <h2 className="roast-section-header text-xl sm:text-2xl">
+                {isServerView ? 'Przegryw Tygodnia' : 'Kto Jest Większym Przegrywem?'}
+              </h2>
+            </div>
 
-              <div className="roast-metal-card p-6">
-                {qualitative?.cwelTygodnia ? (
-                  <CwelTygodniaSection
-                    result={qualitative.cwelTygodnia}
-                    discordChannelId={conversation.metadata.discordChannelId}
-                  />
-                ) : (
-                  <CwelTygodniaButton
-                    analysis={analysis}
-                    onComplete={onCwelComplete}
-                  />
-                )}
-              </div>
-            </RoastAnimatedSection>
-          </div>
-        </section>
-      )}
+            <div className="roast-metal-card p-6">
+              {qualitative?.przegrywTygodnia ? (
+                <PrzegrywTygodniaSection
+                  result={qualitative.przegrywTygodnia}
+                  discordChannelId={conversation.metadata.discordChannelId}
+                  isDuo={!isServerView}
+                />
+              ) : (
+                <PrzegrywTygodniaButton
+                  analysis={analysis}
+                  onComplete={onPrzegrywComplete}
+                  mode={isServerView ? 'group' : 'duo'}
+                />
+              )}
+            </div>
+          </RoastAnimatedSection>
+        </div>
+      </section>
 
       {/* ═══ SCENE 7: OUTRO ═══ */}
       {(hasRoast || hasQualitative) && (

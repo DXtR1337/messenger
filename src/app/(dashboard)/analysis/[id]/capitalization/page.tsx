@@ -141,7 +141,7 @@ export default function CapitalizationModePage() {
             <motion.div className="mt-10" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
               <div className="capitalization-card px-4 py-4 text-center sm:px-8 sm:py-6">
                 <Heart className="mx-auto mb-3 size-8 text-[#ec4899]/40" />
-                <CapitalizationButton conversation={conversation} onComplete={onCapitalizationComplete} />
+                <CapitalizationButton conversation={conversation} reconBriefing={qualitative?.reconBriefing} onComplete={onCapitalizationComplete} />
               </div>
             </motion.div>
           )}

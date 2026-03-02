@@ -209,3 +209,34 @@ describe('parseWhatsAppText — edge cases', () => {
     expect(result.metadata.durationDays).toBe(30);
   });
 });
+
+// ============================================================
+// parseWhatsAppText — edge cases (additional)
+// ============================================================
+
+describe('parseWhatsAppText — edge cases (additional)', () => {
+  it('throws on empty string input', () => {
+    expect(() => parseWhatsAppText('')).toThrow('No user messages found');
+  });
+
+  it('throws on whitespace-only input', () => {
+    expect(() => parseWhatsAppText('   \n\n  \t  \n   ')).toThrow('No user messages found');
+  });
+
+  it('handles line with no parseable date prefix', () => {
+    // Lines without a date prefix are treated as continuations.
+    // If they appear before any message, they are orphan lines and are skipped.
+    // Only the two date-prefixed user messages should appear.
+    const text = wa([
+      'This line has no date prefix at all',
+      'Another orphan line',
+      '01.02.2024, 14:23 - Ania: Hej',
+      '01.02.2024, 14:24 - Bartek: Siema',
+    ]);
+    const result = parseWhatsAppText(text);
+    const userMsgs = result.messages.filter(m => m.type !== 'system');
+    expect(userMsgs).toHaveLength(2);
+    expect(userMsgs[0].sender).toBe('Ania');
+    expect(userMsgs[1].sender).toBe('Bartek');
+  });
+});

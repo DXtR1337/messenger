@@ -61,7 +61,8 @@ export default function DatingProfileButton({ analysis, onComplete }: DatingProf
     try {
       const samples = sampleMessages(conversation, quantitative);
       const allParticipants = conversation.participants.map((p) => p.name);
-      const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      let quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      if (qualitative?.reconBriefing) quantitativeContext += '\n\n' + qualitative.reconBriefing;
 
       // Deep scan — extract confessions, contradictions, obsessions, pet names
       if (mountedRef.current) setStatus(`Kopiemy w brudach ${label}...`);

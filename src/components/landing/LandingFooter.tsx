@@ -142,6 +142,14 @@ export default function LandingFooter() {
                   FAQ
                 </a>
               </li>
+              <li>
+                <Link
+                  href="/metodologia"
+                  className="text-sm text-[#888888] hover:text-foreground transition-colors"
+                >
+                  Jak to działa?
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

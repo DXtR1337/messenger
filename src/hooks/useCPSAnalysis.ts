@@ -1,21 +1,20 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
 import { sampleMessages } from '@/lib/analysis/qualitative';
+import { readSSEStream } from '@/lib/sse';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 import type { CPSResult } from '@/lib/analysis/communication-patterns';
-
-interface OperationCallbacks {
-  startOperation: (id: string, label: string, status?: string) => void;
-  updateOperation: (id: string, patch: { progress?: number; status?: string }) => void;
-  stopOperation: (id: string) => void;
-}
+import type { OperationCallbacks, ProgressPhase } from '@/hooks/sse-types';
+import { getBackgroundOp, setBackgroundOp, clearBackgroundOp, subscribeBackgroundOps, getSnapshotFactory } from '@/lib/analysis/background-ops';
 
 interface UseCPSAnalysisOptions {
   conversation: ParsedConversation;
   quantitative: QuantitativeAnalysis;
   participantName: string;
+  reconBriefing?: string;
   ops?: OperationCallbacks;
+  onComplete?: (result: CPSResult) => void;
 }
 
 interface UseCPSAnalysisReturn {
@@ -28,11 +27,6 @@ interface UseCPSAnalysisReturn {
 }
 
 type CPSState = 'idle' | 'running' | 'complete' | 'error';
-
-interface ProgressPhase {
-  start: number;
-  ceiling: number;
-}
 
 const PHASE_MAP: Record<string, ProgressPhase> = {
   'Przygotowanie analizy wzorców...': { start: 3, ceiling: 12 },
@@ -59,7 +53,9 @@ export function useCPSAnalysis({
   conversation,
   quantitative,
   participantName,
+  reconBriefing,
   ops,
+  onComplete,
 }: UseCPSAnalysisOptions): UseCPSAnalysisReturn {
   const [state, setState] = useState<CPSState>('idle');
   const [progress, setProgress] = useState(0);
@@ -68,6 +64,15 @@ export function useCPSAnalysis({
   const ceilingRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const abortRef = useRef<AbortController | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  // Background state — survives unmount/remount cycles
+  const OP_KEY = 'cps';
+  const bgOp = useSyncExternalStore(subscribeBackgroundOps, getSnapshotFactory(OP_KEY), () => undefined);
+  const isRunningInBackground = !!bgOp && !bgOp.isComplete && !bgOp.error;
+
+  // NOTE: No abort-on-unmount — analysis continues in background when navigating away
 
   // Smooth progress interpolation — creeps toward ceiling between SSE events
   useEffect(() => {
@@ -101,10 +106,16 @@ export function useCPSAnalysis({
   }, []);
 
   const runCPS = useCallback(async () => {
+    if (isRunningInBackground) return;
     if (state === 'running') return;
+
+    // Abort previous run if any
+    abortRef.current?.abort();
+
     setState('running');
     setProgress(0);
     setError(null);
+    setBackgroundOp(OP_KEY, { progress: 0, phaseName: 'CPS Screening', isComplete: false, error: null });
     ops?.startOperation('cps', 'CPS', 'Przygotowuję screening...');
 
     const controller = new AbortController();
@@ -112,6 +123,9 @@ export function useCPSAnalysis({
 
     try {
       const samples = sampleMessages(conversation, quantitative);
+      if (reconBriefing) {
+        samples.quantitativeContext = (samples.quantitativeContext ?? '') + '\n\n' + reconBriefing;
+      }
 
       const response = await fetch('/api/analyze/cps', {
         method: 'POST',
@@ -133,55 +147,34 @@ export function useCPSAnalysis({
       }
 
       const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
       let finalResult: CPSResult | null = null;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
-
-          try {
-            const event = JSON.parse(data) as {
-              type: string;
-              status?: string;
-              result?: CPSResult;
-              error?: string;
-            };
-
-            if (event.type === 'progress' && event.status) {
-              const phase = PHASE_MAP[event.status];
-              if (phase) {
-                setProgress(phase.start);
-                ceilingRef.current = phase.ceiling;
-                ops?.updateOperation('cps', { progress: phase.start, status: event.status });
-              }
-            } else if (event.type === 'complete' && event.result) {
-              finalResult = event.result;
-            } else if (event.type === 'error') {
-              throw new Error(event.error ?? 'Unknown CPS analysis error');
-            }
-          } catch (parseError) {
-            // Skip malformed JSON lines in the SSE stream
-            if (parseError instanceof SyntaxError) continue;
-            throw parseError;
+      await readSSEStream<{
+        type: string;
+        status?: string;
+        result?: CPSResult;
+        error?: string;
+      }>(reader, (event) => {
+        if (event.type === 'progress' && event.status) {
+          const phase = PHASE_MAP[event.status];
+          if (phase) {
+            setProgress(phase.start);
+            ceilingRef.current = phase.ceiling;
+            ops?.updateOperation('cps', { progress: phase.start, status: event.status });
           }
+        } else if (event.type === 'complete' && event.result) {
+          finalResult = event.result;
+        } else if (event.type === 'error') {
+          throw new Error(event.error ?? 'Unknown CPS analysis error');
         }
-      }
+      }, controller.signal);
 
       if (finalResult) {
         setState('complete');
         setProgress(100);
         setResult(finalResult);
+        clearBackgroundOp(OP_KEY);
+        onCompleteRef.current?.(finalResult);
       } else {
         throw new Error('CPS analysis completed without results');
       }
@@ -189,19 +182,18 @@ export function useCPSAnalysis({
       if (controller.signal.aborted) return;
       setState('error');
       setError(err instanceof Error ? err.message : String(err));
+      clearBackgroundOp(OP_KEY);
     } finally {
       ops?.stopOperation('cps');
     }
-  }, [state, conversation, quantitative, participantName, ops]);
+  }, [state, isRunningInBackground, conversation, quantitative, participantName, reconBriefing, ops]);
 
   return {
     runCPS,
-    isLoading: state === 'running',
-    progress,
+    isLoading: isRunningInBackground || state === 'running',
+    progress: isRunningInBackground ? (bgOp?.progress ?? 0) : progress,
     result,
     error,
     reset,
   };
 }
-
-export default useCPSAnalysis;

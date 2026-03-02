@@ -1,22 +1,19 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 import type { QualitativeAnalysis } from '@/lib/analysis/types';
 import type { EksResult, EksRecon, EksPsychogramResult } from '@/lib/analysis/eks-prompts';
 import { buildQuantitativeContext } from '@/lib/analysis/qualitative';
-
-interface OperationCallbacks {
-  startOperation: (id: string, label: string, status?: string) => void;
-  updateOperation: (id: string, patch: { progress?: number; status?: string }) => void;
-  stopOperation: (id: string) => void;
-}
+import type { OperationCallbacks, ProgressPhase } from '@/hooks/sse-types';
+import { getBackgroundOp, setBackgroundOp, clearBackgroundOp, subscribeBackgroundOps, getSnapshotFactory } from '@/lib/analysis/background-ops';
 
 interface UseEksAnalysisOptions {
   conversation: ParsedConversation;
   quantitative: QuantitativeAnalysis;
   qualitative?: QualitativeAnalysis;
   ops?: OperationCallbacks;
+  onComplete?: (result: EksResult) => void;
 }
 
 interface UseEksAnalysisReturn {
@@ -30,11 +27,6 @@ interface UseEksAnalysisReturn {
 }
 
 type EksState = 'idle' | 'recon' | 'targeting' | 'autopsy' | 'psychogram' | 'complete' | 'error';
-
-interface ProgressPhase {
-  start: number;
-  ceiling: number;
-}
 
 // 14 progress entries across 0-98%
 const PHASE_MAP: Record<string, ProgressPhase> = {
@@ -111,7 +103,9 @@ export function useEksAnalysis({
   quantitative,
   qualitative,
   ops,
+  onComplete,
 }: UseEksAnalysisOptions): UseEksAnalysisReturn {
+  const OP_KEY = 'eks';
   const [state, setState] = useState<EksState>('idle');
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<EksResult | undefined>();
@@ -119,6 +113,15 @@ export function useEksAnalysis({
   const ceilingRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const abortRef = useRef<AbortController | null>(null);
+  // Stable ref for onComplete so background fetch can call it after unmount
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  // Background state — survives unmount/remount cycles
+  const bgOp = useSyncExternalStore(subscribeBackgroundOps, getSnapshotFactory(OP_KEY), () => undefined);
+  const isRunningInBackground = !!bgOp && !bgOp.isComplete && !bgOp.error;
+
+  // NOTE: No abort-on-unmount — analysis continues in background when navigating away
 
   // Smooth progress interpolation
   useEffect(() => {
@@ -152,10 +155,16 @@ export function useEksAnalysis({
   }, []);
 
   const runEks = useCallback(async () => {
+    if (isRunningInBackground) return; // already running in background
     if (state !== 'idle' && state !== 'error' && state !== 'complete') return;
+
+    // Abort previous run if any
+    abortRef.current?.abort();
+
     setState('recon');
     setProgress(0);
     setError(null);
+    setBackgroundOp(OP_KEY, { progress: 0, phaseName: 'Rekonesans', isComplete: false, error: null });
     ops?.startOperation('eks', 'Tryb Eks', 'Rekonesans patologiczny...');
 
     const controller = new AbortController();
@@ -173,8 +182,8 @@ export function useEksAnalysis({
       const FINAL_MESSAGES_COUNT = 30;
       const finalMessages = allMessages.slice(-FINAL_MESSAGES_COUNT);
 
-      // ─── Phase A: Initial sampling (500 messages) for Recon ───
-      const RECON_SAMPLES = 500;
+      // ─── Phase A: Initial sampling (700 messages) for Recon ───
+      const RECON_SAMPLES = 700;
       let reconOverview: SimplifiedMessage[];
       if (allMessages.length <= RECON_SAMPLES) {
         reconOverview = allMessages;
@@ -183,13 +192,50 @@ export function useEksAnalysis({
         // Proportional tail — minimum 200, scale with conversation size
         const tailSize = Math.max(200, Math.min(500, Math.floor(allMessages.length * 0.15)));
         const tail = allMessages.slice(-tailSize);
-        // 3 middle windows of 50 each at 25%, 50%, 75%
+        // 3 middle windows: 1% of conversation per window (min 50)
+        const windowSize = Math.max(50, Math.floor(allMessages.length * 0.01));
         const midWindows: SimplifiedMessage[] = [];
         for (const pct of [0.25, 0.5, 0.75]) {
           const start = Math.floor(allMessages.length * pct);
-          midWindows.push(...allMessages.slice(start, start + 50));
+          midWindows.push(...allMessages.slice(start, start + windowSize));
         }
-        reconOverview = [...head, ...midWindows, ...tail];
+
+        // Gap-adjacent sampling: for top 6 communication gaps, grab 15 msg before + 15 after
+        const gapAdjacentMessages: SimplifiedMessage[] = [];
+        const communicationGaps = quantitative.communicationGaps ?? [];
+        const topGaps = communicationGaps.slice(0, 6);
+        const reconSeenIndices = new Set([
+          ...head.map(m => m.index),
+          ...tail.map(m => m.index),
+          ...midWindows.map(m => m.index),
+        ]);
+        for (const gap of topGaps) {
+          // Find the boundary indices in allMessages
+          const gapStartIdx = allMessages.findIndex(m => m.timestamp >= gap.startTimestamp);
+          const gapEndIdx = allMessages.findIndex(m => m.timestamp >= gap.endTimestamp);
+          if (gapStartIdx >= 0) {
+            // 15 messages ending at the gap start (the last messages before silence)
+            const beforeStart = Math.max(0, gapStartIdx - 14);
+            for (let j = beforeStart; j <= gapStartIdx; j++) {
+              if (!reconSeenIndices.has(allMessages[j].index)) {
+                gapAdjacentMessages.push(allMessages[j]);
+                reconSeenIndices.add(allMessages[j].index);
+              }
+            }
+          }
+          if (gapEndIdx >= 0) {
+            // 15 messages starting from the gap end (the first messages after reunion)
+            const afterEnd = Math.min(allMessages.length - 1, gapEndIdx + 14);
+            for (let j = gapEndIdx; j <= afterEnd; j++) {
+              if (!reconSeenIndices.has(allMessages[j].index)) {
+                gapAdjacentMessages.push(allMessages[j]);
+                reconSeenIndices.add(allMessages[j].index);
+              }
+            }
+          }
+        }
+
+        reconOverview = [...head, ...midWindows, ...gapAdjacentMessages, ...tail];
       }
 
       const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
@@ -243,6 +289,7 @@ export function useEksAnalysis({
                 if (phase) {
                   setProgress(phase.start);
                   ceilingRef.current = phase.ceiling;
+                  setBackgroundOp(OP_KEY, { progress: phase.start, phaseName: 'Rekonesans', isComplete: false, error: null });
                   ops?.updateOperation('eks', { progress: phase.start, status: event.status });
                 }
               } else if (event.type === 'recon_complete' && event.recon) {
@@ -268,12 +315,13 @@ export function useEksAnalysis({
       setState('targeting');
       setProgress(28);
       ceilingRef.current = 30;
+      setBackgroundOp(OP_KEY, { progress: 28, phaseName: 'Celowanie', isComplete: false, error: null });
       ops?.updateOperation('eks', { progress: 28, status: 'Celowanie próbek...' });
 
       // Extract targeted messages from flagged date ranges
       const targetedMessages: SimplifiedMessage[] = [];
       const seenIndices = new Set(reconOverview.map(m => m.index));
-      const MAX_RANGES = 5;
+      const MAX_RANGES = 8;
       const MAX_PER_RANGE = 80;
 
       const flaggedRanges = (reconResult.flaggedDateRanges ?? []).slice(0, MAX_RANGES);
@@ -288,7 +336,7 @@ export function useEksAnalysis({
         }
       }
 
-      // Also extract: late-night messages (23:00-05:00), one-word responses, double-texting streaks
+      // Also extract: late-night messages (23:00-05:00)
       const lateNight = allMessages.filter(m => {
         const h = new Date(m.timestamp).getHours();
         return (h >= 23 || h < 5) && !seenIndices.has(m.index);
@@ -300,8 +348,58 @@ export function useEksAnalysis({
         }
       }
 
-      // Cap total targeted to 400
-      const cappedTargeted = targetedMessages.slice(0, 400);
+      // Emotional keyword sampling: find messages about breakups, grief, suicidal thoughts, sadness
+      // These high-signal messages are critical for Tryb Eks to properly assess emotional damage
+      const EMOTIONAL_KEYWORDS_PL = [
+        'zrywam', 'zerwij', 'zerwać', 'zerwaliśmy', 'zerwałam', 'zerwałem', 'rozstanie', 'rozstajemy',
+        'koniec', 'odchodzę', 'odejdź', 'odeszłam', 'odszedł', 'zostawiam', 'zostawiasz', 'zostaw mnie',
+        'nie chcę cię', 'nie kocham', 'kocham cię', 'tęsknię', 'tęsknisz',
+        'samobójstwo', 'samobójcze', 'zabić się', 'chcę umrzeć', 'nie chcę żyć', 'skończę z sobą',
+        'targnąć', 'podcięła', 'podciąłem', 'tabletki', 'przedawkować',
+        'płaczę', 'wyję', 'nie mogę przestać płakać', 'załamanie', 'załamałam',
+        'zdrada', 'zdradziłeś', 'zdradziłaś', 'zdradzasz', 'inna', 'inny', 'z kimś innym',
+        'przepraszam', 'wybacz', 'nigdy mi nie wybaczysz', 'żałuję',
+        'ból', 'boli mnie', 'umrę', 'cierpię', 'cierpienie',
+        'depresja', 'leki', 'terapeuta', 'terapia', 'psycholog', 'psychiatra',
+        'nie odpisuj', 'blokuję', 'zablokuj', 'usuwam numer', 'wypad z mojego życia',
+      ];
+      const EMOTIONAL_KEYWORDS_EN = [
+        'breakup', 'break up', 'breaking up', 'broke up', "it's over", 'leaving you',
+        'suicide', 'kill myself', 'want to die', 'end it all', 'self harm', 'cutting',
+        'crying', "can't stop crying", 'breakdown', 'falling apart',
+        'cheating', 'cheated', 'affair', 'someone else',
+        'sorry', 'forgive', 'regret', 'apologize',
+        'depression', 'depressed', 'therapy', 'therapist', 'psychiatrist',
+        'blocking you', 'delete your number', 'get out of my life',
+        'i love you', 'miss you', 'i miss us', 'come back',
+        'hurting', 'pain', 'suffering', 'broken',
+      ];
+      const emotionalPatterns = [...EMOTIONAL_KEYWORDS_PL, ...EMOTIONAL_KEYWORDS_EN];
+
+      const emotionalMessages = allMessages.filter(m => {
+        if (seenIndices.has(m.index)) return false;
+        const lower = m.content.toLowerCase();
+        return emotionalPatterns.some(kw => lower.includes(kw));
+      }).slice(0, 80);
+      for (const msg of emotionalMessages) {
+        if (!seenIndices.has(msg.index)) {
+          targetedMessages.push(msg);
+          seenIndices.add(msg.index);
+          // Also grab 2 messages before and 2 after for context
+          const msgIdx = allMessages.findIndex(m => m.index === msg.index);
+          if (msgIdx >= 0) {
+            for (let j = Math.max(0, msgIdx - 2); j <= Math.min(allMessages.length - 1, msgIdx + 2); j++) {
+              if (!seenIndices.has(allMessages[j].index)) {
+                targetedMessages.push(allMessages[j]);
+                seenIndices.add(allMessages[j].index);
+              }
+            }
+          }
+        }
+      }
+
+      // Cap total targeted to 500
+      const cappedTargeted = targetedMessages.slice(0, 500);
 
       if (controller.signal.aborted) return;
 
@@ -309,6 +407,7 @@ export function useEksAnalysis({
       setState('autopsy');
       setProgress(32);
       ceilingRef.current = 45;
+      setBackgroundOp(OP_KEY, { progress: 32, phaseName: 'Sekcja', isComplete: false, error: null });
       ops?.updateOperation('eks', { progress: 32, status: 'Głęboka sekcja zwłok...' });
 
       const autopsyResponse = await fetch('/api/analyze/eks', {
@@ -357,6 +456,7 @@ export function useEksAnalysis({
                 if (phase) {
                   setProgress(phase.start);
                   ceilingRef.current = phase.ceiling;
+                  setBackgroundOp(OP_KEY, { progress: phase.start, phaseName: 'Sekcja', isComplete: false, error: null });
                   ops?.updateOperation('eks', { progress: phase.start, status: event.status });
                 }
               } else if (event.type === 'complete' && event.result) {
@@ -382,6 +482,7 @@ export function useEksAnalysis({
       setState('psychogram');
       setProgress(76);
       ceilingRef.current = 82;
+      setBackgroundOp(OP_KEY, { progress: 76, phaseName: 'Psychogram', isComplete: false, error: null });
       ops?.updateOperation('eks', { progress: 76, status: 'Analiza stylu przywiązania...' });
 
       try {
@@ -422,6 +523,7 @@ export function useEksAnalysis({
                   if (phase) {
                     setProgress(phase.start);
                     ceilingRef.current = phase.ceiling;
+                    setBackgroundOp(OP_KEY, { progress: phase.start, phaseName: 'Psychogram', isComplete: false, error: null });
                     ops?.updateOperation('eks', { progress: phase.start, status: event.status });
                   }
                 } else if (event.type === 'psychogram_complete' && event.psychogram) {
@@ -454,24 +556,30 @@ export function useEksAnalysis({
       setState('complete');
       setProgress(100);
       setResult(finalResult);
+      clearBackgroundOp(OP_KEY);
+      // Call onComplete directly — works even after component unmount
+      // because context callbacks are stable (defined at layout level)
+      onCompleteRef.current?.(finalResult);
     } catch (err) {
       if (controller.signal.aborted) return;
       setState('error');
       setError(err instanceof Error ? err.message : String(err));
+      clearBackgroundOp(OP_KEY);
     } finally {
       ops?.stopOperation('eks');
     }
-  }, [state, conversation, quantitative, qualitative, ops]);
+  }, [state, isRunningInBackground, conversation, quantitative, qualitative, ops]);
+
+  // Derive state: prefer background op state when running in background (survived navigation)
+  const locallyLoading = state === 'recon' || state === 'targeting' || state === 'autopsy' || state === 'psychogram';
 
   return {
     runEks,
-    isLoading: state === 'recon' || state === 'targeting' || state === 'autopsy' || state === 'psychogram',
-    progress,
-    phaseName: PHASE_LABELS[state],
+    isLoading: isRunningInBackground || locallyLoading,
+    progress: isRunningInBackground ? (bgOp?.progress ?? 0) : progress,
+    phaseName: isRunningInBackground ? (bgOp?.phaseName ?? '') : PHASE_LABELS[state],
     result,
     error,
     reset,
   };
 }
-
-export default useEksAnalysis;

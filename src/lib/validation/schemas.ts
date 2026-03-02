@@ -21,6 +21,19 @@ export const analyzeRequestSchema = z.object({
   relationshipContext: z.optional(z.enum(['romantic', 'friendship', 'colleague', 'professional', 'family', 'other', 'eks'])),
   mode: z.optional(z.enum(['standard', 'roast'])),
   quantitativeContext: z.optional(z.string()),
+  /** Three-phase analysis: 'recon' (Pass 0), 'deep_recon' (Pass 0.5), or 'deep' (Pass 1-4 with recon data) */
+  phase: z.optional(z.enum(['recon', 'deep_recon', 'deep'])),
+  /** Recon results from Pass 0 — sent with deep_recon and deep phases */
+  recon: z.optional(z.object({}).passthrough()),
+  /** Deep recon results from Pass 0.5 — sent with deep phase */
+  deepRecon: z.optional(z.object({}).passthrough()),
+  /** Targeted messages extracted client-side based on recon — sent with deep_recon and deep phases */
+  targetedSamples: z.optional(z.array(z.object({
+    sender: z.string(),
+    content: z.string(),
+    timestamp: z.number(),
+    index: z.number(),
+  }))),
 });
 export type AnalyzeRequestParsed = z.infer<typeof analyzeRequestSchema>;
 
@@ -56,15 +69,24 @@ export const megaRoastRequestSchema = z.object({
   targetPerson: z.string().min(1, 'targetPerson must not be empty'),
   participants: participantsSchema,
   quantitativeContext: z.string(),
+  mode: z.optional(z.enum(['group', 'duo'])),
+  qualitative: z.optional(z.object({
+    pass1: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
+    pass2: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
+    pass3: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
+    pass4: z.union([z.object({}).passthrough(), z.array(z.unknown())]),
+  })),
+  deepScanMaterial: z.optional(z.string()),
 });
 export type MegaRoastRequestParsed = z.infer<typeof megaRoastRequestSchema>;
 
-export const cwelTygodniaRequestSchema = z.object({
+export const przegrywTygodniaRequestSchema = z.object({
   samples: samplesSchema,
   participants: participantsSchema,
   quantitativeContext: z.string(),
+  mode: z.optional(z.enum(['group', 'duo'])),
 });
-export type CwelTygodniaRequestParsed = z.infer<typeof cwelTygodniaRequestSchema>;
+export type PrzegrywTygodniaRequestParsed = z.infer<typeof przegrywTygodniaRequestSchema>;
 
 const conversationExcerptItemSchema = z.object({
   sender: z.string(),

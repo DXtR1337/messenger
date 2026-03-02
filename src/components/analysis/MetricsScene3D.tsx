@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import * as THREE from 'three';
+import { Color, Group, Points, Vector3, BufferAttribute, AdditiveBlending } from 'three';
 import { useScroll, type MotionValue } from 'framer-motion';
 
 // ---------------------------------------------------------------------------
@@ -10,9 +10,9 @@ import { useScroll, type MotionValue } from 'framer-motion';
 // ---------------------------------------------------------------------------
 
 const COLORS = {
-  blue: new THREE.Color('#3b82f6'),
-  purple: new THREE.Color('#a855f7'),
-  green: new THREE.Color('#10b981'),
+  blue: new Color('#3b82f6'),
+  purple: new Color('#a855f7'),
+  green: new Color('#10b981'),
 } as const;
 
 /** Probability thresholds for color distribution: 60% blue, 25% purple, 15% green */
@@ -40,7 +40,7 @@ function seededRandom(seed: number): () => number {
 }
 
 /** Pick a color based on probability distribution */
-function pickColor(rand: number): THREE.Color {
+function pickColor(rand: number): Color {
   if (rand < COLOR_THRESHOLDS.blue) return COLORS.blue;
   if (rand < COLOR_THRESHOLDS.purple) return COLORS.purple;
   return COLORS.green;
@@ -150,8 +150,8 @@ interface SceneInnerProps {
 }
 
 function SceneInner({ scrollProgress, isMobile, particleCount }: SceneInnerProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const pointsRef = useRef<THREE.Points>(null);
+  const groupRef = useRef<Group>(null);
+  const pointsRef = useRef<Points>(null);
   const { camera } = useThree();
 
   // Smoothed mouse position for lerp parallax
@@ -159,7 +159,7 @@ function SceneInner({ scrollProgress, isMobile, particleCount }: SceneInnerProps
   const mouseCurrent = useRef({ x: 0, y: 0 });
 
   // Base camera position (stored once to avoid recalculation)
-  const baseCameraPos = useRef(new THREE.Vector3(0, 0, 8));
+  const baseCameraPos = useRef(new Vector3(0, 0, 8));
 
   // Generate particle + connection data once
   const particles = useMemo(
@@ -215,7 +215,7 @@ function SceneInner({ scrollProgress, isMobile, particleCount }: SceneInnerProps
     if (pointsRef.current) {
       const posAttr = pointsRef.current.geometry.getAttribute(
         'position',
-      ) as THREE.BufferAttribute;
+      ) as BufferAttribute;
       const posArray = posAttr.array as Float32Array;
 
       for (let i = 0; i < particles.count; i++) {
@@ -275,7 +275,7 @@ function SceneInner({ scrollProgress, isMobile, particleCount }: SceneInnerProps
             sizeAttenuation
             transparent
             opacity={0.6}
-            blending={THREE.AdditiveBlending}
+            blending={AdditiveBlending}
             depthWrite={false}
           />
         </points>
@@ -294,7 +294,7 @@ function SceneInner({ scrollProgress, isMobile, particleCount }: SceneInnerProps
               color="#3b82f6"
               transparent
               opacity={0.04}
-              blending={THREE.AdditiveBlending}
+              blending={AdditiveBlending}
               depthWrite={false}
             />
           </lineSegments>

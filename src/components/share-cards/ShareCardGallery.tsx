@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, createContext, useContext } from 'react';
+import React, { lazy, Suspense, useState, useCallback, useEffect, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Download, X, Link2, Check } from 'lucide-react';
@@ -22,39 +22,41 @@ const DownloadGuardContext = createContext<DownloadGuard | null>(null);
 export function useDownloadGuard(): DownloadGuard | null {
   return useContext(DownloadGuardContext);
 }
-import HealthScoreCard from './HealthScoreCard';
-import VersusCard from './VersusCard';
-import StatsCard from './StatsCard';
-import FlagsCard from './FlagsCard';
-import PersonalityCard from './PersonalityCard';
-import ScoresCard from './ScoresCard';
-import BadgesCard from './BadgesCard';
-import MBTICard from './MBTICard';
-import ReceiptCard from './ReceiptCard';
-import RedFlagCard from './RedFlagCard';
-import VersusCardV2 from './VersusCardV2';
-import LabelCard from './LabelCard';
-import CompatibilityCardV2 from './CompatibilityCardV2';
-import GhostForecastCard from './GhostForecastCard';
-import PersonalityPassportCard from './PersonalityPassportCard';
-import CPSCard from './CPSCard';
-import SubtextCard from './SubtextCard';
-import DelusionCard from './DelusionCard';
-import MugshotCard from './MugshotCard';
-import DatingProfileCard from './DatingProfileCard';
-import CoupleQuizCard from './CoupleQuizCard';
-import CwelTygodniaCard from './CwelTygodniaCard';
-import NekrologCard from './NekrologCard';
-import AktZgonuCard from './AktZgonuCard';
-import ParagonCzasuCard from './ParagonCzasuCard';
-import AutopsyCard from './AutopsyCard';
-import ForecastCard from './ForecastCard';
-import DecayPhasesCard from './DecayPhasesCard';
-import TombstoneCard from './TombstoneCard';
-import GoldenAgeCard from './GoldenAgeCard';
-import UnsaidCard from './UnsaidCard';
-import DeathCertificateCard from './DeathCertificateCard';
-import DeathLineCard from './DeathLineCard';
+
+// Lazy-loaded card components — only fetched when a card is actually rendered
+const HealthScoreCard = lazy(() => import('./HealthScoreCard'));
+const VersusCard = lazy(() => import('./VersusCard'));
+const StatsCard = lazy(() => import('./StatsCard'));
+const FlagsCard = lazy(() => import('./FlagsCard'));
+const PersonalityCard = lazy(() => import('./PersonalityCard'));
+const ScoresCard = lazy(() => import('./ScoresCard'));
+const BadgesCard = lazy(() => import('./BadgesCard'));
+const MBTICard = lazy(() => import('./MBTICard'));
+const ReceiptCard = lazy(() => import('./ReceiptCard'));
+const RedFlagCard = lazy(() => import('./RedFlagCard'));
+const VersusCardV2 = lazy(() => import('./VersusCardV2'));
+const LabelCard = lazy(() => import('./LabelCard'));
+const CompatibilityCardV2 = lazy(() => import('./CompatibilityCardV2'));
+const GhostForecastCard = lazy(() => import('./GhostForecastCard'));
+const PersonalityPassportCard = lazy(() => import('./PersonalityPassportCard'));
+const CPSCard = lazy(() => import('./CPSCard'));
+const SubtextCard = lazy(() => import('./SubtextCard'));
+const DelusionCard = lazy(() => import('./DelusionCard'));
+const MugshotCard = lazy(() => import('./MugshotCard'));
+const DatingProfileCard = lazy(() => import('./DatingProfileCard'));
+const CoupleQuizCard = lazy(() => import('./CoupleQuizCard'));
+const PrzegrywTygodniaCard = lazy(() => import('./PrzegrywTygodniaCard'));
+const NekrologCard = lazy(() => import('./NekrologCard'));
+const AktZgonuCard = lazy(() => import('./AktZgonuCard'));
+const ParagonCzasuCard = lazy(() => import('./ParagonCzasuCard'));
+const AutopsyCard = lazy(() => import('./AutopsyCard'));
+const ForecastCard = lazy(() => import('./ForecastCard'));
+const DecayPhasesCard = lazy(() => import('./DecayPhasesCard'));
+const TombstoneCard = lazy(() => import('./TombstoneCard'));
+const GoldenAgeCard = lazy(() => import('./GoldenAgeCard'));
+const UnsaidCard = lazy(() => import('./UnsaidCard'));
+const DeathCertificateCard = lazy(() => import('./DeathCertificateCard'));
+const DeathLineCard = lazy(() => import('./DeathLineCard'));
 import { buildShareUrl } from '@/lib/share/encode';
 
 /** Detect mobile viewport via matchMedia (SSR-safe) */
@@ -118,7 +120,7 @@ const CARD_CONFIGS: CardConfig[] = [
   { id: 'dating-profile', title: 'Profil randkowy', emoji: '\u{1F498}', icon: '/icons/cards/card-dating-profile.png', requiresQualitative: false },
   { id: 'simulator', title: 'Symulacja', emoji: '\u{1F916}', icon: '/icons/cards/card-simulator.png', requiresQualitative: false },
   { id: 'couple-quiz', title: 'Quiz parowy', emoji: '\u{1F491}', icon: '/icons/cards/card-couple-quiz.png', requiresQualitative: false },
-  { id: 'cwel-tygodnia', title: 'Cwel Tygodnia', emoji: '\u{1F480}', requiresQualitative: false },
+  { id: 'przegryw-tygodnia', title: 'Przegryw Tygodnia', emoji: '\u{1F480}', requiresQualitative: false },
   // Tryb Eks — Relationship Autopsy cards
   { id: 'nekrolog', title: 'Nekrolog', emoji: '\u26B0\uFE0F', requiresQualitative: false, groupStart: 'Tryb Eks' },
   { id: 'akt-zgonu', title: 'Akt Zgonu', emoji: '\u{1F4DC}', requiresQualitative: false },
@@ -319,9 +321,9 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
       case 'couple-quiz':
         if (!qualitative?.coupleQuiz) return null;
         return <CoupleQuizCard comparison={qualitative.coupleQuiz} />;
-      case 'cwel-tygodnia':
-        if (!qualitative?.cwelTygodnia) return null;
-        return <CwelTygodniaCard result={qualitative.cwelTygodnia} />;
+      case 'przegryw-tygodnia':
+        if (!qualitative?.przegrywTygodnia) return null;
+        return <PrzegrywTygodniaCard result={qualitative.przegrywTygodnia} />;
       // Tryb Eks cards
       case 'nekrolog': {
         const eks = qualitative?.eksAnalysis;
@@ -478,7 +480,9 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
                   style={{ minWidth: 'min(396px, 100%)' }}
                 >
                   <SectionErrorBoundary section="Karta udostepniania">
-                    {renderFullCard(activeCard)}
+                    <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-xl bg-white/5" />}>
+                      {renderFullCard(activeCard)}
+                    </Suspense>
                   </SectionErrorBoundary>
                 </motion.div>
               </div>
@@ -564,7 +568,9 @@ function ShareCardGallery({ analysis, selectedPair }: ShareCardGalleryProps) {
               {/* Card render */}
               <div className="flex justify-center overflow-x-auto py-4">
                 <SectionErrorBoundary section="Karta udostepniania">
-                  {renderFullCard(activeCard)}
+                  <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-xl bg-white/5" />}>
+                    {renderFullCard(activeCard)}
+                  </Suspense>
                 </SectionErrorBoundary>
               </div>
             </motion.div>

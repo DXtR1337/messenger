@@ -200,6 +200,7 @@ export async function runDatingProfile(
   existingAnalysis?: { pass1?: Record<string, unknown>; pass3?: Record<string, unknown> },
   deepScanMaterial?: string,
   targetPerson?: string,
+  researchBrief?: string,
 ): Promise<DatingProfileResult> {
   const isDeep = !!targetPerson;
   const systemPrompt = isDeep ? DATING_PROFILE_SYSTEM_DEEP : DATING_PROFILE_SYSTEM;
@@ -210,6 +211,9 @@ export async function runDatingProfile(
   }
   if (existingAnalysis?.pass3) {
     contextBlock += `\n=== PROFILE OSOBOWOSCI (Pass 3) ===\n${JSON.stringify(existingAnalysis.pass3, null, 2)}\n`;
+  }
+  if (researchBrief) {
+    contextBlock += `\n=== AI RESEARCH BRIEF ===\n${researchBrief}\n`;
   }
 
   let input: string;

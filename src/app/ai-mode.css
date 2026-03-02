@@ -176,8 +176,7 @@
   background:
     linear-gradient(180deg, rgba(168,85,247,0.14) 0%, rgba(139,92,246,0.10) 20%, rgba(88,28,135,0.10) 40%, rgba(30,20,50,0.50) 100%) padding-box,
     conic-gradient(from var(--border-angle), rgba(168,85,247,0.6), rgba(192,132,252,0.25) 20%, rgba(139,92,246,0.10) 40%, rgba(88,28,135,0.06) 50%, rgba(139,92,246,0.10) 60%, rgba(192,132,252,0.25) 80%, rgba(168,85,247,0.6)) border-box !important;
-  animation: ai-border-spin 8s linear infinite, ai-card-breathe 5s ease-in-out infinite;
-  animation-play-state: paused;
+  /* animation: ai-border-spin 8s linear infinite, ai-card-breathe 5s ease-in-out infinite; — KILLED */
   box-shadow:
     inset 0 1px 0 0 rgba(192,132,252, 0.18),
     0 0 0 0.5px rgba(168,85,247,0.12),
@@ -210,15 +209,12 @@
   50%      { --glow-intensity: 0.28; }
 }
 
-/* Play card animations only when visible (class added by GSAP on viewport entry) */
-[data-mode="ai"] .analysis-card-accent.ai-scanned {
-  animation-play-state: running;
-}
+/* Card scan class — animations killed, keep for GSAP hooks only */
 
 [data-mode="ai"] .analysis-card-accent:hover {
   --glow-intensity: 0.35;
   transform: translateY(-4px) scale(1.005);
-  animation: ai-border-spin-fast 2.5s linear infinite, ai-card-breathe-hover 3s ease-in-out infinite;
+  /* animation: ai-border-spin-fast 2.5s linear infinite, ai-card-breathe-hover 3s ease-in-out infinite; — KILLED */
   box-shadow:
     inset 0 1px 0 0 rgba(192,132,252,0.30),
     inset 0 0 100px -20px rgba(168,85,247,0.12),
@@ -371,14 +367,6 @@
   100% { background-position: -20% 100%; opacity: 0; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .gsap-ready [data-mode="ai"] .analysis-card-accent::before,
-  [data-mode="ai"] .gsap-ready .analysis-card-accent::before {
-    animation: none;
-    display: none;
-  }
-}
-
 /* ── Click ripple — expanding ring from click point on cards ── */
 .ai-click-ripple {
   position: absolute;
@@ -396,10 +384,6 @@
   50%  { opacity: 0.5; }
   100% { transform: translate(-50%, -50%) scale(14); opacity: 0; border-width: 0.3px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .ai-click-ripple { animation: none; display: none; }
-}
-
 /* ── Achievement toast — scan complete notification ── */
 .ai-achievement-toast {
   position: fixed;
@@ -839,13 +823,6 @@
   0%, 100% { stroke: rgba(168,85,247,0.08); }
   50%      { stroke: rgba(168,85,247,0.14); }
 }
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent svg path[stroke-dasharray],
-  [data-mode="ai"] .analysis-card-accent svg circle[stroke-dasharray] { animation: none; }
-  [data-mode="ai"] .analysis-card-accent svg circle[stroke="rgba(255,255,255,0.05)"],
-  [data-mode="ai"] .analysis-card-accent svg path[stroke="rgba(255,255,255,0.06)"] { animation: none; }
-}
-
 /* ═══ PROFILE GRID CELL HOVER DEPTH — lift + glow on inner cards ═══ */
 
 @media (hover: hover) and (min-width: 768px) {
@@ -925,12 +902,7 @@
     box-shadow: 0 4px 16px -4px rgba(168,85,247,0.12), inset 0 1px 0 rgba(192,132,252,0.04);
     transform: translateX(3px);
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent svg.text-purple-400\/60 { animation: none; }
-}
-
-/* ═══ WSKAZÓWKI HIGH BADGES — purple override in AI mode ═══ */
+}/* ═══ WSKAZÓWKI HIGH BADGES — purple override in AI mode ═══ */
 
 [data-mode="ai"] .analysis-card-accent .bg-red-500\/10 {
   background-color: rgba(168,85,247,0.12) !important;
@@ -942,12 +914,7 @@
 @keyframes ai-badge-pulse {
   0%, 100% { box-shadow: 0 0 8px rgba(168,85,247,0.20), inset 0 0 6px rgba(192,132,252,0.08); }
   50%      { box-shadow: 0 0 14px rgba(168,85,247,0.35), 0 0 28px rgba(139,92,246,0.10), inset 0 0 8px rgba(192,132,252,0.12); }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .bg-red-500\/10 { animation: none; }
-}
-
-/* ═══ KLUCZOWE ODKRYCIA — emerald→purple override + glowing dots ═══ */
+}/* ═══ KLUCZOWE ODKRYCIA — emerald→purple override + glowing dots ═══ */
 
 /* Override emerald card backgrounds → purple in AI mode */
 [data-mode="ai"] .analysis-card-accent .bg-emerald-500\/5 {
@@ -980,12 +947,7 @@
 }
 [data-mode="ai"] .analysis-card-accent .border-emerald-500\/20 {
   border-color: rgba(168,85,247,0.20) !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .bg-emerald-400 { animation: none; }
-}
-
-/* ═══ ATTACHMENT STYLE — Secure badge emerald→purple + green status dots ═══ */
+}/* ═══ ATTACHMENT STYLE — Secure badge emerald→purple + green status dots ═══ */
 
 /* "Secure" (or any style) badge — override emerald gradient to purple */
 [data-mode="ai"] .analysis-card-accent .from-emerald-500\/20 {
@@ -1016,12 +978,7 @@
     box-shadow: 0 2px 10px -2px rgba(168,85,247,0.18);
     transform: translateY(-1px);
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .from-emerald-500\/20 { animation: none; }
-}
-
-/* ═══ TURNING POINTS — dramatic timeline card treatment ═══ */
+}/* ═══ TURNING POINTS — dramatic timeline card treatment ═══ */
 
 /* .tp-card = Turning Point card class */
 [data-mode="ai"] .analysis-card-accent .tp-card {
@@ -1054,13 +1011,7 @@
 /* "PUNKT ZWROTNY" and "ODKRYCIE" type badges */
 [data-mode="ai"] .analysis-card-accent .tp-card .text-\[10px\].font-mono {
   text-shadow: 0 0 12px rgba(168,85,247,0.3);
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent [class*="bg-purple"] { animation: none; }
-  [data-mode="ai"] .analysis-card-accent .tp-card:hover { transform: none !important; }
-}
-
-/* ═══ PREDYKCJE AI — confidence arc glow + card hover ═══ */
+}/* ═══ PREDYKCJE AI — confidence arc glow + card hover ═══ */
 
 /* Prediction item cards — hover glow + lift */
 [data-mode="ai"] .analysis-card-accent .relative.rounded-lg.overflow-hidden.border.border-white\/\[0\.05\] {
@@ -1091,12 +1042,7 @@
 /* Confidence level badges (WYSOKI/ŚREDNI) */
 [data-mode="ai"] .analysis-card-accent .text-\[9px\].font-bold.uppercase {
   text-shadow: 0 0 8px rgba(168,85,247,0.3);
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent svg[viewBox="0 0 100 58"] { animation: none; filter: none; }
-}
-
-/* ═══ CONVERSATION PERSONALITY ICONS — breathing glow ═══ */
+}/* ═══ CONVERSATION PERSONALITY ICONS — breathing glow ═══ */
 
 [data-mode="ai"] .analysis-card-accent .grid-cols-3 .rounded-xl,
 [data-mode="ai"] .analysis-card-accent .grid-cols-3 .rounded-lg {
@@ -1119,13 +1065,7 @@
 @keyframes ai-icon-breathe {
   0%, 100% { box-shadow: 0 0 12px -2px rgba(168,85,247,0.15), inset 0 1px 0 rgba(192,132,252,0.06); }
   50%      { box-shadow: 0 0 20px -2px rgba(168,85,247,0.25), 0 0 40px -4px rgba(139,92,246,0.10), inset 0 1px 0 rgba(192,132,252,0.08); }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .rounded-lg > .rounded-xl,
-  [data-mode="ai"] .analysis-card-accent .flex-col.items-center .rounded-xl { animation: none; }
-}
-
-/* ═══ VIRAL SCORES — shimmer on big numbers + sub-card glow ═══ */
+}/* ═══ VIRAL SCORES — shimmer on big numbers + sub-card glow ═══ */
 
 /* Compatibility & Delusion big numbers — shimmer gradient text */
 [data-mode="ai"] .analysis-card-accent .font-mono.text-3xl.font-black.tabular-nums {
@@ -1158,12 +1098,7 @@
 /* Compatibility SVG ring — breathing glow */
 [data-mode="ai"] .analysis-card-accent svg circle[stroke="#a855f7"] {
   filter: drop-shadow(0 0 6px rgba(168,85,247,0.4));
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .font-mono.text-3xl.font-black.tabular-nums { animation: none; -webkit-text-fill-color: #c084fc; background: none; }
-}
-
-/* ═══ THREAT METERS — gauge card breathing border + inner glow ═══ */
+}/* ═══ THREAT METERS — gauge card breathing border + inner glow ═══ */
 
 /* Individual gauge cards — subtle breathing top accent */
 [data-mode="ai"] .analysis-card-accent .grid.grid-cols-2 > [class*="rounded-xl"][class*="border"] {
@@ -1239,12 +1174,7 @@
 }
 @media (max-width: 767px), (hover: none) {
   .ai-cursor-ring { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-cursor-ring { display: none; }
-}
-
-/* Custom cursor — small glowing purple dot replacing default arrow (desktop only) */
+}/* Custom cursor — small glowing purple dot replacing default arrow (desktop only) */
 [data-mode="ai"] {
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='4' fill='rgba(192,132,252,0.8)'/%3E%3Ccircle cx='12' cy='12' r='8' fill='none' stroke='rgba(168,85,247,0.4)' stroke-width='1'/%3E%3C/svg%3E") 12 12, auto;
 }
@@ -1325,12 +1255,7 @@
     opacity: 0.5;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-fireflies { display: none; }
-}
-
-/* ═══ NOISE/GRAIN TEXTURE — premium editorial overlay ═══ */
+/* ═══ NOISE/GRAIN TEXTURE — premium editorial overlay ═══ */
 
 .ai-noise-overlay {
   position: fixed;
@@ -1406,12 +1331,7 @@
 @keyframes ai-scanline-descend {
   0%   { transform: translateY(0); }
   100% { transform: translateY(100vh); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-scanline { display: none; }
-}
-
-/* ═══ PROGRESS BAR SHIMMER — living light sweep on all bar fills ═══ */
+}/* ═══ PROGRESS BAR SHIMMER — living light sweep on all bar fills ═══ */
 
 [data-mode="ai"] [data-ai-card] .h-full.rounded-full {
   position: relative;
@@ -1442,15 +1362,7 @@
   0%   { background-position: 200% 0; }
   40%  { background-position: -50% 0; }
   100% { background-position: -50% 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] [data-ai-card] .h-full.rounded-full::after {
-    animation: none;
-    display: none;
-  }
-}
-
-/* ═══ ASYMMETRIC CARD LAYOUT — alternating offset ═══ */
+}/* ═══ ASYMMETRIC CARD LAYOUT — alternating offset ═══ */
 
 [data-ai-card="left"] {
   margin-right: 4%;
@@ -1493,12 +1405,7 @@
 [data-mode="ai"] .tp-card:hover {
   border-color: rgba(168,85,247,0.15) !important;
   box-shadow: 0 0 20px -4px rgba(168,85,247,0.12), inset 0 1px 0 rgba(192,132,252,0.06);
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .tp-connector::after { animation: none; opacity: 0; }
-}
-
-/* ═══ STAT COUNTER HOLOGRAPHIC — prismatic gradient + breathing glow ═══ */
+}/* ═══ STAT COUNTER HOLOGRAPHIC — prismatic gradient + breathing glow ═══ */
 
 .ai-stat-number {
   background: linear-gradient(
@@ -1638,13 +1545,7 @@
 @keyframes ai-health-ring {
   0%, 100% { transform: scale(1); opacity: 0.5; border-color: rgba(168,85,247,0.20); }
   50%      { transform: scale(1.08); opacity: 0.9; border-color: rgba(192,132,252,0.35); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-stat-health { animation: none; }
-  .ai-stat-health .ai-stat-number::before { animation: none; }
-}
-
-/* Stats circuit — traveling dot between stat cells */
+}/* Stats circuit — traveling dot between stat cells */
 @keyframes ai-stat-circuit-travel {
   0%, 100% { left: 25%; opacity: 0.5; }
   50%      { left: 72%; opacity: 0.9; }
@@ -1671,12 +1572,7 @@
   .ai-stat-cell {
     transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s ease, box-shadow 0.5s ease;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-stat-circuits { display: none !important; }
-}
-
-/* Stats→Ticker separator — traveling energy dot */
+}/* Stats→Ticker separator — traveling energy dot */
 @keyframes ai-stats-sep-travel {
   0%, 100% { left: 5%; opacity: 0.3; }
   25%      { opacity: 0.9; }
@@ -1685,21 +1581,7 @@
 }
 .ai-stats-separator {
   contain: layout;
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-stats-sep-dot { display: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-stat-number {
-    animation: none;
-    background: none;
-    -webkit-text-fill-color: #e9d5ff;
-    filter: none;
-  }
-}
-
-/* ── Count-up landing flash — brief brightening when number finishes counting ── */
+}/* ── Count-up landing flash — brief brightening when number finishes counting ── */
 .ai-countup-landed {
   display: inline-block;
   transform-origin: center;
@@ -1709,12 +1591,7 @@
   0%   { filter: drop-shadow(0 0 30px rgba(233,213,255,1.0)) drop-shadow(0 0 60px rgba(168,85,247,0.8)) brightness(1.8); transform: scale(1.15); }
   30%  { filter: drop-shadow(0 0 20px rgba(192,132,252,0.7)) drop-shadow(0 0 40px rgba(168,85,247,0.4)) brightness(1.3); transform: scale(1.05); }
   100% { filter: drop-shadow(0 0 20px rgba(168,85,247,0.45)) drop-shadow(0 0 50px rgba(139,92,246,0.2)) brightness(1); transform: scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-countup-landed { animation: none; }
-}
-
-/* ── Stats intro cells — hover depth + perspective tilt ── */
+}/* ── Stats intro cells — hover depth + perspective tilt ── */
 [data-mode="ai"] .grid.grid-cols-2 > .group.rounded-xl {
   transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), box-shadow 0.5s ease, border-color 0.5s ease !important;
 }
@@ -1794,12 +1671,7 @@
 
 @media (max-width: 639px) {
   [data-mode="ai"] .aurora-orb { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .aurora-orb { display: none; }
-}
-
-/* ═══ MOOD AMBIENT — per-section color atmosphere ═══ */
+}/* ═══ MOOD AMBIENT — per-section color atmosphere ═══ */
 
 .ai-mood-ambient {
   position: fixed;
@@ -1813,12 +1685,7 @@
 
 @media (max-width: 767px) {
   .ai-mood-ambient { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-mood-ambient { display: none; }
-}
-
-/* ═══ SECTION FLASH — viewport-wide scanner beam on section transitions ═══ */
+}/* ═══ SECTION FLASH — viewport-wide scanner beam on section transitions ═══ */
 
 .ai-section-flash {
   position: fixed;
@@ -1875,12 +1742,7 @@
   15%  { opacity: 1; }
   100% { opacity: 0; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-section-flash { display: none; }
-}
-
-/* ═══ DEPTH FOG — top/bottom gradient masks for cinematic scroll depth ═══ */
+/* ═══ DEPTH FOG — top/bottom gradient masks for cinematic scroll depth ═══ */
 
 .ai-depth-fog {
   position: fixed;
@@ -1935,12 +1797,7 @@
 
 @media (max-width: 767px) {
   .ai-depth-vignette { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-depth-vignette { display: none; }
-}
-
-/* Speed streaks — horizontal anime-style lines during fast scroll */
+}/* Speed streaks — horizontal anime-style lines during fast scroll */
 .ai-speed-streak {
   position: fixed;
   height: 1px;
@@ -1955,24 +1812,13 @@
 @media (max-width: 767px) {
   .ai-velocity-glow { display: none; }
   .ai-speed-streak { display: none !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-velocity-glow { display: none; }
-  .ai-speed-streak { display: none !important; }
-}
-
-/* Inter-card energy connector — vertical line between consecutive cards */
+}/* Inter-card energy connector — vertical line between consecutive cards */
 .ai-card-connector {
   will-change: height, opacity;
 }
 @media (max-width: 767px) {
   .ai-card-connector { display: none !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-card-connector { display: none !important; }
-}
-
-/* Card entry shockwave — expanding ring impact burst (spawned by GSAP) */
+}/* Card entry shockwave — expanding ring impact burst (spawned by GSAP) */
 .ai-card-shockwave {
   will-change: width, height, opacity;
 }
@@ -1985,13 +1831,7 @@
 @media (max-width: 767px) {
   .ai-card-shockwave,
   .ai-header-glow-pulse { display: none !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-card-shockwave,
-  .ai-header-glow-pulse { display: none !important; }
-}
-
-/* ═══ CUSTOM CURSOR — purple dot + trailing ring (desktop only) ═══ */
+}/* ═══ CUSTOM CURSOR — purple dot + trailing ring (desktop only) ═══ */
 
 .ai-cursor-dot {
   position: fixed;
@@ -2026,12 +1866,7 @@
 [data-mode="ai"] .gsap-ready,
 [data-mode="ai"] .gsap-ready * {
   cursor: none !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-cursor-dot, .ai-cursor-ring { display: none; }
-  [data-mode="ai"] .gsap-ready, [data-mode="ai"] .gsap-ready * { cursor: auto !important; }
-}
-@media (hover: none) {
+}@media (hover: none) {
   .ai-cursor-dot, .ai-cursor-ring { display: none; }
   [data-mode="ai"] .gsap-ready, [data-mode="ai"] .gsap-ready * { cursor: auto !important; }
 }
@@ -2140,12 +1975,7 @@
 @media (max-width: 767px) {
   .ai-viewport-frame { display: none; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-viewport-frame { animation: none; }
-}
-
-/* ═══ PERFORMANCE — containment, GPU promotion, content-visibility ═══ */
+/* ═══ PERFORMANCE — containment, GPU promotion, content-visibility ═══ */
 
 /* Layout containment on card wrappers — prevents layout recalculations from propagating.
    NOTE: content-visibility:auto removed — it caused CLS (layout jumps) because the 500px
@@ -2380,12 +2210,7 @@
 }
 @media (max-width: 639px) {
   .ai-connector-traveler { left: calc(0.75rem - 2.5px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-connector-traveler { display: none; }
-}
-
-/* Large watermark section number — dramatic oversized, highly visible holographic */
+}/* Large watermark section number — dramatic oversized, highly visible holographic */
 .ai-section-num {
   position: absolute;
   left: -1.5rem;
@@ -2463,11 +2288,7 @@
   45%  { transform: translate(-1px, 2px) skewX(-2deg); clip-path: inset(30% 0 30% 0); }
   60%  { transform: translate(1px, 0) skewX(1deg); clip-path: inset(0 0 0 0); }
   100% { transform: translate(0) skewX(0deg); clip-path: inset(0 0 0 0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-num-active { animation: none; }
-}
-.ai-num-active::after {
+}.ai-num-active::after {
   background: radial-gradient(ellipse 55% 45% at 50% 50%,
     rgba(168,85,247,0.25) 0%,
     rgba(139,92,246,0.12) 30%,
@@ -2770,13 +2591,7 @@
   10%  { opacity: 1; }
   80%  { opacity: 0.6; }
   100% { right: 100%; opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-section-divider-line::before { display: none; }
-  .ai-section-line::before { display: none; }
-}
-
-/* Soft glow behind the line */
+}/* Soft glow behind the line */
 .ai-section-divider-line::after {
   content: '';
   position: absolute;
@@ -2962,16 +2777,7 @@
     border-color: rgba(192,132,252,0.35) !important;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-sections-layout > [data-ai-header]::before,
-  .ai-sections-layout > [data-ai-header]::after { display: none; }
-  .ai-section-divider-gem-core.ai-discharged { animation: ai-gem-pulse 3s ease-in-out infinite !important; }
-  .ai-section-divider-gem.ai-fired::before,
-  .ai-section-divider-gem.ai-fired::after { display: none; }
-}
-
-/* ═══ CARD ENTRANCE SCAN — full-height vertical light sweep (Apple-style) ═══ */
+/* ═══ CARD ENTRANCE SCAN — full-height vertical light sweep (Apple-style) ═══ */
 [data-ai-card] {
   position: relative;
   overflow: visible;
@@ -3090,14 +2896,7 @@
 @media (max-width: 639px) {
   /* Keep scan sweep + topbeam on mobile but simpler */
   [data-ai-card].ai-scanned > .analysis-card-accent { animation: ai-border-glow-pulse 1.2s cubic-bezier(0.22, 1, 0.3, 1) 0.1s both; }
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-ai-card].ai-scanned::after,
-  [data-ai-card].ai-scanned::before { display: none; }
-  [data-ai-card].ai-scanned > .analysis-card-accent { animation: none; }
-}
-
-/* ═══ FLOATING PARTICLES — larger, dramatic ═══ */
+}/* ═══ FLOATING PARTICLES — larger, dramatic ═══ */
 
 .ai-particle {
   position: absolute;
@@ -3199,12 +2998,7 @@
   100% { transform: translate(2px, -105vh); opacity: 0; }
 }
 
-/* Reduced motion: disable streams */
-@media (prefers-reduced-motion: reduce) {
-  .ai-data-streams { display: none; }
-}
-
-/* ═══ ATMOSPHERIC BLUR BLOBS — large nebula orbs between cards ═══ */
+/* Reduced motion: disable streams *//* ═══ ATMOSPHERIC BLUR BLOBS — large nebula orbs between cards ═══ */
 
 .ai-blob {
   position: absolute;
@@ -3286,14 +3080,7 @@
   .ai-section-label::before { left: 1.5rem; }
   .ai-section-header::before { height: 4rem; left: 0.75rem; }
   .ai-section-header::after { left: calc(0.75rem - 3px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-particle { display: none; }
-  .ai-blob { animation: none; opacity: 0.4; }
-  [data-mode="ai"] .analysis-card-accent { animation: none; }
-}
-
-/* ═══ SCROLL PROGRESS — dramatic glowing bar with leading particle ═══ */
+}/* ═══ SCROLL PROGRESS — dramatic glowing bar with leading particle ═══ */
 
 /* ═══ FLOATING SECTION LABEL — HUD-grade context indicator (xl+ only) ═══ */
 .ai-floating-label {
@@ -3363,12 +3150,7 @@
   85%  { opacity: 1; }
   100% { left: 100%; opacity: 0; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-floating-label { display: none !important; }
-}
-
-.ai-scroll-progress {
+.ai-scroll-progress {
   position: fixed;
   top: 0;
   left: 0;
@@ -3589,14 +3371,7 @@
 .ai-mode-disclaimer .ai-disclaimer-seal ~ .ai-disclaimer-text::after {
   display: none;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-disclaimer-seal { animation: none; opacity: 0.7; }
-  .ai-mode-disclaimer { animation: none; }
-  .ai-disclaimer-sig { animation: none; opacity: 0.6; max-width: none; border-right: none; }
-}
-
-/* ═══ FINAL REPORT CARD — crown treatment for culmination ═══ */
+/* ═══ FINAL REPORT CARD — crown treatment for culmination ═══ */
 
 /* Stronger top border glow on the final card */
 .ai-final-card {
@@ -3699,12 +3474,7 @@
 [data-mode="ai"] .analysis-card-accent .font-mono.text-sm.font-bold {
   color: #c084fc;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .font-mono.text-3xl.font-black.leading-none { animation: none; }
-  [data-mode="ai"] .analysis-card-accent .border-purple-500\/10.rounded-lg { animation: none; }
-}
-/* Pulsing outer ring on the final report wrapper */
+/* Pulsing outer ring on the final report wrapper */
 .ai-final-report-wrapper::before {
   content: '';
   position: absolute;
@@ -3720,7 +3490,7 @@
     transparent 85%,
     rgba(168,85,247,0.25)
   );
-  animation: ai-final-ring-spin 12s linear infinite;
+  /* animation: ai-final-ring-spin 12s linear infinite; — KILLED */
   z-index: -1;
   pointer-events: none;
   opacity: 0.6;
@@ -3747,7 +3517,7 @@
 
 /* Rotating aurora ring */
 .ai-fin-aurora {
-  animation: ai-fin-aurora-spin 18s linear infinite;
+  /* animation: ai-fin-aurora-spin 18s linear infinite; — KILLED */
 }
 
 /* ── Concentric sonar rings — expanding pulses from center (boosted) ── */
@@ -3873,19 +3643,14 @@
   0%   { transform: translate(0, 0) scale(1); opacity: 0.2; }
   50%  { transform: translate(-5px, 2px) scale(1.02); opacity: 0.35; }
   100% { transform: translate(3px, -1px) scale(0.99); opacity: 0.15; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-fin-text::after { display: none; }
-}
-
-/* Subtitle — initial state hidden for GSAP reveal */
+}/* Subtitle — initial state hidden for GSAP reveal */
 .ai-fin-subtitle {
   opacity: 0;
 }
 
 /* Diamond ornament — holographic prismatic spin with rainbow refraction (boosted) */
 .ai-fin-diamond {
-  animation: ai-fin-diamond-spin 8s linear infinite, ai-fin-diamond-prism 3s ease-in-out infinite;
+  /* animation: ai-fin-diamond-spin 8s linear infinite, ai-fin-diamond-prism 3s ease-in-out infinite; — KILLED */
   box-shadow: 0 0 14px rgba(192,132,252,0.6), 0 0 28px rgba(168,85,247,0.3), 0 0 56px rgba(139,92,246,0.12);
   position: relative;
 }
@@ -3895,7 +3660,7 @@
   inset: -3px;
   border-radius: 2px;
   background: conic-gradient(from var(--diamond-hue, 0deg), rgba(192,132,252,0.6), rgba(125,211,252,0.4), rgba(192,132,252,0.6), rgba(240,171,252,0.4), rgba(192,132,252,0.6));
-  animation: ai-fin-diamond-hue 4s linear infinite;
+  /* animation: ai-fin-diamond-hue 4s linear infinite; — KILLED */
   opacity: 0.7;
   filter: blur(2px);
 }
@@ -3934,12 +3699,7 @@
     transform: scale(1.03);
     border-color: rgba(168,85,247,0.22);
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-cta-field { animation: none !important; }
-}
-
-/* Dot cluster — staggered pulse, 5 items */
+}/* Dot cluster — staggered pulse, 5 items */
 .ai-fin-dots > div:nth-child(1) { animation: ai-fin-dot-pulse 3s ease-in-out infinite; }
 .ai-fin-dots > div:nth-child(2) { animation: ai-fin-dot-pulse 3s ease-in-out infinite 0.3s; }
 .ai-fin-dots > div:nth-child(3) { animation: ai-fin-dot-pulse 3s ease-in-out infinite 0.6s; }
@@ -3992,22 +3752,7 @@
   60%  { opacity: 1; }
   100% { transform: scaleX(1); opacity: 1; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-fin-text { animation: none; }
-  .ai-fin-separator { opacity: 1; }
-  .ai-fin-subtitle { opacity: 1; }
-  .ai-fin-ring { animation: none; opacity: 0.2; transform: translate(-50%,-50%) scale(0.6); }
-  .ai-fin-aurora { animation: none; }
-  .ai-fin-glow { animation: none; }
-  .ai-fin-halo { animation: none; }
-  .ai-fin-diamond { animation: none; }
-  .ai-fin-diamond::before { animation: none; opacity: 0.3; }
-  .ai-incomplete-warning { animation: none; }
-  .ai-fin-dots > div { animation: none; }
-}
-
-/* ═══ SCROLL CUE — gateway portal effect ═══ */
+/* ═══ SCROLL CUE — gateway portal effect ═══ */
 
 .ai-scroll-cue {
   animation: ai-scroll-cue-fade 6s ease-in-out infinite;
@@ -4126,12 +3871,7 @@
 @keyframes ai-gateway-core-hover-pulse {
   0%   { transform: scale(1); box-shadow: 0 0 14px rgba(192,132,252,1), 0 0 36px rgba(168,85,247,0.8), 0 0 70px rgba(168,85,247,0.4); }
   100% { transform: scale(1.4); box-shadow: 0 0 20px rgba(233,213,255,1), 0 0 50px rgba(192,132,252,0.9), 0 0 90px rgba(168,85,247,0.5); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-gateway-orb:hover .ai-gateway-core { animation: none; }
-}
-
-/* ── Gateway text — luminous label with traveling highlight ── */
+}/* ── Gateway text — luminous label with traveling highlight ── */
 .ai-gateway-text {
   position: relative;
   letter-spacing: 0.5em;
@@ -4269,12 +4009,7 @@
   5%   { opacity: 0.9; }
   90%  { opacity: 0.6; }
   100% { top: calc(100% + 2px); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-boot-terminal::before { display: none; }
-}
-
-/* Terminal frame glow on hover */
+}/* Terminal frame glow on hover */
 .ai-boot-terminal {
   transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
@@ -4302,12 +4037,7 @@
 @keyframes ai-terminal-grain-drift {
   0%   { background-position: 0 0; }
   100% { background-position: 0 3px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-boot-terminal::after { animation: none; }
-}
-
-@media (hover: hover) {
+}@media (hover: hover) {
   .ai-boot-terminal:hover {
     border-color: rgba(168,85,247,0.25);
     box-shadow: 0 0 30px rgba(168,85,247,0.10), 0 0 60px rgba(168,85,247,0.04), inset 0 0 40px rgba(168,85,247,0.06);
@@ -5200,29 +4930,7 @@
 [data-mode="ai"] .analysis-card-accent .font-mono.font-black.tabular-nums:not(.text-3xl):not(.text-4xl) {
   text-shadow: 0 0 12px rgba(168,85,247,0.30);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .text-purple-400\/\[0\.06\],
-  [data-mode="ai"] .analysis-card-accent svg[viewBox="0 0 140 80"],
-  [data-mode="ai"] .analysis-card-accent svg.text-purple-400\/60,
-  [data-mode="ai"] .analysis-card-accent .font-display.text-5xl.font-black,
-  [data-mode="ai"] .analysis-card-accent .font-display.text-6xl,
-  [data-mode="ai"] .analysis-card-accent .text-2xl[role="img"],
-  [data-mode="ai"] .analysis-card-accent .border-purple-500\/15.bg-purple-500\/10,
-  [data-mode="ai"] .analysis-card-accent .text-purple-300\/50,
-  [data-mode="ai"] .ai-final-card,
-  .ai-final-report-wrapper > .pointer-events-none,
-  [data-mode="ai"] .analysis-card-accent .h-2.flex-1 .rounded-sm::after,
-  [data-mode="ai"] .analysis-card-accent .text-2xl.font-display.font-bold.tabular-nums,
-  [data-mode="ai"] .analysis-card-accent .bg-purple-500\/10.border-purple-500\/20 {
-    animation: none !important;
-  }
-  [data-mode="ai"] .analysis-card-accent .h-2.flex-1 .rounded-sm::after {
-    display: none;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    GOTTMAN HORSEMEN — purple severity override + bar glow + evidence chips
 ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -5713,21 +5421,8 @@
 }
 
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   PREFERS-REDUCED-MOTION — additions for new animations
-═══════════════════════════════════════════════════════════════════════════ */
 
-@media (prefers-reduced-motion: reduce) {
-  /* Disable all hover transforms on AI cards */
-  [data-mode="ai"] .analysis-card-accent .rounded-xl.border-white\/\[0\.04\]:hover,
-  [data-mode="ai"] .analysis-card-accent .rounded-lg.border-white\/\[0\.04\]:hover,
-  [data-mode="ai"] .analysis-card-accent .text-xs.text-muted-foreground.px-2\.5.py-1:hover {
-    transform: none !important;
-  }
-}
-
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    FAZA 30/31 COMPONENTS — universal purple override for all new cards
    ChronotypePair, ConversationalNarcissismCard, EmotionalGranularityCard,
    BidResponseCard, IntegrativeComplexityCard, TemporalFocusCard,
@@ -5935,19 +5630,8 @@
 }
 
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   PREFERS-REDUCED-MOTION — additions for Faza 30/31 hover effects
-═══════════════════════════════════════════════════════════════════════════ */
 
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .rounded-lg.border-white\/\[0\.04\].bg-white\/\[0\.03\].p-3:hover,
-  [data-mode="ai"] .analysis-card-accent .rounded.bg-white\/\[0\.04\]:hover {
-    transform: none !important;
-  }
-}
-
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    DAMAGE REPORT — purple gauges, grade badges, benefit badges, glow rings
 ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -6210,19 +5894,6 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   prefers-reduced-motion — disable hover transforms for Viral/Predictions/Timeline
-═══════════════════════════════════════════════════════════════════════════ */
-
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .rounded-xl.border-white\/\[0\.06\].bg-white\/\[0\.03\].p-4:hover,
-  [data-mode="ai"] .analysis-card-accent .tp-card:hover,
-  [data-mode="ai"] .analysis-card-accent .rounded-lg.border-white\/\[0\.05\].bg-white\/\[0\.02\]:hover {
-    transform: none !important;
-  }
-}
-
-
-/* ═══════════════════════════════════════════════════════════════════════════
    INK-SPREAD — card title luminous wipe reveal + text bloom
 ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -6297,17 +5968,7 @@
     filter: brightness(1);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent h3.ai-ink-revealed::after,
-  [data-mode="ai"] .analysis-card-accent h4.ai-ink-revealed::after,
-  [data-mode="ai"] .analysis-card-accent h3.ai-ink-revealed,
-  [data-mode="ai"] .analysis-card-accent h4.ai-ink-revealed {
-    animation: none !important;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    TYPEWRITER — PsychDisclaimer character-by-character reveal + cursor
 ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -6337,13 +5998,7 @@
   0%, 100% { opacity: 0.8; }
   50% { opacity: 0; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-tw-ch { opacity: 1 !important; }
-  .ai-tw-cursor { display: none; }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    AI MODE — PREMIUM MICRO-DETAILS
    Selection color, number polish, focus states, text rendering
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -6521,18 +6176,7 @@
     transform: translateX(-2px);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] h1::after {
-    animation: none;
-    display: none;
-  }
-  [data-mode="ai"] h1 {
-    animation: none;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    AI MODE — MBTI TYPE BADGE + DIMENSION BOXES ENHANCEMENT
 ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -6886,23 +6530,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    AI MODE — REDUCED MOTION for global enhancements
 ═══════════════════════════════════════════════════════════════════════════ */
-
-@media (prefers-reduced-motion: reduce) {
-  [data-mode="ai"] .analysis-card-accent .h-1\.5 .h-full.rounded-full::after,
-  [data-mode="ai"] .analysis-card-accent .h-1\.5 > div[style*="width"]::after {
-    animation: none !important;
-    display: none;
-  }
-  [data-mode="ai"] .analysis-card-accent .rounded-lg.border[class*="bg-white/"]:hover,
-  [data-mode="ai"] .analysis-card-accent .rounded-xl.border[class*="bg-white/"]:hover {
-    transform: none !important;
-  }
-  .ai-section-flash {
-    display: none !important;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    AI MODE — ICON CONTAINERS + HEADER GLYPHS
    Large icon boxes, header icons get purple halo treatment
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -7072,19 +6700,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    AI MODE — REDUCED MOTION for new enhancements
 ═══════════════════════════════════════════════════════════════════════════ */
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-noise-overlay {
-    animation: none !important;
-  }
-  [data-mode="ai"] .analysis-card-accent .grid > div.rounded-lg:hover,
-  [data-mode="ai"] .analysis-card-accent .rounded-xl.border:hover,
-  [data-mode="ai"] .analysis-card-accent button.rounded-lg.border:hover {
-    transform: none !important;
-  }
-}
-
-/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════
    GSAP Scroll Choreography
 ═══════════════════════════════════════ */
 
@@ -7108,10 +6724,10 @@
    PERFORMANCE — SELECTIVE OPTIMIZATIONS (premium animations preserved)
    ====================================================================== */
 
-/* Card border breathing — scanned cards only */
-[data-mode="ai"] .analysis-card-accent.ai-scanned {
+/* Card border breathing — KILLED */
+/* [data-mode="ai"] .analysis-card-accent.ai-scanned {
   animation: ai-card-breathe 6s ease-in-out infinite;
-}
+} */
 
 /* Gem divider pulse after discharge */
 [data-mode="ai"] .ai-section-divider-gem-core.ai-discharged {
@@ -7220,3 +6836,220 @@
   }
 
 }
+
+
+/* =======================================================================
+   AI DEEP DIVE — HARDKILL: all decorative animations unconditionally off
+   ======================================================================= */
+
+  .gsap-ready [data-mode="ai"] .analysis-card-accent::before,
+  [data-mode="ai"] .gsap-ready .analysis-card-accent::before {
+    animation: none;
+    display: none;
+  }
+
+  .ai-click-ripple { animation: none; display: none; }
+
+  [data-mode="ai"] .analysis-card-accent svg path[stroke-dasharray],
+  [data-mode="ai"] .analysis-card-accent svg circle[stroke-dasharray] { animation: none; }
+  [data-mode="ai"] .analysis-card-accent svg circle[stroke="rgba(255,255,255,0.05)"],
+  [data-mode="ai"] .analysis-card-accent svg path[stroke="rgba(255,255,255,0.06)"] { animation: none; }
+
+  [data-mode="ai"] .analysis-card-accent svg.text-purple-400\/60 { animation: none; }
+
+  [data-mode="ai"] .analysis-card-accent .bg-red-500\/10 { animation: none; }
+
+  [data-mode="ai"] .analysis-card-accent .bg-emerald-400 { animation: none; }
+
+  [data-mode="ai"] .analysis-card-accent .from-emerald-500\/20 { animation: none; }
+
+  [data-mode="ai"] .analysis-card-accent [class*="bg-purple"] { animation: none; }
+  [data-mode="ai"] .analysis-card-accent .tp-card:hover { transform: none !important; }
+
+  [data-mode="ai"] .analysis-card-accent svg[viewBox="0 0 100 58"] { animation: none; filter: none; }
+
+  [data-mode="ai"] .analysis-card-accent .rounded-lg > .rounded-xl,
+  [data-mode="ai"] .analysis-card-accent .flex-col.items-center .rounded-xl { animation: none; }
+
+  [data-mode="ai"] .analysis-card-accent .font-mono.text-3xl.font-black.tabular-nums { animation: none; -webkit-text-fill-color: #c084fc; background: none; }
+
+  .ai-cursor-ring { display: none; }
+
+  .ai-fireflies { display: none; }
+
+  .ai-scanline { display: none; }
+
+  [data-mode="ai"] [data-ai-card] .h-full.rounded-full::after {
+    animation: none;
+    display: none;
+  }
+
+  [data-mode="ai"] .tp-connector::after { animation: none; opacity: 0; }
+
+  .ai-stat-health { animation: none; }
+  .ai-stat-health .ai-stat-number::before { animation: none; }
+
+  .ai-stat-circuits { display: none !important; }
+
+  .ai-stats-sep-dot { display: none; }
+
+  .ai-stat-number {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: #e9d5ff;
+    filter: none;
+  }
+
+  .ai-countup-landed { animation: none; }
+
+  [data-mode="ai"] .aurora-orb { display: none; }
+
+  .ai-mood-ambient { display: none; }
+
+  .ai-section-flash { display: none; }
+
+  .ai-depth-vignette { display: none; }
+
+  .ai-velocity-glow { display: none; }
+  .ai-speed-streak { display: none !important; }
+
+  .ai-card-connector { display: none !important; }
+
+  .ai-card-shockwave,
+  .ai-header-glow-pulse { display: none !important; }
+
+  .ai-cursor-dot, .ai-cursor-ring { display: none; }
+  [data-mode="ai"] .gsap-ready, [data-mode="ai"] .gsap-ready * { cursor: auto !important; }
+
+  .ai-viewport-frame { animation: none; }
+
+  .ai-connector-traveler { display: none; }
+
+  .ai-num-active { animation: none; }
+
+  .ai-section-divider-line::before { display: none; }
+  .ai-section-line::before { display: none; }
+
+  .ai-sections-layout > [data-ai-header]::before,
+  .ai-sections-layout > [data-ai-header]::after { display: none; }
+  .ai-section-divider-gem-core.ai-discharged { animation: ai-gem-pulse 3s ease-in-out infinite !important; }
+  .ai-section-divider-gem.ai-fired::before,
+  .ai-section-divider-gem.ai-fired::after { display: none; }
+
+  [data-ai-card].ai-scanned::after,
+  [data-ai-card].ai-scanned::before { display: none; }
+  [data-ai-card].ai-scanned > .analysis-card-accent { animation: none; }
+
+  .ai-data-streams { display: none; }
+
+  .ai-particle { display: none; }
+  .ai-blob { animation: none; opacity: 0.4; }
+  [data-mode="ai"] .analysis-card-accent { animation: none; }
+
+  .ai-floating-label { display: none !important; }
+
+  .ai-disclaimer-seal { animation: none; opacity: 0.7; }
+  .ai-mode-disclaimer { animation: none; }
+  .ai-disclaimer-sig { animation: none; opacity: 0.6; max-width: none; border-right: none; }
+
+  [data-mode="ai"] .analysis-card-accent .font-mono.text-3xl.font-black.leading-none { animation: none; }
+  [data-mode="ai"] .analysis-card-accent .border-purple-500\/10.rounded-lg { animation: none; }
+
+  .ai-fin-text::after { display: none; }
+
+  .ai-cta-field { animation: none !important; }
+
+  .ai-fin-text { animation: none; }
+  .ai-fin-separator { opacity: 1; }
+  .ai-fin-subtitle { opacity: 1; }
+  .ai-fin-ring { animation: none; opacity: 0.2; transform: translate(-50%,-50%) scale(0.6); }
+  .ai-fin-aurora { animation: none; }
+  .ai-fin-glow { animation: none; }
+  .ai-fin-halo { animation: none; }
+  .ai-fin-diamond { animation: none; }
+  .ai-fin-diamond::before { animation: none; opacity: 0.3; }
+  .ai-incomplete-warning { animation: none; }
+  .ai-fin-dots > div { animation: none; }
+
+  .ai-gateway-orb:hover .ai-gateway-core { animation: none; }
+
+  .ai-boot-terminal::before { display: none; }
+
+  .ai-boot-terminal::after { animation: none; }
+
+  [data-mode="ai"] .analysis-card-accent .text-purple-400\/\[0\.06\],
+  [data-mode="ai"] .analysis-card-accent svg[viewBox="0 0 140 80"],
+  [data-mode="ai"] .analysis-card-accent svg.text-purple-400\/60,
+  [data-mode="ai"] .analysis-card-accent .font-display.text-5xl.font-black,
+  [data-mode="ai"] .analysis-card-accent .font-display.text-6xl,
+  [data-mode="ai"] .analysis-card-accent .text-2xl[role="img"],
+  [data-mode="ai"] .analysis-card-accent .border-purple-500\/15.bg-purple-500\/10,
+  [data-mode="ai"] .analysis-card-accent .text-purple-300\/50,
+  [data-mode="ai"] .ai-final-card,
+  .ai-final-report-wrapper > .pointer-events-none,
+  [data-mode="ai"] .analysis-card-accent .h-2.flex-1 .rounded-sm::after,
+  [data-mode="ai"] .analysis-card-accent .text-2xl.font-display.font-bold.tabular-nums,
+  [data-mode="ai"] .analysis-card-accent .bg-purple-500\/10.border-purple-500\/20 {
+    animation: none !important;
+  }
+  [data-mode="ai"] .analysis-card-accent .h-2.flex-1 .rounded-sm::after {
+    display: none;
+  }
+
+  /* Disable all hover transforms on AI cards */
+  [data-mode="ai"] .analysis-card-accent .rounded-xl.border-white\/\[0\.04\]:hover,
+  [data-mode="ai"] .analysis-card-accent .rounded-lg.border-white\/\[0\.04\]:hover,
+  [data-mode="ai"] .analysis-card-accent .text-xs.text-muted-foreground.px-2\.5.py-1:hover {
+    transform: none !important;
+  }
+
+  [data-mode="ai"] .analysis-card-accent .rounded-lg.border-white\/\[0\.04\].bg-white\/\[0\.03\].p-3:hover,
+  [data-mode="ai"] .analysis-card-accent .rounded.bg-white\/\[0\.04\]:hover {
+    transform: none !important;
+  }
+
+  [data-mode="ai"] .analysis-card-accent .rounded-xl.border-white\/\[0\.06\].bg-white\/\[0\.03\].p-4:hover,
+  [data-mode="ai"] .analysis-card-accent .tp-card:hover,
+  [data-mode="ai"] .analysis-card-accent .rounded-lg.border-white\/\[0\.05\].bg-white\/\[0\.02\]:hover {
+    transform: none !important;
+  }
+
+  [data-mode="ai"] .analysis-card-accent h3.ai-ink-revealed::after,
+  [data-mode="ai"] .analysis-card-accent h4.ai-ink-revealed::after,
+  [data-mode="ai"] .analysis-card-accent h3.ai-ink-revealed,
+  [data-mode="ai"] .analysis-card-accent h4.ai-ink-revealed {
+    animation: none !important;
+  }
+
+  .ai-tw-ch { opacity: 1 !important; }
+  .ai-tw-cursor { display: none; }
+
+  [data-mode="ai"] h1::after {
+    animation: none;
+    display: none;
+  }
+  [data-mode="ai"] h1 {
+    animation: none;
+  }
+
+  [data-mode="ai"] .analysis-card-accent .h-1\.5 .h-full.rounded-full::after,
+  [data-mode="ai"] .analysis-card-accent .h-1\.5 > div[style*="width"]::after {
+    animation: none !important;
+    display: none;
+  }
+  [data-mode="ai"] .analysis-card-accent .rounded-lg.border[class*="bg-white/"]:hover,
+  [data-mode="ai"] .analysis-card-accent .rounded-xl.border[class*="bg-white/"]:hover {
+    transform: none !important;
+  }
+  .ai-section-flash {
+    display: none !important;
+  }
+
+  .ai-noise-overlay {
+    animation: none !important;
+  }
+  [data-mode="ai"] .analysis-card-accent .grid > div.rounded-lg:hover,
+  [data-mode="ai"] .analysis-card-accent .rounded-xl.border:hover,
+  [data-mode="ai"] .analysis-card-accent button.rounded-lg.border:hover {
+    transform: none !important;
+  }

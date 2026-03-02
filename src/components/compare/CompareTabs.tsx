@@ -14,15 +14,13 @@ export interface TabDef {
 }
 
 export const COMPARE_TABS: TabDef[] = [
-  { key: 'dynamics', label: 'Dynamika', icon: '🎭', requiresAI: true },
-  { key: 'quant', label: 'Statystyki', icon: '📊' },
-  { key: 'variations', label: 'Wariancje', icon: '🔀', minRecords: 3, requiresAI: true },
-  { key: 'insights', label: 'Odkrycia', icon: '💡' },
+  { key: 'overview', label: 'Przegląd', icon: '📋' },
   { key: 'ranking', label: 'Ranking', icon: '🏆', minRecords: 2 },
+  { key: 'ai', label: 'AI Analiza', icon: '🧠', requiresAI: true },
+  { key: 'quant', label: 'Statystyki', icon: '📊' },
+  { key: 'timeline', label: 'Trendy', icon: '📈', minRecords: 2 },
   { key: 'radar', label: 'Radar', icon: '🕸️' },
   { key: 'profile', label: 'Profil', icon: '👤' },
-  { key: 'health', label: 'Zdrowie', icon: '❤️' },
-  { key: 'timeline', label: 'Trendy', icon: '📈', minRecords: 2 },
 ];
 
 interface CompareTabsProps {
@@ -60,13 +58,25 @@ export default function CompareTabs({
     [recordCount, aiCount],
   );
 
+  const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+    const tabs = COMPARE_TABS;
+    let nextIndex = index;
+    if (e.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+    else return;
+    e.preventDefault();
+    onTabChange(tabs[nextIndex].key);
+  };
+
   return (
     <div className="sticky top-0 z-30 -mx-4 bg-background/80 px-4 backdrop-blur-xl sm:-mx-6 sm:px-6">
       <div
         ref={scrollRef}
+        role="tablist"
+        aria-label="Nawigacja porównania"
         className="no-scrollbar flex gap-1 overflow-x-auto py-2"
       >
-        {COMPARE_TABS.map((tab) => {
+        {COMPARE_TABS.map((tab, index) => {
           const active = activeTab === tab.key;
           const enabled = isEnabled(tab);
 
@@ -74,7 +84,10 @@ export default function CompareTabs({
             <button
               key={tab.key}
               ref={active ? activeRef : undefined}
+              role="tab"
+              aria-selected={active}
               onClick={() => enabled && onTabChange(tab.key)}
+              onKeyDown={(e) => handleTabKeyDown(e, index)}
               disabled={!enabled}
               className={`relative flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active

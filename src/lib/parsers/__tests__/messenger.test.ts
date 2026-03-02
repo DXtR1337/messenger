@@ -261,6 +261,56 @@ describe('parseMessengerJSON', () => {
 });
 
 // ============================================================
+// parseMessengerJSON — edge cases
+// ============================================================
+
+describe('parseMessengerJSON — edge cases', () => {
+  const makeConversation = (messages: Array<Record<string, unknown>>) => ({
+    participants: [{ name: 'Alice' }, { name: 'Bob' }],
+    messages,
+    title: 'Alice and Bob',
+    is_still_participant: true,
+    thread_path: 'inbox/alice_bob',
+  });
+
+  it('throws on truncated/malformed JSON string', () => {
+    // Passing a raw string instead of a parsed object — validation rejects it
+    expect(() => parseMessengerJSON('{"participants":[{"name":"Alice"}],"messages":[' as unknown)).toThrow(
+      'Invalid Messenger JSON format',
+    );
+  });
+
+  it('handles message with extremely long content (10KB+)', () => {
+    const longContent = 'A'.repeat(10_240); // 10KB of text
+    const data = makeConversation([
+      { sender_name: 'Alice', timestamp_ms: 1700000001000, content: longContent, type: 'Generic' },
+    ]);
+    const result = parseMessengerJSON(data);
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0].content).toBe(longContent);
+    expect(result.messages[0].content.length).toBe(10_240);
+    expect(result.messages[0].type).toBe('text');
+  });
+
+  it('handles messages with identical timestamps', () => {
+    const sameTimestamp = 1700000001000;
+    const data = makeConversation([
+      // FB exports newest first — these all share the same timestamp
+      { sender_name: 'Alice', timestamp_ms: sameTimestamp, content: 'First', type: 'Generic' },
+      { sender_name: 'Bob', timestamp_ms: sameTimestamp, content: 'Second', type: 'Generic' },
+      { sender_name: 'Alice', timestamp_ms: sameTimestamp, content: 'Third', type: 'Generic' },
+    ]);
+    const result = parseMessengerJSON(data);
+    expect(result.messages).toHaveLength(3);
+    // All messages share the same timestamp — metadata should reflect that
+    expect(result.metadata.dateRange.start).toBe(sameTimestamp);
+    expect(result.metadata.dateRange.end).toBe(sameTimestamp);
+    // durationDays should be at least 1 (Math.max(1, ...))
+    expect(result.metadata.durationDays).toBe(1);
+  });
+});
+
+// ============================================================
 // mergeMessengerFiles
 // ============================================================
 

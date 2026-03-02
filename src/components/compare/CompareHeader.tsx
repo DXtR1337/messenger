@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { ChevronDown, Check, Users, X } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { ChevronDown, Check, Users } from 'lucide-react';
 import type { AnalysisIndexEntry } from '@/lib/analysis/types';
 
 interface CompareHeaderProps {
@@ -22,6 +22,7 @@ export default function CompareHeader({
   selfName,
 }: CompareHeaderProps) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const oneOnOneEntries = useMemo(
     () => entries.filter((e) => e.participants.length === 2),
@@ -30,15 +31,27 @@ export default function CompareHeader({
 
   const selectedCount = selectedIds.size;
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
   return (
     <div className="space-y-3">
-      {/* Title row */}
+      {/* Title — compact single line */}
       <div className="flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20">
-          <Users className="size-5 text-blue-400" />
+        <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+          <Users className="size-4 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="font-display text-xl font-bold">
+          <h1 className="font-display text-lg font-bold">
             {selfName ? (
               <>
                 Porównanie relacji{' '}
@@ -51,120 +64,97 @@ export default function CompareHeader({
             )}
           </h1>
           <p className="text-xs text-muted-foreground">
-            {selectedCount === 0
-              ? 'Wybierz analizy do porównania'
-              : `${selectedCount} ${selectedCount === 1 ? 'analiza' : selectedCount < 5 ? 'analizy' : 'analiz'} wybranych`}
-            {selfName && ` \u00b7 Wspólny uczestnik: ${selfName}`}
+            {selectedCount} analiz wybranych
+            {selfName && ` · Wspólny uczestnik: ${selfName}`}
           </p>
         </div>
       </div>
 
-      {/* Multi-select picker */}
-      <div className="relative">
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-border-hover"
-        >
-          <div className="flex-1 min-w-0">
-            {selectedCount === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Kliknij, żeby wybrać analizy...
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {oneOnOneEntries
-                  .filter((e) => selectedIds.has(e.id))
-                  .slice(0, 6)
-                  .map((e) => (
-                    <span
-                      key={e.id}
-                      className="inline-flex items-center gap-1 rounded-md bg-secondary/60 px-2 py-0.5 text-xs font-medium"
-                    >
-                      {e.title}
-                      <button
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          onToggle(e.id);
-                        }}
-                        className="ml-0.5 rounded-sm p-0.5 hover:bg-secondary"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </span>
-                  ))}
-                {selectedCount > 6 && (
-                  <span className="inline-flex items-center rounded-md bg-secondary/40 px-2 py-0.5 text-xs text-muted-foreground">
-                    +{selectedCount - 6}
-                  </span>
-                )}
-              </div>
+      {/* Compact picker — chip strip with toggle dropdown */}
+      <div ref={containerRef} className="relative">
+        {/* Selected chips as inline strip — clicking individual chips toggles them */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 flex-wrap items-center gap-1">
+            {oneOnOneEntries
+              .filter((e) => selectedIds.has(e.id))
+              .slice(0, 5)
+              .map((e) => {
+                const partner = e.participants.find(
+                  (p) => p.toLowerCase() !== selfName?.toLowerCase(),
+                );
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => onToggle(e.id)}
+                    className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2 py-0.5 text-xs font-medium transition-colors hover:bg-white/[0.12]"
+                    title={`Odznacz: ${e.title}`}
+                  >
+                    {partner ?? e.title}
+                    <span className="ml-0.5 text-muted-foreground/60">&times;</span>
+                  </button>
+                );
+              })}
+            {selectedCount > 5 && (
+              <span className="text-xs text-muted-foreground">+{selectedCount - 5}</span>
             )}
           </div>
-          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
-            {selectedCount}/{oneOnOneEntries.length}
-          </span>
-          <ChevronDown
-            className={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
-          />
-        </button>
 
+          {/* Dropdown toggle */}
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs transition-colors hover:border-border-hover"
+          >
+            <span className="font-mono text-primary">{selectedCount}/{oneOnOneEntries.length}</span>
+            <ChevronDown className={`size-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {/* Dropdown list */}
         {open && (
-          <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-border bg-card shadow-xl">
-            {/* Actions */}
-            <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-              <button
-                onClick={onSelectAll}
-                className="text-xs text-primary hover:underline"
-              >
+          <div className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-xl border border-border bg-card shadow-xl">
+            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+              <button onClick={onSelectAll} className="text-xs text-primary hover:underline">
                 Zaznacz wszystko
               </button>
               <span className="text-xs text-muted-foreground">/</span>
-              <button
-                onClick={onDeselectAll}
-                className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-              >
+              <button onClick={onDeselectAll} className="text-xs text-muted-foreground hover:text-foreground hover:underline">
                 Odznacz
               </button>
             </div>
-
-            {/* List */}
-            <div className="max-h-72 overflow-y-auto py-1">
+            <div className="max-h-64 overflow-y-auto py-1">
               {oneOnOneEntries.length === 0 && (
-                <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  Brak analiz 1:1 do porównania
+                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  Brak analiz 1:1
                 </p>
               )}
               {oneOnOneEntries.map((entry) => {
                 const checked = selectedIds.has(entry.id);
+                const partner = entry.participants.find(
+                  (p) => p.toLowerCase() !== selfName?.toLowerCase(),
+                );
                 return (
                   <button
                     key={entry.id}
                     onClick={() => onToggle(entry.id)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-secondary/50"
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-secondary/50"
                   >
                     <span
-                      className={`flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                      className={`flex size-4 shrink-0 items-center justify-center rounded border transition-colors ${
                         checked
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-border'
                       }`}
                     >
-                      {checked && <Check className="size-3" />}
+                      {checked && <Check className="size-2.5" />}
                     </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-sm">{entry.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {entry.participants.join(', ')} &bull;{' '}
-                        {entry.messageCount.toLocaleString('pl-PL')} wiad.
-                        {entry.hasQualitative && (
-                          <span className="ml-1 text-primary">AI</span>
-                        )}
-                      </p>
-                    </div>
-                    {entry.healthScore != null && (
-                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                        {entry.healthScore}/100
-                      </span>
+                    <span className="flex-1 truncate text-sm">
+                      {partner ?? entry.title}
+                    </span>
+                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                      {entry.messageCount.toLocaleString('pl-PL')}
+                    </span>
+                    {entry.hasQualitative && (
+                      <span className="shrink-0 text-[10px] text-primary">AI</span>
                     )}
                   </button>
                 );

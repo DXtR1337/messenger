@@ -90,21 +90,27 @@ function classifyResponse(prevContent: string, currContent: string): 'shift' | '
   const tokens = lower.split(/\s+/);
   const hasQuestion = currContent.includes('?');
   const overlap = wordOverlapCount(prevContent, currContent);
+  const headTokens = tokens.slice(0, 4);
+  const startsWithSelf = SELF_START.has(firstToken);
 
-  // Support signals: engaging with partner's topic
-  if (hasQuestion) return 'support';
+  // Pure question about partner's topic → support
   if (QUESTION_STARTS.has(firstToken)) return 'support';
+
+  // Question that starts with self-reference ("Ja miałam takie coś, a ty?")
+  // is a shift-with-tag-question (Derber) → ambiguous, not support
+  if (hasQuestion && !startsWithSelf) return 'support';
+
+  // Word overlap with previous message → engaging with partner's topic
   if (overlap >= 2) return 'support';
 
   // Acknowledgment tokens at start → support (responding to partner's point)
   if (ACKNOWLEDGMENT_TOKENS.has(firstToken)) return 'support';
 
   // Any partner-reference token in first 4 tokens → support
-  const headTokens = tokens.slice(0, 4);
   if (headTokens.some(t => PARTNER_REFERENCE.has(t))) return 'support';
 
   // Shift signals: redirecting to self without partner engagement
-  if (SELF_START.has(firstToken) && overlap === 0) return 'shift';
+  if (startsWithSelf && overlap === 0) return 'shift';
 
   // "I" as first token + no overlap + no partner reference → shift (English)
   if (firstToken === 'i' && overlap === 0 && !headTokens.some(t => PARTNER_REFERENCE.has(t))) return 'shift';

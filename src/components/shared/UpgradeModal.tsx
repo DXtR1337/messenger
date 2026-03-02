@@ -124,6 +124,9 @@ export function UpgradeModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
       onMouseDown={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="upgrade-modal-title"
       style={{ animation: 'upgradeOverlayIn 200ms ease-out both' }}
     >
       {/* Keyframe styles injected once */}
@@ -150,6 +153,7 @@ export function UpgradeModal({
         {/* Close button */}
         <button
           onClick={onClose}
+          aria-label="Zamknij"
           className="absolute right-3 top-3 z-10 flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
         >
           <X className="size-4" />
@@ -177,6 +181,7 @@ export function UpgradeModal({
             </div>
 
             <h3
+              id="upgrade-modal-title"
               className="mb-2 text-lg font-bold leading-snug"
               style={{
                 background: 'linear-gradient(135deg, #e2e8f0 0%, #a855f7 50%, #3b82f6 100%)',

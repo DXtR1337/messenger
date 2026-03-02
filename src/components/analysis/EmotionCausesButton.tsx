@@ -13,12 +13,13 @@ const EmotionCausesCard = dynamic(() => import('@/components/analysis/EmotionCau
 
 interface EmotionCausesButtonProps {
   conversation: ParsedConversation;
+  reconBriefing?: string;
   onComplete?: (result: import('@/lib/analysis/emotion-causes-prompts').EmotionCausesResult) => void;
 }
 
-export default function EmotionCausesButton({ conversation, onComplete }: EmotionCausesButtonProps) {
+export default function EmotionCausesButton({ conversation, reconBriefing, onComplete }: EmotionCausesButtonProps) {
   const participants = conversation.participants.map(p => p.name);
-  const { run, isLoading, result, error, reset } = useEmotionCausesAnalysis(conversation, onComplete);
+  const { run, isLoading, result, error, reset } = useEmotionCausesAnalysis(conversation, onComplete, reconBriefing);
   const [hasRun, setHasRun] = useState(false);
 
   const handleClick = async () => {

@@ -1,5 +1,3 @@
-'use client';
-
 import { cn } from '@/lib/utils';
 import { GENERIC_DISCLAIMER_PL } from '@/lib/analysis/citations';
 

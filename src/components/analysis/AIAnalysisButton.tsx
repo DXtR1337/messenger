@@ -6,11 +6,12 @@ import { Sparkles, Check, AlertCircle, Loader2, Flame, X, Info } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { sampleMessages } from '@/lib/analysis/qualitative';
+import { sampleMessages, sampleForRecon, extractTargetedSamples, extractDeepTargetedSamples, buildQuantitativeContext } from '@/lib/analysis/qualitative';
+import { buildReconBriefingText } from '@/lib/analysis/recon-briefing';
 import { trackEvent } from '@/lib/analytics/events';
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
-import type { QualitativeAnalysis, RoastResult } from '@/lib/analysis/types';
+import type { QualitativeAnalysis, RoastResult, ReconResult, DeepReconResult } from '@/lib/analysis/types';
 
 export interface AIProgressInfo {
   state: 'idle' | 'running' | 'complete' | 'error';
@@ -31,7 +32,10 @@ interface AIAnalysisButtonProps {
 type AnalysisState = 'idle' | 'running' | 'complete' | 'error';
 type RoastState = 'idle' | 'running' | 'complete' | 'error';
 
+// 7 steps: Recon → Deep Recon → Pass 1-4 → Roast (if applicable)
 const PASS_LABELS = [
+  'Rozpoznanie terenu...',
+  'Pogłębione rozpoznanie...',
   'Czytam między wierszami...',
   'Mapuję dynamikę konwersacji...',
   'Profiluję osobowości...',
@@ -56,6 +60,62 @@ function mapErrorToPolish(raw: string): string {
   return 'Analiza nie powiodła się. Spróbuj ponownie za chwilę.';
 }
 
+/**
+ * Parse an SSE stream and return the first event matching the expected type.
+ */
+async function parseSSEStream<T>(
+  response: Response,
+  expectedType: string,
+  resultKey: string,
+  signal: AbortSignal,
+  onProgress?: (pass: number, status: string) => void,
+): Promise<T> {
+  if (!response.body) throw new Error('No response body received');
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result: T | null = null;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (signal.aborted) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(data) as Record<string, unknown>;
+
+          if (event.type === 'progress' && onProgress) {
+            onProgress(event.pass as number, event.status as string);
+          } else if (event.type === expectedType && event[resultKey]) {
+            result = event[resultKey] as T;
+          } else if (event.type === 'error') {
+            throw new Error((event.error as string) ?? 'Unknown analysis error');
+          }
+        } catch (parseError) {
+          if (parseError instanceof SyntaxError) continue;
+          throw parseError;
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (!result) throw new Error(`Stream ended without ${expectedType} result`);
+  return result;
+}
+
 export default function AIAnalysisButton({
   analysisId,
   conversation,
@@ -65,7 +125,7 @@ export default function AIAnalysisButton({
   onProgressChange,
   relationshipContext,
 }: AIAnalysisButtonProps) {
-  const { startOperation, updateOperation, stopOperation } = useAnalysis();
+  const { startOperation, updateOperation, stopOperation, mergeQualitative } = useAnalysis();
   const [state, setState] = useState<AnalysisState>('idle');
   const [roastState, setRoastState] = useState<RoastState>('idle');
   const [currentPass, setCurrentPass] = useState(0);
@@ -118,18 +178,24 @@ export default function AIAnalysisButton({
     setRoastState('idle');
   }, []);
 
-  const steps: ProgressStep[] = PASS_LABELS.map((label, index) => ({
-    pass: index + 1,
-    label,
-    status:
-      state !== 'running'
-        ? 'pending'
-        : index + 1 < currentPass
-          ? 'complete'
-          : index + 1 === currentPass
-            ? 'running'
-            : 'pending',
-  }));
+  // Map currentPass to step status for the 6-step progress UI
+  const steps: ProgressStep[] = PASS_LABELS.map((label, index) => {
+    // Steps are numbered 0 (recon), 0.5 (deep recon), 1-4 (passes)
+    // Map to linear index: 0=recon, 1=deep_recon, 2=pass1, 3=pass2, 4=pass3, 5=pass4
+    const stepIndex = index;
+    return {
+      pass: stepIndex,
+      label,
+      status:
+        state !== 'running'
+          ? (state === 'complete' ? 'complete' : 'pending')
+          : currentPass > stepIndex
+            ? 'complete'
+            : currentPass === stepIndex
+              ? 'running'
+              : 'pending',
+    };
+  });
 
   const roastSteps: ProgressStep[] = ROAST_LABELS.map((label, index) => ({
     pass: index + 1,
@@ -142,126 +208,176 @@ export default function AIAnalysisButton({
           : 'pending',
   }));
 
+  /**
+   * Three-phase analysis pipeline:
+   * 1. Recon (Pass 0) — AI scouts the conversation
+   * 2. Deep Recon (Pass 0.5) — AI refines targeting with extracted messages
+   * 3. Deep (Pass 1-4) — Full analysis with ultra-targeted samples
+   */
   const handleRun = useCallback(async () => {
     setState('running');
-    setCurrentPass(1);
+    setCurrentPass(0);
     setError(null);
     startOperation('ai-analysis', 'AI Deep Dive', PASS_LABELS[0]);
     trackEvent({ name: 'analysis_start', params: { mode: 'standard' } });
 
-    // Create AbortController for this analysis request
     analysisControllerRef.current?.abort();
     const controller = new AbortController();
     analysisControllerRef.current = controller;
 
-    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     try {
-      const samples = sampleMessages(conversation, quantitative);
       const participants = conversation.participants.map((p) => p.name);
 
-      const response = await fetch('/api/analyze', {
+      // ── Phase 1: Recon (Pass 0) ──
+      if (mountedRef.current) setCurrentPass(0);
+      updateOperation('ai-analysis', { progress: 5, status: PASS_LABELS[0] });
+
+      const { reconSample, allEligible } = sampleForRecon(conversation, quantitative);
+      const quantContext = buildQuantitativeContext(quantitative, conversation.participants);
+
+      const reconResponse = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           analysisId,
-          samples,
+          samples: { overview: reconSample, quantitativeContext: quantContext },
           participants,
           relationshipContext,
+          phase: 'recon',
+          quantitativeContext: quantContext,
         }),
         signal: controller.signal,
       });
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Analysis failed: ${response.status} ${errorBody}`);
+      if (!reconResponse.ok) {
+        throw new Error(`Recon failed: ${reconResponse.status} ${await reconResponse.text()}`);
       }
 
-      if (!response.body) {
-        throw new Error('No response body received');
+      const reconResult = await parseSSEStream<ReconResult>(
+        reconResponse, 'recon_complete', 'recon', controller.signal,
+      );
+
+      if (controller.signal.aborted) return;
+
+      // ── Client-side targeted extraction (round 1) ──
+      const reconIndices = new Set(reconSample.map(m => m.index));
+      const targeted1 = extractTargetedSamples(allEligible, reconResult, reconIndices, 600);
+
+      // ── Phase 2: Deep Recon (Pass 0.5) ──
+      if (mountedRef.current) setCurrentPass(1);
+      updateOperation('ai-analysis', { progress: 15, status: PASS_LABELS[1] });
+
+      const deepReconResponse = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisId,
+          samples: { overview: targeted1, quantitativeContext: quantContext },
+          participants,
+          relationshipContext,
+          phase: 'deep_recon',
+          quantitativeContext: quantContext,
+          recon: reconResult,
+          targetedSamples: targeted1,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!deepReconResponse.ok) {
+        throw new Error(`Deep recon failed: ${deepReconResponse.status} ${await deepReconResponse.text()}`);
       }
 
-      reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let finalResult: QualitativeAnalysis | null = null;
+      const deepReconResult = await parseSSEStream<DeepReconResult>(
+        deepReconResponse, 'deep_recon_complete', 'deepRecon', controller.signal,
+      );
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      if (controller.signal.aborted) return;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
+      // ── Client-side targeted extraction (round 2) ──
+      const allUsedIndices = new Set([...reconIndices, ...targeted1.map(m => m.index)]);
+      const targeted2 = extractDeepTargetedSamples(allEligible, deepReconResult, allUsedIndices, 400);
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
+      // Merge all targeted messages for Pass 1-4
+      const allTargeted = [...targeted1, ...targeted2].sort((a, b) => a.timestamp - b.timestamp);
 
-          try {
-            const event = JSON.parse(data) as {
-              type: string;
-              pass?: number;
-              status?: string;
-              result?: QualitativeAnalysis;
-              error?: string;
-            };
+      // Build Intelligence Briefing text and store for secondary endpoints
+      const reconBriefingText = buildReconBriefingText(reconResult, deepReconResult);
+      mergeQualitative({ reconBriefing: reconBriefingText });
 
-            if (event.type === 'progress' && event.pass) {
-              if (mountedRef.current) setCurrentPass(event.pass);
-              updateOperation('ai-analysis', {
-                progress: event.pass * 20,
-                status: PASS_LABELS[event.pass - 1] ?? `Pass ${event.pass}...`,
-              });
-            } else if (event.type === 'complete' && event.result) {
-              finalResult = event.result;
-              // Debug: log pass3 completeness
-              const p3 = event.result.pass3;
-              if (p3) {
-                const p3Names = Object.keys(p3);
-                console.log('[AI Debug] pass3 participants:', p3Names);
-                for (const n of p3Names) {
-                  const pf = p3[n];
-                  console.log(`[AI Debug] ${n}:`, {
-                    hasAttachment: !!pf?.attachment_indicators?.primary_style,
-                    attachmentStyle: pf?.attachment_indicators?.primary_style,
-                    hasBigFive: !!pf?.big_five_approximation,
-                    hasMBTI: !!pf?.mbti?.type,
-                    hasLoveLang: !!pf?.love_language,
-                    keys: pf ? Object.keys(pf) : [],
-                  });
-                }
-              } else {
-                console.warn('[AI Debug] pass3 is empty/undefined in result!');
-              }
-            } else if (event.type === 'error') {
-              throw new Error(event.error ?? 'Unknown analysis error');
-            }
-          } catch (parseError) {
-            // Skip malformed JSON lines in the SSE stream
-            if (parseError instanceof SyntaxError) continue;
-            throw parseError;
-          }
+      // ── Phase 3: Deep analysis (Pass 1-4) ──
+      if (mountedRef.current) setCurrentPass(2);
+      updateOperation('ai-analysis', { progress: 25, status: PASS_LABELS[2] });
+
+      const mainSamples = sampleMessages(conversation, quantitative);
+
+      const deepResponse = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisId,
+          samples: mainSamples,
+          participants,
+          relationshipContext,
+          phase: 'deep',
+          quantitativeContext: mainSamples.quantitativeContext,
+          recon: reconResult,
+          deepRecon: deepReconResult,
+          targetedSamples: allTargeted,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!deepResponse.ok) {
+        throw new Error(`Analysis failed: ${deepResponse.status} ${await deepResponse.text()}`);
+      }
+
+      const finalResult = await parseSSEStream<QualitativeAnalysis>(
+        deepResponse, 'complete', 'result', controller.signal,
+        (pass, _status) => {
+          // Map server pass numbers (1-4) to UI step indices (2-5)
+          const uiStep = pass + 1;
+          if (mountedRef.current) setCurrentPass(uiStep);
+          updateOperation('ai-analysis', {
+            progress: 25 + pass * 18,
+            status: PASS_LABELS[uiStep] ?? `Pass ${pass}...`,
+          });
+        },
+      );
+
+      if (controller.signal.aborted) return;
+
+      // Debug: log pass3 completeness
+      const p3 = finalResult.pass3;
+      if (p3) {
+        const p3Names = Object.keys(p3);
+        console.log('[AI Debug] pass3 participants:', p3Names);
+        for (const n of p3Names) {
+          const pf = p3[n];
+          console.log(`[AI Debug] ${n}:`, {
+            hasAttachment: !!pf?.attachment_indicators?.primary_style,
+            attachmentStyle: pf?.attachment_indicators?.primary_style,
+            hasBigFive: !!pf?.big_five_approximation,
+            hasMBTI: !!pf?.mbti?.type,
+            hasLoveLang: !!pf?.love_language,
+            keys: pf ? Object.keys(pf) : [],
+          });
         }
-      }
-
-      if (finalResult) {
-        if (mountedRef.current) {
-          setState('complete');
-          setCompletedAt(
-            new Date().toLocaleTimeString('pl-PL', {
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
-          );
-        }
-        trackEvent({ name: 'analysis_complete', params: { mode: 'standard', passCount: 4 } });
-        onComplete(finalResult);
       } else {
-        throw new Error('Analysis completed without results');
+        console.warn('[AI Debug] pass3 is empty/undefined in result!');
       }
+
+      if (mountedRef.current) {
+        setState('complete');
+        setCompletedAt(
+          new Date().toLocaleTimeString('pl-PL', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        );
+      }
+      trackEvent({ name: 'analysis_complete', params: { mode: 'standard', passCount: 6 } });
+      onComplete(finalResult);
     } catch (err) {
-      await reader?.cancel();
       // User cancelled — silently reset to idle
       if (err instanceof DOMException && err.name === 'AbortError') return;
       if (mountedRef.current) {
@@ -273,7 +389,7 @@ export default function AIAnalysisButton({
       stopOperation('ai-analysis');
       analysisControllerRef.current = null;
     }
-  }, [analysisId, conversation, quantitative, onComplete, relationshipContext, startOperation, updateOperation, stopOperation]);
+  }, [analysisId, conversation, quantitative, onComplete, relationshipContext, startOperation, updateOperation, stopOperation, mergeQualitative]);
 
   const handleRunRoast = useCallback(async () => {
     setRoastState('running');
@@ -528,7 +644,7 @@ export default function AIAnalysisButton({
           {/* Progress steps */}
           <div className="space-y-3" aria-live="polite">
             <AnimatePresence>
-              {steps.map((step) => (
+              {steps.map((step, index) => (
                 <motion.div
                   key={step.pass}
                   initial={{ opacity: 0, x: -10 }}
@@ -553,7 +669,7 @@ export default function AIAnalysisButton({
                     ) : step.status === 'running' ? (
                       <Loader2 className="size-3.5 animate-spin" />
                     ) : (
-                      step.pass
+                      index + 1
                     )}
                   </div>
 

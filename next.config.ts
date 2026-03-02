@@ -67,7 +67,7 @@ const nextConfig: NextConfig = {
      * Allow build to continue despite prerender failures.
      */
     staticGenerationRetryCount: 0,
-    optimizePackageImports: ['framer-motion', 'lucide-react', 'recharts'],
+    optimizePackageImports: ['framer-motion', 'lucide-react', 'recharts', 'gsap', 'three'],
   },
 };
 

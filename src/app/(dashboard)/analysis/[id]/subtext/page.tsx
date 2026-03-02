@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
@@ -63,15 +63,10 @@ export default function SubtextModePage() {
     quantitative,
     qualitative,
     ops,
+    onComplete: onSubtextComplete,
   });
 
   const persisted = qualitative?.subtext;
-  useEffect(() => {
-    if (hookResult && !persisted) {
-      onSubtextComplete(hookResult);
-    }
-  }, [hookResult, persisted, onSubtextComplete]);
-
   const subtextResult = persisted ?? hookResult;
   const canRun = hasQualitative && !subtextResult && !isLoading;
 

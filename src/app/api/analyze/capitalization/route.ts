@@ -85,7 +85,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Brak messagesText lub participants.' }, { status: 400 });
   }
 
-  const { messagesText, participants } = body as { messagesText: string; participants: string[] };
+  const { messagesText, participants, reconBriefing } = body as { messagesText: string; participants: string[]; reconBriefing?: string };
 
   if (typeof messagesText !== 'string' || !Array.isArray(participants) || participants.length < 2) {
     return Response.json({ error: 'Nieprawidłowe parametry żądania.' }, { status: 400 });
@@ -128,7 +128,8 @@ export async function POST(request: Request): Promise<Response> {
 
         send({ type: 'progress', status: 'Analizowanie odpowiedzi na dobre wieści...' });
 
-        const prompt = buildCapitalizationPrompt(messagesText, participants);
+        let prompt = buildCapitalizationPrompt(messagesText, participants);
+        if (reconBriefing) prompt = reconBriefing + '\n\n' + prompt;
         const rawJson = await callGeminiWithRetry(CAPITALIZATION_SYSTEM_PROMPT, prompt, 3, 4096, 0.3);
 
         if (signal.aborted) { safeClose(); return; }

@@ -396,6 +396,57 @@ export interface Pass4Result {
 export type RelationshipContext = 'romantic' | 'friendship' | 'colleague' | 'professional' | 'family' | 'other' | 'eks';
 
 // ============================================================
+// RECON PASS (Pass 0) — Intelligent Sampling
+// ============================================================
+
+export interface ReconFlaggedRange {
+  start: string;     // YYYY-MM or YYYY-MM-DD
+  end: string;
+  reason: string;
+  priority: 1 | 2 | 3;  // 1=critical, 3=interesting
+}
+
+export interface ReconTopic {
+  topic: string;
+  searchKeywords: string[];  // PL+EN keywords for client-side grep
+  reason: string;
+  priority: 1 | 2 | 3;
+}
+
+export interface ReconEmotionalPeak {
+  approximateDate: string;
+  emotion: string;
+  description: string;
+}
+
+export interface ReconResult {
+  flaggedDateRanges: ReconFlaggedRange[];
+  topicsToInvestigate: ReconTopic[];
+  emotionalPeaks: ReconEmotionalPeak[];
+  observedThemes: string[];
+  openQuestions: string[];
+}
+
+// ============================================================
+// DEEP RECON PASS (Pass 0.5) — Refined Intelligent Sampling
+// ============================================================
+
+export interface DeepReconResult {
+  /** New or narrowed date ranges found from targeted samples */
+  refinedDateRanges: ReconFlaggedRange[];
+  /** New or refined topics discovered from deeper look */
+  refinedTopics: ReconTopic[];
+  /** Confirmed/enriched emotional peaks with more detail */
+  confirmedPeaks: ReconEmotionalPeak[];
+  /** Themes confirmed or discovered from targeted samples */
+  confirmedThemes: string[];
+  /** Narrative summary of what deep recon uncovered — context for Pass 1-4 */
+  narrativeSummary: string;
+  /** New questions that arose from the deeper look */
+  newQuestions: string[];
+}
+
+// ============================================================
 // ROAST MODE
 // ============================================================
 
@@ -451,10 +502,26 @@ export interface MegaRoastResult {
 }
 
 // ============================================================
-// CWEL TYGODNIA — AI-first group chat award ceremony
+// ROAST RESEARCH — AI pre-analysis for enhanced/mega roasts
 // ============================================================
 
-export interface CwelNomination {
+export interface RoastResearchResult {
+  per_person: Record<string, {
+    compromising_scenes: Array<{ date: string; scene: string; why_devastating: string }>;
+    contradictions: Array<{ said: string; did: string; gap: string }>;
+    behavioral_patterns: Array<{ pattern: string; examples: string[]; what_it_says: string }>;
+    worst_moments: Array<{ timestamp: string; quote: string; context: string }>;
+    defining_quotes: string[];
+  }>;
+  power_dynamics_scenes: Array<{ scene: string; who_wins: string; how: string }>;
+  narrative_arcs: Array<{ title: string; setup: string; development: string; climax: string; punchline_potential: string }>;
+}
+
+// ============================================================
+// PRZEGRYW TYGODNIA — AI-first group chat award ceremony
+// ============================================================
+
+export interface PrzegrywNomination {
   categoryId: string;
   categoryTitle: string;
   emoji: string;
@@ -464,11 +531,11 @@ export interface CwelNomination {
   runnerUp?: string;
 }
 
-export interface CwelTygodniaResult {
+export interface PrzegrywTygodniaResult {
   winner: string;
   winnerScore: number;
   winnerCategories: number;
-  nominations: CwelNomination[];
+  nominations: PrzegrywNomination[];
   ranking: Array<{ name: string; score: number; oneLiner: string }>;
   intro: string;
   crowningSpeech: string;
@@ -579,10 +646,10 @@ export interface QualitativeAnalysis {
   datingProfile?: DatingProfileResult;
   /** Quiz parowy — Couple Mode comparison (optional, client-side) */
   coupleQuiz?: CoupleQuizComparison;
-  /** Mega Roast — single-target roast using full group context (optional) */
-  megaRoast?: MegaRoastResult;
-  /** Cwel Tygodnia — AI-first group chat award ceremony (optional) */
-  cwelTygodnia?: CwelTygodniaResult;
+  /** Mega Roast — per-target roasts keyed by participant name (optional) */
+  megaRoast?: Record<string, MegaRoastResult>;
+  /** Przegryw Tygodnia — AI-first group chat award ceremony (optional) */
+  przegrywTygodnia?: PrzegrywTygodniaResult;
   /** Emotion Cause Extraction (optional AI pass) */
   emotionCauses?: EmotionCausesResult;
   /** Moral Foundations Theory (optional AI pass) */
@@ -593,6 +660,8 @@ export interface QualitativeAnalysis {
   argumentSimulation?: ArgumentSimulationResult;
   /** Tryb Eks — relationship autopsy (optional) */
   eksAnalysis?: EksResult;
+  /** Intelligence Briefing text from recon passes — shared with all secondary AI endpoints */
+  reconBriefing?: string;
   completedAt?: number;
 }
 

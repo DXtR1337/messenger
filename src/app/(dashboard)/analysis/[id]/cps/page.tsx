@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
@@ -98,16 +98,12 @@ export default function CPSModePage() {
     conversation,
     quantitative,
     participantName: selectedParticipant,
+    reconBriefing: qualitative?.reconBriefing,
     ops,
+    onComplete: onCPSComplete,
   });
 
   const persisted = qualitative?.cps;
-  useEffect(() => {
-    if (hookResult && !persisted) {
-      onCPSComplete(hookResult);
-    }
-  }, [hookResult, persisted, onCPSComplete]);
-
   const cpsResult = persisted ?? hookResult;
 
   const messageCount = conversation.messages.length;

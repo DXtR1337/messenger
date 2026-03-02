@@ -4,17 +4,20 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Flame, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sampleMessages, buildQuantitativeContext } from '@/lib/analysis/qualitative';
+import { runDeepScan } from '@/lib/analysis/deep-scanner';
 import { trackEvent } from '@/lib/analytics/events';
 import { useAnalysis } from '@/lib/analysis/analysis-context';
 import type { StoredAnalysis, MegaRoastResult } from '@/lib/analysis/types';
+import { logger } from '@/lib/logger';
 
 interface MegaRoastButtonProps {
   analysis: StoredAnalysis;
   targetPerson: string;
   onComplete: (result: MegaRoastResult) => void;
+  mode?: 'group' | 'duo';
 }
 
-export default function MegaRoastButton({ analysis, targetPerson, onComplete }: MegaRoastButtonProps) {
+export default function MegaRoastButton({ analysis, targetPerson, onComplete, mode = 'group' }: MegaRoastButtonProps) {
   const { startOperation, updateOperation, stopOperation } = useAnalysis();
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -36,18 +39,25 @@ export default function MegaRoastButton({ analysis, targetPerson, onComplete }: 
   }, []);
 
   const handleRun = useCallback(async () => {
-    const { conversation, quantitative } = analysis;
+    const { conversation, quantitative, qualitative } = analysis;
+
+    // Duo mode requires full AI analysis
+    if (mode === 'duo' && (!qualitative?.pass1 || !qualitative?.pass2 || !qualitative?.pass3 || !qualitative?.pass4)) {
+      setError('Kombajn roastowy wymaga wcześniejszej Analizy AI (pass 1-4). Uruchom najpierw "AI Deep Dive".');
+      return;
+    }
 
     setRunning(true);
     setError(null);
-    setStatus(`Przygotowuję mega roast na ${targetPerson}...`);
-    startOperation('mega-roast', 'Mega Roast', `Przygotowuję mega roast na ${targetPerson}...`);
+    const isDuo = mode === 'duo';
+    setStatus(isDuo ? `Uruchamiam kombajn roastowy na ${targetPerson}...` : `Przygotowuję mega roast na ${targetPerson}...`);
+    startOperation('mega-roast', 'Mega Roast', isDuo ? `Uruchamiam kombajn roastowy na ${targetPerson}...` : `Przygotowuję mega roast na ${targetPerson}...`);
 
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
 
-    trackEvent({ name: 'analysis_start', params: { mode: 'mega_roast' } });
+    trackEvent({ name: 'analysis_start', params: { mode: isDuo ? 'mega_roast_duo' : 'mega_roast' } });
 
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     try {
@@ -55,15 +65,37 @@ export default function MegaRoastButton({ analysis, targetPerson, onComplete }: 
       const participants = conversation.participants.map((p) => p.name);
       const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
 
+      // Build request body — duo mode includes qualitative + deep scan
+      const body: Record<string, unknown> = {
+        samples,
+        targetPerson,
+        participants,
+        quantitativeContext,
+      };
+
+      if (isDuo) {
+        if (mountedRef.current) setStatus('Skanuję konwersację w poszukiwaniu amunicji...');
+        updateOperation('mega-roast', { status: 'Skanuję konwersację...', progress: 15 });
+        const deepScan = runDeepScan(conversation, quantitative);
+        logger.log('[MegaRoast Duo] Deep scan material:', (deepScan.formattedForPrompt.length / 1024).toFixed(1), 'KB');
+
+        if (mountedRef.current) setStatus('Ładuję kombajn roastowy...');
+        updateOperation('mega-roast', { status: 'Ładuję kombajn roastowy...', progress: 25 });
+
+        body.mode = 'duo';
+        body.qualitative = {
+          pass1: qualitative!.pass1,
+          pass2: qualitative!.pass2,
+          pass3: qualitative!.pass3,
+          pass4: qualitative!.pass4,
+        };
+        body.deepScanMaterial = deepScan.formattedForPrompt;
+      }
+
       const response = await fetch('/api/analyze/mega-roast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          samples,
-          targetPerson,
-          participants,
-          quantitativeContext,
-        }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
 
@@ -116,7 +148,7 @@ export default function MegaRoastButton({ analysis, targetPerson, onComplete }: 
       }
 
       if (megaRoastResult) {
-        trackEvent({ name: 'analysis_complete', params: { mode: 'mega_roast', passCount: 1 } });
+        trackEvent({ name: 'analysis_complete', params: { mode: isDuo ? 'mega_roast_duo' : 'mega_roast', passCount: 1 } });
         onComplete(megaRoastResult);
         setStatus(null);
       } else {
@@ -131,7 +163,9 @@ export default function MegaRoastButton({ analysis, targetPerson, onComplete }: 
       if (mountedRef.current) setRunning(false);
       controllerRef.current = null;
     }
-  }, [analysis, targetPerson, onComplete, startOperation, updateOperation, stopOperation]);
+  }, [analysis, targetPerson, onComplete, mode, startOperation, updateOperation, stopOperation]);
+
+  const isDuo = mode === 'duo';
 
   if (error) {
     return (
@@ -170,12 +204,14 @@ export default function MegaRoastButton({ analysis, targetPerson, onComplete }: 
         ) : (
           <>
             <Flame className="size-4" />
-            Mega Roast — {targetPerson}
+            {isDuo ? `Kombajn Roastowy — ${targetPerson}` : `Mega Roast — ${targetPerson}`}
           </>
         )}
       </Button>
       {!running && (
-        <span className="text-xs text-muted-foreground">Ultra brutalny roast na podstawie całej konwersacji</span>
+        <span className="text-xs text-muted-foreground">
+          {isDuo ? 'Łączy statystyki, psychologię, zarzuty i komedię' : 'Ultra brutalny roast na podstawie całej konwersacji'}
+        </span>
       )}
     </div>
   );

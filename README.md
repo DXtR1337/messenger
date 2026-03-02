@@ -271,7 +271,7 @@ HTTP-based interactions bot (Ed25519 verification, in-memory LRU cache).
 | `/roast` | AI roast of entire channel | AI |
 | `/megaroast` | AI mega roast of one person | AI |
 | `/personality` | AI personality profile (MBTI + Big Five) | AI |
-| `/cwel` | Cwel Tygodnia — AI picks the biggest loser | AI |
+| `/przegryw` | Przegryw Tygodnia — AI picks the biggest loser | AI |
 | `/search` | Search channel messages by keyword | Search |
 | `/analyze` | Open full web analysis | Link |
 
@@ -307,7 +307,7 @@ All quantitative metrics have been audited against published research:
 | Capitalization (ACR) | Gable et al. (2004) |
 | Moral Foundations | Haidt & Graham (2007), Rathje et al. (2024) *PNAS* |
 
-Three fabricated citations (Jarmolowicz 2022, Alikhan 2023, Vanderbilt 2025) were identified and replaced with real sources during the audit.
+Two fabricated citations (Jarmolowicz 2022, Alikhan 2023) were identified and replaced with real sources (Randler 2017, Vetter 2015) during the methodological audit. Vanderbilt et al. (2025) was verified as a real publication (DOI: 10.1177/0261927X251344949).
 
 ---
 

@@ -10,9 +10,10 @@ import { AIBadge } from '@/components/shared/SourceBadge';
 interface MegaRoastSectionProps {
   result: MegaRoastResult;
   discordChannelId?: string;
+  isDuo?: boolean;
 }
 
-export default function MegaRoastSection({ result, discordChannelId }: MegaRoastSectionProps) {
+export default function MegaRoastSection({ result, discordChannelId, isDuo }: MegaRoastSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
   const [linkCopied, setLinkCopied] = useState(false);
@@ -105,7 +106,7 @@ export default function MegaRoastSection({ result, discordChannelId }: MegaRoast
               <AIBadge />
             </div>
             <p className="text-xs text-muted-foreground">
-              Ultra brutalny roast na podstawie całej konwersacji
+              {isDuo ? 'Kombajn roastowy — statystyki + psychologia + zarzuty + komedia' : 'Ultra brutalny roast na podstawie całej konwersacji'}
             </p>
           </div>
         </div>
@@ -163,7 +164,7 @@ export default function MegaRoastSection({ result, discordChannelId }: MegaRoast
             >
               <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <MessageCircle className="size-4 text-purple-500" />
-                Co mówią inni
+                {isDuo ? 'Co zdradza o tobie twój rozmówca' : 'Co mówią inni'}
               </h3>
               <div className="space-y-2">
                 {result.what_others_say.map((line, i) => (

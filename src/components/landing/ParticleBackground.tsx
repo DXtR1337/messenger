@@ -16,7 +16,6 @@ export default function ParticleBackground() {
 
   useEffect(() => {
     if (isMobile) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;

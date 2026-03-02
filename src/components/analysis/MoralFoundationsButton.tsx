@@ -13,12 +13,13 @@ const MoralFoundationsCard = dynamic(() => import('@/components/analysis/MoralFo
 
 interface MoralFoundationsButtonProps {
   conversation: ParsedConversation;
+  reconBriefing?: string;
   onComplete?: (result: import('@/lib/analysis/moral-foundations-prompts').MoralFoundationsResult) => void;
 }
 
-export default function MoralFoundationsButton({ conversation, onComplete }: MoralFoundationsButtonProps) {
+export default function MoralFoundationsButton({ conversation, reconBriefing, onComplete }: MoralFoundationsButtonProps) {
   const participants = conversation.participants.map(p => p.name);
-  const { run, isLoading, result, error, reset } = useMoralFoundationsAnalysis(conversation, onComplete);
+  const { run, isLoading, result, error, reset } = useMoralFoundationsAnalysis(conversation, onComplete, reconBriefing);
   const [hasRun, setHasRun] = useState(false);
 
   const handleClick = async () => {

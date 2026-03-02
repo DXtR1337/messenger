@@ -16,16 +16,38 @@ import {
 } from '@/lib/compare';
 import type { ComparisonRecord, CommonUserResult } from '@/lib/compare';
 
+/**
+ * Deduplicate analyses from the same conversation.
+ * Groups by sorted lowercase participant names — ignores platform, timestamps,
+ * and fingerprint because re-uploading the same conversation from a different
+ * export date range produces a different fingerprint.
+ * Keeps only the newest analysis per unique participant set.
+ */
+function deduplicateEntries(entries: AnalysisIndexEntry[]): AnalysisIndexEntry[] {
+  const groups = new Map<string, AnalysisIndexEntry[]>();
+  for (const entry of entries) {
+    const key = [...entry.participants]
+      .map((p) => p.trim().toLowerCase())
+      .sort()
+      .join('|');
+    const group = groups.get(key);
+    if (group) group.push(entry);
+    else groups.set(key, [entry]);
+  }
+  return Array.from(groups.values()).map((group) =>
+    group.reduce((newest, e) => (e.createdAt > newest.createdAt ? e : newest)),
+  );
+}
+
 // Lazy-load tab components
-const QuantCompareTab = dynamic(() => import('@/components/compare/QuantCompareTab'), { ssr: false });
+const OverviewTab = dynamic(() => import('@/components/compare/OverviewTab'), { ssr: false });
 const RankingTab = dynamic(() => import('@/components/compare/RankingTab'), { ssr: false });
-const RadarProfilesTab = dynamic(() => import('@/components/compare/RadarProfilesTab'), { ssr: false });
+const AICompareTab = dynamic(() => import('@/components/compare/AICompareTab'), { ssr: false });
+const QuantCompareTab = dynamic(() => import('@/components/compare/QuantCompareTab'), { ssr: false });
 const TimelineCompareTab = dynamic(() => import('@/components/compare/TimelineCompareTab'), { ssr: false });
-const InsightsTab = dynamic(() => import('@/components/compare/InsightsTab'), { ssr: false });
-const HealthTab = dynamic(() => import('@/components/compare/HealthTab'), { ssr: false });
-const DynamicsTab = dynamic(() => import('@/components/compare/DynamicsTab'), { ssr: false });
-const VariationsTab = dynamic(() =>   import('@/components/compare/VariationsTab'), { ssr: false });
+const RadarProfilesTab = dynamic(() => import('@/components/compare/RadarProfilesTab'), { ssr: false });
 const UserProfileTab = dynamic(() => import('@/components/compare/UserProfileTab'), { ssr: false });
+const ColorLegend = dynamic(() => import('@/components/compare/ColorLegend'), { ssr: false });
 
 export default function CompareClient() {
   const router = useRouter();
@@ -34,14 +56,15 @@ export default function CompareClient() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [analyses, setAnalyses] = useState<StoredAnalysis[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('quant');
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // Load index
+  // Load index — deduplicate so each conversation appears only once (newest)
   useEffect(() => {
     listAnalyses().then((all) => {
-      setEntries(all);
+      const deduped = deduplicateEntries(all);
+      setEntries(deduped);
       // Auto-select all 1:1 analyses
-      const oneOnOneIds = all
+      const oneOnOneIds = deduped
         .filter((e) => e.participants.length === 2)
         .map((e) => e.id);
       if (oneOnOneIds.length > 0) {
@@ -197,33 +220,29 @@ export default function CompareClient() {
             aiCount={aiCount}
           />
 
+          <ColorLegend records={records} />
+
           <div className="min-h-[50vh]">
-            {activeTab === 'dynamics' && (
-              <DynamicsTab records={records} selfName={selfName} />
+            {activeTab === 'overview' && (
+              <OverviewTab records={records} selfName={selfName} />
+            )}
+            {activeTab === 'ranking' && (
+              <RankingTab records={records} selfName={selfName} />
+            )}
+            {activeTab === 'ai' && (
+              <AICompareTab records={records} selfName={selfName} />
             )}
             {activeTab === 'quant' && (
               <QuantCompareTab records={records} selfName={selfName} />
             )}
-            {activeTab === 'variations' && (
-              <VariationsTab records={records} selfName={selfName} />
-            )}
-            {activeTab === 'insights' && (
-              <InsightsTab records={records} selfName={selfName} />
-            )}
-            {activeTab === 'ranking' && (
-              <RankingTab records={records} selfName={selfName} />
+            {activeTab === 'timeline' && (
+              <TimelineCompareTab records={records} selfName={selfName} />
             )}
             {activeTab === 'radar' && (
               <RadarProfilesTab records={records} selfName={selfName} />
             )}
             {activeTab === 'profile' && (
               <UserProfileTab records={records} selfName={selfName} />
-            )}
-            {activeTab === 'health' && (
-              <HealthTab records={records} selfName={selfName} />
-            )}
-            {activeTab === 'timeline' && (
-              <TimelineCompareTab records={records} selfName={selfName} />
             )}
           </div>
         </>

@@ -53,7 +53,8 @@ export default function ChatCourtButton({ analysis, onComplete }: ChatCourtButto
     try {
       const samples = sampleMessages(conversation, quantitative);
       const participants = conversation.participants.map((p) => p.name);
-      const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      let quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      if (qualitative?.reconBriefing) quantitativeContext += '\n\n' + qualitative.reconBriefing;
 
       const body: Record<string, unknown> = {
         samples,

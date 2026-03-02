@@ -100,7 +100,7 @@ export async function POST(request: Request): Promise<Response> {
           console.error('[CPS]', error);
           send({
             type: 'error',
-            error: error instanceof Error ? error.message : 'CPS analysis failed',
+            error: error instanceof Error ? error.message : 'Analiza CPS nie powiodła się — spróbuj ponownie',
           });
         }
       } finally {

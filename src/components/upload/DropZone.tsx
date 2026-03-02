@@ -303,22 +303,26 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
           !isDragging && !disabled && 'border-border bg-card/50 hover:border-muted-foreground/50 hover:bg-card/80',
         )}
       >
+        {/* sr-only instead of hidden: avoids display:none which some browsers
+            block when triggering .click() programmatically */}
         <input
           ref={fileInputRef}
           type="file"
           accept=".json,.txt"
           multiple
           onChange={handleFileInputChange}
-          className="hidden"
+          className="sr-only"
           disabled={disabled}
+          tabIndex={-1}
           aria-label="Select JSON files"
         />
         <input
           ref={folderInputRef}
           type="file"
           onChange={handleFolderInputChange}
-          className="hidden"
+          className="sr-only"
           disabled={disabled}
+          tabIndex={-1}
           aria-label="Select conversation folder"
         />
 

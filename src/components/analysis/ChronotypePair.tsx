@@ -187,7 +187,7 @@ export default function ChronotypePair({ result }: ChronotypePairProps) {
 
       <PsychDisclaimer
         text="Chronotyp wyznaczony z timestampów wiadomości — analogia do MCTQ midpoint-of-sleep, bez kontroli snu i strefy czasowej. UK Biobank (N=47,420 par): r=0.24 dla synchronizacji rytmów dobowych. Przesunięcie aktywności = |midpoint_dni_roboczych − midpoint_weekendu| (analogia do social jet lag, Roenneberg et al., 2012 — oryginał mierzy sen, nie wiadomości). Wyniki zależą od nawyków telefonu."
-        citation="Aledavood et al., 2018 (EPJ Data Science, N=400); Jarmolowicz et al., 2022; Roenneberg et al., 2012 (Current Biology)"
+        citation="Aledavood et al., 2018 (EPJ Data Science, N=400); Randler et al., 2017 (Chronobiology International); Roenneberg et al., 2012 (Current Biology)"
         showGenericFooter
       />
     </div>

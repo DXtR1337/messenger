@@ -36,40 +36,6 @@ export function useScrollChoreography(
       if (!container) return;
 
       // ---------------------------------------------------------------
-      // Accessibility: prefers-reduced-motion
-      // ---------------------------------------------------------------
-      const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-      const setFinalStates = () => {
-        gsap.set(container.querySelectorAll('[data-scroll-column]'), { opacity: 1, x: 0 });
-        gsap.set(container.querySelectorAll('[data-scroll-card]'), { opacity: 1, y: 0 });
-        gsap.set(container.querySelectorAll('[data-scroll-group="achievements"] > *'), { opacity: 1, scale: 1, y: 0 });
-        gsap.set(container.querySelectorAll('[data-scroll-group="section-header"]'), { opacity: 1, x: 0 });
-        const headerLines = container.querySelectorAll('[data-scroll-element="header-line"]');
-        gsap.set(headerLines, { scaleX: 1, opacity: 1 });
-      };
-
-      if (motionQuery.matches) {
-        setFinalStates();
-        // Still watch for late-mounting Suspense content to set visible
-        const reducedMotionObserver = new MutationObserver(
-          debounce(() => setFinalStates(), 100),
-        );
-        reducedMotionObserver.observe(container, { childList: true, subtree: true });
-        return () => {
-          reducedMotionObserver.disconnect();
-        };
-      }
-
-      const handleMotionChange = (e: MediaQueryListEvent) => {
-        if (e.matches) {
-          ScrollTrigger.getAll().forEach((t) => t.kill());
-          setFinalStates();
-        }
-      };
-      motionQuery.addEventListener('change', handleMotionChange);
-
-      // ---------------------------------------------------------------
       // Mobile scaling factors
       // ---------------------------------------------------------------
       const isMobile = window.innerWidth < 768;
@@ -340,7 +306,6 @@ export function useScrollChoreography(
       return () => {
         resizeObserver.disconnect();
         mutationObserver.disconnect();
-        motionQuery.removeEventListener('change', handleMotionChange);
         container.classList.remove('gsap-ready');
       };
     },

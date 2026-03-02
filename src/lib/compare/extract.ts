@@ -64,8 +64,8 @@ function extractPersonQuant(
   q: StoredAnalysis['quantitative'],
   analysis: StoredAnalysis,
 ): PersonQuantData {
-  const pm = q.perPerson[name];
-  const tm = q.timing.perPerson[name];
+  const pm = q.perPerson?.[name];
+  const tm = q.timing?.perPerson?.[name];
   const eng = q.engagement;
 
   // Null-safe metric access
@@ -93,8 +93,8 @@ function extractPersonQuant(
     linksSharedPer1k: pm?.linksSharedPer1k ?? 0,
     reactionsGiven: pm?.reactionsGiven ?? 0,
     reactionsReceived: pm?.reactionsReceived ?? 0,
-    reactionGiveRate: safe(eng.reactionGiveRate[name], 0),
-    reactionReceiveRate: safe(eng.reactionReceiveRate[name], 0),
+    reactionGiveRate: safe(eng.reactionGiveRate?.[name], 0),
+    reactionReceiveRate: safe(eng.reactionReceiveRate?.[name], 0),
     unsentMessages: pm?.unsentMessages ?? 0,
 
     // Timing
@@ -107,14 +107,14 @@ function extractPersonQuant(
     fastestResponseMs: tm?.fastestResponseMs ?? 0,
     slowestResponseMs: tm?.slowestResponseMs ?? 0,
     responseTimeTrend: tm?.responseTimeTrend ?? 0,
-    conversationInitiations: safe(q.timing.conversationInitiations[name], 0),
-    conversationEndings: safe(q.timing.conversationEndings[name], 0),
-    lateNightMessages: safe(q.timing.lateNightMessages[name], 0),
+    conversationInitiations: safe(q.timing?.conversationInitiations?.[name], 0),
+    conversationEndings: safe(q.timing?.conversationEndings?.[name], 0),
+    lateNightMessages: safe(q.timing?.lateNightMessages?.[name], 0),
 
     // Engagement
-    doubleTexts: safe(eng.doubleTexts[name], 0),
-    maxConsecutive: safe(eng.maxConsecutive[name], 0),
-    messageRatio: safe(eng.messageRatio[name], 0),
+    doubleTexts: safe(eng?.doubleTexts?.[name], 0),
+    maxConsecutive: safe(eng?.maxConsecutive?.[name], 0),
+    messageRatio: safe(eng?.messageRatio?.[name], 0),
 
     // Sentiment
     sentiment: q.sentimentAnalysis?.perPerson[name] ?? null,
@@ -238,16 +238,16 @@ function extractRelationshipQuant(
     rankingPercentiles: q.rankingPercentiles ?? null,
     responseTimeDistribution: q.responseTimeDistribution ?? null,
     yearMilestones: q.yearMilestones ?? null,
-    totalSessions: q.engagement.totalSessions,
-    avgConversationLength: q.engagement.avgConversationLength,
-    volumeTrend: q.patterns.volumeTrend,
-    burstsCount: q.patterns.bursts.length,
+    totalSessions: q.engagement?.totalSessions ?? 0,
+    avgConversationLength: q.engagement?.avgConversationLength ?? 0,
+    volumeTrend: q.patterns?.volumeTrend ?? 0,
+    burstsCount: q.patterns?.bursts?.length ?? 0,
     trends: q.trends ?? null,
     heatmap: q.heatmap ?? null,
-    monthlyVolume: q.patterns.monthlyVolume ?? null,
-    weekdayWeekend: q.patterns.weekdayWeekend ?? null,
-    longestSilenceMs: q.timing.longestSilence?.durationMs ?? 0,
-    longestSilenceLastSender: q.timing.longestSilence?.lastSender ?? null,
+    monthlyVolume: q.patterns?.monthlyVolume ?? null,
+    weekdayWeekend: q.patterns?.weekdayWeekend ?? null,
+    longestSilenceMs: q.timing?.longestSilence?.durationMs ?? 0,
+    longestSilenceLastSender: q.timing?.longestSilence?.lastSender ?? null,
   };
 }
 

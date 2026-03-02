@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useAnalysis } from '@/lib/analysis/analysis-context';
+import { readSSEStream } from '@/lib/sse';
 import type { ParsedConversation } from '@/lib/parsers/types';
 import type { MoralFoundationsResult } from '@/lib/analysis/moral-foundations-prompts';
+import { getBackgroundOp, setBackgroundOp, clearBackgroundOp, subscribeBackgroundOps, getSnapshotFactory } from '@/lib/analysis/background-ops';
 
 interface UseMoralFoundationsReturn {
   run: () => Promise<void>;
@@ -16,12 +18,20 @@ interface UseMoralFoundationsReturn {
 export function useMoralFoundationsAnalysis(
   conversation: ParsedConversation,
   onComplete?: (result: MoralFoundationsResult) => void,
+  reconBriefing?: string,
 ): UseMoralFoundationsReturn {
   const { startOperation, updateOperation, stopOperation } = useAnalysis();
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<MoralFoundationsResult | undefined>();
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Background state — survives unmount/remount cycles
+  const OP_KEY = 'moral';
+  const bgOp = useSyncExternalStore(subscribeBackgroundOps, getSnapshotFactory(OP_KEY), () => undefined);
+  const isRunningInBackground = !!bgOp && !bgOp.isComplete && !bgOp.error;
+
+  // NOTE: No abort-on-unmount — analysis continues in background when navigating away
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -31,9 +41,15 @@ export function useMoralFoundationsAnalysis(
   }, []);
 
   const run = useCallback(async () => {
+    if (isRunningInBackground) return;
     if (isLoading) return;
+
+    // Abort previous run if any
+    abortRef.current?.abort();
+
     setIsLoading(true);
     setError(null);
+    setBackgroundOp(OP_KEY, { progress: 0, phaseName: 'Fundacje Moralne', isComplete: false, error: null });
     startOperation('moral', 'Fundacje Moralne', 'Przygotowuję analizę...');
 
     const controller = new AbortController();
@@ -49,7 +65,7 @@ export function useMoralFoundationsAnalysis(
       const response = await fetch('/api/analyze/moral-foundations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, participants }),
+        body: JSON.stringify({ messages, participants, reconBriefing }),
         signal: controller.signal,
       });
 
@@ -61,46 +77,26 @@ export function useMoralFoundationsAnalysis(
       if (!response.body) throw new Error('No response body received');
 
       const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
       let finalResult: MoralFoundationsResult | null = null;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
-
-          try {
-            const event = JSON.parse(data) as {
-              type: string;
-              result?: MoralFoundationsResult;
-              error?: string;
-            };
-
-            if (event.type === 'progress') {
-              updateOperation('moral', { progress: 50, status: (event as Record<string, unknown>).status as string ?? 'Analizuję...' });
-            } else if (event.type === 'complete' && event.result) {
-              finalResult = event.result;
-            } else if (event.type === 'error') {
-              throw new Error(event.error ?? 'Unknown moral foundations error');
-            }
-          } catch (parseError) {
-            if (parseError instanceof SyntaxError) continue;
-            throw parseError;
-          }
+      await readSSEStream<{
+        type: string;
+        status?: string;
+        result?: MoralFoundationsResult;
+        error?: string;
+      }>(reader, (event) => {
+        if (event.type === 'progress') {
+          updateOperation('moral', { progress: 50, status: (event as Record<string, unknown>).status as string ?? 'Analizuję...' });
+        } else if (event.type === 'complete' && event.result) {
+          finalResult = event.result;
+        } else if (event.type === 'error') {
+          throw new Error(event.error ?? 'Unknown moral foundations error');
         }
-      }
+      }, controller.signal);
 
       if (finalResult) {
         setResult(finalResult);
+        clearBackgroundOp(OP_KEY);
         onComplete?.(finalResult);
       } else {
         throw new Error('Analysis completed without results');
@@ -108,11 +104,12 @@ export function useMoralFoundationsAnalysis(
     } catch (err) {
       if (controller.signal.aborted) return;
       setError(err instanceof Error ? err.message : String(err));
+      clearBackgroundOp(OP_KEY);
     } finally {
       setIsLoading(false);
       stopOperation('moral');
     }
-  }, [isLoading, conversation, onComplete, startOperation, updateOperation, stopOperation]);
+  }, [isLoading, isRunningInBackground, conversation, onComplete, reconBriefing, startOperation, updateOperation, stopOperation]);
 
-  return { run, isLoading, result, error, reset };
+  return { run, isLoading: isRunningInBackground || isLoading, result, error, reset };
 }

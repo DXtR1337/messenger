@@ -22,7 +22,7 @@ import { handleRanking } from '../commands/ranking';
 import { handleRoast } from '../commands/roast';
 import { handleMegaroast } from '../commands/megaroast';
 import { handlePersonality } from '../commands/personality';
-import { handleCwel } from '../commands/cwel';
+import { handlePrzegryw } from '../commands/przegryw';
 import { handleSearchDeferred } from '../commands/search';
 import { handleTinder } from '../commands/tinder';
 import { handleCourt } from '../commands/court';
@@ -91,7 +91,7 @@ export async function POST(request: Request): Promise<Response> {
     ]);
 
     // AI commands — always defer
-    const aiCommands = new Set(['roast', 'megaroast', 'personality', 'cwel', 'tinder', 'court', 'subtext', 'simulate', 'standup', 'deeproast']);
+    const aiCommands = new Set(['roast', 'megaroast', 'personality', 'przegryw', 'tinder', 'court', 'subtext', 'simulate', 'standup', 'deeproast']);
 
     // Search command — deferred but no AI needed
     const searchCommands = new Set(['search']);
@@ -226,8 +226,8 @@ export async function POST(request: Request): Promise<Response> {
                 case 'personality':
                   await handlePersonality(interaction, data);
                   break;
-                case 'cwel':
-                  await handleCwel(interaction, data);
+                case 'przegryw':
+                  await handlePrzegryw(interaction, data);
                   break;
                 case 'tinder':
                   await handleTinder(interaction, data);
@@ -282,7 +282,7 @@ export async function POST(request: Request): Promise<Response> {
       return deferredResponse();
     }
 
-    return immediateResponse('Nieznana komenda. Użyj /stats, /roast, /megaroast, /cwel, /personality, /tinder, /court, /subtext, /simulate, /standup, /deeproast, /versus, /whosimps, /ghostcheck, /besttime, /catchphrase, /emoji, /nightowl, /ranking, /search lub /analyze.');
+    return immediateResponse('Nieznana komenda. Użyj /stats, /roast, /megaroast, /przegryw, /personality, /tinder, /court, /subtext, /simulate, /standup, /deeproast, /versus, /whosimps, /ghostcheck, /besttime, /catchphrase, /emoji, /nightowl, /ranking, /search lub /analyze.');
   }
 
   return new Response('Unknown interaction type', { status: 400 });

@@ -481,7 +481,7 @@ export function buildMegaRoastPrompt(
   return lines.join('\n');
 }
 
-export const DISCORD_CWEL_SYSTEM = `Jestes ceremoniarzem "CWEL TYGODNIA" na Discordzie. Twoje zadanie: przeczytac wiadomosci z kanalu i oglosic kto jest CWELEM TYGODNIA.
+export const DISCORD_PRZEGRYW_SYSTEM = `Jestes ceremoniarzem "PRZEGRYW TYGODNIA" na Discordzie. Twoje zadanie: przeczytac wiadomosci z kanalu i oglosic kto jest PRZEGRYWEM TYGODNIA.
 
 OCENIASZ NA PODSTAWIE TRESCI WIADOMOSCI:
 1. Kto przegrywal klotnie — wycofywal sie, przepraszal, zaprzeczal sobie
@@ -515,7 +515,7 @@ OUTPUT: Valid JSON:
   "hallOfShame": [{"person": "string", "quote": "cytat", "commentary": "1 zdanie komentarza"}]
 }`;
 
-export function buildCwelPrompt(
+export function buildPrzegrywPrompt(
   channelName: string,
   messages: Array<{ sender: string; content: string; timestamp: number; type: string }>,
   quantitative: QuantitativeAnalysis,
@@ -544,8 +544,8 @@ export function buildCwelPrompt(
 
   // Full conversation messages — the AI needs to READ these
   lines.push('=== WIADOMOSCI (czytaj uwaznie — z tego oceniasz) ===');
-  const cwelSampled = sampleChannelMessages(messages, messageLimit);
-  for (const m of cwelSampled) {
+  const przegrywSampled = sampleChannelMessages(messages, messageLimit);
+  for (const m of przegrywSampled) {
     const date = new Date(m.timestamp).toISOString().split('T')[0];
     const time = new Date(m.timestamp).toTimeString().split(' ')[0].slice(0, 5);
     lines.push(`[${date} ${time}] ${m.sender}: ${m.content.slice(0, 200)}`);

@@ -133,7 +133,7 @@ export const METRIC_REGISTRY: Record<string, MetricMeta> = {
   chronotype: {
     name: 'Kompatybilność Chronotypu',
     isExperimental: true,
-    citation: 'Aledavood (2018), Jarmolowicz (2022)',
+    citation: 'Aledavood (2018), Randler (2017)',
     minSampleSize: '20 wiadomości na osobę',
     description: 'Chronotyp behawioralny z timestampów (okrągły punkt środkowy), kompatybilność 0-100.',
     limitations: 'Krzywa delta→score jest heurystyczna — brak opublikowanego mapowania godzin na wynik.',
@@ -167,7 +167,7 @@ export const METRIC_REGISTRY: Record<string, MetricMeta> = {
   gottmanHorsemen: {
     name: 'Wzorce Ryzyka Komunikacyjnego',
     isExperimental: true,
-    citation: 'Gottman & Levenson (2000)',
+    citation: 'Gottman (1994), Gottman & Levenson (2000)',
     description: 'Heurystyczna analiza 4 obszarów ryzyka (Krytycyzm, Pogarda, Defensywność, Stonewalling) inspirowana badaniami Gottmana.',
     limitations: 'Derywowane z wyników CPS (AI) — oryginał wymaga obserwacji klinicznych (SPAFF).',
   },

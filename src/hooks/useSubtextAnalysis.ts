@@ -1,21 +1,19 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
+import { readSSEStream } from '@/lib/sse';
 import type { ParsedConversation, QuantitativeAnalysis } from '@/lib/parsers/types';
 import type { QualitativeAnalysis } from '@/lib/analysis/types';
 import type { SubtextResult } from '@/lib/analysis/subtext';
-
-interface OperationCallbacks {
-  startOperation: (id: string, label: string, status?: string) => void;
-  updateOperation: (id: string, patch: { progress?: number; status?: string }) => void;
-  stopOperation: (id: string) => void;
-}
+import type { OperationCallbacks, ProgressPhase } from '@/hooks/sse-types';
+import { getBackgroundOp, setBackgroundOp, clearBackgroundOp, subscribeBackgroundOps, getSnapshotFactory } from '@/lib/analysis/background-ops';
 
 interface UseSubtextAnalysisOptions {
   conversation: ParsedConversation;
   quantitative: QuantitativeAnalysis;
   qualitative?: QualitativeAnalysis;
   ops?: OperationCallbacks;
+  onComplete?: (result: SubtextResult) => void;
 }
 
 interface UseSubtextAnalysisReturn {
@@ -28,11 +26,6 @@ interface UseSubtextAnalysisReturn {
 }
 
 type SubtextState = 'idle' | 'running' | 'complete' | 'error';
-
-interface ProgressPhase {
-  start: number;
-  ceiling: number;
-}
 
 const PHASE_MAP: Record<string, ProgressPhase> = {
   'Rozpoczynam analizę podtekstów...': { start: 2, ceiling: 8 },
@@ -55,6 +48,7 @@ export function useSubtextAnalysis({
   quantitative,
   qualitative,
   ops,
+  onComplete,
 }: UseSubtextAnalysisOptions): UseSubtextAnalysisReturn {
   const [state, setState] = useState<SubtextState>('idle');
   const [progress, setProgress] = useState(0);
@@ -63,6 +57,15 @@ export function useSubtextAnalysis({
   const ceilingRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const abortRef = useRef<AbortController | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  // Background state — survives unmount/remount cycles
+  const OP_KEY = 'subtext';
+  const bgOp = useSyncExternalStore(subscribeBackgroundOps, getSnapshotFactory(OP_KEY), () => undefined);
+  const isRunningInBackground = !!bgOp && !bgOp.isComplete && !bgOp.error;
+
+  // NOTE: No abort-on-unmount — analysis continues in background when navigating away
 
   // Smooth progress interpolation
   useEffect(() => {
@@ -96,10 +99,16 @@ export function useSubtextAnalysis({
   }, []);
 
   const runSubtext = useCallback(async () => {
+    if (isRunningInBackground) return;
     if (state === 'running') return;
+
+    // Abort previous run if any
+    abortRef.current?.abort();
+
     setState('running');
     setProgress(0);
     setError(null);
+    setBackgroundOp(OP_KEY, { progress: 0, phaseName: 'Subtext Decoder', isComplete: false, error: null });
     ops?.startOperation('subtext', 'Subtext Decoder', 'Rozpoczynam analizę podtekstów...');
 
     const controller = new AbortController();
@@ -121,8 +130,11 @@ export function useSubtextAnalysis({
         conflictPatterns: qualitative.pass2?.conflict_patterns,
       } : undefined;
 
-      // Build quantitative context string
+      // Build quantitative context string (include recon briefing if available)
       let quantitativeContext: string | undefined;
+      if (qualitative?.reconBriefing) {
+        quantitativeContext = qualitative.reconBriefing;
+      }
       if (quantitative.timing?.perPerson) {
         const lines: string[] = [];
         for (const name of participants) {
@@ -136,7 +148,7 @@ export function useSubtextAnalysis({
           }
         }
         if (lines.length > 0) {
-          quantitativeContext = `RESPONSE TIMES:\n${lines.join('\n')}`;
+          quantitativeContext = (quantitativeContext ? quantitativeContext + '\n\n' : '') + `RESPONSE TIMES:\n${lines.join('\n')}`;
         }
       }
 
@@ -162,54 +174,34 @@ export function useSubtextAnalysis({
       }
 
       const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
       let finalResult: SubtextResult | null = null;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
-
-          try {
-            const event = JSON.parse(data) as {
-              type: string;
-              status?: string;
-              result?: SubtextResult;
-              error?: string;
-            };
-
-            if (event.type === 'progress' && event.status) {
-              const phase = PHASE_MAP[event.status];
-              if (phase) {
-                setProgress(phase.start);
-                ceilingRef.current = phase.ceiling;
-                ops?.updateOperation('subtext', { progress: phase.start, status: event.status });
-              }
-            } else if (event.type === 'complete' && event.result) {
-              finalResult = event.result;
-            } else if (event.type === 'error') {
-              throw new Error(event.error ?? 'Unknown subtext analysis error');
-            }
-          } catch (parseError) {
-            if (parseError instanceof SyntaxError) continue;
-            throw parseError;
+      await readSSEStream<{
+        type: string;
+        status?: string;
+        result?: SubtextResult;
+        error?: string;
+      }>(reader, (event) => {
+        if (event.type === 'progress' && event.status) {
+          const phase = PHASE_MAP[event.status];
+          if (phase) {
+            setProgress(phase.start);
+            ceilingRef.current = phase.ceiling;
+            ops?.updateOperation('subtext', { progress: phase.start, status: event.status });
           }
+        } else if (event.type === 'complete' && event.result) {
+          finalResult = event.result;
+        } else if (event.type === 'error') {
+          throw new Error(event.error ?? 'Unknown subtext analysis error');
         }
-      }
+      }, controller.signal);
 
       if (finalResult) {
         setState('complete');
         setProgress(100);
         setResult(finalResult);
+        clearBackgroundOp(OP_KEY);
+        onCompleteRef.current?.(finalResult);
       } else {
         throw new Error('Subtext analysis completed without results');
       }
@@ -217,19 +209,18 @@ export function useSubtextAnalysis({
       if (controller.signal.aborted) return;
       setState('error');
       setError(err instanceof Error ? err.message : String(err));
+      clearBackgroundOp(OP_KEY);
     } finally {
       ops?.stopOperation('subtext');
     }
-  }, [state, conversation, quantitative, qualitative, ops]);
+  }, [state, isRunningInBackground, conversation, quantitative, qualitative, ops]);
 
   return {
     runSubtext,
-    isLoading: state === 'running',
-    progress,
+    isLoading: isRunningInBackground || state === 'running',
+    progress: isRunningInBackground ? (bgOp?.progress ?? 0) : progress,
     result,
     error,
     reset,
   };
 }
-
-export default useSubtextAnalysis;

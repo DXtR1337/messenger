@@ -407,41 +407,6 @@ body::after {
   animation-play-state: paused;
 }
 
-/* Accessibility: respect reduced-motion preference */
-@media (prefers-reduced-motion: reduce) {
-  *:not([data-mode="court"]):not([data-mode="court"] *):not([data-mode="standup"]):not([data-mode="standup"] *),
-  *:not([data-mode="court"]):not([data-mode="court"] *):not([data-mode="standup"]):not([data-mode="standup"] *)::before,
-  *:not([data-mode="court"]):not([data-mode="court"] *):not([data-mode="standup"]):not([data-mode="standup"] *)::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-
-  /* Exempt loading spinners — essential UI feedback */
-  .animate-spin {
-    animation-duration: 1s !important;
-    animation-iteration-count: infinite !important;
-  }
-
-  /* Exempt continuous marquee — slow it down instead of killing */
-  .marquee-track {
-    animation-duration: 60s !important;
-    animation-iteration-count: infinite !important;
-  }
-
-  /* Exempt wrapped progress fill — essential UI feedback */
-  .wrapped-progress-fill {
-    animation-duration: inherit !important;
-    animation-iteration-count: 1 !important;
-  }
-
-  /* CurtainReveal fallback — ensure landing page is visible
-     when animations are disabled (reduced-motion preference) */
-  .landing-content {
-    opacity: 1 !important;
-  }
-}
 
 /* Wrapped mode: Stories-style progress fill */
 @keyframes wrappedProgressFill {
@@ -567,15 +532,6 @@ body::after {
   transform: scale(1.4) translateZ(0);
   transform-origin: center 40%;
   backface-visibility: hidden;
-}
-
-/* Reduced motion: keep video visible (ambient atmosphere) but kill transitions */
-@media (prefers-reduced-motion: reduce) {
-  .mode-video-bg,
-  .roast-embers-video {
-    animation: none !important;
-    transition: none !important;
-  }
 }
 
 /* ═══════════════════════════════════════
@@ -3036,21 +2992,6 @@ body::after {
 .emotions-particle-5 { top: 55%; left: 50%; background: radial-gradient(circle, rgba(236,72,153,0.15), transparent 70%); animation-delay: 3s; width: 45px; height: 45px; }
 .emotions-particle-6 { top: 80%; left: 70%; background: radial-gradient(circle, rgba(16,185,129,0.15), transparent 70%); animation-delay: 5s; }
 
-/* ── Accessibility: reduce motion (standup exempt — theatrical experience) ── */
-@media (prefers-reduced-motion: reduce) {
-  .roast-spark,
-  .dating-particle, .dating-bokeh,
-  .simulator-particle,
-  .subtext-particle,
-  .delusion-particle, .delusion-ripple,
-  .cps-particle,
-  .moral-particle,
-  .emotions-particle {
-    animation: none !important;
-    opacity: 0.1 !important;
-  }
-}
-
 /* ── Mobile: fewer/smaller particles ──────── */
 @media (max-width: 768px) {
   .court-particle:nth-child(n+6),
@@ -3735,20 +3676,6 @@ body::after {
   animation: eks-pain-pulse 4s ease-in-out infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .eks-ember, .eks-flatline path, .eks-heartbeat-line, .eks-typewriter { animation: none !important; }
-  .eks-heartbeat-line { stroke-dashoffset: 0; }
-  .eks-flatline path { stroke-dashoffset: 0; }
-  .eks-scene-reveal { opacity: 1; filter: none; transform: none; transition: none; }
-  .eks-pain-card { animation: none; }
-  .eks-phase-stagger > * { opacity: 1; transform: none; transition: none; }
-  .eks-scroll-draw, .eks-scroll-fade-in, .eks-scroll-deblur, .eks-scroll-scale-in {
-    animation: none !important;
-    opacity: 1 !important;
-    filter: none !important;
-    transform: none !important;
-  }
-}
 @media (max-width: 640px) {
   .eks-scene { padding: 2rem 0; }
   .eks-emergency-exit { bottom: 16px; right: 16px; font-size: 0.75rem; padding: 6px 12px; }
@@ -3765,13 +3692,4 @@ body::after {
   }
 }
 
-/* Court/standup: disable motion-sickness-inducing animations even in exempt modes */
-@media (prefers-reduced-motion: reduce) {
-  .court-shake,
-  [data-mode="court"] .court-shake { animation: none !important; }
-  .court-gavel-animate { animation: none !important; transform: rotate(0deg); }
-  .standup-screen-shake { animation: none !important; }
-  .audience-bob,
-  .audience-laugh { animation: none !important; }
-}
 

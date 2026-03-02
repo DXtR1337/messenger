@@ -1,5 +1,3 @@
-'use client';
-
 import { Sparkles, BarChart3 } from 'lucide-react';
 
 export function AIBadge({ className }: { className?: string }) {

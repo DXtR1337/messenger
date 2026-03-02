@@ -23,7 +23,7 @@ const OP_META: Record<string, { icon: typeof Flame; accent: string; route?: stri
   'capitalization':  { icon: Heart,           accent: '#ec4899', route: 'capitalization' },
   'moral':           { icon: Compass,         accent: '#f97316', route: 'moral' },
   'emotions':        { icon: Sparkles,        accent: '#06b6d4', route: 'emotions' },
-  'cwel':            { icon: Flame,           accent: '#ef4444', route: 'roast' },
+  'przegryw':        { icon: Flame,           accent: '#ef4444', route: 'roast' },
   'argument':        { icon: Zap,             accent: '#ef4444', route: 'argument' },
 };
 

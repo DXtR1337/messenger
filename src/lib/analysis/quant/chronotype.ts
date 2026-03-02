@@ -8,10 +8,12 @@
  * References:
  * - Aledavood, T. et al. (2018). Social network differences of chronotypes
  *   identified from mobile phone data. EPJ Data Science, 7(1), 1-13. N=400.
- * - Jarmolowicz, D. P. et al. (2022). Matched chronotypes and relationship
- *   satisfaction. Chronobiology International, 39(4), 566-573. F(1,58)=19.57.
- * - Alikhan, M. F. et al. (2023). Chronotype match moderates work stress recovery.
- *   J. Occupational & Organizational Psychology, 96(3), 615-633. N=79 pairs.
+ * - Randler, C. et al. (2017). Morningness-eveningness and romantic relationship
+ *   satisfaction. Chronobiology International, 34(10), 1407-1416.
+ *   DOI: 10.1080/07420528.2017.1361437. Chronotype mismatch → lower satisfaction.
+ * - Vetter, C. et al. (2015). Aligning work and circadian time in shift workers
+ *   improves sleep and reduces circadian disruption. Current Biology, 25(7), 907-911.
+ *   DOI: 10.1016/j.cub.2015.01.064.
  */
 
 import type { UnifiedMessage } from '../../parsers/types';
@@ -91,23 +93,16 @@ function circularDelta(a: number, b: number): number {
 
 /**
  * Map chronotype delta (hours between midpoints) to compatibility score 0–100.
- * Heuristic step curve — Jarmolowicz (2022) found that chronotype mismatch predicts
- * lower relationship satisfaction (F(1,58)=19.57), but published no continuous
- * hour-to-score mapping. These thresholds are hand-tuned:
- *   <=1h: 95 (nearly identical rhythms)
- *   <=2h: 80 (normal variation within couples)
- *   <=3h: 60 (noticeable but manageable)
- *   <=4h: 40 (early bird vs intermediate)
- *   <=6h: 20 (significant mismatch)
- *   >6h:  5 (extreme — one sleeps while other is active)
+ * Smooth cosine decay — Randler et al. (2017) found chronotype mismatch predicts
+ * lower relationship satisfaction, but no published continuous mapping exists.
+ * Cosine curve gives smooth transition: identical rhythms → 100, 6h+ apart → ~0.
+ * Capped at [5, 95] to avoid false certainty at extremes.
  */
 function scoreFromDelta(delta: number): number {
-  if (delta <= 1) return 95;
-  if (delta <= 2) return 80;
-  if (delta <= 3) return 60;
-  if (delta <= 4) return 40;
-  if (delta <= 6) return 20;
-  return 5;
+  const maxDelta = 6;
+  const clamped = Math.min(delta, maxDelta) / maxDelta;
+  const raw = 50 * (1 + Math.cos(Math.PI * clamped));
+  return Math.round(Math.max(5, Math.min(95, raw)));
 }
 
 function interpret(score: number, delta: number): string {

@@ -53,7 +53,7 @@ export default function DiscordImport({ relationshipType, autoChannelId }: Disco
 
   // Restore verified PIN from sessionStorage
   useEffect(() => {
-    const stored = localStorage.getItem('podtekst-discord-pin');
+    const stored = sessionStorage.getItem('podtekst-discord-pin');
     if (stored) {
       setPin(stored);
       setPinVerified(true);
@@ -83,7 +83,7 @@ export default function DiscordImport({ relationshipType, autoChannelId }: Disco
         return;
       }
       // PIN valid — store and mark verified
-      localStorage.setItem('podtekst-discord-pin', pinToCheck);
+      sessionStorage.setItem('podtekst-discord-pin', pinToCheck);
       setPinVerified(true);
       setPinError('');
       // Also process the guilds response we already have
@@ -107,14 +107,14 @@ export default function DiscordImport({ relationshipType, autoChannelId }: Disco
     setState('loading_guilds');
     if (!hadGuilds) setError('');
     try {
-      const storedPin = localStorage.getItem('podtekst-discord-pin') ?? '';
+      const storedPin = sessionStorage.getItem('podtekst-discord-pin') ?? '';
       const res = await fetch(`/api/discord/guilds?pin=${encodeURIComponent(storedPin)}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         if (res.status === 401) {
           // PIN invalid — clear verified state
           setPinVerified(false);
-          localStorage.removeItem('podtekst-discord-pin');
+          sessionStorage.removeItem('podtekst-discord-pin');
           setPinError('PIN wygasł. Wpisz ponownie.');
           setState('idle');
           return;
@@ -142,7 +142,7 @@ export default function DiscordImport({ relationshipType, autoChannelId }: Disco
     abortRef.current = controller;
 
     try {
-      const storedPin = localStorage.getItem('podtekst-discord-pin') ?? '';
+      const storedPin = sessionStorage.getItem('podtekst-discord-pin') ?? '';
       const res = await fetch('/api/discord/fetch-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useAnalysis } from '@/lib/analysis/analysis-context';
+import { readSSEStream } from '@/lib/sse';
 import type { ParsedConversation } from '@/lib/parsers/types';
 import type { CapitalizationResult } from '@/lib/analysis/capitalization-prompts';
+import { getBackgroundOp, setBackgroundOp, clearBackgroundOp, subscribeBackgroundOps, getSnapshotFactory } from '@/lib/analysis/background-ops';
 
 interface UseCapitalizationOptions {
   conversation: ParsedConversation;
+  reconBriefing?: string;
   onComplete?: (result: CapitalizationResult) => void;
 }
 
@@ -52,6 +55,7 @@ function sampleMessagesText(conversation: ParsedConversation, maxMessages = 300)
 
 export function useCapitalizationAnalysis({
   conversation,
+  reconBriefing,
   onComplete,
 }: UseCapitalizationOptions): UseCapitalizationReturn {
   const { startOperation, updateOperation, stopOperation } = useAnalysis();
@@ -62,6 +66,13 @@ export function useCapitalizationAnalysis({
   const ceilingRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Background state — survives unmount/remount cycles
+  const OP_KEY = 'capitalization';
+  const bgOp = useSyncExternalStore(subscribeBackgroundOps, getSnapshotFactory(OP_KEY), () => undefined);
+  const isRunningInBackground = !!bgOp && !bgOp.isComplete && !bgOp.error;
+
+  // NOTE: No abort-on-unmount — analysis continues in background when navigating away
 
   useEffect(() => {
     if (state !== 'running') {
@@ -89,10 +100,16 @@ export function useCapitalizationAnalysis({
   }, []);
 
   const runAnalysis = useCallback(async () => {
+    if (isRunningInBackground) return;
     if (state === 'running') return;
+
+    // Abort previous run if any
+    abortRef.current?.abort();
+
     setState('running');
     setProgress(0);
     setError(null);
+    setBackgroundOp(OP_KEY, { progress: 0, phaseName: 'Kapitalizacja ACR', isComplete: false, error: null });
     startOperation('capitalization', 'Kapitalizacja ACR', 'Przygotowuję analizę...');
 
     const controller = new AbortController();
@@ -107,7 +124,7 @@ export function useCapitalizationAnalysis({
       const response = await fetch('/api/analyze/capitalization', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messagesText, participants }),
+        body: JSON.stringify({ messagesText, participants, reconBriefing }),
         signal: controller.signal,
       });
 
@@ -119,48 +136,30 @@ export function useCapitalizationAnalysis({
       if (!response.body) throw new Error('No response body');
 
       const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
       let finalResult: CapitalizationResult | null = null;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
-          try {
-            const event = JSON.parse(data) as {
-              type: string;
-              status?: string;
-              result?: CapitalizationResult;
-              error?: string;
-            };
-            if (event.type === 'progress') {
-              ceilingRef.current = 70;
-              updateOperation('capitalization', { progress: 50, status: event.status ?? 'Analizuję...' });
-            } else if (event.type === 'complete' && event.result) {
-              finalResult = event.result;
-              ceilingRef.current = 100;
-            } else if (event.type === 'error') {
-              throw new Error(event.error ?? 'Nieznany błąd analizy');
-            }
-          } catch (parseError) {
-            if (parseError instanceof SyntaxError) continue;
-            throw parseError;
-          }
+      await readSSEStream<{
+        type: string;
+        status?: string;
+        result?: CapitalizationResult;
+        error?: string;
+      }>(reader, (event) => {
+        if (event.type === 'progress') {
+          ceilingRef.current = 70;
+          updateOperation('capitalization', { progress: 50, status: event.status ?? 'Analizuję...' });
+        } else if (event.type === 'complete' && event.result) {
+          finalResult = event.result;
+          ceilingRef.current = 100;
+        } else if (event.type === 'error') {
+          throw new Error(event.error ?? 'Nieznany błąd analizy');
         }
-      }
+      }, controller.signal);
 
       if (finalResult) {
         setState('complete');
         setProgress(100);
         setResult(finalResult);
+        clearBackgroundOp(OP_KEY);
         onComplete?.(finalResult);
       } else {
         throw new Error('Analiza zakończona bez wyników');
@@ -169,19 +168,18 @@ export function useCapitalizationAnalysis({
       if (controller.signal.aborted) return;
       setState('error');
       setError(err instanceof Error ? err.message : String(err));
+      clearBackgroundOp(OP_KEY);
     } finally {
       stopOperation('capitalization');
     }
-  }, [state, conversation, onComplete, startOperation, updateOperation, stopOperation]);
+  }, [state, isRunningInBackground, conversation, reconBriefing, onComplete, startOperation, updateOperation, stopOperation]);
 
   return {
     runAnalysis,
-    isLoading: state === 'running',
-    progress,
+    isLoading: isRunningInBackground || state === 'running',
+    progress: isRunningInBackground ? (bgOp?.progress ?? 0) : progress,
     result,
     error,
     reset,
   };
 }
-
-export default useCapitalizationAnalysis;

@@ -97,6 +97,7 @@ export default function SectionNavigator({ isServerView }: SectionNavigatorProps
               key={id}
               onClick={() => handleClick(id)}
               title={label}
+              aria-label={label}
               className={cn(
                 'group relative flex size-8 items-center justify-center rounded-lg text-sm transition-colors',
                 activeId === id
@@ -127,6 +128,7 @@ export default function SectionNavigator({ isServerView }: SectionNavigatorProps
               <button
                 key={id}
                 onClick={() => handleClick(id)}
+                aria-label={label}
                 className={cn(
                   'flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap active:scale-95 active:opacity-80',
                   activeId === id

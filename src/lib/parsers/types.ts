@@ -115,6 +115,8 @@ export interface QuantitativeAnalysis {
   conflictFingerprint?: import('../analysis/quant/conflict-fingerprint').ConflictFingerprintResult;
   /** Professional RT analysis: turn-based, overnight-filtered, with composite indices (Templeton 2022) */
   responseTimeAnalysis?: import('../analysis/quant/response-time-engine').ResponseTimeAnalysis;
+  /** Communication gaps >7 days — breakup/reunion detection for Tryb Eks */
+  communicationGaps?: import('../analysis/quant/gaps').CommunicationGap[];
   /** Data format version — used for migrations (e.g. UTC→local date fix) */
   _version?: number;
 }
@@ -261,6 +263,14 @@ export interface TimingMetrics {
   };
   /** Messages sent between 22:00-04:00 per person */
   lateNightMessages: Record<string, number>;
+  /** Top significant silences (>3 days), sorted by duration descending */
+  significantSilences?: Array<{
+    startTimestamp: number;
+    endTimestamp: number;
+    durationMs: number;
+    lastSender: string;
+    nextSender: string;
+  }>;
 }
 
 export interface EngagementMetrics {

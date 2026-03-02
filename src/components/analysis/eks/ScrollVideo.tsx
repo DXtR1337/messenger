@@ -19,7 +19,6 @@ interface ScrollVideoProps {
  * Falls back to poster image when:
  *   - On mobile (viewport < 768px)
  *   - Video fails to load or src is missing
- *   - prefers-reduced-motion is enabled
  *   - IntersectionObserver or rAF unavailable
  *
  * Positioned identically to VideoBackground (mode-video-bg class) so it layers
@@ -30,22 +29,8 @@ export default function ScrollVideo({ src, poster, containerRef }: ScrollVideoPr
   const [isMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 768 : false,
   );
-  const [reducedMotion, setReducedMotion] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      : false,
-  );
-
-  // Subscribe to reduced-motion changes
-  useEffect(() => {
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    motionQuery.addEventListener('change', handler);
-    return () => motionQuery.removeEventListener('change', handler);
-  }, []);
-
-  // Only enable scroll-linked playback on desktop with no reduced motion
-  const shouldPlayVideo = !isMobile && !reducedMotion && !hasError && !!src;
+  // Only enable scroll-linked playback on desktop
+  const shouldPlayVideo = !isMobile && !hasError && !!src;
 
   const { videoRef, isReady } = useScrollVideo({
     containerRef,

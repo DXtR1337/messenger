@@ -70,7 +70,8 @@ export default function EnhancedRoastButton({ analysis, onComplete }: EnhancedRo
     try {
       const samples = sampleMessages(conversation, quantitative);
       const participants = conversation.participants.map((p) => p.name);
-      const quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      let quantitativeContext = buildQuantitativeContext(quantitative, conversation.participants);
+      if (qualitative?.reconBriefing) quantitativeContext += '\n\n' + qualitative.reconBriefing;
 
       // Deep scan — extract confessions, contradictions, obsessions, power moves
       if (mountedRef.current) setStatus('Skanuję całą konwersację w poszukiwaniu amunicji...');

@@ -77,7 +77,7 @@ export const TEMPERATURES = {
     ANALYTICAL: 0.1,    // Pass 1-3A, CPS, capitalization, emotion causes
     SYNTHESIS: 0.3,     // Pass 3B, Pass 4, moral foundations
     SEMI_CREATIVE: 0.5, // Court trial, enhanced roast, subtext
-    CREATIVE: 0.7,      // Dating profile, stand-up, mega roast, cwel
+    CREATIVE: 0.7,      // Dating profile, stand-up, mega roast, przegryw
 } as const;
 
 // ============================================================

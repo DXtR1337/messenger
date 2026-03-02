@@ -1,6 +1,6 @@
 /**
  * POST /api/discord/send-roast
- * Sends a mega roast or cwel tygodnia result to a Discord channel as embeds via bot token.
+ * Sends a mega roast or przegryw tygodnia result to a Discord channel as embeds via bot token.
  * Discriminates payload type via `type` field (default: 'megaRoast').
  */
 
@@ -13,7 +13,7 @@ const checkLimit = rateLimit(10, 10 * 60 * 1000);
 const DISCORD_API = 'https://discord.com/api/v10';
 
 const megaRoastSchema = z.object({
-  channelId: z.string().min(1),
+  channelId: z.string().regex(/^\d{17,20}$/, 'Invalid channel ID'),
   pin: z.optional(z.string()),
   type: z.optional(z.literal('megaRoast')),
   megaRoast: z.object({
@@ -42,17 +42,17 @@ const datingProfilePersonSchema = z.object({
 });
 
 const datingProfileSchema = z.object({
-  channelId: z.string().min(1),
+  channelId: z.string().regex(/^\d{17,20}$/, 'Invalid channel ID'),
   pin: z.optional(z.string()),
   type: z.literal('datingProfile'),
   profiles: z.record(z.string(), datingProfilePersonSchema),
 });
 
-const cwelSchema = z.object({
-  channelId: z.string().min(1),
+const przegrywSchema = z.object({
+  channelId: z.string().regex(/^\d{17,20}$/, 'Invalid channel ID'),
   pin: z.optional(z.string()),
-  type: z.literal('cwelTygodnia'),
-  cwelTygodnia: z.object({
+  type: z.literal('przegrywTygodnia'),
+  przegrywTygodnia: z.object({
     winner: z.string(),
     winnerScore: z.number(),
     winnerCategories: z.number(),
@@ -80,7 +80,7 @@ const cwelSchema = z.object({
   }),
 });
 
-const requestSchema = z.union([megaRoastSchema, cwelSchema, datingProfileSchema]);
+const requestSchema = z.union([megaRoastSchema, przegrywSchema, datingProfileSchema]);
 
 const COLOR_ORANGE = 0xf97316;
 const COLOR_RED = 0xef4444;
@@ -88,7 +88,7 @@ const COLOR_DARK_RED = 0xdc2626;
 const COLOR_PURPLE = 0xa855f7;
 const COLOR_BLUE = 0x3b82f6;
 const FOOTER_MEGA = { text: 'PodTeksT Mega Roast \u2022 podtekst.app' };
-const FOOTER_CWEL = { text: 'PodTeksT Cwel Tygodnia \u2022 podtekst.app' };
+const FOOTER_PRZEGRYW = { text: 'PodTeksT Przegryw Tygodnia \u2022 podtekst.app' };
 const FOOTER_DATING = { text: 'PodTeksT Dating Profile \u2022 podtekst.app' };
 const COLOR_PINK = 0xff006e;
 
@@ -189,30 +189,30 @@ export async function POST(request: Request): Promise<Response> {
         color: COLOR_RED,
       });
     }
-  } else if (payloadType === 'cwelTygodnia' && 'cwelTygodnia' in parsed.data) {
-    const cwel = parsed.data.cwelTygodnia;
+  } else if (payloadType === 'przegrywTygodnia' && 'przegrywTygodnia' in parsed.data) {
+    const przegryw = parsed.data.przegrywTygodnia;
 
     // Embed 1: Winner + intro + verdict
     const mainLines = [
-      cwel.intro,
+      przegryw.intro,
       '',
       '\u2500'.repeat(30),
       '',
-      `\u{1F480} **${cwel.winner}** \u2014 Cwelowatość: **${cwel.winnerScore}/100** | Wygrane kategorie: **${cwel.winnerCategories}/8**`,
+      `\u{1F480} **${przegryw.winner}** \u2014 Przegrywowatość: **${przegryw.winnerScore}/100** | Wygrane kategorie: **${przegryw.winnerCategories}/8**`,
       '',
-      `**WERDYKT:** ${cwel.verdict}`,
+      `**WERDYKT:** ${przegryw.verdict}`,
     ].join('\n');
 
     embeds.push({
-      title: `\u{1F480} CWEL TYGODNIA: ${cwel.winner} \u{1F480}`,
+      title: `\u{1F480} PRZEGRYW TYGODNIA: ${przegryw.winner} \u{1F480}`,
       description: trimToEmbed(mainLines),
       color: COLOR_RED,
-      footer: FOOTER_CWEL,
+      footer: FOOTER_PRZEGRYW,
     });
 
     // Embed 2: Nominations
-    if (cwel.nominations.length > 0) {
-      const catLines = cwel.nominations.map((nom) => {
+    if (przegryw.nominations.length > 0) {
+      const catLines = przegryw.nominations.map((nom) => {
         const evidence = nom.evidence.length > 0
           ? `\n> ${nom.evidence.slice(0, 2).join('\n> ')}`
           : '';
@@ -228,8 +228,8 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // Embed 3: Hall of Shame
-    if (cwel.hallOfShame.length > 0) {
-      const shameLines = cwel.hallOfShame.map((h) =>
+    if (przegryw.hallOfShame.length > 0) {
+      const shameLines = przegryw.hallOfShame.map((h) =>
         `**${h.person}:** "${h.quote}"\n\u{1F525} ${h.commentary}`
       ).join('\n\n');
 
@@ -241,17 +241,17 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // Embed 4: Crowning speech
-    if (cwel.crowningSpeech) {
+    if (przegryw.crowningSpeech) {
       embeds.push({
         title: '\u{1F451} Koronacja',
-        description: trimToEmbed(cwel.crowningSpeech),
+        description: trimToEmbed(przegryw.crowningSpeech),
         color: COLOR_DARK_RED,
       });
     }
 
     // Embed 5: Ranking
-    if (cwel.ranking.length > 0) {
-      const rankLines = cwel.ranking
+    if (przegryw.ranking.length > 0) {
+      const rankLines = przegryw.ranking
         .sort((a, b) => b.score - a.score)
         .map((r, i) => {
           const medal = i === 0 ? '\u{1F480}' : i === 1 ? '\u{1F4A9}' : i === 2 ? '\u{1F921}' : `${i + 1}.`;
@@ -260,10 +260,10 @@ export async function POST(request: Request): Promise<Response> {
         .join('\n');
 
       embeds.push({
-        title: '\u{1F4CA} Ranking Cwelowatości',
+        title: '\u{1F4CA} Ranking Przegrywowatości',
         description: trimToEmbed(rankLines),
         color: COLOR_BLUE,
-        footer: FOOTER_CWEL,
+        footer: FOOTER_PRZEGRYW,
       });
     }
   } else if ('megaRoast' in parsed.data) {

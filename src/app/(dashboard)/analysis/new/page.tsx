@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, Suspense } from 'react';
+import { useState, useCallback, useMemo, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, RotateCcw, ChevronDown, Upload, Bot, AlertTriangle } from 'lucide-react';
 import { DropZone } from '@/components/upload/DropZone';
@@ -50,25 +50,47 @@ const RELATIONSHIP_OPTIONS: { value: RelationshipContext; emoji: string; label: 
   { value: 'other', emoji: '\u2753', label: 'Inne' },
 ];
 
+/**
+ * Read the ?channel= query param inside a Suspense boundary so the rest
+ * of the page (including DropZone) hydrates immediately and is interactive.
+ */
+function ChannelParamReader({ onChannel }: { onChannel: (id: string | null) => void }) {
+  const searchParams = useSearchParams();
+  const channel = searchParams.get('channel');
+  useEffect(() => {
+    onChannel(channel);
+  }, [channel, onChannel]);
+  return null;
+}
+
 export default function NewAnalysisPage() {
+  const [autoChannelId, setAutoChannelId] = useState<string | null>(null);
+  const handleChannel = useCallback((id: string | null) => setAutoChannelId(id), []);
+
   return (
-    <Suspense>
-      <NewAnalysisContent />
-    </Suspense>
+    <>
+      <Suspense>
+        <ChannelParamReader onChannel={handleChannel} />
+      </Suspense>
+      <NewAnalysisContent autoChannelId={autoChannelId} />
+    </>
   );
 }
 
-function NewAnalysisContent() {
+function NewAnalysisContent({ autoChannelId }: { autoChannelId: string | null }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const autoChannelId = searchParams.get('channel');
-  const [importMode, setImportMode] = useState<ImportMode>(autoChannelId ? 'discord' : 'file');
+  const [importMode, setImportMode] = useState<ImportMode>('file');
   const [files, setFiles] = useState<File[]>([]);
   const [relationshipType, setRelationshipType] = useState<RelationshipContext | null>(null);
   const [stage, setStage] = useState<Stage>('idle');
   const [error, setError] = useState<string | undefined>(undefined);
   const [progress, setProgress] = useState<{ current: number; total: number } | undefined>(undefined);
   const [showInstructions, setShowInstructions] = useState<boolean>(false);
+
+  // Switch to discord mode when ?channel= param is detected
+  useEffect(() => {
+    if (autoChannelId) setImportMode('discord');
+  }, [autoChannelId]);
 
   const handleFilesSelected = useCallback((selectedFiles: File[]) => {
     setFiles(selectedFiles);

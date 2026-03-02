@@ -1,4 +1,5 @@
 import { runDatingProfile } from '@/lib/analysis/dating-profile-prompts';
+import { runRoastResearch } from '@/lib/analysis/gemini';
 import type { AnalysisSamples } from '@/lib/analysis/qualitative';
 import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod/v4';
@@ -97,6 +98,19 @@ export async function POST(request: Request): Promise<Response> {
       try {
         if (signal.aborted) { safeClose(); return; }
 
+        // Phase 1: AI Research — investigator pre-pass
+        send({ type: 'progress', status: 'Prowadzę śledztwo w wiadomościach...' });
+        let researchBrief: string | undefined;
+        try {
+          const researchResult = await runRoastResearch(samples, participants, quantitativeContext);
+          researchBrief = JSON.stringify(researchResult, null, 2);
+        } catch (researchErr) {
+          console.error('[DatingProfile] Research pass failed (non-fatal):', researchErr);
+        }
+
+        if (signal.aborted) { safeClose(); return; }
+
+        // Phase 2: Dating profile generation with research context
         send({ type: 'progress', status: targetPerson ? `Budowanie profilu ${targetPerson}...` : 'Tworzę szczere profile randkowe...' });
         const result = await runDatingProfile(
           samples,
@@ -105,6 +119,7 @@ export async function POST(request: Request): Promise<Response> {
           existingAnalysis as { pass1?: Record<string, unknown>; pass3?: Record<string, unknown> } | undefined,
           deepScanMaterial ?? undefined,
           targetPerson ?? undefined,
+          researchBrief,
         );
 
         if (signal.aborted) { safeClose(); return; }

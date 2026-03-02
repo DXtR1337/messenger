@@ -7,6 +7,9 @@ export const PSYCH_CITATIONS = {
   gottman: 'Gottman, J. M. & Silver, N. (1999). The Seven Principles for Making Marriage Work.',
   gottmanShort: 'Gottman & Silver, 1999',
 
+  gottman1994: 'Gottman, J. M. (1994). What Predicts Divorce? The Relationship Between Marital Processes and Marital Outcomes. Lawrence Erlbaum Associates. Original source of the "Four Horsemen" framework (Criticism, Contempt, Defensiveness, Stonewalling).',
+  gottman1994Short: 'Gottman, 1994',
+
   bowlby: 'Bowlby, J. (1969). Attachment and Loss, Vol. 1: Attachment.',
   ainsworth: 'Ainsworth, M. D. S. et al. (1978). Patterns of Attachment.',
   attachmentShort: 'Bowlby, 1969; Ainsworth, 1978',
@@ -54,6 +57,9 @@ export const PSYCH_CITATIONS = {
   aledavood2015: 'Aledavood, T., Lehmann, S., & Saramäki, J. (2015). Digital daily cycles of individuals. Frontiers in Physics, 3, 73. DOI: 10.3389/fphy.2015.00073. Distinctive, persistent daily rhythms in digital activity.',
   aledavood2015Short: 'Aledavood et al., 2015',
 
+  randler2017: 'Randler, C. et al. (2017). Morningness-eveningness and romantic relationship satisfaction. Chronobiology International, 34(10), 1407-1416. DOI: 10.1080/07420528.2017.1361437. Chronotype mismatch → lower relationship satisfaction.',
+  randler2017Short: 'Randler et al., 2017',
+
   roy2021: 'Roy, A. et al. (2021). Morningness–eveningness assessment from mobile phone communication analysis. Scientific Reports, 11, 13971. DOI: 10.1038/s41598-021-93799-0. Behavioral chronotype inferred from mobile communication timestamps.',
   roy2021Short: 'Roy et al., 2021',
 
@@ -78,7 +84,7 @@ export const PSYCH_CITATIONS = {
   vishnubhotla2024: 'Vishnubhotla, K. et al. (2024). Emotional granularity in text: Capturing fine-grained emotion categories. Proceedings of EMNLP 2024, pp. 19168-19185. DOI: 10.18653/v1/2024.emnlp-main.1063. Fine-grained emotion diversity correlates with mental health outcomes.',
   vishnubhotla2024Short: 'Vishnubhotla et al., 2024 (EMNLP)',
 
-  suvak2011: 'Suvak, M. K. et al. (2011). Emotional granularity and emotion regulation. Behaviour Research and Therapy, 49(9), 566-574. DOI: 10.1016/j.brat.2011.06.002. Higher emotional granularity → better self-regulation.',
+  suvak2011: 'Suvak, M. K. et al. (2011). Emotional Granularity and Borderline Personality Disorder. Journal of Abnormal Psychology, 120(2), 414-426. DOI: 10.1037/a0021808. Higher emotional granularity → better self-regulation.',
   suvak2011Short: 'Suvak et al., 2011',
 
   kashdan2015: 'Kashdan, T. B. et al. (2015). Unpacking emotion differentiation: Transforming unpleasant experience by perceiving distinctions in negativity. Current Directions in Psychological Science, 24(1), 10-16. DOI: 10.1177/0963721414550708.',
@@ -105,12 +111,12 @@ export const PSYCH_CITATIONS = {
   roenneberg2012Short: 'Roenneberg et al., 2012',
 
   // Moral Foundations Theory
-  haidt2007: 'Haidt, J. & Graham, J. (2007). When morality opposes justice: Conservatives have moral intuitions that liberals may not recognize. Social Justice Research, 20(1), 98-116. Rathje, S. et al. (2024). PNAS, 121(8). Dictionary-based MFT classification r=0.59–0.77.',
+  haidt2007: 'Haidt, J. & Graham, J. (2007). When morality opposes justice: Conservatives have moral intuitions that liberals may not recognize. Social Justice Research, 20(1), 98-116. Rathje, S. et al. (2024). GPT is an effective tool for multilingual psychological text analysis. PNAS, 121(8). GPT-based MFT classification r=0.59–0.77 (outperforming dictionaries).',
   haidt2007Short: 'Haidt & Graham, 2007; Rathje et al., 2024 (PNAS)',
 
   // Emotion Cause Extraction
-  poria2021: 'Poria, S. et al. (2021). Recognizing Emotion Cause in Conversations. Cognitive Computation, 13, 1317-1332. DOI: 10.1007/s12559-021-09860-5. SemEval-2024 Task 3: Multimodal Emotion Cause Analysis in Conversations.',
-  poria2021Short: 'Poria et al., 2021; SemEval-2024 Task 3',
+  poria2021: 'Poria, S. et al. (2021). Recognizing Emotion Cause in Conversations. Cognitive Computation, 13, 1317-1332. DOI: 10.1007/s12559-021-09860-5.',
+  poria2021Short: 'Poria et al., 2021',
   // Lexical Diversity (MTLD — replaces Guiraud's R)
   mtld: 'McCarthy, P. M. & Jarvis, S. (2010). MTLD, vocd-D, and HD-D: A validation study of sophisticated approaches to lexical diversity assessment. Behavior Research Methods, 42(2), 381-392. DOI: 10.3758/BRM.42.2.381. MTLD is the only index not found to vary as a function of text length.',
   mtldShort: 'McCarthy & Jarvis, 2010',

@@ -278,7 +278,6 @@ export default function TimelineCompareTab({ records, selfName }: Props) {
     const months = [...monthMap.keys()].sort();
     return months.map(m => ({
       month: m,
-      label: formatMonthSmart(m, months),
       ...monthMap.get(m),
     }));
   }, [records, trendKey, selfName]);
@@ -365,7 +364,11 @@ export default function TimelineCompareTab({ records, selfName }: Props) {
             <ResponsiveContainer width="100%" height={320}>
               <ChartComponent data={chartData}>
                 <CartesianGrid {...CHART_GRID_PROPS} />
-                <XAxis dataKey="label" tick={CHART_AXIS_TICK} />
+                <XAxis
+                  dataKey="month"
+                  tick={CHART_AXIS_TICK}
+                  tickFormatter={(ym: string) => formatMonthSmart(ym, chartData.map(d => d.month))}
+                />
                 <YAxis
                   tick={CHART_AXIS_TICK}
                   domain={config.domain ?? ['auto', 'auto']}
